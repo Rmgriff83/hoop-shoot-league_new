@@ -45,8 +45,10 @@ var _panes: Dictionary = {}
 var _switching := false
 
 
-func setup(id: String) -> void:
+func setup(id: String, p_tab := "HEAT", p_sub := "LOADOUT") -> void:
 	league_id = id
+	_tab = p_tab
+	_card_sub = p_sub
 	cfg = App.league_cfg(id)
 	doc = App.league_doc(id)
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -132,22 +134,32 @@ func _build_tabs() -> void:
 		_tab_row.add_child(b)
 
 
-## Active: a solid cream face with tan dots and an orange dithered shadow,
-## ink text. Inactive: see-through cream, cream text with the ink outline.
+## Active: a solid face in the palette's panel colour (cream with tan dots
+## on the cream page, the dark panel with muted dots in dark mode) with an
+## orange dithered shadow and the palette's text. Inactive: see-through
+## cream, cream text with the ink outline.
 func _tab_button(text: String, active: bool, size_: int, height := 52.0) -> Button:
 	var b: ShadowCard
 	if active:
-		b = ShadowCard.solid(CREAM, RetroTheme.TAN, RetroTheme.LIGHT["orange"])
-		b.add_theme_color_override("font_color", INK)
-		b.add_theme_color_override("font_hover_color", INK)
-		b.add_theme_color_override("font_pressed_color", INK)
+		var dark := RetroTheme.current() == RetroTheme.DARK
+		b = ShadowCard.solid(RetroTheme.c("panel"), Color(RetroTheme.c("muted"), 0.35) if dark else RetroTheme.TAN, RetroTheme.c("orange"))
+		b.color = CREAM if dark else RetroTheme.c("panel")
 		b.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		# The solid face is drawn over the button's own text, so the label is a child.
+		var l := UiFont.label(text, size_, RetroTheme.c("text"))
+		l.name = "Label"
+		l.set_anchors_preset(Control.PRESET_FULL_RECT)
+		l.offset_right = -ShadowStyle.OFFSET
+		l.offset_bottom = -ShadowStyle.OFFSET
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		b.add_child(l)
 	else:
 		b = ShadowCard.new(CREAM)
 		RetroTheme.on_scene(b)
-	b.add_theme_font_override("font", UiFont.display())
-	b.add_theme_font_size_override("font_size", UiFont.snap(size_))
-	b.text = text
+		b.add_theme_font_override("font", UiFont.display())
+		b.add_theme_font_size_override("font_size", UiFont.snap(size_))
+		b.text = text
 	b.custom_minimum_size = Vector2(0, height + ShadowStyle.OFFSET)
 	return b
 
@@ -787,7 +799,7 @@ func _fill_shop(vb: VBoxContainer) -> void:
 		head.add_child(_display(str(card.get("name", "")).to_upper(), 16))
 		var chip := PanelContainer.new()
 		var sb := StyleBoxFlat.new()
-		sb.bg_color = BLUE if str(card.get("rarity", "")) == "rare" else (RetroTheme.LIGHT["gold"] if str(card.get("rarity", "")) == "epic" else CREAM)
+		sb.bg_color = BLUE if str(card.get("rarity", "")) == "rare" else (RetroTheme.c("gold") if str(card.get("rarity", "")) == "epic" else CREAM)
 		sb.set_content_margin_all(4)
 		sb.content_margin_left = 8
 		sb.content_margin_right = 8
@@ -811,7 +823,7 @@ func _fill_shop(vb: VBoxContainer) -> void:
 		ol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		ol.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		foot.add_child(ol)
-		var buy := ShadowCard.new(RetroTheme.LIGHT["gold"])
+		var buy := ShadowCard.new(RetroTheme.c("gold"))
 		buy.name = "Buy_" + str(card["id"])
 		buy.custom_minimum_size = Vector2(136 + ShadowStyle.OFFSET, 50 + ShadowStyle.OFFSET)
 		buy.disabled = App.league_coins(league_id) < int(card.get("price", 0))

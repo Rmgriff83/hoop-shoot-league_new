@@ -127,7 +127,7 @@ static func league_card(state: Dictionary, slots: Array = []) -> Button:
 		for i in mini(titles, MAX_TROPHIES):
 			tr.add_child(PixelIcon.new("icon_trophy", Vector2(30, 30), 2.0))
 		if titles > MAX_TROPHIES:
-			var more := _label("+%d" % (titles - MAX_TROPHIES), 16, RetroTheme.LIGHT["gold"], true)
+			var more := _label("+%d" % (titles - MAX_TROPHIES), 16, RetroTheme.c("gold"), true)
 			more.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			tr.add_child(more)
 		b.add_child(tr)

@@ -252,10 +252,15 @@ func rebuild_chrome() -> void:
 	_float.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_float.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_chrome.add_child(_float)
-	if _open and _league == null:
+	# The league panel is built in the palette too: rebuild it on a flip,
+	# keeping its tab.
+	if _league != null:
+		var tab := _league.current_tab()
+		var sub := _league.card_sub()
+		_league.queue_free()
+		_league = _make_league(tab, sub)
+	elif _open:
 		_league = _make_league()
-	elif _league != null and _league.get_parent() != _area:
-		_area.add_child(_league)
 	_apply_area(_open_frac)
 	_rebuild_float()
 
@@ -318,10 +323,10 @@ func _apply_area(f: float) -> void:
 		_float.visible = not home
 
 
-func _make_league() -> LeagueContext:
+func _make_league(tab := "HEAT", sub := "LOADOUT") -> LeagueContext:
 	var lc := LeagueContext.new()
 	lc.name = "League"
-	lc.setup(str(CARDS[_index]["area"]))
+	lc.setup(str(CARDS[_index]["area"]), tab, sub)
 	lc.closed.connect(_close_league)
 	lc.changed.connect(func() -> void:
 		_update_zone()
@@ -577,7 +582,7 @@ func _float_upcoming(doc: Dictionary) -> void:
 	for i in games.size():
 		var u: Dictionary = games[i]
 		var first := i == 0 and str(u["day"]) != ""
-		var line := RetroTheme.LIGHT["gold"] if first else RetroTheme.SCENE_TEXT
+		var line := RetroTheme.c("gold") if first else RetroTheme.SCENE_TEXT
 		var card := ShadowPanel.new(line, 0.0, 0.30 if first else 0.18, 16.0)
 		card.name = "Up_%d" % i
 		card.shadow = Color(RetroTheme.SCENE_TEXT, ShadowStyle.SHADOW_ALPHA)

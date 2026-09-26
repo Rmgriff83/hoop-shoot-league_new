@@ -27,6 +27,8 @@ var _ai_pool: BallPool
 var _ai_cam: Camera3D
 var _ai_tier_shown := 1
 var _ai_applied_geo: SimGeometry
+## The league's standings / bracket cloth in the arena (league heats only).
+var _banner: LeagueBanner
 ## Where the PiP sits: below the spot picker row on courts that have one.
 var _pip_pos := PIP_POS
 var _pip_size := PIP_SIZE

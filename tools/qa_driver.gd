@@ -149,6 +149,15 @@ func _run_title() -> void:
 		home.call("rebuild_chrome")
 	await _sleep(0.6)
 	await _snap("title_dark")
+	# The league in the dark palette (its tabs rebuild with the chrome).
+	await _click_button_named("ENTER")
+	await _sleep(0.8)
+	await _snap("title_dark_league")
+	await _click_button_named("TABLE")
+	await _sleep(0.6)
+	await _snap("title_dark_table")
+	await _click_button_named("<")
+	await _sleep(0.8)
 	App.set_dark_mode(false)
 	if home != null and home.has_method("rebuild_chrome"):
 		home.call("rebuild_chrome")
