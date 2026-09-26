@@ -168,16 +168,38 @@ static func target_of(id: String) -> String:
 	return str(get_card(id).get("target", "opponent"))
 
 
-## Fresh inventory/loadout doc for the save's `cards` part. `inventory` holds
+## The save's `cards` part, v3 (docs/ECONOMY.md): ONE BUCKET PER LEAGUE —
+## `leagues[id] = {coins, inventory, loadout}`. Coins earned in a league are
+## spent there; cards bought or dropped there stay there. `inventory` holds
 ## the spare copies (id → n); `loadout` holds three slots, each a real copy
 ## taken out of the inventory (equipping moves it, unequipping returns it,
-## playing it in a heat empties the slot). `v` 2 marks that layout; older
-## docs (slots that merely referenced the inventory) go through migrate().
-const DOC_VERSION := 2
+## playing it in a heat empties the slot). The inventory ops below take a
+## BUCKET (league_doc), not the whole doc. Older docs (v1 referenced slots,
+## v2 one global inventory) are wiped by migrate() — the economy changed
+## under them.
+const DOC_VERSION := 3
 
 
 static func empty_doc() -> Dictionary:
-	return {"updatedAt": 0, "v": DOC_VERSION, "inventory": {}, "loadout": [null, null, null]}
+	return {"updatedAt": 0, "v": DOC_VERSION, "leagues": {}}
+
+
+static func empty_bucket() -> Dictionary:
+	return {"coins": 0, "inventory": {}, "loadout": [null, null, null]}
+
+
+## The league's bucket inside `doc`, created on first touch (a reference:
+## mutate it, then save the doc).
+static func league_doc(doc: Dictionary, league_id: String) -> Dictionary:
+	if not doc.has("leagues"):
+		doc["leagues"] = {}
+	if not doc["leagues"].has(league_id):
+		doc["leagues"][league_id] = empty_bucket()
+	return doc["leagues"][league_id]
+
+
+static func coins(doc: Dictionary, league_id: String) -> int:
+	return int(Dictionary(doc.get("leagues", {})).get(league_id, {}).get("coins", 0))
 
 
 ## Spare (unequipped) copies of a card.
@@ -264,26 +286,13 @@ static func loadout_slots(doc: Dictionary) -> Array:
 	return out
 
 
-## Bring an older doc up to DOC_VERSION. Version-1 slots only referenced the
-## inventory (one owned copy could sit in all three slots): each equipped slot
-## now takes a copy out of the inventory, and a slot with no copy to back it
-## empties. Idempotent; returns true when anything changed.
+## Bring an older doc up to DOC_VERSION. v1 and v2 held one global inventory
+## paid for with one global wallet; the economy is per league now, so they
+## are wiped (dev saves, by decision). Idempotent; returns true when changed.
 static func migrate(doc: Dictionary) -> bool:
-	if int(doc.get("v", 1)) >= DOC_VERSION:
+	if int(doc.get("v", 1)) >= DOC_VERSION and doc.has("leagues"):
 		return false
-	if not doc.has("inventory"):
-		doc["inventory"] = {}
-	var lo: Array = doc.get("loadout", [])
-	while lo.size() < SLOTS:
-		lo.push_back(null)
-	for i in SLOTS:
-		var id: Variant = lo[i]
-		if id == null or str(id) == "" or get_card(str(id)).is_empty():
-			lo[i] = null
-		elif count(doc, str(id)) > 0:
-			_take(doc, str(id))
-		else:
-			lo[i] = null
-	doc["loadout"] = lo
-	doc["v"] = DOC_VERSION
+	for k in doc.keys():
+		doc.erase(k)
+	doc.merge(empty_doc())
 	return true

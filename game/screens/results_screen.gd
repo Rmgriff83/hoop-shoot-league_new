@@ -30,6 +30,11 @@ func _ready() -> void:
 	if int(run.get("iced", 0)) > 0:
 		stats += "   🧊%d iced" % int(run["iced"])
 	vbox.add_child(_label(stats, 24, Color(0.85, 0.88, 0.95)))
+	if int(run.get("tickets", 0)) > 0:
+		var line := "+%d TICKETS" % int(run["tickets"])
+		if App.last_run_was_best:
+			line += "   (new best bonus in)"
+		vbox.add_child(_label(line, 26, Color(1.0, 0.85, 0.3)))
 
 	vbox.add_child(_spacer(24))
 	var loc: String = run.get("location", "cage")

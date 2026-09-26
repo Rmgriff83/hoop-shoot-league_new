@@ -101,6 +101,9 @@ static func validate() -> PackedStringArray:
 		var unlock: Variant = l.get("unlock", null)
 		if unlock != null and (not (unlock is Dictionary) or not unlock.has("league") or not unlock.has("min_finish")):
 			problems.push_back("league %s has a malformed unlock rule" % l.get("id", "?"))
+		for key in ["win_coins", "loss_coins", "title_coins", "win_tickets", "loss_tickets", "title_tickets"]:
+			if not Dictionary(l.get("rewards", {})).has(key):
+				problems.push_back("league %s rewards missing %s" % [l.get("id", "?"), key])
 		_validate_cards(l, problems)
 	return problems
 

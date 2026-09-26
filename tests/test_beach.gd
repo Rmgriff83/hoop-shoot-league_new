@@ -70,6 +70,8 @@ func _modes(t) -> void:
 		"beach time trial: timed, static hoop, beach leaderboard")
 	t.eq(app.AREA_MODES["trial"]["beach"], "trial_beach", "trial × beach → trial_beach")
 	t.eq(app.AREA_MODES["practice"]["cage"], "practice", "practice × cage → practice")
+	t.ok(not app.AREA_MODES.has("heat"), "quick heats are off the area table (heats are league games)")
+	t.ok(app.MODES.has("heat") and app.MODES.has("heat_beach"), "the heat modes stay for league games and tests")
 	var b: Dictionary = app.mode_config("beach")
 	t.eq(b["arena"], "beach", "beach mode uses the beach arena")
 	t.eq(b["hoop"], "street", "beach mode mandates the street hoop")

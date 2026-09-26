@@ -265,8 +265,9 @@ func _on_card_tapped(i: int) -> void:
 	else:
 		# The effect refused after all: put the copy back in its slot.
 		var d := App.cards_doc()
-		CardDefs.add(d, id)
-		CardDefs.equip(d, i, id)
+		var b := CardDefs.league_doc(d, App.current_league if App.current_league != "" else "cage")
+		CardDefs.add(b, id)
+		CardDefs.equip(b, i, id)
 		SaveService.put_cards(d)
 
 

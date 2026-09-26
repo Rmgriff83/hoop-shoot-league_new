@@ -83,7 +83,6 @@ const MODES := {
 const AREA_MODES := {
 	"trial": {"cage": "trial", "beach": "trial_beach"},
 	"practice": {"cage": "practice", "beach": "beach"},
-	"heat": {"cage": "heat", "beach": "heat_beach"},
 }
 var next_mode := "trial"
 
@@ -178,16 +177,20 @@ func cycle_shot_help() -> void:
 	set_shot_help((shot_help + 1) % SHOT_HELP_LABELS.size())
 
 
-# ---- cosmetics: selection, coins, purchase (API only; the shop UI comes later) ----
+# ---- tickets (global, the locker money) + cosmetics ----------------------------
+# docs/ECONOMY.md: tickets are earned by time trials and league heats and
+# spent on balls / hoops in the locker; coins (below) are per league.
 
 
-func coins() -> int:
-	return int(SaveService.get_cosmetics().get("coins", 0))
+func tickets() -> int:
+	return int(SaveService.get_cosmetics().get("tickets", 0))
 
 
-func grant_coins(n: int) -> void:
+func grant_tickets(n: int) -> void:
+	if n <= 0:
+		return
 	var c := SaveService.get_cosmetics()
-	c["coins"] = int(c.get("coins", 0)) + n
+	c["tickets"] = int(c.get("tickets", 0)) + n
 	SaveService.put_cosmetics(c)
 
 
@@ -216,15 +219,15 @@ func select_ball(id: String) -> bool:
 	return select("ball", id)
 
 
-## Spend coins on a set. False if unknown, already owned, or unaffordable.
+## Spend tickets on a set. False if unknown, already owned, or unaffordable.
 func try_buy(kind: String, id: String) -> bool:
 	var set: CosmeticSet = CosmeticLibrary.get_hoop(id) if kind == "hoop" else CosmeticLibrary.get_ball(id)
 	if set == null or owns(kind, id):
 		return false
 	var c := SaveService.get_cosmetics()
-	if int(c.get("coins", 0)) < set.price_coins:
+	if int(c.get("tickets", 0)) < set.price_coins:
 		return false
-	c["coins"] = int(c.get("coins", 0)) - set.price_coins
+	c["tickets"] = int(c.get("tickets", 0)) - set.price_coins
 	c[kind]["owned"].push_back(id)
 	SaveService.put_cosmetics(c)
 	return true
@@ -248,8 +251,10 @@ func start_mode(id: String) -> void:
 	get_tree().change_scene_to_file(TIME_TRIAL_SCENE)
 
 
-## A one-off heat against the stand-in opponent at this mode's court. The seed
-## comes from the clock (quick heats are not replays); leagues pass their own.
+## TEST-ONLY. Quick heats left the game (2026-09-25): heats are league games.
+## This one-off against the stand-in opponent stays for the QA driver and
+## tests (start_mode("heat") without a league). No cards outside leagues, no
+## rewards.
 func quick_heat_config(mode_id: String) -> Dictionary:
 	var cfg := mode_config(mode_id)
 	return {
@@ -257,7 +262,7 @@ func quick_heat_config(mode_id: String) -> Dictionary:
 		"ball_return_s": Heat.DEFAULT_BALL_RETURN_S, "ai": QUICK_OPPONENT["ratings"], "err_mult": 1.0,
 		"seed": int(Time.get_ticks_usec() % 2147483647), "opponent": QUICK_OPPONENT,
 		"calib_key": cfg.get("calib_key", "regulation"), "league": null,
-		"player_cards": loadout_hand(), "player_slots": loadout_slots(), "ai_cards": [],
+		"player_cards": [], "player_slots": [null, null, null], "ai_cards": [],
 	}
 
 
@@ -280,78 +285,107 @@ func finish_heat(result: Dictionary) -> void:
 	get_tree().change_scene_to_file(HEAT_RESULT_SCENE)
 
 
-# ---- power-up cards ----------------------------------------------------------
+# ---- power-up cards + coins: one bucket per league --------------------------------
+# docs/ECONOMY.md. Every call takes the league (default: the one being played,
+# App.current_league). Coins earned in a league are spent there; the cards
+# bought or dropped there stay there.
 
 
+func _league_for(league := "") -> String:
+	if league != "":
+		return league
+	return current_league if current_league != "" else "cage"
+
+
+## The whole cards doc (every league's bucket).
 func cards_doc() -> Dictionary:
 	return SaveService.get_cards()
 
 
-func card_count(id: String) -> int:
-	return CardDefs.count(cards_doc(), id)
+## A copy of one league's bucket {coins, inventory, loadout}.
+func cards_bucket(league := "") -> Dictionary:
+	return CardDefs.league_doc(cards_doc(), _league_for(league)).duplicate(true)
 
 
-func add_card(id: String, n := 1) -> void:
+func league_coins(league := "") -> int:
+	return CardDefs.coins(cards_doc(), _league_for(league))
+
+
+func grant_league_coins(n: int, league := "") -> void:
+	if n <= 0:
+		return
 	var d := cards_doc()
-	CardDefs.add(d, id, n)
+	var b := CardDefs.league_doc(d, _league_for(league))
+	b["coins"] = int(b.get("coins", 0)) + n
 	SaveService.put_cards(d)
 
 
-func equip_card(slot: int, id: String) -> bool:
+func card_count(id: String, league := "") -> int:
+	return CardDefs.count(cards_bucket(league), id)
+
+
+func add_card(id: String, n := 1, league := "") -> void:
 	var d := cards_doc()
-	if not CardDefs.equip(d, slot, id):
+	CardDefs.add(CardDefs.league_doc(d, _league_for(league)), id, n)
+	SaveService.put_cards(d)
+
+
+func equip_card(slot: int, id: String, league := "") -> bool:
+	var d := cards_doc()
+	if not CardDefs.equip(CardDefs.league_doc(d, _league_for(league)), slot, id):
 		return false
 	SaveService.put_cards(d)
 	return true
 
 
-func unequip_card(slot: int) -> void:
+func unequip_card(slot: int, league := "") -> void:
 	var d := cards_doc()
-	CardDefs.unequip(d, slot)
+	CardDefs.unequip(CardDefs.league_doc(d, _league_for(league)), slot)
 	SaveService.put_cards(d)
 
 
 ## A deployed card leaves the inventory at once (abandoning a heat is no refund).
-func consume_card(id: String) -> bool:
+func consume_card(id: String, league := "") -> bool:
 	var d := cards_doc()
-	if not CardDefs.consume(d, id):
+	if not CardDefs.consume(CardDefs.league_doc(d, _league_for(league)), id):
 		return false
 	SaveService.put_cards(d)
 	return true
 
 
 ## The same for a known loadout slot (the tray plays by slot).
-func consume_slot(slot: int, id: String) -> bool:
+func consume_slot(slot: int, id: String, league := "") -> bool:
 	var d := cards_doc()
-	if not CardDefs.consume_slot(d, slot, id):
+	if not CardDefs.consume_slot(CardDefs.league_doc(d, _league_for(league)), slot, id):
 		return false
 	SaveService.put_cards(d)
 	return true
 
 
-## Buy a card with coins. False if unknown or unaffordable.
-func try_buy_card(id: String) -> bool:
+## Buy a card with the league's coins. False if unknown or unaffordable.
+func try_buy_card(id: String, league := "") -> bool:
 	var card := CardDefs.get_card(id)
 	if card.is_empty():
 		return false
-	var c := SaveService.get_cosmetics()
+	var d := cards_doc()
+	var b := CardDefs.league_doc(d, _league_for(league))
 	var price := int(card.get("price", 0))
-	if int(c.get("coins", 0)) < price:
+	if int(b.get("coins", 0)) < price:
 		return false
-	c["coins"] = int(c.get("coins", 0)) - price
-	SaveService.put_cosmetics(c)
-	add_card(id)
+	b["coins"] = int(b.get("coins", 0)) - price
+	CardDefs.add(b, id)
+	SaveService.put_cards(d)
 	return true
 
 
 ## The equipped hand for the next heat (the ids in the three slots).
-func loadout_hand() -> Array:
-	return CardDefs.loadout_ids(cards_doc())
+func loadout_hand(league := "") -> Array:
+	return CardDefs.loadout_ids(cards_bucket(league))
 
 
 ## The three slots as saved (null = empty) — the heat screen's tray order.
-func loadout_slots() -> Array:
-	return CardDefs.loadout_slots(cards_doc())
+func loadout_slots(league := "") -> Array:
+	return CardDefs.loadout_slots(cards_bucket(league))
 
 
 # ---- leagues ------------------------------------------------------------------
@@ -419,7 +453,7 @@ func league_heat_config(doc: Dictionary, cfg: Dictionary) -> Dictionary:
 		"seed": QuickSim.seed_from([season["seed"], season["year"], tag, int(doc["career"]["totals"]["games"])]),
 		"opponent": shooter, "calib_key": cfg.get("calib_key", "regulation"),
 		"league": {"id": cfg["id"], "game": tag, "playoff": season["phase"] == Season.PHASE_PLAYOFFS},
-		"player_cards": loadout_hand(), "player_slots": loadout_slots(),
+		"player_cards": loadout_hand(cfg["id"]), "player_slots": loadout_slots(cfg["id"]),
 		# The opponent's season hand (its fixed allowance, less what it has
 		# already played on you), not a fresh authored list every meeting.
 		"ai_cards": Season.card_hand(season, opp_id),
@@ -450,18 +484,20 @@ func _apply_league_heat(result: Dictionary) -> void:
 		"won": bool(result.get("won", false)), "ot": int(result.get("ot", 0)),
 		"swishes": int(you.get("swishes", 0)), "bestStreak": int(you.get("bestStreak", 0)),
 	})
-	var rewards: Dictionary = cfg.get("rewards", {})
-	var coins := int(rewards.get("win_coins", 50)) if result.get("won", false) else int(rewards.get("loss_coins", 20))
-	if doc["season"].get("championId", "") == Campaign.PLAYER and doc["season"]["phase"] == Season.PHASE_DONE:
-		coins += int(rewards.get("title_coins", 300))
-	grant_coins(coins)
-	last_heat["coins"] = coins
-	# Card drop, seeded by the campaign so a replayed season rolls the same.
+	# Payout (docs/ECONOMY.md): this league's coins, global tickets.
+	var title: bool = doc["season"].get("championId", "") == Campaign.PLAYER and doc["season"]["phase"] == Season.PHASE_DONE
+	var pay := Economy.heat_rewards(cfg, bool(result.get("won", false)), title)
+	grant_league_coins(int(pay["coins"]), cfg["id"])
+	grant_tickets(int(pay["tickets"]))
+	last_heat["coins"] = int(pay["coins"])
+	last_heat["tickets"] = int(pay["tickets"])
+	# Card drop, seeded by the campaign so a replayed season rolls the same;
+	# it lands in this league's inventory.
 	var league: Dictionary = result.get("league", {})
 	var drop := CardRewards.roll(bool(result.get("won", false)), bool(league.get("playoff", false)),
 		QuickSim.seed_from([doc["season"]["seed"], "drop", int(doc["career"]["totals"]["games"])]))
 	if drop != "":
-		add_card(drop)
+		add_card(drop, 1, cfg["id"])
 	last_heat["card_drop"] = drop
 
 
@@ -488,4 +524,9 @@ func start_beach() -> void:
 func finish_run(run: Dictionary) -> void:
 	last_run_was_best = SaveService.is_best(run["score"], run.get("location", "cage"))
 	last_run = SaveService.put_score(run)
+	# Tickets for the run (docs/ECONOMY.md). Practice never gets here: endless
+	# modes have no clock to run out.
+	var earned := Economy.trial_tickets(run, last_run_was_best)
+	grant_tickets(earned)
+	last_run["tickets"] = earned
 	get_tree().change_scene_to_file(RESULTS_SCENE)

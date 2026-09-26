@@ -83,7 +83,7 @@ held back for a later league. `LeagueData` loads and validates both.
 **App** — `start_league(id)` creates the campaign on first visit and opens the dashboard;
 `start_league_heat()` builds the heat config (opponent card + ratings, league format, a seed
 from season seed + game) and `finish_heat` applies the result (season, career, live games,
-coins from the league's `rewards`) before the result screen, whose Continue returns to the
+the league's coins and tickets from its `rewards`, docs/ECONOMY.md) before the result screen, whose Continue returns to the
 dashboard. `LEAGUE_GATING` is false: unlock rules are evaluated and displayed, not enforced.
 
 **Dashboard** — `game/screens/league_hub_screen.gd`: header (league, season/day or round, EXIT),
@@ -174,7 +174,7 @@ opponent's clock not running or rim already iced); played cards leave the tray.
 - **UI**: the in-heat **card tray** (left edge, inside the flick input's UI zone; tap = deploy,
   greyed when it can't apply), the **card toast** (art + "Deep Freeze → OPPONENT", or "Ollie
   Knots plays Deep Freeze on YOU!"), the opponent's board scrolls ICED BY CARD, the dashboard's
-  **LOADOUT** (three slots + inventory) and **SHOP** (cards and cosmetics for coins) tabs, and
+  **LOADOUT** (this league's three slots + inventory) and **SHOP** (this league's cards for this league's coins) tabs, and
   the result screen's card drop.
 
 ## League banners (environment dressing, league heats only)

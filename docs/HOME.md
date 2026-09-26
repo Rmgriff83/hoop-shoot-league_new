@@ -14,12 +14,12 @@ ModeRow     TrialCard (gold, "BEST 29" / "NO RUNS YET")   PracticeCard (teal, "N
 Ticker      flat strip at the very bottom, scrolling copy from the save
 ```
 No bottom nav: the phone's safe area would push one up, and the space goes to
-the cards. **Locker** (`game/ui/locker_panel.gd`): the sheet where you set your
-ball from the owned skins (`App.owns` / `App.select("ball", id)`); more
-sections later. **Ranks** is an icon beside the area name (SOON for now).
+the cards. **Locker** (`game/ui/locker_panel.gd`): the prize counter — every ball and
+hoop, owned ones equip (`App.select`), the rest buy for tickets
+(`App.try_buy`). **Ranks** is an icon beside the area name (SOON for now).
 **Shop is not on the home page**: it will live inside each league, selling
 cards usable only in that league (so the easy league can't farm cards for the
-hard one); the coins pill stays.
+hard one); the pill shows TICKETS, the locker money.
 
 - **Theme** (`game/ui/retro_theme.gd`, `RetroTheme`): two palettes over one
   layout — `LIGHT` (the concept's cream, ink `#221C18`, orange / gold / teal /
@@ -60,7 +60,7 @@ hard one); the coins pill stays.
   lives in the league hub; `AREA_MODES["heat"]` stays).
 - **Ticker** (`game/ui/home_ticker.gd`, `HomeTicker`): `items_from(bests,
   states, coins, next_up)` → `ARCADE CAGE BEST 29 · ARCADE LEAGUE · SEASON 2
-  · DAY 4 · 3RD PLACE · NEXT UP: PRUDENCE CHIME · 1,240 COINS`, laid twice
+  · DAY 4 · 3RD PLACE · NEXT UP: PRUDENCE CHIME · 1,240 TICKETS`, laid twice
   around a `★` seam and scrolled at 80 px/s.
 - **Settings** (`game/ui/settings_panel.gd`): SHOT HELP, DARK MODE, TUNING
   (debug builds only), CREDITS, CLOSE.
@@ -73,7 +73,7 @@ hard one); the coins pill stays.
   RECORDS tab and `results_screen` hold the leaderboard logic to lift.
 - **Shop** — off the home page by design; to be built into the league view
   with league-scoped cards.
-- **Coins** are real (`App.coins()`) but only league heats award them.
+- **Tickets** (the pill) are real (`App.tickets()`): time trials and league heats award them (docs/ECONOMY.md).
 - The concept's **social** tab is not built.
 
 ## Adding an area

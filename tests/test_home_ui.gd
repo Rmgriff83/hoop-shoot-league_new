@@ -110,7 +110,7 @@ func _ticker(t) -> void:
 	t.ok(items.has("ARCADE CAGE BEST 29"), "best per area")
 	t.ok(not "BEACH BEST 0" in items, "no best → no line")
 	t.ok(items.has("NEXT UP: PRUDENCE CHIME"), "next opponent")
-	t.ok(items.has("1,240 COINS"), "coin balance")
+	t.ok(items.has("1,240 TICKETS"), "ticket balance")
 	var league_seen := false
 	for it in items:
 		if it.begins_with("ARCADE LEAGUE · SEASON 1"):
@@ -133,7 +133,7 @@ func _ticker(t) -> void:
 	var ticker := HomeTicker.new()
 	ticker.set_items(items)
 	t.ok(ticker.text().contains(HomeTicker.SEAM), "the strip lays the copy around a seam")
-	t.ok(ticker.text().count("1,240 COINS") == 2, "copy laid twice for a seamless wrap")
+	t.ok(ticker.text().count("1,240 TICKETS") == 2, "copy laid twice for a seamless wrap")
 	ticker._process(0.5)
 	t.ok(ticker._label.position.x < 0.0, "the copy scrolls left")
 	ticker.free()
@@ -170,11 +170,11 @@ func _widgets(t) -> void:
 	locker._ready()
 	var rows: Array = locker.rows()
 	t.ok(rows.has("Ball_classic"), "the classic ball is in the locker (%s)" % str(rows))
-	var owned := 0
-	for b in CosmeticLibrary.balls():
-		if app.owns("ball", b.id) or b.id == CosmeticLibrary.starter_ball().id:
-			owned += 1
-	t.eq(rows.size(), owned, "one row per owned ball (the starter always)")
+	t.eq(rows.size(), CosmeticLibrary.balls().size() + CosmeticLibrary.hoops().size(), "every ball and hoop is listed: owned to equip, the rest to buy")
+	t.ok(rows.has("Ball_gold") and rows.has("Hoop_street"), "unowned sets are on the counter")
+	var gold: Button = locker.find_child("Ball_gold", true, false)
+	t.ok(gold != null and gold.text.contains("TICKETS"), "an unowned set shows its ticket price (%s)" % (gold.text if gold != null else "?"))
+	t.ok(gold != null and gold.disabled == (app.tickets() < 1500), "buying is gated on tickets")
 	if app.ball_set != null:
 		t.eq(locker.in_use_row(), "Ball_" + str(app.ball_set.id), "the ball in use is tagged")
 		var before: String = app.ball_set.id

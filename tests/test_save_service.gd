@@ -85,8 +85,9 @@ func run(t) -> void:
 	var cos: Dictionary = svc.get_cosmetics()
 	t.eq(cos["hoop"]["selected"], "classic", "starter hoop selected")
 	t.ok(Array(cos["ball"]["owned"]).has("classic"), "starter ball owned")
-	t.eq(int(cos["coins"]), 0, "no coins to start")
-	cos["coins"] = 250
+	t.eq(int(cos["tickets"]), 0, "no tickets to start")
+	t.ok(not cos.has("coins"), "the one-wallet coins key is gone")
+	cos["tickets"] = 250
 	cos["hoop"]["owned"].push_back("neon")
 	cos["hoop"]["selected"] = "neon"
 	svc.put_cosmetics(cos)
@@ -100,7 +101,7 @@ func run(t) -> void:
 	t.eq(svc2.get_tuning()["tuningMode"], true, "tuning mode survives reload")
 	t.eq(int(svc2.get_settings()["shotHelp"]), 2, "shot help mode survives reload")
 	t.eq(bool(svc2.get_settings().get("darkMode", false)), true, "dark mode survives reload")
-	t.eq(int(svc2.get_cosmetics()["coins"]), 250, "coins survive reload")
+	t.eq(int(svc2.get_cosmetics()["tickets"]), 250, "tickets survive reload")
 	t.eq(svc2.get_cosmetics()["hoop"]["selected"], "neon", "hoop selection survives reload")
 	t.close(float(svc2.get_tuning()["fields"]["angle_low"]), 42.0, 1e-9, "tuning field survives reload")
 	t.close(float(svc2.get_tuning().get("undo", {}).get("angle_low", 0.0)), 41.0, 1e-9, "undo snapshot survives reload")
@@ -119,16 +120,20 @@ func run(t) -> void:
 	var svc4 := _fresh()
 	t.eq(svc4.league_doc("cage")["year"], 1, "league doc survives reload")
 	t.eq(svc4.live_games("cage", 100).size(), 50, "live games survive reload")
-	# Cards part.
-	t.eq(svc3.get_cards()["loadout"].size(), 3, "three loadout slots by default")
+	# Cards part: one bucket per league.
+	t.eq(svc3.get_cards().get("leagues", null), {}, "no league buckets by default")
 	var cd: Dictionary = svc3.get_cards()
-	CardDefs.add(cd, "ice", 1)
-	CardDefs.equip(cd, 1, "ice")
+	var bucket := CardDefs.league_doc(cd, "cage")
+	bucket["coins"] = 120
+	CardDefs.add(bucket, "ice", 1)
+	CardDefs.equip(bucket, 1, "ice")
 	svc3.put_cards(cd)
 	t.ok(svc3.dirty_parts().has("cards"), "cards part marked dirty")
 	var svc5 := _fresh()
-	t.eq(CardDefs.owned(svc5.get_cards(), "ice"), 1, "card ownership survives reload")
-	t.eq(svc5.get_cards()["loadout"][1], "ice", "loadout survives reload")
+	t.eq(CardDefs.owned(CardDefs.league_doc(svc5.get_cards(), "cage"), "ice"), 1, "card ownership survives reload")
+	t.eq(CardDefs.league_doc(svc5.get_cards(), "cage")["loadout"][1], "ice", "loadout survives reload")
+	t.eq(CardDefs.coins(svc5.get_cards(), "cage"), 120, "league coins survive reload")
+	t.eq(CardDefs.coins(svc5.get_cards(), "beach"), 0, "and stay in their league")
 	t.eq(svc5.get_cards().get("v", 0), CardDefs.DOC_VERSION, "cards doc carries the version")
 	svc5.free()
 	svc3.free()

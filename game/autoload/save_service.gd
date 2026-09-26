@@ -61,6 +61,12 @@ func load_all() -> void:
 	_cosmetics = _read_json(COSMETICS_PART)
 	if _cosmetics.is_empty():
 		_cosmetics = default_cosmetics()
+	elif _cosmetics.has("coins") and not _cosmetics.has("tickets"):
+		# The one-wallet economy is gone: coins are per league now (cards part),
+		# tickets are the locker money. Old coins are wiped (docs/ECONOMY.md).
+		_cosmetics.erase("coins")
+		_cosmetics["tickets"] = 0
+		_write_json(COSMETICS_PART, _cosmetics)
 	_settings = _read_json(SETTINGS_PART)
 	if _settings.is_empty():
 		_settings = default_settings()
@@ -77,7 +83,7 @@ func load_all() -> void:
 		_write_json(CARDS_PART, _cards)
 
 
-## Power-up cards: {inventory: {id: n}, loadout: [id|null ×3]}.
+## Power-up cards, v3: {leagues: {id: {coins, inventory: {id: n}, loadout: [id|null ×3]}}}.
 func get_cards() -> Dictionary:
 	return _cards.duplicate(true)
 
@@ -149,7 +155,7 @@ func live_games(league_id := "", limit := 10) -> Array:
 static func default_cosmetics() -> Dictionary:
 	return {
 		"updatedAt": 0,
-		"coins": 0,
+		"tickets": 0,
 		"hoop": {"selected": "classic", "owned": ["classic"]},
 		"ball": {"selected": "classic", "owned": ["classic"]},
 	}
@@ -159,7 +165,7 @@ func get_cosmetics() -> Dictionary:
 	return _cosmetics.duplicate(true)
 
 
-## Persist coins / selections / ownership. Player state: marked dirty for sync.
+## Persist tickets / selections / ownership. Player state: marked dirty for sync.
 func put_cosmetics(doc: Dictionary) -> void:
 	_cosmetics = doc.duplicate(true)
 	_cosmetics["updatedAt"] = _now_ms()

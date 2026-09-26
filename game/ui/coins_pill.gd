@@ -1,9 +1,9 @@
 class_name CoinsPill
 extends PanelContainer
-## The coin balance: a see-through gold element (ShadowStyle) with a small
-## orange square (drawn — no coin glyph in the pixel faces) and the amount
-## with thousands separators. Will link to the shop once that lives in the
-## league view.
+## The TICKET balance (docs/ECONOMY.md): a see-through gold element
+## (ShadowStyle) with a small orange square (drawn — no ticket glyph in the
+## pixel faces) and the amount with thousands separators. Tickets are the
+## locker money; the class keeps its old name.
 
 var _amount: Label
 

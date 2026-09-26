@@ -1,7 +1,6 @@
 extends Control
 ## Heat result: WIN / LOSS, the score line (with OT), a you/them table, then
-## Rematch (same opponent, fresh seed) / Title — or Continue when a league
-## sent us here (M2c).
+## Continue when a league sent us here (M2c), else Title (test-only heats).
 
 
 func _ready() -> void:
@@ -43,8 +42,13 @@ func _ready() -> void:
 	vbox.add_child(_spacer(30))
 
 	if r.get("league", null) != null:
+		var pay := []
 		if int(r.get("coins", 0)) > 0:
-			vbox.add_child(_label("🪙 +%d coins" % int(r["coins"]), 26, Color(1.0, 0.85, 0.3)))
+			pay.push_back("+%d COINS" % int(r["coins"]))
+		if int(r.get("tickets", 0)) > 0:
+			pay.push_back("+%d TICKETS" % int(r["tickets"]))
+		if not pay.is_empty():
+			vbox.add_child(_label("   ·   ".join(pay), 26, Color(1.0, 0.85, 0.3)))
 		var drop := str(r.get("card_drop", ""))
 		if drop != "":
 			var card := CardDefs.get_card(drop)
@@ -65,16 +69,6 @@ func _ready() -> void:
 		cont.custom_minimum_size = Vector2(0, 76)
 		cont.pressed.connect(App.to_league_hub)
 		vbox.add_child(cont)
-	else:
-		var again := Button.new()
-		again.text = "  REMATCH 🏀  "
-		again.add_theme_font_size_override("font_size", 32)
-		again.custom_minimum_size = Vector2(0, 76)
-		again.pressed.connect(func() -> void:
-			var cfg := App.quick_heat_config(App.next_mode)
-			App.start_heat(App.next_mode, cfg)
-		)
-		vbox.add_child(again)
 	var title_btn := Button.new()
 	title_btn.text = "Title"
 	title_btn.add_theme_font_size_override("font_size", 24)

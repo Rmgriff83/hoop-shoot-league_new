@@ -137,9 +137,9 @@ Rules the suite enforces (`CardBudget.problems()`):
    hands its AI *less* card power than the league before it);
 5. no signature hand carries more than one epic-band card.
 
-Simplification, on purpose: the player's inventory is global (cage earnings
-buy beach cards), but the envelope treats each league alone. It is a
-per-league design target, not a wallet model.
+The wallet *is* per league (docs/ECONOMY.md): coins earned in a league are
+spent in that league's shop, and its cards play only there. So the envelope
+is the real thing, not a simplification.
 
 Shipped envelope (2026-09-22): cage allowance 6 (3 signature) → AI 4.2 power
 vs player income 9.9 → parity **0.42** against a target of 0.5 (the open

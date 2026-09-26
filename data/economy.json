@@ -1,0 +1,12 @@
+{
+  "tickets": {
+    "trial": {"base": 6, "per_point": 0.45, "new_best": 10, "location_mult": {"cage": 1.0, "beach": 1.25}},
+    "reference": {"trial_minutes": 1.5, "heat_minutes": 2.5, "avg_score": {"cage": 24, "beach": 18}, "p_win": 0.5},
+    "rate_band_per_min": [6, 14],
+    "tiers": {"entry": [15, 40], "mid": [40, 70], "premium": [70, 115], "grail": [115, 170]},
+    "catalog_hours": [15, 35]
+  },
+  "coins": {
+    "heats_to_afford": {"common": [1.5, 4.5], "rare": [3.0, 8.0], "epic": [6.0, 14.0]}
+  }
+}

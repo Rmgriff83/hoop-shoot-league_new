@@ -17,9 +17,19 @@ func run(t) -> void:
 	t.eq(CardDefs.target_of("fire7"), "self", "fire is a self card")
 	t.eq(CardDefs.target_of("ice"), "opponent", "ice is an opponent card")
 	t.eq(CardDefs.target_of("nope"), "opponent", "unknown → opponent")
-	# Inventory + loadout: slots hold real copies, played cards empty their slot.
-	var d := CardDefs.empty_doc()
-	t.eq(d["v"], CardDefs.DOC_VERSION, "fresh doc carries the version")
+	# The save doc: one bucket per league (docs/ECONOMY.md).
+	var full := CardDefs.empty_doc()
+	t.eq(full["v"], CardDefs.DOC_VERSION, "fresh doc carries the version")
+	t.eq(full["leagues"], {}, "no buckets until a league is touched")
+	var cage := CardDefs.league_doc(full, "cage")
+	t.eq(full["leagues"].keys(), ["cage"], "touching a league creates its bucket")
+	t.eq(int(cage["coins"]), 0, "a bucket starts with no coins")
+	CardDefs.add(cage, "ice", 2)
+	t.eq(CardDefs.count(CardDefs.league_doc(full, "cage"), "ice"), 2, "the bucket is a live reference into the doc")
+	t.eq(CardDefs.count(CardDefs.league_doc(full, "beach"), "ice"), 0, "cage cards never show in the beach bucket")
+	t.eq(CardDefs.coins(full, "beach"), 0, "coins are per league too")
+	# Inventory + loadout on a bucket: slots hold real copies, played cards empty their slot.
+	var d := CardDefs.empty_bucket()
 	t.eq(CardDefs.loadout_ids(d), [], "empty hand")
 	t.ok(not CardDefs.equip(d, 0, "ice"), "cannot equip an unowned card")
 	CardDefs.add(d, "ice", 2)
@@ -51,17 +61,16 @@ func run(t) -> void:
 	CardDefs.add(d, "ice", 1)
 	t.ok(CardDefs.equip(d, 1, "ice"), "replace the slot's copy")
 	t.eq(CardDefs.count(d, "ice"), 1, "the replaced copy went back to the inventory")
-	# Migration of a version-1 doc: one owned copy sat in all three slots.
-	var old := {"updatedAt": 0, "inventory": {"ice": 1}, "loadout": ["ice", "ice", "ice"]}
-	t.ok(CardDefs.migrate(old), "v1 doc migrates")
-	t.eq(old["v"], CardDefs.DOC_VERSION, "stamped v2")
-	t.eq(CardDefs.loadout_slots(old), ["ice", null, null], "only the backed slot survives")
-	t.eq(CardDefs.count(old, "ice"), 0, "its copy left the inventory")
+	# Older docs (one global inventory, one global wallet) are wiped: the
+	# economy is per league now.
+	var old := {"updatedAt": 0, "v": 2, "inventory": {"ice": 3}, "loadout": ["ice", null, "ice"]}
+	t.ok(CardDefs.migrate(old), "a v2 doc migrates")
+	t.eq(old["v"], CardDefs.DOC_VERSION, "stamped v3")
+	t.eq(old.get("leagues", null), {}, "…as an empty per-league doc")
+	t.ok(not old.has("inventory"), "the global inventory is gone")
 	t.ok(not CardDefs.migrate(old), "migrate is idempotent")
-	var old2 := {"updatedAt": 0, "inventory": {"ice": 3}, "loadout": ["ice", null, "ice"]}
-	CardDefs.migrate(old2)
-	t.eq(CardDefs.count(old2, "ice"), 1, "three owned, two equipped → one spare")
-	t.eq(CardDefs.loadout_slots(old2), ["ice", null, "ice"], "slots kept")
+	var v1 := {"updatedAt": 0, "inventory": {"ice": 1}, "loadout": ["ice", "ice", "ice"]}
+	t.ok(CardDefs.migrate(v1) and v1["leagues"] == {}, "a v1 doc is wiped the same way")
 	# Heat: the player ices the AI; the effect refuses a second time.
 	var geo := SimGeometry.arcade()
 	var h := Heat.new({"geo": geo, "seconds": 30.0, "ai": AiRatings.make(0.9, 0.9, 2.0), "seed": 5,

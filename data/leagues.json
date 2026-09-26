@@ -47,7 +47,10 @@
       "rewards": {
         "win_coins": 50,
         "loss_coins": 20,
-        "title_coins": 300
+        "title_coins": 300,
+        "win_tickets": 28,
+        "loss_tickets": 11,
+        "title_tickets": 80
       }
     },
     {
@@ -111,7 +114,10 @@
       "rewards": {
         "win_coins": 60,
         "loss_coins": 25,
-        "title_coins": 400
+        "title_coins": 400,
+        "win_tickets": 35,
+        "loss_tickets": 14,
+        "title_tickets": 100
       }
     }
   ]

@@ -143,7 +143,7 @@ func rebuild_chrome() -> void:
 	menu.pressed.connect(_open_settings)
 	_chrome.add_child(menu)
 	var coins := CoinsPill.new()
-	coins.set_coins(App.coins())
+	coins.set_coins(App.tickets())
 	coins.position = Vector2(720 - MARGIN - HamburgerButton.SIZE - 16 - 170, 32)
 	coins.custom_minimum_size = Vector2(170, 56)
 	_chrome.add_child(coins)
@@ -292,7 +292,7 @@ func _refresh_ticker() -> void:
 		var opp := Campaign.next_opponent(st["doc"])
 		if opp != "":
 			next_up = str(LeagueData.shooter(opp).get("name", ""))
-	_ticker.set_items(HomeTicker.items_from(bests, App.league_states(), App.coins(), next_up))
+	_ticker.set_items(HomeTicker.items_from(bests, App.league_states(), App.tickets(), next_up))
 
 
 # ---- actions ---------------------------------------------------------------------

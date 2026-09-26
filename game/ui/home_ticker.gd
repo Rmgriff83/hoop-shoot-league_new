@@ -3,7 +3,7 @@ extends PanelContainer
 ## The home screen's ticker strip: a flat framed band clipping one label that
 ## scrolls left and wraps seamlessly (the copy is laid twice around a ★
 ## seam). `items_from` builds the copy from the save — bests per area, the
-## league standing and next opponent, the coin balance — in the body face,
+## league standing and next opponent, the ticket balance — in the body face,
 ## so every glyph is one the font has (tested).
 
 const SPEED := 80.0   # px/s
@@ -59,7 +59,7 @@ func _process(dt: float) -> void:
 
 
 ## The copy, from data: bests = [{name, best}], states = App.league_states()
-## rows, coins, and the next opponent's name (or "").
+## rows, tickets, and the next opponent's name (or "").
 static func items_from(bests: Array, states: Array, coins: int, next_up := "") -> PackedStringArray:
 	var out := PackedStringArray()
 	for b in bests:
@@ -73,7 +73,7 @@ static func items_from(bests: Array, states: Array, coins: int, next_up := "") -
 		out.push_back("%s · %s" % [str(st["league"]["name"]).to_upper(), line])
 	if next_up != "":
 		out.push_back("NEXT UP: %s" % next_up.to_upper())
-	out.push_back("%s COINS" % RetroTheme.thousands(coins))
+	out.push_back("%s TICKETS" % RetroTheme.thousands(coins))
 	if out.size() < 3:
 		out.push_back("SWISH FOR 2")
 		out.push_back("KEEP THE STREAK ALIVE")

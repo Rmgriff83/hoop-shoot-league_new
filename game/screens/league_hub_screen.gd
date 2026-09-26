@@ -406,7 +406,7 @@ func _card_button(card: Dictionary, size_: Vector2) -> TextureButton:
 
 func _fill_loadout() -> void:
 	var vb := _list("LOADOUT")
-	var cd := App.cards_doc()
+	var cd := App.cards_bucket(cfg["id"])
 	vb.add_child(_label("EQUIPPED · %d slots · one-time use · tap a slot to put it back" % CardDefs.SLOTS, 18, pal["muted"]))
 	var slots := HBoxContainer.new()
 	slots.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -419,7 +419,7 @@ func _fill_loadout() -> void:
 		if card.is_empty():
 			b.modulate = Color(0.6, 0.6, 0.7)
 		b.pressed.connect(func() -> void:
-			App.unequip_card(i)
+			App.unequip_card(i, cfg["id"])
 			_refresh()
 		)
 		slots.add_child(b)
@@ -441,8 +441,8 @@ func _fill_loadout() -> void:
 		var b := _card_button(card, Vector2(120, 160))
 		b.pressed.connect(func() -> void:
 			for slot in CardDefs.SLOTS:
-				if App.cards_doc()["loadout"][slot] == null:
-					App.equip_card(slot, str(id))
+				if App.cards_bucket(cfg["id"])["loadout"][slot] == null:
+					App.equip_card(slot, str(id), cfg["id"])
 					break
 			_refresh()
 		)
@@ -459,7 +459,8 @@ func _fill_loadout() -> void:
 
 func _fill_shop() -> void:
 	var vb := _list("SHOP")
-	vb.add_child(_label("🪙 %d coins" % App.coins(), 26, pal["accent"]))
+	vb.add_child(_label("%d COINS · %s" % [App.league_coins(cfg["id"]), str(cfg.get("name", "")).to_upper()], 26, pal["accent"]))
+	vb.add_child(_label("coins are earned and spent in this league; its cards play only here", 15, pal["muted"]))
 	vb.add_child(_label("— CARDS —", 20, pal["muted"]))
 	for card in CardDefs.all():
 		var row := HBoxContainer.new()
@@ -472,7 +473,7 @@ func _fill_shop() -> void:
 		var blurb := _label(str(card["blurb"]), 15, pal["muted"], HORIZONTAL_ALIGNMENT_LEFT)
 		blurb.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		col.add_child(blurb)
-		var cdoc := App.cards_doc()
+		var cdoc := App.cards_bucket(cfg["id"])
 		var owned_n := CardDefs.owned(cdoc, str(card["id"]))
 		var spare_n := CardDefs.count(cdoc, str(card["id"]))
 		var owned_txt := "owned ×%d" % owned_n
@@ -480,39 +481,16 @@ func _fill_shop() -> void:
 			owned_txt += " · %d equipped" % (owned_n - spare_n)
 		col.add_child(_label(owned_txt, 15, pal["muted"], HORIZONTAL_ALIGNMENT_LEFT))
 		row.add_child(col)
-		var buy := _small_button("BUY 🪙%d" % int(card["price"]))
+		var buy := _small_button("BUY %d" % int(card["price"]))
 		buy.custom_minimum_size = Vector2(150, 52)
-		buy.disabled = App.coins() < int(card["price"])
+		buy.disabled = App.league_coins(cfg["id"]) < int(card["price"])
 		buy.pressed.connect(func() -> void:
-			if App.try_buy_card(card["id"]):
+			if App.try_buy_card(card["id"], cfg["id"]):
 				_refresh()
 		)
 		row.add_child(buy)
 		vb.add_child(row)
-	vb.add_child(_label("— HOOPS & BALLS —", 20, pal["muted"]))
-	for kind in ["hoop", "ball"]:
-		var sets: Array = CosmeticLibrary.hoops() if kind == "hoop" else CosmeticLibrary.balls()
-		for cs in sets:
-			var row := HBoxContainer.new()
-			row.add_theme_constant_override("separation", 16)
-			var owned := App.owns(kind, cs.id)
-			var selected: bool = (App.hoop_set.id if kind == "hoop" else App.ball_set.id) == cs.id
-			var col := VBoxContainer.new()
-			col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			col.add_child(_label("%s · %s%s" % [cs.display_name, kind, "  ✓ in use" if selected else ""], 20, pal["text"], HORIZONTAL_ALIGNMENT_LEFT))
-			row.add_child(col)
-			var btn := _small_button(("USE" if not selected else "IN USE") if owned else "BUY 🪙%d" % cs.price_coins)
-			btn.custom_minimum_size = Vector2(150, 52)
-			btn.disabled = selected or (not owned and App.coins() < cs.price_coins)
-			btn.pressed.connect(func() -> void:
-				if owned:
-					App.select(kind, cs.id)
-				else:
-					App.try_buy(kind, cs.id)
-				_refresh()
-			)
-			row.add_child(btn)
-			vb.add_child(row)
+	vb.add_child(_label("balls and hoops are in the LOCKER on the home page, for tickets", 15, pal["muted"]))
 
 
 # ---- RECORDS ----
