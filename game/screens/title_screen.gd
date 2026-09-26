@@ -5,8 +5,10 @@ extends Node3D
 ## the top bar (LVL01 + meter, the locker icon, the coins pill, the menu),
 ## the AREA ZONE — the top two thirds: the difficulty and the area's name
 ## (with the ranks icon) at its top, big chevrons at the screen edges to page
-## — the LEAGUE card with its status line, the TIME TRIAL / PRACTICE pair,
-## and the ticker at the very bottom. No bottom nav (the phone's safe area
+## — the CARD AREA (the LEAGUE card with its status line and the TIME TRIAL /
+## PRACTICE pair; tapping LEAGUE grows the area up under the name, slides the
+## cards out and the league in context in: LeagueContext), and the ticker at
+## the very bottom. No bottom nav (the phone's safe area
 ## would push one up). Cards are flat and sharp-cornered. Two palettes (RetroTheme,
 ## App.dark_mode) over one layout; the chrome rebuilds in place when the
 ## setting flips. One court lives at a time: a page turn covers the screen,
@@ -27,7 +29,13 @@ const CHEVRON_SIZE := Vector2(112, 176)
 ## the very bottom. Chevrons centre in the gap between the zone and the cards.
 const LEAGUE_H := 148.0
 const PAIR_H := 176.0
-const CARDS_Y := 1280.0 - HomeTicker.HEIGHT - 32.0 - (LEAGUE_H + 20.0 + PAIR_H)
+const CARDS_H := LEAGUE_H + 20.0 + PAIR_H
+const AREA_W := 654.0
+const AREA_BOTTOM := 1280.0 - HomeTicker.HEIGHT - 26.0
+const CARDS_Y := AREA_BOTTOM - 6.0 - CARDS_H
+## The card area opens up to just under the area name (the league in context).
+const AREA_TOP_OPEN := ZONE_Y + ZONE_H + 30.0
+const OPEN_S := 0.3
 const CHEVRON_Y := (ZONE_Y + ZONE_H + CARDS_Y) / 2.0 - CHEVRON_SIZE.y / 2.0
 
 var _index := 0
@@ -41,6 +49,12 @@ var _cover: ColorRect
 var _area_caps: Label
 var _area_name: Label
 var _cards_row: VBoxContainer
+var _area: Control
+var _league: LeagueContext
+var _open := false
+var _open_frac := 0.0
+var _prev: Button
+var _next: Button
 var _ticker: HomeTicker
 var _settings: SettingsPanel
 var _switching := false
@@ -62,9 +76,18 @@ func _ready() -> void:
 	_cover.color = Color(RetroTheme.c("ink"), 0.0)
 	_cover.set_anchors_preset(Control.PRESET_FULL_RECT)
 	_cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# CONTINUE SEASON (and start_league) land here with a league to open.
+	var deep := App.home_open_league
+	if deep != "":
+		App.home_open_league = ""
+		for i in CARDS.size():
+			if LeagueData.league(deep).get("location", "") == CARDS[i]["area"]:
+				_index = i
 	rebuild_chrome()
 	_ui.add_child(_cover)
 	_build_court(_index)
+	if deep != "" and App.enter_league(deep):
+		_open_league(true)
 
 
 func _process(dt: float) -> void:
@@ -188,22 +211,31 @@ func rebuild_chrome() -> void:
 		tw.tween_interval(0.8)
 		tw.tween_callback(func() -> void: soon.visible = false)
 	)
-	var prev := _chevron("<", -1)
-	prev.position = Vector2(8, CHEVRON_Y)
-	_chrome.add_child(prev)
-	var next := _chevron(">", 1)
-	next.position = Vector2(720 - 8 - CHEVRON_SIZE.x, CHEVRON_Y)
-	_chrome.add_child(next)
+	_prev = _chevron("<", -1)
+	_prev.position = Vector2(8, CHEVRON_Y)
+	_chrome.add_child(_prev)
+	_next = _chevron(">", 1)
+	_next.position = Vector2(720 - 8 - CHEVRON_SIZE.x, CHEVRON_Y)
+	_chrome.add_child(_next)
 
-	# The cards.
+	# The card area: the home cards, and the league in context when open.
+	_area = Control.new()
+	_area.name = "Area"
+	_area.clip_contents = true
+	_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chrome.add_child(_area)
 	_cards_row = VBoxContainer.new()
 	_cards_row.name = "Cards"
-	_cards_row.position = Vector2(MARGIN, CARDS_Y)
-	_cards_row.size = Vector2(COLUMN_W, LEAGUE_H + 20 + PAIR_H)
+	_cards_row.size = Vector2(COLUMN_W, CARDS_H)
 	_cards_row.add_theme_constant_override("separation", 20)
 	_cards_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_chrome.add_child(_cards_row)
+	_area.add_child(_cards_row)
 	_fill_cards()
+	if _open and _league == null:
+		_league = _make_league()
+	elif _league != null and _league.get_parent() != _area:
+		_area.add_child(_league)
+	_apply_area(_open_frac)
 
 	# The ticker sits at the very bottom (no bottom nav: the safe area would
 	# push one up on the phone).
@@ -241,6 +273,72 @@ func _fill_cards() -> void:
 
 
 ## A big edge chevron over the court: no panel, cream with an ink outline.
+## Lay the area out for an openness fraction: 0 = home cards, 1 = league.
+func _apply_area(f: float) -> void:
+	_open_frac = f
+	var top := lerpf(CARDS_Y, AREA_TOP_OPEN, f)
+	_area.position = Vector2(MARGIN, top)
+	_area.size = Vector2(AREA_W, AREA_BOTTOM - top)
+	_cards_row.position = Vector2(-1.1 * AREA_W * f, _area.size.y - 6.0 - CARDS_H)
+	if _league != null:
+		_league.position = Vector2(1.1 * AREA_W * (1.0 - f), 0)
+		_league.size = _area.size
+	var home := f < 0.5
+	if _prev != null:
+		_prev.visible = home
+		_next.visible = home
+	if _area_caps != null:
+		_update_zone()
+
+
+func _make_league() -> LeagueContext:
+	var lc := LeagueContext.new()
+	lc.name = "League"
+	lc.setup(str(CARDS[_index]["area"]))
+	lc.closed.connect(_close_league)
+	lc.changed.connect(func() -> void:
+		_update_zone()
+		_refresh_ticker()
+	)
+	_area.add_child(lc)
+	return lc
+
+
+## LEAGUE tapped: grow the area up under the area name and slide the league in.
+func _open_league(instant := false) -> void:
+	if _open or _switching:
+		return
+	if not App.enter_league(str(CARDS[_index]["area"])):
+		return
+	_open = true
+	if _league == null:
+		_league = _make_league()
+	if instant:
+		_apply_area(1.0)
+		return
+	var tw := create_tween()
+	tw.tween_method(_apply_area, _open_frac, 1.0, OPEN_S).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
+## "<" in the league: slide it out, drop the area back to the home cards.
+func _close_league() -> void:
+	if not _open:
+		return
+	_open = false
+	var tw := create_tween()
+	tw.tween_method(_apply_area, _open_frac, 0.0, OPEN_S).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	await tw.finished
+	if _league != null and not _open:
+		_league.queue_free()
+		_league = null
+	_fill_cards()
+	_refresh_ticker()
+
+
+func is_league_open() -> bool:
+	return _open
+
+
 func _chevron(text: String, dir: int) -> Button:
 	var b := Button.new()
 	b.name = "Prev" if dir < 0 else "Next"
@@ -259,7 +357,12 @@ func _chevron(text: String, dir: int) -> Button:
 func _update_zone() -> void:
 	var arena := CosmeticLibrary.get_arena(str(CARDS[_index]["area"]))
 	_area_name.text = (arena.display_name if arena != null else str(CARDS[_index]["area"])).to_upper()
-	_area_caps.text = str(arena.title_tier).to_upper() if arena != null else ""
+	if _open:
+		var st := _league_state(str(CARDS[_index]["area"]))
+		var nm := str(st["league"]["name"]).to_upper() if not st.is_empty() else "LEAGUE"
+		_area_caps.text = "%s · %s" % [nm, ModeCards.league_line(st)]
+	else:
+		_area_caps.text = str(arena.title_tier).to_upper() if arena != null else ""
 
 
 func headline() -> String:
@@ -304,7 +407,7 @@ func _pick(mode: String) -> void:
 	App.home_card = _index
 	var area := str(CARDS[_index]["area"])
 	if mode == "league":
-		App.start_league(area)
+		_open_league()
 	else:
 		App.start_area(mode, area)
 
@@ -333,6 +436,8 @@ func _open_settings() -> void:
 
 ## A horizontal drag on the scrim turns the page (cards above it take their taps).
 func _on_swipe(ev: InputEvent) -> void:
+	if _open:
+		return
 	if ev is InputEventScreenTouch or ev is InputEventMouseButton:
 		if ev.pressed:
 			_drag_x = ev.position.x
@@ -347,7 +452,7 @@ func _on_swipe(ev: InputEvent) -> void:
 
 ## Page turn: cover the screen, rebuild the court, refresh the chrome, uncover.
 func _switch(dir: int) -> void:
-	if _switching or CARDS.size() < 2:
+	if _switching or _open or CARDS.size() < 2:
 		return
 	_switching = true
 	_cover.color = Color(RetroTheme.c("ink"), 0.0)

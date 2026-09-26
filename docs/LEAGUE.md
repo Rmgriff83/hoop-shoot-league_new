@@ -80,14 +80,15 @@ held back for a later league. `LeagueData` loads and validates both.
 **Persistence** — save parts `campaign` (`{leagues: {league_id: doc}, records}`) and
 `liveGames` (the player's last 50 heat box scores, best-first per league), both dirty-tracked.
 
-**App** — `start_league(id)` creates the campaign on first visit and opens the dashboard;
+**App** — `enter_league(id)` creates the campaign on first visit and makes it current (the
+dashboard is the home page's league context, `docs/HOME.md`); `start_league(id)` also goes there;
 `start_league_heat()` builds the heat config (opponent card + ratings, league format, a seed
 from season seed + game) and `finish_heat` applies the result (season, career, live games,
 the league's coins and tickets from its `rewards`, docs/ECONOMY.md) before the result screen, whose Continue returns to the
 dashboard. `LEAGUE_GATING` is false: unlock rules are evaluated and displayed, not enforced.
 
-**Dashboard** — `game/screens/league_hub_screen.gd`: header (league, season/day or round, EXIT),
-tabs HEAT (opponent's shooter card, PLAY HEAT / SIM THIS DAY / SIM TO PLAYOFFS, series score,
+**Dashboard** — `game/ui/league_context.gd` on the home page (2026-09-25; the full-screen
+`league_hub_screen` is gone). Tabs HEAT (opponent's shooter card, PLAY HEAT / SIM THIS DAY / SIM TO PLAYOFFS, series score,
 ADVANCE LEAGUE when out, START SEASON N+1 when done), STANDINGS (with clinch marks and streak
 flames/ice), SCHEDULE (your 14 games + playoff games, today marked), BRACKET, RECORDS (career,
 best heats, the location's time-trial board). Title → LEAGUE → area page shows each league's

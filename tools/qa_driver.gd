@@ -110,6 +110,16 @@ func _run_title() -> void:
 	await _click_button_named("<")
 	await _sleep(1.2)
 	await _snap("title_cage_back")
+	# The league in context: open it, walk the tabs, close it.
+	await _click_button_named("LEAGUE")
+	await _sleep(0.8)
+	await _snap("title_league_heat")
+	for tab in ["TABLE", "SCHED", "CARDS", "STATS"]:
+		await _click_button_named(tab)
+		await _sleep(0.6)
+		await _snap("title_league_" + tab.to_lower())
+	await _click_button_named("<")
+	await _sleep(0.8)
 	# The locker (an IconButton has no text: click it by name).
 	var locker: Button = get_tree().root.find_child("Locker", true, false)
 	if locker != null:

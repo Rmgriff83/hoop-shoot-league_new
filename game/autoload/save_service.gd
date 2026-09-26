@@ -119,6 +119,8 @@ func league_doc(league_id: String) -> Dictionary:
 
 func put_league_doc(league_id: String, doc: Dictionary) -> void:
 	var c := get_campaign()
+	if not c.has("leagues"):   # an unloaded part (headless tests) starts empty
+		c = default_campaign()
 	if doc.get("id", "") == "":
 		doc["id"] = uuid4()
 	c["leagues"][league_id] = doc

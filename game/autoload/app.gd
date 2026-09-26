@@ -9,7 +9,6 @@ const TIME_TRIAL_SCENE := "res://game/screens/time_trial_screen.tscn"
 const RESULTS_SCENE := "res://game/screens/results_screen.tscn"
 const HEAT_SCENE := "res://game/screens/heat_screen.tscn"
 const HEAT_RESULT_SCENE := "res://game/screens/heat_result_screen.tscn"
-const LEAGUE_HUB_SCENE := "res://game/screens/league_hub_screen.tscn"
 const CREDITS_SCENE := "res://game/screens/credits_screen.tscn"
 ## The intro loop (title + credits); an area's ambience replaces it.
 const TITLE_MUSIC := {"id": "title", "clip": "res://assets/music/title_moog.ogg", "gain_db": -15.0}
@@ -21,6 +20,9 @@ const LEAGUE_GATING := false
 var current_league := ""
 ## The home screen's last card (page index), so leaving an area returns to it.
 var home_card := 0
+## A league the home page should open straight into (its id), set by
+## to_league_hub() — the heat result's CONTINUE SEASON. Cleared once used.
+var home_open_league := ""
 
 ## Stats of the run that just ended, for the results screen.
 var last_run: Dictionary = {}
@@ -414,24 +416,33 @@ func save_league_doc(doc: Dictionary, id := "") -> void:
 	SaveService.put_league_doc(id if id != "" else current_league, doc)
 
 
-## Enter a league: create its campaign on first visit, then open the dashboard.
-func start_league(id: String) -> void:
+## Make a league current (creating its campaign on first visit) — no scene
+## change: the home page opens the league in place (LeagueContext).
+func enter_league(id: String) -> bool:
 	var cfg := LeagueData.league(id)
 	if cfg.is_empty():
-		return
+		return false
 	current_league = id
 	if league_doc(id).is_empty():
 		var seed_v := int(Time.get_ticks_usec() % 2147483647)
 		save_league_doc(Campaign.new_doc(cfg, seed_v, Time.get_unix_time_from_system() * 1000.0), id)
-	to_league_hub()
+	return true
+
+
+## Enter a league and go to the home page with it open.
+func start_league(id: String) -> void:
+	if enter_league(id):
+		to_league_hub()
 
 
 func to_credits() -> void:
 	get_tree().change_scene_to_file(CREDITS_SCENE)
 
 
+## The "dashboard" is the home page with the current league open in context.
 func to_league_hub() -> void:
-	get_tree().change_scene_to_file(LEAGUE_HUB_SCENE)
+	home_open_league = current_league
+	to_title()
 
 
 ## The heat config for the player's next league game: the opponent's card and

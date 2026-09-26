@@ -50,12 +50,24 @@ hard one); the pill shows TICKETS, the locker money.
   horizontal swipe. A page turn (arrows or swipe) fades a full-screen ink
   cover, rebuilds the court, refreshes the zone, cards and ticker, and
   fades back. `App.home_card` keeps the page. No SubViewport.
+- **The league in context** (`game/ui/league_context.gd`, `LeagueContext`;
+  design "Home League Context v2"): tapping LEAGUE grows the card area up to
+  just under the area name, slides the home cards out left and the league
+  in from the right — a tab row `<` HEAT · TABLE · SCHED · CARDS · STATS over
+  panes that slide sideways. It IS the league dashboard now (the full-screen
+  hub is gone): the next heat with the opponent card, PLAY HEAT, SIM DAY /
+  SIM ALL, playoffs, advance, next season; the table or bracket; the
+  schedule; this league's cards (loadout + shop, this league's coins); the
+  career, best heats and time-trial records. `App.enter_league(id)` makes a
+  league current without a scene change; `App.to_league_hub()` (CONTINUE
+  SEASON after a heat) lands on the home with it open. While open the zone's
+  caps read `LEAGUE NAME · status`, the chevrons hide, the swipe is off.
 - **Cards** (`game/ui/mode_cards.gd`, `ModeCards`): Buttons with a label
   stack. `league_line(state)` is the LEAGUE sub-line from an
   `App.league_states()` row: `NEW LEAGUE`, `LOCKED · TOP 4 IN THE ARCADE
   LEAGUE`, `SEASON 1 · DAY 1 · TIP OFF`, `SEASON 2 · DAY 4 · 3RD PLACE`,
   `SEASON 2 · SEMIS 1-0`, `SEASON 2 · CHAMPIONS`, `SEASON 2 · DONE · 5TH
-  PLACE`. LEAGUE → `App.start_league(area)`; TIME TRIAL / PRACTICE →
+  PLACE`. LEAGUE → opens the league in context; TIME TRIAL / PRACTICE →
   `App.start_area(mode, area)`. **Quick heat is not on the home screen** (it
   lives in the league hub; `AREA_MODES["heat"]` stays).
 - **Ticker** (`game/ui/home_ticker.gd`, `HomeTicker`): `items_from(bests,

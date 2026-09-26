@@ -185,6 +185,33 @@ func _widgets(t) -> void:
 	else:
 		t.eq(locker.in_use_row(), "Ball_classic", "no save (headless): the starter reads as in use")
 	locker.close()
+	# The league in context: enter without a scene change, build the panel.
+	var was_league: String = app.current_league
+	t.ok(app.enter_league("cage"), "entering the cage league succeeds")
+	t.eq(app.current_league, "cage", "the league is current")
+	t.ok(not app.league_doc("cage").is_empty(), "its campaign exists")
+	t.ok(not app.enter_league("nope"), "an unknown league is refused")
+	var lc := LeagueContext.new()
+	lc.setup("cage")
+	for tab in LeagueContext.TABS:
+		t.ok(lc.find_child("Tab_" + tab, true, false) != null, "league context has the %s tab" % tab)
+	t.ok(lc.find_child("Back", true, false) != null, "league context has its back button")
+	t.eq(lc.current_tab(), "HEAT", "opens on HEAT")
+	t.ok(lc.find_child("Opponent", true, false) != null, "HEAT shows the next opponent")
+	t.ok(lc.find_child("PlayHeat", true, false) != null, "HEAT has PLAY HEAT")
+	t.ok(lc.find_child("SimDay", true, false) != null and lc.find_child("SimAll", true, false) != null, "HEAT has the sim pair in season")
+	t.ok(lc.find_child("Row_8", true, false) != null, "TABLE lists eight rows")
+	t.ok(lc.find_child("Schedule", true, false) != null, "SCHED has its panel")
+	t.ok(lc.find_child("Slot_2", true, false) != null, "CARDS shows three slots")
+	t.ok(lc.find_child("Career", true, false) != null, "STATS has the career grid")
+	lc._show_tab("STATS")
+	t.eq(lc.current_tab(), "STATS", "tabs switch")
+	var closed := []
+	lc.closed.connect(func() -> void: closed.push_back(true))
+	(lc.find_child("Back", true, false) as Button).pressed.emit()
+	t.eq(closed.size(), 1, "back emits closed")
+	lc.free()
+	app.current_league = was_league
 	var panel := SettingsPanel.new()
 	panel._ready()
 	t.ok(panel.has_dark_mode(), "settings has the dark-mode row")
