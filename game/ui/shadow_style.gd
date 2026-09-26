@@ -7,7 +7,9 @@ extends RefCounted
 ## ink on paper rather than a flat block. The edge stays flat.
 ## Only the L-shaped strip past the face is painted, so the face stays
 ## transparent. Pressing drops the face onto its shadow. Used by ShadowCard
-## (the mode cards) and the top-bar elements.
+## (the mode cards), ShadowPanel and the top-bar elements. `draw` is the
+## one-colour form; `draw_ex` takes the edge, fill, dot and shadow colours
+## apart (a solid cream tab with an orange shadow, a pine card at 30 %).
 
 const OFFSET := 6.0
 const EDGE := 2.0
@@ -51,34 +53,45 @@ static func dither_tex() -> ImageTexture:
 	return _tex
 
 
-## Draw the style into `ci` (which must have texture_repeat enabled).
+## Draw the one-colour style into `ci` (which must have texture_repeat enabled).
 static func draw(ci: CanvasItem, size: Vector2, color: Color, pressed: bool, hovered: bool, disabled: bool) -> void:
+	draw_ex(ci, size, color, Color(color, TINT), Color(color, DOT_ALPHA), Color(color, SHADOW_ALPHA), pressed, hovered, disabled)
+
+
+## The style with its colours apart: `edge` (the flat line), `fill` (the
+## face, alpha = the tint), `dot` (the face texture) and `shadow` (the
+## dithered L strip). The face is size − OFFSET; the strip fills the rest.
+static func draw_ex(ci: CanvasItem, size: Vector2, edge: Color, fill: Color, dot: Color, shadow: Color,
+		pressed: bool, hovered: bool, disabled: bool) -> void:
 	var w := size.x - OFFSET
 	var h := size.y - OFFSET
-	var col := color if not disabled else color.darkened(0.45)
-	var tex := dither_tex()
+	if disabled:
+		edge = edge.darkened(0.45)
+		fill = fill.darkened(0.45)
+		dot = dot.darkened(0.45)
+		shadow = shadow.darkened(0.45)
 	if pressed:
-		var face := Rect2(Vector2(OFFSET, OFFSET), Vector2(w, h))
-		_face(ci, face, col, TINT * 2.5)
+		_face(ci, Rect2(Vector2(OFFSET, OFFSET), Vector2(w, h)), edge, Color(fill, minf(1.0, fill.a * 2.5)), dot)
 		return
-	var sh := Color(col, SHADOW_ALPHA)
-	ci.draw_texture_rect(tex, Rect2(Vector2(w, OFFSET), Vector2(OFFSET, h)), true, sh)
-	ci.draw_texture_rect(tex, Rect2(Vector2(OFFSET, h), Vector2(w - OFFSET, OFFSET)), true, sh)
-	_face(ci, Rect2(Vector2.ZERO, Vector2(w, h)), col, TINT * (1.5 if hovered else 1.0))
+	var tex := dither_tex()
+	ci.draw_texture_rect(tex, Rect2(Vector2(w, OFFSET), Vector2(OFFSET, h)), true, shadow)
+	ci.draw_texture_rect(tex, Rect2(Vector2(OFFSET, h), Vector2(w - OFFSET, OFFSET)), true, shadow)
+	_face(ci, Rect2(Vector2.ZERO, Vector2(w, h)), edge, Color(fill, minf(1.0, fill.a * (1.5 if hovered else 1.0))), dot)
 
 
-## The face: a faint tint, a subtle dotted texture over it, a flat solid edge.
-static func _face(ci: CanvasItem, face: Rect2, col: Color, tint: float) -> void:
-	ci.draw_rect(face, Color(col, tint))
-	ci.draw_texture_rect(dot_tex(), face, true, Color(col, DOT_ALPHA))
-	ci.draw_rect(face, col, false, EDGE)
+## The face: the fill, the dotted texture over it, a flat solid edge.
+static func _face(ci: CanvasItem, face: Rect2, edge: Color, fill: Color, dot: Color) -> void:
+	ci.draw_rect(face, fill)
+	ci.draw_texture_rect(dot_tex(), face, true, dot)
+	ci.draw_rect(face, edge, false, EDGE)
 
 
 ## Content margins that keep children inside the face, clear of the shadow.
-static func margins(pad: float) -> StyleBoxEmpty:
+static func margins(pad: float, pad_h := -1.0) -> StyleBoxEmpty:
 	var sb := StyleBoxEmpty.new()
-	sb.content_margin_left = pad
+	var ph := pad if pad_h < 0.0 else pad_h
+	sb.content_margin_left = ph
 	sb.content_margin_top = pad
-	sb.content_margin_right = pad + OFFSET
+	sb.content_margin_right = ph + OFFSET
 	sb.content_margin_bottom = pad + OFFSET
 	return sb

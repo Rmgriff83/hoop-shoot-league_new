@@ -52,8 +52,19 @@ func _theme(t) -> void:
 	t.eq(over.get_theme_constant("outline_size"), RetroTheme.OUTLINE, "on-scene text carries an ink outline")
 	over.free()
 	for id in ["cage", "beach"]:
-		t.ok(str(CosmeticLibrary.get_arena(id).title_tier) != "", "%s names its difficulty" % id)
-	t.eq(CosmeticLibrary.get_arena("cage").title_tier, "EASY LEVEL", "the cage is the easy level")
+		t.ok(int(CosmeticLibrary.get_arena(id).title_stars) >= 1, "%s rates its difficulty in stars" % id)
+	t.eq(int(CosmeticLibrary.get_arena("cage").title_stars), 1, "the cage is one star")
+	t.ok(int(CosmeticLibrary.get_arena("beach").title_stars) > int(CosmeticLibrary.get_arena("cage").title_stars), "the beach is harder")
+	for icon in ["ball", "coin", "jersey", "multiplayer", "star", "stopwatch", "trophy"]:
+		t.ok(ResourceLoader.exists("res://assets/ui/icon_%s.png" % icon), "icon_%s ships" % icon)
+	var solid := ShadowCard.solid(RetroTheme.SCENE_TEXT, RetroTheme.TAN, RetroTheme.LIGHT["orange"])
+	t.eq(solid.fill, RetroTheme.SCENE_TEXT, "a solid card fills its face")
+	t.ok(solid.shadow.r > solid.shadow.b, "with its own shadow colour")
+	solid.free()
+	var dl := RetroTheme.dithered(Label.new())
+	t.ok(dl.material is ShaderMaterial and (dl.material as ShaderMaterial).shader != null, "a dithered label carries the checker shader")
+	t.eq(dl.get_theme_constant("shadow_offset_x"), int(RetroTheme.TEXT_SHADOW.x), "its shadow sits at the design offset")
+	dl.free()
 	t.eq(RetroTheme.thousands(1240), "1,240", "thousands separator")
 	t.eq(RetroTheme.thousands(999), "999", "no separator under a thousand")
 	t.eq(RetroTheme.thousands(1234567), "1,234,567", "millions")
@@ -77,6 +88,7 @@ func _dark_mode(t) -> void:
 
 
 func _league_line(t) -> void:
+	_summary(t)
 	t.eq(ModeCards.league_line({}), "NEW LEAGUE", "no league state → new")
 	var cage := LeagueData.league("cage")
 	t.eq(ModeCards.league_line({"league": cage, "unlocked": true, "doc": {}}), "NEW LEAGUE", "no campaign → new")
@@ -100,6 +112,67 @@ func _league_line(t) -> void:
 	doc["season"]["championId"] = "brickport"
 	line = ModeCards.league_line(st)
 	t.ok(line.begins_with("SEASON 1 · DONE · ") and line.ends_with(" PLACE"), "season over, your place (%s)" % line)
+
+
+## The LEAGUE card's copy and the floats through every phase.
+func _summary(t) -> void:
+	var cage := LeagueData.league("cage")
+	var fresh := LeagueSummary.card({"league": cage, "unlocked": true, "doc": {}})
+	t.eq(fresh["top"], "ARCADE LEAGUE", "the card names the league")
+	t.eq(fresh["sub"], "NEW LEAGUE", "a new league says so")
+	t.eq(fresh["next_right"], "DAY 1 OF 14", "and counts the season (%s)" % fresh["next_right"])
+	var locked := LeagueSummary.card({"league": LeagueData.league("beach"), "unlocked": false, "doc": {}})
+	t.eq(locked["sub"], "LOCKED", "a locked league says so")
+	t.eq(locked["next_left"], "TOP 4 IN THE ARCADE LEAGUE", "and names the rule")
+	t.eq(Array(locked["stats"]).size(), 0, "with no numbers")
+	var doc := Campaign.new_doc(cage, 7, 1000)
+	var st := {"league": cage, "unlocked": true, "doc": doc}
+	var c := LeagueSummary.card(st)
+	t.eq(c["sub"], "SEASON 1", "in season: the season")
+	t.eq(Array(c["stats"]).size(), 3, "three numbers")
+	t.eq(c["stats"][0], {"v": "0-0", "l": "RECORD"}, "record first")
+	t.eq(c["stats"][1]["v"], "-", "no place before a game")
+	t.ok(str(c["next_left"]).begins_with("NEXT · "), "the next game (%s)" % c["next_left"])
+	t.eq(c["next_right"], "DAY 1 OF 14", "day of the season")
+	var up := LeagueSummary.upcoming(doc, cage, 3)
+	t.eq(up.size(), 3, "three upcoming cards")
+	t.eq(up[0]["day"], "D1", "the first is today")
+	t.eq(up[0]["tag"], "TODAY", "tagged")
+	t.eq(up[1]["tag"], "", "the next is not")
+	t.ok(str(up[0]["name"]).begins_with("@ ") or str(up[0]["name"]).begins_with("VS "), "home or away (%s)" % up[0]["name"])
+	var sp := LeagueSummary.spot(doc, cage)
+	t.eq(sp["big"], "-", "no spot before a game")
+	var result := {"won": true, "player_score": 28, "ai_score": 15, "ot": 0,
+		"sides": {"player": {"score": 28, "makes": 20, "swishes": 6, "attempts": 30, "bestStreak": 7, "bonus": 4, "iced": 0},
+			"ai": {"score": 15, "makes": 12, "swishes": 2, "attempts": 25, "bestStreak": 3, "bonus": 0, "iced": 1}}}
+	Campaign.apply_live_result(doc, cage, result, 2000)
+	c = LeagueSummary.card(st)
+	t.eq(c["stats"][0]["v"], "1-0", "a win in the record")
+	t.eq(c["stats"][2]["v"], "W1", "and the streak")
+	t.eq(c["next_right"], "DAY 2 OF 14", "the day moved on")
+	sp = LeagueSummary.spot(doc, cage)
+	t.eq(sp["cap"], "YOUR SPOT", "the table float")
+	t.ok(str(sp["big"]).ends_with("ST") or str(sp["big"]).ends_with("ND") or str(sp["big"]).ends_with("RD") or str(sp["big"]).ends_with("TH"), "a place (%s)" % sp["big"])
+	t.ok(str(sp["line1"]).begins_with("1-0 · "), "record and games back (%s)" % sp["line1"])
+	var ss := LeagueSummary.season_stats(doc)
+	t.eq(ss[1], {"v": "28", "l": "HIGH PTS"}, "season high points")
+	Campaign.sim_to_playoffs(doc, cage)
+	c = LeagueSummary.card(st)
+	t.ok(str(c["sub"]).ends_with("PLAYOFFS") or str(c["sub"]).ends_with("OVER"), "playoffs (%s)" % c["sub"])
+	sp = LeagueSummary.spot(doc, cage)
+	t.ok(sp["cap"] == "PLAYOFFS" or str(sp["cap"]).begins_with("SEASON"), "the playoff spot (%s)" % str(sp))
+	up = LeagueSummary.upcoming(doc, cage, 3)
+	t.eq(up.size(), 3, "still three cards")
+	doc["season"]["phase"] = Season.PHASE_DONE
+	doc["season"]["championId"] = Campaign.PLAYER
+	doc["career"]["championships"] = 1
+	c = LeagueSummary.card(st)
+	t.eq(c["titles"], 1, "a title counts")
+	t.eq(c["sub"], "SEASON 1 · OVER", "season over")
+	t.eq(c["stats"][2]["v"], "CHAMPS", "champions")
+	t.eq(LeagueSummary.spot(doc, cage)["line2"], "CHAMPIONS", "the spot says so")
+	t.eq(LeagueSummary.upcoming(doc, cage, 3)[0]["name"], "SEASON 2", "next season is up")
+	t.eq(LeagueSummary.short_name("brickport"), "MO", "a shooter's short name (%s)" % LeagueSummary.team_name("brickport"))
 
 
 func _ticker(t) -> void:
@@ -145,7 +218,7 @@ func _widgets(t) -> void:
 	badge.set_level(7, 0.5)
 	t.eq(badge.level_text(), "LVL07", "level pads to two digits")
 	badge.free()
-	for kind in ["locker", "ranks", "shop"]:
+	for kind in ["locker", "ranks", "shop", "multi"]:
 		var ib := IconButton.new(kind)
 		t.eq(ib.kind, kind, "%s icon button builds" % kind)
 		ib.free()
@@ -156,10 +229,23 @@ func _widgets(t) -> void:
 	var app = _app()
 	if app == null:
 		return
-	var league := ModeCards.league_card({"league": LeagueData.league("cage"), "unlocked": true, "doc": {}})
+	var league := ModeCards.league_card({"league": LeagueData.league("cage"), "unlocked": true, "doc": {}}, [null, null, null])
 	t.eq(ModeCards.sub_text(league), "NEW LEAGUE", "league card sub-line")
 	t.ok(league.find_child("Chevron", true, false) != null, "league card has its chevron")
+	t.ok(ModeCards.enter_button(league) != null, "and its ENTER LEAGUE button")
+	t.ok(league.find_child("Trophies", true, false) == null, "no trophies without a title")
+	t.eq(league.find_child("Chips", true, false).get_child_count(), 3, "three loadout chips")
+	t.eq(league.find_child("Stats", true, false).get_child_count(), 3, "three numbers")
 	league.free()
+	var cage_doc := Campaign.new_doc(LeagueData.league("cage"), 3, 0)
+	cage_doc["career"]["championships"] = 7
+	var champ := ModeCards.league_card({"league": LeagueData.league("cage"), "unlocked": true, "doc": cage_doc}, ["fire7", null, null])
+	var trophies: Control = champ.find_child("Trophies", true, false)
+	t.ok(trophies != null and trophies.get_child_count() == ModeCards.MAX_TROPHIES + 1, "seven titles: five trophies and a +2")
+	t.ok(champ.find_child("Titles", true, false) != null and (champ.find_child("Titles", true, false) as Label).text == "7 TITLES", "the header counts them")
+	t.ok(champ.find_child("Chips", true, false).get_child(0) is ModeCards.Chip, "an equipped card is a chip")
+	t.ok(not (champ.find_child("Chips", true, false).get_child(1) is ModeCards.Chip), "an empty slot is the dashed plus")
+	champ.free()
 	var trial := ModeCards.trial_card(29)
 	t.eq(ModeCards.sub_text(trial), "BEST 29", "trial card shows the best")
 	trial.free()
@@ -196,16 +282,25 @@ func _widgets(t) -> void:
 	for tab in LeagueContext.TABS:
 		t.ok(lc.find_child("Tab_" + tab, true, false) != null, "league context has the %s tab" % tab)
 	t.ok(lc.find_child("Back", true, false) != null, "league context has its back button")
-	t.eq(lc.current_tab(), "HEAT", "opens on HEAT")
-	t.ok(lc.find_child("Opponent", true, false) != null, "HEAT shows the next opponent")
-	t.ok(lc.find_child("PlayHeat", true, false) != null, "HEAT has PLAY HEAT")
-	t.ok(lc.find_child("SimDay", true, false) != null and lc.find_child("SimAll", true, false) != null, "HEAT has the sim pair in season")
+	t.eq(lc.current_tab(), "HEAT", "opens on the match")
+	t.eq((lc.find_child("Tab_HEAT", true, false) as Button).text, "MATCH", "the first tab reads MATCH")
+	t.ok(lc.find_child("Opponent", true, false) != null, "MATCH shows the next opponent")
+	t.ok(lc.find_child("PlayHeat", true, false) != null, "MATCH has PLAY")
+	t.ok(lc.find_child("SimDay", true, false) == null and lc.find_child("SimAll", true, false) == null, "no sim buttons: every game is played")
 	t.ok(lc.find_child("Row_8", true, false) != null, "TABLE lists eight rows")
+	t.ok(lc.find_child("Standings", true, false) is ShadowPanel, "the table is a see-through panel")
 	t.ok(lc.find_child("Schedule", true, false) != null, "SCHED has its panel")
-	t.ok(lc.find_child("Slot_2", true, false) != null, "CARDS shows three slots")
+	t.ok(lc.find_child("Slot_2", true, false) == null, "the equipped slots are not in the pane (they float on the home)")
+	t.ok(lc.find_child("Spares", true, false) != null, "CARDS shows the spares")
 	t.ok(lc.find_child("Career", true, false) != null, "STATS has the career grid")
+	var tabs := []
+	lc.tab_changed.connect(func(tab: String) -> void: tabs.push_back(tab))
 	lc._show_tab("STATS")
 	t.eq(lc.current_tab(), "STATS", "tabs switch")
+	t.eq(tabs, ["STATS"], "and say so")
+	lc.go_loadout()
+	t.eq(lc.current_tab(), "CARDS", "go_loadout lands on CARDS")
+	t.eq(lc.card_sub(), "LOADOUT", "on the loadout")
 	var closed := []
 	lc.closed.connect(func() -> void: closed.push_back(true))
 	(lc.find_child("Back", true, false) as Button).pressed.emit()

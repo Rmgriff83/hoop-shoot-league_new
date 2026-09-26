@@ -47,8 +47,9 @@ extends CosmeticSet
 @export var title_drift := Vector3(0.05, 0.0, 0.5)
 @export var title_period_s := 28.0
 @export var title_fov := 66.0
-## The home page's subtitle under the area name: how hard this area plays.
-@export var title_tier := "EASY LEVEL"
+## The home page's star row over the area name: how hard this area plays
+## (one star per step; the cage is 1, the beach 2).
+@export var title_stars := 1
 
 ## Attach BeachFx (animated Ocean waves + tide-driven Shore) at build time.
 @export var ocean := false

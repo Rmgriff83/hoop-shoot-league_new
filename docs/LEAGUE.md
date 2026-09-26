@@ -87,12 +87,14 @@ from season seed + game) and `finish_heat` applies the result (season, career, l
 the league's coins and tickets from its `rewards`, docs/ECONOMY.md) before the result screen, whose Continue returns to the
 dashboard. `LEAGUE_GATING` is false: unlock rules are evaluated and displayed, not enforced.
 
-**Dashboard** — `game/ui/league_context.gd` on the home page (2026-09-25; the full-screen
-`league_hub_screen` is gone). Tabs HEAT (opponent's shooter card, PLAY HEAT / SIM THIS DAY / SIM TO PLAYOFFS, series score,
-ADVANCE LEAGUE when out, START SEASON N+1 when done), STANDINGS (with clinch marks and streak
-flames/ice), SCHEDULE (your 14 games + playoff games, today marked), BRACKET, RECORDS (career,
-best heats, the location's time-trial board). Title → LEAGUE → area page shows each league's
-record or its unlock rule.
+**Dashboard** — `game/ui/league_context.gd` on the home page (2026-09-26, design "Home
+League Context v2"; the full-screen `league_hub_screen` is gone; docs/HOME.md). Tabs MATCH
+(the opponent's shooter card with PLAY — **every game is played live, the SIM DAY / SIM ALL
+buttons are gone** — ADVANCE when out of the playoffs, START SEASON N+1 when done), TABLE
+(standings with the playoff line, or the bracket), SCHED (your 14 games + playoff games,
+today marked), CARDS (spares + shop), STATS (career, best matches, the location's
+time-trial board). The home's LEAGUE card and its floating layer (`LeagueSummary`) show
+each league's season numbers, its next game and its unlock rule.
 
 ## AI pacing (2026-09-18)
 

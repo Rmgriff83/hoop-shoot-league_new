@@ -34,6 +34,17 @@ const RULE := 3
 const SCENE_TEXT := Color("#F1E8D0")
 const SCENE_OUTLINE := Color("#221C18")
 const OUTLINE := 3
+## Quieter text over the court: the muted cream (a label under a number),
+## the dim cream (a game not yet played), and the dithered drop shadow behind
+## a headline (cream at half strength, halved again by the checker).
+const SCENE_MUTED := Color("#E6D9B8")
+const SCENE_DIM := Color("#CFC3A3")
+const SCENE_SHADOW := Color("#F1E8D0", 0.5)
+const TEXT_SHADOW := Vector2(7, 7)
+## The active tab's face: solid cream with tan dots and an orange shadow.
+const TAN := Color("#CDBF9C")
+
+static var _dither_mat: ShaderMaterial
 
 
 static func current() -> Dictionary:
@@ -119,6 +130,26 @@ static func on_scene(node: Control) -> Control:
 		node.add_theme_color_override("font_hover_color", LIGHT["gold"])
 		node.add_theme_color_override("font_pressed_color", LIGHT["orange"])
 	return node
+
+
+## A dithered drop shadow behind a Label drawn over the court (the area name,
+## the chevrons): the Label's own shadow pass, offset TEXT_SHADOW, run
+## through the checker shader (game/ui/dither_text.gdshader).
+static func dithered(label: Label, offset := TEXT_SHADOW) -> Label:
+	label.add_theme_color_override("font_shadow_color", SCENE_SHADOW)
+	label.add_theme_constant_override("shadow_offset_x", int(offset.x))
+	label.add_theme_constant_override("shadow_offset_y", int(offset.y))
+	label.add_theme_constant_override("shadow_outline_size", 0)
+	label.material = dither_material()
+	return label
+
+
+static func dither_material() -> ShaderMaterial:
+	if _dither_mat == null:
+		_dither_mat = ShaderMaterial.new()
+		_dither_mat.shader = load("res://game/ui/dither_text.gdshader")
+		_dither_mat.set_shader_parameter("cell", float(ShadowStyle.CELL))
+	return _dither_mat
 
 
 ## 1240 → "1,240".

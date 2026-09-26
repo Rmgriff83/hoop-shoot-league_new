@@ -1,16 +1,21 @@
-# Home screen — the retro card chrome over the live area (2026-09-23)
+# Home screen — the retro card chrome over the live area (2026-09-26, design "Home League Context v2")
 
-Ross's concept, implemented: ink-outlined, hard-shadowed cards in the pixel
+Ross's concept, implemented: see-through, dither-shadowed cards in the pixel
 faces (cream palette or its dark twin) over a **full-screen live view of the
 current area**. `game/screens/title_screen.gd` (a `Node3D`), widgets in `game/ui/`.
 
 ```
 Court       full-screen CourtGeometry + Camera3D (TitlePan), under a mild scrim (0.25)
-TopBar      [LVL01 + meter] [locker]                          [▪ 1,240] [menu]
-AreaZone    EASY LEVEL / ARCADE CAGE [ranks]  (cream, ink outline, left-aligned);
-            big < > chevrons at the screen edges, centred between zone and cards
-LeagueCard  orange · "LEAGUE" · ">" · status line
-ModeRow     TrialCard (gold, "BEST 29" / "NO RUNS YET")   PracticeCard (teal, "NO CLOCK")
+TopBar      [LVL01 + meter] [ball = locker]                   [coin 1,240] [menu]
+AreaZone    ★ (one star per difficulty step, ArenaSet.title_stars)
+            ARCADE CAGE (52 px, wraps at 430, dithered drop shadow) [ranks] [multiplayer]
+            big < > chevrons at the screen edges (y 520), dithered shadows too
+Float       over the court above the area, only while the league is open (per tab)
+CardArea    a fixed box (y 781 → 1206) holding the home block or the league in context
+  League    orange, 270 high: NAME — n TITLES / SEASON n · three numbers (RECORD ·
+            PLACE · STREAK, or SERIES · ROUND · SEED) · ENTER LEAGUE > · dashed rule ·
+            NEXT · @ NAME / DAY d OF 14; trophies overhang top-left, loadout chips top-right
+  Pair      TIME TRIAL (gold, stopwatch, "BEST 29") · PRACTICE (teal, jersey, "NO CLOCK")
 Ticker      flat strip at the very bottom, scrolling copy from the save
 ```
 No bottom nav: the phone's safe area would push one up, and the space goes to
@@ -39,9 +44,15 @@ hard one); the pill shows TICKETS, the locker money.
   the body / display face. Flipping the setting rebuilds the chrome in place
   (`rebuild_chrome()`); the court stays.
 - **Type**: `UiFont` — Press Start 2P (display) and Silkscreen (body), 8 px
-  grid, no system fallback. Anything the faces lack (☰ ▪ ■ ●) is **drawn in
-  code**: `HamburgerButton`, `CoinsPill.Square`, `IconButton`.
+  grid, no system fallback. Anything the faces lack (☰, the bars) is **drawn
+  in code** (`HamburgerButton`, `IconButton`); the pixel icons come from the
+  design project as `assets/ui/icon_*.png` (ball, coin, star, trophy,
+  stopwatch, jersey, multiplayer), drawn nearest-filtered by `PixelIcon`.
   `·` and `★` exist in Press Start 2P; the ticker test asserts every glyph.
+  A headline's **dithered drop shadow** (the area name, the chevrons) is the
+  Label's own shadow pass run through `game/ui/dither_text.gdshader`
+  (`RetroTheme.dithered`): cream at half strength, offset (7, 7), one square
+  of a 3 px checker kept.
 - **The live court** is the page background: the scene is a `Node3D` holding
   one `CourtGeometry` (built from the area's practice `App.MODES` row, with
   its own `Sun` / `Env`) and a camera on `TitlePan.pose()` (five `title_*`
@@ -50,26 +61,47 @@ hard one); the pill shows TICKETS, the locker money.
   horizontal swipe. A page turn (arrows or swipe) fades a full-screen ink
   cover, rebuilds the court, refreshes the zone, cards and ticker, and
   fades back. `App.home_card` keeps the page. No SubViewport.
-- **The league in context** (`game/ui/league_context.gd`, `LeagueContext`;
-  design "Home League Context v2"): tapping LEAGUE grows the card area up to
-  just under the area name, slides the home cards out left and the league
-  in from the right — a tab row `<` HEAT · TABLE · SCHED · CARDS · STATS over
-  panes that slide sideways. It IS the league dashboard now (the full-screen
-  hub is gone): the next heat with the opponent card, PLAY HEAT, SIM DAY /
-  SIM ALL, playoffs, advance, next season; the table or bracket; the
-  schedule; this league's cards (loadout + shop, this league's coins); the
-  career, best heats and time-trial records. `App.enter_league(id)` makes a
-  league current without a scene change; `App.to_league_hub()` (CONTINUE
-  SEASON after a heat) lands on the home with it open. While open the zone's
-  caps read `LEAGUE NAME · status`, the chevrons hide, the swipe is off.
-- **Cards** (`game/ui/mode_cards.gd`, `ModeCards`): Buttons with a label
-  stack. `league_line(state)` is the LEAGUE sub-line from an
-  `App.league_states()` row: `NEW LEAGUE`, `LOCKED · TOP 4 IN THE ARCADE
-  LEAGUE`, `SEASON 1 · DAY 1 · TIP OFF`, `SEASON 2 · DAY 4 · 3RD PLACE`,
-  `SEASON 2 · SEMIS 1-0`, `SEASON 2 · CHAMPIONS`, `SEASON 2 · DONE · 5TH
-  PLACE`. LEAGUE → opens the league in context; TIME TRIAL / PRACTICE →
-  `App.start_area(mode, area)`. **Quick heat is not on the home screen** (it
-  lives in the league hub; `AREA_MODES["heat"]` stays).
+- **The league in context** (`game/ui/league_context.gd`, `LeagueContext`):
+  tapping the LEAGUE card (or ENTER LEAGUE) slides the home block out left
+  and the league in from the right, in the same box — a tab row `<` MATCH ·
+  TABLE · SCHED · CARDS · STATS (the active tab a solid cream face with an
+  orange dithered shadow) over panes that slide sideways, with an 88 px fade
+  at the bottom while a pane can still scroll. It IS the league dashboard
+  (the full-screen hub is gone): MATCH — the pine opponent card (`DAY 4 ·
+  AWAY` over the name, nickname / hometown, ACC / ARC segments and PACE beside
+  the PLAY button with the equipped cards as chips on its corner, the bio;
+  **no SIM DAY / SIM ALL — every game is played live**), plus the START
+  SEASON / ADVANCE cards for a finished season or a lost playoff; TABLE — the
+  standings (your row orange, the dashed PLAYOFF LINE) or the bracket (the
+  semis, a connector, the final); SCHED — every game (today's gold, unplayed
+  dim); CARDS — LOADOUT (the **spares**; the equipped slots float above) and
+  SHOP (this league's coins, the buy pill with the coin icon); STATS — the
+  career grid, seasons, BEST MATCHES, the area's time trials. Every panel is
+  a see-through cream `ShadowPanel` at 14 % with cream text. `changed` fires
+  when the doc moves, `tab_changed` on a tab; `go_loadout()` lands on CARDS ·
+  LOADOUT. `App.enter_league(id)` makes a league current without a scene
+  change; `App.to_league_hub()` (CONTINUE SEASON after a heat) lands on the
+  home with it open. While open the chevrons hide and the swipe is off.
+- **The floating layer** (`title_screen.gd` `_rebuild_float`, over the court
+  above the area, per open tab): MATCH → the compact loadout strip (three
+  42×56 thumbnails, `LOADOUT · n OF 3 SET`; tap → CARDS · LOADOUT); CARDS →
+  the full loadout (96×128 cards, tap one to unequip, `SLOT 3 EMPTY`); TABLE
+  → `YOUR SPOT` / the big ordinal / `2-1 · 1.0 GB` / `IN A PLAYOFF SPOT`;
+  SCHED → `COMING UP`, the next three games as cards (today's gold); STATS →
+  `THIS SEASON` RECORD · HIGH PTS · STREAK. Rebuilt on `tab_changed` /
+  `changed`, hidden with the home block.
+- **Summary copy** (`game/ui/league_summary.gd`, `LeagueSummary`, pure):
+  `card(state)` (the LEAGUE card's top / sub / titles / stats / next line),
+  `spot`, `upcoming`, `season_stats`, and `line(state)` — the one-liner the
+  ticker reads: `NEW LEAGUE`, `LOCKED · TOP 4 IN THE ARCADE LEAGUE`, `SEASON
+  1 · DAY 1 · TIP OFF`, `SEASON 2 · DAY 4 · 3RD PLACE`, `SEASON 2 · SEMIS
+  1-0`, `SEASON 2 · CHAMPIONS`, `SEASON 2 · DONE · 5TH PLACE`.
+- **Cards** (`game/ui/mode_cards.gd`, `ModeCards`): `league_card(state,
+  slots)` (trophies up to five then `+n`, chips = `Chip` crops of the card
+  art or the dashed `+`), `trial_card` / `practice_card` (`icon_card`),
+  `text_card`, and the shared `art` / `empty_slot` / `chip` / `stat`
+  pieces. LEAGUE → opens the league in context; TIME TRIAL / PRACTICE →
+  `App.start_area(mode, area)`. **Quick heat is not on the home screen**.
 - **Ticker** (`game/ui/home_ticker.gd`, `HomeTicker`): `items_from(bests,
   states, coins, next_up)` → `ARCADE CAGE BEST 29 · ARCADE LEAGUE · SEASON 2
   · DAY 4 · 3RD PLACE · NEXT UP: PRUDENCE CHIME · 1,240 TICKETS`, laid twice
@@ -90,14 +122,15 @@ hard one); the pill shows TICKETS, the locker money.
 
 ## Adding an area
 
-An ArenaSet with `title_*` set (pose, and `title_tier` for the subtitle), its
+An ArenaSet with `title_*` set (pose, and `title_stars` for the star row), its
 `App.MODES` rows, and a row in `title_screen.gd` `CARDS`.
 
 ## QA and tests
 
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-title` →
   `user://qa/title_*.png`: the cage over its pan, the beach page, back, the
-  settings sheet, then the dark page.
+  league open on every tab (with its float), the locker, the settings sheet,
+  then the dark page.
 - `--qa`, `--qa-aim`, `--qa-beach` click TIME TRIAL on the right page.
 - `tests/test_home_ui.gd` (palettes, faces, dark mode persistence, league
   lines, ticker copy + glyph coverage, widgets), `tests/test_title_cards.gd`
