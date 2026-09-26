@@ -1,0 +1,45 @@
+{
+  "cards": {
+    "fire7": {
+      "beach": 0.55,
+      "cage": 0.78
+    },
+    "ice": {
+      "beach": 0.85,
+      "cage": 0.61
+    }
+  },
+  "detail": {
+    "fire7": {
+      "beach": {
+        "played": 1.0,
+        "se": 0.133,
+        "with": 0.89,
+        "without": 0.34
+      },
+      "cage": {
+        "played": 1.0,
+        "se": 0.066,
+        "with": 0.63,
+        "without": -0.15
+      }
+    },
+    "ice": {
+      "beach": {
+        "played": 0.996,
+        "se": 0.129,
+        "with": 1.2,
+        "without": 0.34
+      },
+      "cage": {
+        "played": 0.84,
+        "se": 0.06,
+        "with": 0.46,
+        "without": -0.15
+      }
+    }
+  },
+  "generated": "2026-09-22",
+  "n": 500.0,
+  "seed": 4242.0
+}

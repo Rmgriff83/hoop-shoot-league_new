@@ -1,0 +1,23 @@
+[
+  {"id": "classic", "name": "Classic", "price": 0, "skin": "res://assets/textures/balls/classic.png"},
+  {"id": "globetrotters", "name": "Globetrotters", "price": 900, "skin": "res://assets/textures/balls/globetrotters.png"},
+  {"id": "aba", "name": "ABA Tri-Color", "price": 750, "skin": "res://assets/textures/balls/aba.png"},
+  {"id": "blacktop", "name": "Blacktop", "price": 250, "skin": "res://assets/textures/balls/blacktop.png"},
+  {"id": "midnight", "name": "Midnight", "price": 600, "skin": "res://assets/textures/balls/midnight.png"},
+  {"id": "neon", "name": "Neon", "price": 800, "skin": "res://assets/textures/balls/neon.png"},
+  {"id": "sunset", "name": "Sunset", "price": 700, "skin": "res://assets/textures/balls/sunset.png"},
+  {"id": "lime", "name": "Lime", "price": 400, "skin": "res://assets/textures/balls/lime.png"},
+  {"id": "bubblegum", "name": "Bubblegum", "price": 500, "skin": "res://assets/textures/balls/bubblegum.png"},
+  {"id": "gold", "name": "Gold", "price": 1500, "skin": "res://assets/textures/balls/gold.png"},
+  {"id": "chrome", "name": "Chrome", "price": 1400, "skin": "res://assets/textures/balls/chrome.png"},
+  {"id": "camo", "name": "Camo", "price": 650, "skin": "res://assets/textures/balls/camo.png"},
+  {"id": "beach", "name": "Beach Ball", "price": 350, "skin": "res://assets/textures/balls/beach.png"},
+  {"id": "eightball", "name": "Eight Ball", "price": 1000, "skin": "res://assets/textures/balls/eightball.png"},
+  {"id": "watermelon", "name": "Watermelon", "price": 450, "skin": "res://assets/textures/balls/watermelon.png"},
+  {"id": "ice", "name": "Ice", "price": 700, "skin": "res://assets/textures/balls/ice.png"},
+  {"id": "fire", "name": "Fire", "price": 900, "skin": "res://assets/textures/balls/fire.png"},
+  {"id": "galaxy", "name": "Galaxy", "price": 1200, "skin": "res://assets/textures/balls/galaxy.png"},
+  {"id": "retro", "name": "Retro 70s", "price": 550, "skin": "res://assets/textures/balls/retro.png"},
+  {"id": "varsity", "name": "Varsity", "price": 600, "skin": "res://assets/textures/balls/varsity.png"},
+  {"id": "tiger", "name": "Tiger", "price": 850, "skin": "res://assets/textures/balls/tiger.png"}
+]

@@ -1,0 +1,118 @@
+{
+  "leagues": [
+    {
+      "id": "cage",
+      "name": "Arcade League",
+      "location": "cage",
+      "mode": "heat",
+      "arena": "cage",
+      "hoop": "",
+      "calib_key": "arcade",
+      "roster": [
+        "brickport",
+        "dustplain",
+        "sunnyvale-flex",
+        "maple-falls",
+        "cactus-flats",
+        "goldgulch",
+        "pinewick"
+      ],
+      "err_mult": 1.2,
+      "heat_seconds": 90,
+      "ot_seconds": 20,
+      "ball_return_s": 1.0,
+      "rounds": 2,
+      "playoff_teams": 4,
+      "semis_best_of": 3,
+      "final_best_of": 5,
+      "unlock": null,
+      "ai_cards_per_season": 6,
+      "ai_hand_max": 2,
+      "ai_pool": [
+        "ice",
+        "fire7"
+      ],
+      "card_parity": 0.5,
+      "ai_cards": {
+        "brickport": [
+          "fire7"
+        ],
+        "pinewick": [
+          "ice"
+        ],
+        "goldgulch": [
+          "ice"
+        ]
+      },
+      "rewards": {
+        "win_coins": 50,
+        "loss_coins": 20,
+        "title_coins": 300
+      }
+    },
+    {
+      "id": "beach",
+      "name": "Beach League",
+      "location": "beach",
+      "mode": "heat_beach",
+      "arena": "beach",
+      "hoop": "street",
+      "calib_key": "beach",
+      "roster": [
+        "coalditch",
+        "thunder-mesa",
+        "bellmeadow",
+        "frostpeak",
+        "harborlight",
+        "red-rock",
+        "ironvale"
+      ],
+      "err_mult": 1.0,
+      "heat_seconds": 90,
+      "ot_seconds": 20,
+      "ball_return_s": 1.0,
+      "rounds": 2,
+      "playoff_teams": 4,
+      "semis_best_of": 3,
+      "final_best_of": 5,
+      "unlock": {
+        "league": "cage",
+        "min_finish": 4
+      },
+      "ai_cards_per_season": 10,
+      "ai_hand_max": 2,
+      "ai_pool": [
+        "ice",
+        "fire7"
+      ],
+      "card_parity": 1.0,
+      "ai_cards": {
+        "coalditch": [
+          "ice"
+        ],
+        "bellmeadow": [
+          "ice"
+        ],
+        "frostpeak": [
+          "ice",
+          "ice"
+        ],
+        "harborlight": [
+          "ice"
+        ],
+        "red-rock": [
+          "ice"
+        ],
+        "ironvale": [
+          "ice",
+          "ice"
+        ]
+      },
+      "rewards": {
+        "win_coins": 60,
+        "loss_coins": 25,
+        "title_coins": 400
+      }
+    }
+  ]
+}

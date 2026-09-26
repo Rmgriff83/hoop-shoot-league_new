@@ -1,0 +1,125 @@
+{
+  "sounds": [
+    {
+      "title": "Moog_SEM 110bpm",
+      "author": "fonoskop",
+      "url": "https://freesound.org/s/856449/",
+      "license": "Attribution 4.0",
+      "used_for": "Title music and the beach radio's first track"
+    },
+    {
+      "title": "250825_152710_PH_Arcade_games",
+      "author": "kevp888",
+      "url": "https://freesound.org/s/840203/",
+      "license": "Attribution 4.0",
+      "used_for": "Arcade cage ambience"
+    },
+    {
+      "title": "nieuwpoort-seagulls-02",
+      "author": "rthijs",
+      "url": "https://freesound.org/s/864817/",
+      "license": "see the source page",
+      "used_for": "Beach ambience"
+    },
+    {
+      "title": "Fire Burst.wav",
+      "author": "SilverIllusionist",
+      "url": "https://freesound.org/s/472688/",
+      "license": "Attribution 4.0",
+      "used_for": "Rim catching fire"
+    },
+    {
+      "title": "ice cracking",
+      "author": "timbreknight",
+      "url": "https://freesound.org/s/342546/",
+      "license": "see the source page",
+      "used_for": "Rim icing over (trimmed)"
+    },
+    {
+      "title": "Breaking Glass Mix.wav",
+      "author": "theplax",
+      "url": "https://freesound.org/s/546671/",
+      "license": "Attribution 4.0",
+      "used_for": "Ice breaking (caught ball or three rim hits)"
+    },
+    {
+      "title": "mp glass break.wav",
+      "author": "cmusounddesign",
+      "url": "https://freesound.org/s/85184/",
+      "license": "Attribution 4.0",
+      "used_for": "Ice breaking on a swish (trimmed)"
+    },
+    {
+      "title": "MatchstickDeath-03",
+      "author": "Wavewire",
+      "url": "https://freesound.org/s/834140/",
+      "license": "Attribution 4.0",
+      "used_for": "Rim fire going out"
+    },
+    {
+      "title": "zero mass 110",
+      "author": "fonoskop",
+      "url": "https://freesound.org/s/860354/",
+      "license": "Attribution 4.0",
+      "used_for": "Beach radio playlist"
+    },
+    {
+      "title": "Scarpeta 110",
+      "author": "fonoskop",
+      "url": "https://freesound.org/s/865348/",
+      "license": "Attribution 4.0",
+      "used_for": "Beach radio playlist"
+    },
+    {
+      "title": "footloose 110bpm",
+      "author": "fonoskop",
+      "url": "https://freesound.org/s/862800/",
+      "license": "Attribution 4.0",
+      "used_for": "Beach radio playlist"
+    },
+    {
+      "title": "Synthwave Beat 110 BPM loop",
+      "author": "fonoskop",
+      "url": "https://freesound.org/s/856396/",
+      "license": "Attribution 4.0",
+      "used_for": "Beach radio playlist"
+    },
+    {
+      "title": "Anabell 110BPM Melodic Synth-Wave Loop",
+      "author": "fonoskop",
+      "url": "https://freesound.org/s/853379/",
+      "license": "Attribution 4.0",
+      "used_for": "Beach radio playlist"
+    },
+    {
+      "title": "Stone hitting fence",
+      "author": "DillonNaidoo",
+      "url": "https://freesound.org/s/543321/",
+      "license": "Attribution 4.0",
+      "used_for": "Ball hitting the pole"
+    }
+  ],
+  "fonts": [
+    {
+      "title": "Caveat",
+      "author": "Pablo Impallari and contributors",
+      "url": "https://github.com/googlefonts/caveat",
+      "license": "SIL Open Font License 1.1",
+      "used_for": "Chalkboard handwriting on the beach league board"
+    },
+    {
+      "title": "Press Start 2P",
+      "author": "CodeMan38 (Cody Boisclair)",
+      "url": "https://github.com/google/fonts/tree/main/ofl/pressstart2p",
+      "license": "SIL Open Font License 1.1",
+      "used_for": "Pixel display face: headlines and buttons"
+    },
+    {
+      "title": "Silkscreen",
+      "author": "Jason Kottke",
+      "url": "https://github.com/googlefonts/silkscreen",
+      "license": "SIL Open Font License 1.1",
+      "used_for": "Pixel body face: small labels and status lines"
+    }
+  ]
+}

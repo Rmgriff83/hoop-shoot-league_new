@@ -1,0 +1,30 @@
+[gd_resource type="Resource" script_class="ArenaSet" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/cosmetics/arena_set.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "cage"
+display_name = "Arcade Cage"
+price_coins = 0
+model_path = "res://assets/arena/cage/cage.glb"
+emissive_nodes = PackedStringArray("HallBack")
+sun_rotation_deg = Vector3(-55, -30, 0)
+sun_energy = 1.0
+sun_color = Color(1, 1, 1, 1)
+ambient_color = Color(0.68, 0.62, 0.56, 1)
+ambient_energy = 0.55
+background_color = Color(0.03, 0.02, 0.02, 1)
+camera_fov = 60.0
+camera_look_height = 2.2
+title_cam_pos = Vector3(-1.65, 2.0, -0.55)
+title_look_at = Vector3(2.9, 1.55, 0.2)
+title_drift = Vector3(0.05, 0, 0.5)
+title_period_s = 28.0
+title_fov = 66.0
+title_tier = "EASY LEVEL"
+ocean = false
+arcade_life = true
+ambient_clips = PackedStringArray("res://assets/arena/cage/ambience/arcade.ogg")
+ambient_gains_db = PackedFloat32Array(-16.0)
+ambient_fade_s = 1.2

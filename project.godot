@@ -1,0 +1,43 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="Hoop Shoot"
+run/main_scene="res://game/screens/title_screen.tscn"
+config/features=PackedStringArray("4.7")
+
+[autoload]
+
+SaveService="*res://game/autoload/save_service.gd"
+Sfx="*res://game/autoload/sfx.gd"
+App="*res://game/autoload/app.gd"
+QaDriver="*res://tools/qa_driver.gd"
+
+[display]
+
+window/size/viewport_width=720
+window/size/viewport_height=1280
+window/stretch/mode="canvas_items"
+window/handheld/orientation=1
+
+[dotnet]
+
+project/assembly_name="Hoop Shoot"
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+
+[rendering]
+
+textures/canvas_textures/default_texture_filter=0
+renderer/rendering_method="mobile"
+textures/vram_compression/import_etc2_astc=true

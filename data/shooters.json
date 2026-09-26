@@ -1,0 +1,349 @@
+{
+  "shooters": [
+    {
+      "id": "brickport",
+      "name": "Mo Mortar",
+      "hometown": "Brickport",
+      "conference": "EAST",
+      "number": 52,
+      "nickname": "The Mason",
+      "bio": "Learned to shoot against a chimney. Every miss somehow makes the rim louder.",
+      "colors": {
+        "primary": "#b0413e",
+        "secondary": "#7c2d2a",
+        "accent": "#ffd93d"
+      },
+      "signature": "Flat, hard line-drives that terrify front rims.",
+      "ratings": {
+        "accuracy": 0.38,
+        "swishRate": 0.15,
+        "pace": 3.2,
+        "composure": 0.55,
+        "streakiness": 0.3,
+        "consistency": 0.75
+      }
+    },
+    {
+      "id": "maple-falls",
+      "name": "Junie Sap",
+      "hometown": "Maple Falls",
+      "conference": "EAST",
+      "number": 7,
+      "nickname": "Syrup",
+      "bio": "Slow mornings, sweet arcs. Never seen without a thermos of hot maple.",
+      "colors": {
+        "primary": "#c96f2f",
+        "secondary": "#8a4a1c",
+        "accent": "#fff3df"
+      },
+      "signature": "Molasses-slow windup, honey-smooth release.",
+      "ratings": {
+        "accuracy": 0.52,
+        "swishRate": 0.75,
+        "pace": 5.6,
+        "composure": 0.7,
+        "streakiness": 0.2,
+        "consistency": 0.85
+      }
+    },
+    {
+      "id": "pinewick",
+      "name": "Ollie Knots",
+      "hometown": "Pinewick",
+      "conference": "EAST",
+      "number": 33,
+      "nickname": "Timber",
+      "bio": "A lumberjack with a jump shot. Yells \"TIMBER!\" on heat checks.",
+      "colors": {
+        "primary": "#3e7c4f",
+        "secondary": "#265232",
+        "accent": "#ffce8a"
+      },
+      "signature": "Streak monster — either splashing everything or hitting nothing.",
+      "ratings": {
+        "accuracy": 0.58,
+        "swishRate": 0.6,
+        "pace": 3.4,
+        "composure": 0.5,
+        "streakiness": 0.95,
+        "consistency": 0.35
+      }
+    },
+    {
+      "id": "harborlight",
+      "name": "Delia Beacon",
+      "hometown": "Harborlight",
+      "conference": "EAST",
+      "number": 1,
+      "nickname": "Lighthouse",
+      "bio": "Tall, calm, always visible in the clutch. Has never once rushed a shot.",
+      "colors": {
+        "primary": "#e8b23d",
+        "secondary": "#a87c1e",
+        "accent": "#35405c"
+      },
+      "signature": "Unshakeable — gets BETTER when trailing.",
+      "ratings": {
+        "accuracy": 0.66,
+        "swishRate": 0.7,
+        "pace": 4.8,
+        "composure": 0.95,
+        "streakiness": 0.15,
+        "consistency": 0.9
+      }
+    },
+    {
+      "id": "coalditch",
+      "name": "Bram Cinder",
+      "hometown": "Coalditch",
+      "conference": "EAST",
+      "number": 66,
+      "nickname": "Furnace",
+      "bio": "Shoots angry. Nobody knows at what. Rims fear him; nets tolerate him.",
+      "colors": {
+        "primary": "#4a4a55",
+        "secondary": "#2b2b33",
+        "accent": "#ff5d3d"
+      },
+      "signature": "Rushes when hot — pace drops as the streak grows.",
+      "ratings": {
+        "accuracy": 0.6,
+        "swishRate": 0.35,
+        "pace": 2.6,
+        "composure": 0.4,
+        "streakiness": 0.7,
+        "consistency": 0.55
+      }
+    },
+    {
+      "id": "bellmeadow",
+      "name": "Prudence Chime",
+      "hometown": "Bellmeadow",
+      "conference": "EAST",
+      "number": 21,
+      "nickname": "Sunday Bells",
+      "bio": "Choir director, part-time assassin from deep. Only swishes count, she says.",
+      "colors": {
+        "primary": "#9d7bff",
+        "secondary": "#6c4fd1",
+        "accent": "#fffaf2"
+      },
+      "signature": "Highest arc in the league — rainbow shots that kiss nothing.",
+      "ratings": {
+        "accuracy": 0.62,
+        "swishRate": 0.92,
+        "pace": 4.6,
+        "composure": 0.75,
+        "streakiness": 0.25,
+        "consistency": 0.8
+      }
+    },
+    {
+      "id": "ironvale",
+      "name": "Greta Forge",
+      "hometown": "Ironvale",
+      "conference": "EAST",
+      "number": 44,
+      "nickname": "The Anvil",
+      "bio": "League MVP two towns running. Forged in a gym with no heating.",
+      "colors": {
+        "primary": "#c0c5ce",
+        "secondary": "#7d8494",
+        "accent": "#d24a3e"
+      },
+      "signature": "Machine-like cadence — same shot, every time, forever.",
+      "ratings": {
+        "accuracy": 0.78,
+        "swishRate": 0.72,
+        "pace": 3.8,
+        "composure": 0.85,
+        "streakiness": 0.1,
+        "consistency": 0.95
+      }
+    },
+    {
+      "id": "sunnyvale-flex",
+      "name": "Sunny Vale",
+      "hometown": "Sunnyside",
+      "conference": "EAST",
+      "number": 8,
+      "nickname": "Sunshine",
+      "bio": "Moved towns three times chasing good weather. Will happily switch leagues too.",
+      "colors": {
+        "primary": "#ffd93d",
+        "secondary": "#d9ae1a",
+        "accent": "#58aee6"
+      },
+      "signature": "Smiles at the rim before every shot. The rim smiles back.",
+      "ratings": {
+        "accuracy": 0.5,
+        "swishRate": 0.55,
+        "pace": 3.9,
+        "composure": 0.65,
+        "streakiness": 0.35,
+        "consistency": 0.75
+      }
+    },
+    {
+      "id": "dustplain",
+      "name": "Wyatt Tumble",
+      "hometown": "Dustplain",
+      "conference": "WEST",
+      "number": 3,
+      "nickname": "Tumbleweed",
+      "bio": "Shoots like the wind is always behind him. It usually is not.",
+      "colors": {
+        "primary": "#d9a05b",
+        "secondary": "#a3703a",
+        "accent": "#7c5c8a"
+      },
+      "signature": "Wild variance — town legend or cautionary tale, nightly.",
+      "ratings": {
+        "accuracy": 0.45,
+        "swishRate": 0.4,
+        "pace": 3.0,
+        "composure": 0.45,
+        "streakiness": 0.8,
+        "consistency": 0.3
+      }
+    },
+    {
+      "id": "frostpeak",
+      "name": "Ingrid Boreal",
+      "hometown": "Frostpeak",
+      "conference": "WEST",
+      "number": 19,
+      "nickname": "Icicle",
+      "bio": "Trains outdoors at −20°. Warm gyms feel like cheating now.",
+      "colors": {
+        "primary": "#8fd6f0",
+        "secondary": "#4a9cc0",
+        "accent": "#fffaf2"
+      },
+      "signature": "Ice in the veins — nothing rattles her, ever.",
+      "ratings": {
+        "accuracy": 0.63,
+        "swishRate": 0.65,
+        "pace": 4.4,
+        "composure": 0.9,
+        "streakiness": 0.1,
+        "consistency": 0.88
+      }
+    },
+    {
+      "id": "cactus-flats",
+      "name": "Paco Prickle",
+      "hometown": "Cactus Flats",
+      "conference": "WEST",
+      "number": 23,
+      "nickname": "Needles",
+      "bio": "Says every rim-out is the desert teaching patience. Is not patient.",
+      "colors": {
+        "primary": "#5ba85d",
+        "secondary": "#3a7440",
+        "accent": "#ff5d73"
+      },
+      "signature": "Quick-draw release — fastest pickup-to-shot in the West.",
+      "ratings": {
+        "accuracy": 0.53,
+        "swishRate": 0.45,
+        "pace": 2.4,
+        "composure": 0.5,
+        "streakiness": 0.5,
+        "consistency": 0.65
+      }
+    },
+    {
+      "id": "goldgulch",
+      "name": "Rosie Nugget",
+      "hometown": "Goldgulch",
+      "conference": "WEST",
+      "number": 24,
+      "nickname": "Pans",
+      "bio": "Prospector family. Treats every swish like striking gold, celebration included.",
+      "colors": {
+        "primary": "#e8c53d",
+        "secondary": "#b08f1e",
+        "accent": "#35405c"
+      },
+      "signature": "Theatrical celebrations that eat into her own clock.",
+      "ratings": {
+        "accuracy": 0.57,
+        "swishRate": 0.6,
+        "pace": 5.0,
+        "composure": 0.6,
+        "streakiness": 0.4,
+        "consistency": 0.7
+      }
+    },
+    {
+      "id": "thunder-mesa",
+      "name": "Big Sky Sam",
+      "hometown": "Thunder Mesa",
+      "conference": "WEST",
+      "number": 99,
+      "nickname": "The Storm",
+      "bio": "Seven feet of noise. The backboard has filed complaints.",
+      "colors": {
+        "primary": "#6b5aa3",
+        "secondary": "#453a6e",
+        "accent": "#ffd93d"
+      },
+      "signature": "Bank-shot specialist — plays the glass like an instrument.",
+      "ratings": {
+        "accuracy": 0.61,
+        "swishRate": 0.2,
+        "pace": 3.6,
+        "composure": 0.55,
+        "streakiness": 0.45,
+        "consistency": 0.72
+      }
+    },
+    {
+      "id": "red-rock",
+      "name": "Esteban Cielo",
+      "hometown": "Red Rock",
+      "conference": "WEST",
+      "number": 10,
+      "nickname": "El Arco",
+      "bio": "Paints murals of perfect parabolas. Then goes out and shoots them.",
+      "colors": {
+        "primary": "#d2543e",
+        "secondary": "#96371f",
+        "accent": "#8fd6f0"
+      },
+      "signature": "Textbook 53° arc — the shot they show in coaching videos.",
+      "ratings": {
+        "accuracy": 0.72,
+        "swishRate": 0.88,
+        "pace": 4.2,
+        "composure": 0.8,
+        "streakiness": 0.2,
+        "consistency": 0.85
+      }
+    },
+    {
+      "id": "starfall",
+      "name": "Nova Reyes",
+      "hometown": "Starfall",
+      "conference": "WEST",
+      "number": 0,
+      "nickname": "Supernova",
+      "bio": "The youngest champion in league memory. Sees the game a beat before it happens.",
+      "colors": {
+        "primary": "#35405c",
+        "secondary": "#1f2740",
+        "accent": "#ff5d73"
+      },
+      "signature": "The total package — the shooter everyone else measures against.",
+      "ratings": {
+        "accuracy": 0.8,
+        "swishRate": 0.8,
+        "pace": 3.5,
+        "composure": 0.9,
+        "streakiness": 0.2,
+        "consistency": 0.9
+      }
+    }
+  ]
+}

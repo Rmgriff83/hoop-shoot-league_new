@@ -1,0 +1,13 @@
+{
+  "enabledMcpjsonServers": [
+    "godotiq"
+  ],
+  "disabledMcpjsonServers": [
+    "godotiq-hometown"
+  ],
+  "permissions": {
+    "allow": [
+      "mcp__godotiq__godotiq_script_ops"
+    ]
+  }
+}
