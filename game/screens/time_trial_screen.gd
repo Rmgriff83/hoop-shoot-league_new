@@ -850,6 +850,7 @@ func _on_outcome(outcome: Dictionary, buzzer_beater: bool) -> void:
 		else:
 			_hud.banner("+%d" % pts, RetroTheme.SCENE_TEXT)
 		if lit and streak == StreakRules.FIRE_AT:
+			_hud.banner("ON FIRE", RetroTheme.LIGHT["orange"])
 			_court.led.marquee("ON FIRE", 24.0, accent)
 			Sfx.score_pop(true)
 		elif lit and tier > _tier_shown:

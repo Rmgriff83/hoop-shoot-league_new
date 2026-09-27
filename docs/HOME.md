@@ -166,8 +166,26 @@ under that. The pause menu is shared (`game/ui/pause_menu.gd`, `PauseMenu`):
 PAUSED, RESUME, SHOT HELP (taps cycle the value), QUIT TO TITLE — the old
 BACK button lives there now.
 
+**League match** (design "League Match HUD", `game/screens/heat_screen.gd`):
+the same row with two 162×50 score cards in place of SCORE — YOU in orange,
+the opponent's first name in their shooter colour — a gold `OT1` tag in the
+clock card in overtime, and the ball-return wait as a NEXT BALL chip. The
+opponent's window sits under the row at the right margin in a frame of their
+colour with a dithered shadow (`PipFrame`), OPP top-left, a minimize button
+top-right and their loadout hanging off the bottom as chips; minimized it is
+a chip in their colour with their score and a restore glyph. The card tray
+(`TrayCard`) puts each card on a dithered ink shadow with a press state and a
+chip across its middle for WAIT (dimmed) or the fire window's seconds. A
+played card grows in the middle over its shadow with a caption chip
+(`DEEP FREEZE > OLLIE`; blue for yours, orange for theirs) then flies to its
+target; the overtime break dims the court under `TIED 37-37` / OVERTIME /
+the period's note. ON FIRE joins the banners.
+
 ## QA and tests
 
+- `godot --path hoop_shoot --resolution 360x640 -- --qa-heat` →
+  `user://qa/heat_countdown.png`, `heat_live.png`, `heat_pipmin.png`,
+  `heat_pause.png` on a real cage league heat.
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-hud` →
   `user://qa/hud_countdown.png`, `hud_live.png`, `hud_pause.png`,
   `hud_practice.png`, `hud_practice30.png`.

@@ -61,5 +61,17 @@ static func best_chip(best: int, score: int) -> Dictionary:
 	return {"label": "BEST", "val": str(best) if best > 0 else "-"}
 
 
+## The card-deal caption as [left, right]: the card's name then who it lands
+## on — YOU, or the opponent's first name. `by_ai`: the opponent played it.
+static func deal_caption(card_name: String, on_you: bool, opp_short: String) -> Array:
+	return [card_name.to_upper(), "YOU" if on_you else opp_short.to_upper()]
+
+
+## The overtime break card: {sub, title, note}.
+static func ot_break(you: int, opp: int, n: int, seconds: int, spots: bool) -> Dictionary:
+	return {"sub": "TIED %d-%d" % [you, opp], "title": "OVERTIME" if n <= 1 else "OVERTIME %d" % n,
+		"note": ("%d SECONDS · BOTH SHOOTERS BACK TO THE KEY" % seconds) if spots else ("%d SECONDS" % seconds)}
+
+
 static func shot_help_value(mode: int) -> String:
 	return str(App.SHOT_HELP_LABELS[clampi(mode, 0, App.SHOT_HELP_LABELS.size() - 1)])

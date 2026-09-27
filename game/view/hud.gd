@@ -8,8 +8,10 @@ extends CanvasLayer
 ## lines (SWISH / +2, HEATING / UP, TIME!). Long messages draw as a small
 ## note. All Controls are decorative → mouse_filter IGNORE so flicks pass
 ## through; everything sits above the flick input's grab line. Heat mode
-## keeps the same row: the score card reads YOU-OPP and the clock an OT tag.
-## Copy from HudCopy (pure).
+## (design "League Match HUD") swaps the score card for two 162×50 cards —
+## YOU in orange, the opponent's first name in their shooter colour — puts
+## a gold OT tag in the clock card in overtime, and shows the ball-return
+## wait as a NEXT BALL chip. Copy from HudCopy (pure).
 
 const CREAM := RetroTheme.SCENE_TEXT
 const GOLD := Color("#F0B84A")
@@ -19,12 +21,21 @@ const SCORE_POS := Vector2(520, 32)
 const SCORE_SIZE := Vector2(164, 132)
 const BEST_POS := Vector2(520, 186)
 const BEST_SIZE := Vector2(164, 40)
+const YOU_POS := Vector2(340, 32)
+const OPP_POS := Vector2(522, 32)
+const SIDE_SIZE := Vector2(162, 50)
+const WAIT_Y := 860.0
 const COUNTDOWN_Y := 300.0
 const BANNER_Y := 450.0
 const BANNER_HOLD_S := 0.7
 
 var _clock_card: ShadowPanel
 var _clock: Label
+var _ot_tag: Label
+var _score_card: ShadowPanel
+var _you_score: Label
+var _opp_score: Label
+var _wait_chip: ShadowPanel
 var _practice_card: ShadowPanel
 var _score: Label
 var _score_caps: Label
@@ -56,6 +67,11 @@ func _ready() -> void:
 	_clock_card.name = "Clock"
 	var cr := _hbox(10)
 	cr.add_child(_icon("icon_stopwatch"))
+	_ot_tag = _text("OT1", 16, GOLD, true)
+	_ot_tag.name = "OtTag"
+	_ot_tag.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_ot_tag.visible = false
+	cr.add_child(_ot_tag)
 	_clock = _text("60.0", 24, CREAM, true)
 	_clock.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	cr.add_child(_clock)
@@ -73,6 +89,7 @@ func _ready() -> void:
 	# The score card.
 	var sc := _card(RetroTheme.c("orange"), SCORE_POS, SCORE_SIZE, 0.22, 16.0)
 	sc.name = "ScoreCard"
+	_score_card = sc
 	var col := VBoxContainer.new()
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.add_theme_constant_override("separation", 16)
@@ -140,50 +157,82 @@ func _ready() -> void:
 	_note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_note.visible = false
 	add_child(_note)
-	_wait = _text("", 16, CREAM, true)
-	_wait.name = "Wait"
-	_wait.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	_wait.offset_top = 790
-	_wait.offset_bottom = 830
-	_wait.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_wait.visible = false
-	add_child(_wait)
+	_wait_chip = ShadowPanel.new(CREAM, 0.0, 0.22, 16.0)
+	_wait_chip.name = "Wait"
+	_wait_chip.visible = false
+	add_child(_wait_chip)
+	var wr := _hbox(14)
+	wr.add_child(_text("NEXT BALL"))
+	_wait = _text("0.0", 16, CREAM, true)
+	_wait.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	wr.add_child(_wait)
+	_wait_chip.add_child(wr)
 
 
 func _process(dt: float) -> void:
 	_score_spring.step(dt)
 	if _heat:
 		_opp_spring.step(dt)
-		_score.text = "%d-%d" % [roundi(_score_spring.value), roundi(_opp_spring.value)]
+		_you_score.text = str(roundi(_score_spring.value))
+		_opp_score.text = str(roundi(_opp_spring.value))
 	else:
 		_score.text = str(roundi(_score_spring.value))
+	if _wait_chip.visible:
+		_wait_chip.position = Vector2((720.0 - _wait_chip.size.x) / 2.0, WAIT_Y)
 
 
 # ---- modes -----------------------------------------------------------------------
 
 
-func set_heat(on: bool) -> void:
+## A heat: two score cards on the row — YOU (orange) and the opponent's first
+## name in their shooter colour — in place of the SCORE card.
+func set_heat(on: bool, opp_label := "OPP", opp_color := LeagueContext.PINE) -> void:
 	_heat = on
-	if on:
-		_score.add_theme_font_size_override("font_size", UiFont.snap(32))
-		_score_caps.text = "YOU-OPP"
+	if not on:
+		return
+	_score_card.visible = false
+	_best_chip.visible = false
+	var you := _card(RetroTheme.c("orange"), YOU_POS, SIDE_SIZE, 0.22, 14.0)
+	you.name = "YouCard"
+	_you_score = _side(you, "YOU")
+	var opp := _card(opp_color, OPP_POS, SIDE_SIZE, 0.32, 14.0)
+	opp.name = "OppCard"
+	_opp_score = _side(opp, opp_label.to_upper())
+
+
+func _side(card: ShadowPanel, label: String) -> Label:
+	var row := _hbox(8)
+	var l := _text(label)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.clip_text = true
+	row.add_child(l)
+	var v := _text("0", 24, CREAM, true)
+	v.name = "Value"
+	v.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(v)
+	card.add_child(row)
+	return v
 
 
 func set_opponent_score(score: int) -> void:
 	_opp_spring.target = float(score)
 
 
+## The overtime period (0 = regulation): a gold OT tag in the clock card.
 func set_ot(n: int) -> void:
 	_ot = n
+	_ot_tag.visible = n > 0
+	_ot_tag.text = "OT%d" % n
 
 
-## Seconds until the next ball may be picked up (0 hides the readout).
+## Seconds until the next ball may be picked up (0 hides the chip).
 func set_ball_wait(seconds: float) -> void:
 	if seconds <= 0.0:
-		_wait.visible = false
+		_wait_chip.visible = false
 		return
-	_wait.visible = true
-	_wait.text = "NEXT BALL %.1f" % seconds
+	_wait_chip.visible = true
+	_wait.text = "%.1f" % seconds
 
 
 ## Endless practice: the clock slot reads PRACTICE (or the area's label) and the countdown never shows.
@@ -217,7 +266,7 @@ func _refresh_best() -> void:
 func update_clock(time_left: float, countdown: float, phase: String) -> void:
 	if _practice:
 		return
-	_clock.text = HudCopy.clock_text(time_left, _ot)
+	_clock.text = HudCopy.clock_text(time_left)
 	_clock.add_theme_color_override("font_color", GOLD if HudCopy.clock_hot(time_left) and phase != TimeTrial.PHASE_COUNTDOWN else CREAM)
 	if phase == TimeTrial.PHASE_COUNTDOWN:
 		_countdown.text = str(ceili(countdown))
@@ -284,6 +333,10 @@ func banner_text() -> String:
 
 func clock_text() -> String:
 	return _clock.text
+
+
+func side_texts() -> Array:
+	return [_you_score.text, _opp_score.text] if _heat else []
 
 
 func best_text() -> String:

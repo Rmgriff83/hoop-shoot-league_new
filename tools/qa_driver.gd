@@ -14,7 +14,7 @@ var _outcomes: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
-	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud")):
+	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	if args.has("--qa-title"):
@@ -25,6 +25,8 @@ func _ready() -> void:
 		_run_heat_result.call_deferred()
 	elif args.has("--qa-hud"):
 		_run_hud.call_deferred()
+	elif args.has("--qa-heat"):
+		_run_heat.call_deferred()
 	elif args.has("--qa-beach"):
 		_run_beach.call_deferred()
 	elif args.has("--qa-aim"):
@@ -110,6 +112,49 @@ func _run_results() -> void:
 	await _snap("results_home")
 	print("QA results: done")
 	get_tree().quit(0)
+
+
+## Match QA: the league match HUD (design "League Match HUD") on a real cage
+## league heat — the countdown, live play, the opponent's window minimized
+## and back, then the pause menu and out.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-heat
+func _run_heat() -> void:
+	await _sleep(0.8)
+	App.enter_league("cage")
+	App.start_league_heat()
+	await _sleep(1.0)
+	await _snap("heat_countdown")
+	await _sleep(3.2)
+	_hook_trial()
+	await _flick(1.9, 0.30, 0.0)
+	await _sleep(1.4)
+	await _snap("heat_live")
+	await _sleep(2.0)
+	await _click_named("PipMin")
+	await _sleep(0.5)
+	await _snap("heat_pipmin")
+	await _click_named("PipChip")
+	await _sleep(0.5)
+	await _click_named("PauseButton")
+	await _sleep(0.5)
+	await _snap("heat_pause")
+	await _click_button_named("QUIT TO TITLE")
+	await _sleep(1.2)
+	print("QA heat: done")
+	get_tree().quit(0)
+
+
+## Click a button by node name (icon buttons carry no text).
+func _click_named(node_name: String) -> void:
+	var b: Button = get_tree().root.find_child(node_name, true, false)
+	if b == null or not b.is_visible_in_tree():
+		print("QA: no visible button named '%s'" % node_name)
+		return
+	var c := (b.global_position + b.size / 2.0) * 0.5
+	_mouse_button(c, true)
+	await _sleep(0.08)
+	_mouse_button(c, false)
+	print("QA click: %s" % node_name)
 
 
 ## HUD QA: the solo-mode HUD (design "Solo Modes HUD") — a trial's
