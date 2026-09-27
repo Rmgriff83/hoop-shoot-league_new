@@ -14,11 +14,13 @@ var _outcomes: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
-	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title")):
+	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	if args.has("--qa-title"):
 		_run_title.call_deferred()
+	elif args.has("--qa-results"):
+		_run_results.call_deferred()
 	elif args.has("--qa-beach"):
 		_run_beach.call_deferred()
 	elif args.has("--qa-aim"):
@@ -69,6 +71,40 @@ func _run() -> void:
 	await _snap("05_results")
 	print("QA stats: %s" % JSON.stringify(_stats))
 	print("QA last_run: %s" % JSON.stringify(App.last_run))
+	get_tree().quit(0)
+
+
+## Results QA: the time-trial results page in two states without playing a
+## run — a NEW BEST with tickets (the board's top row as this run), then a
+## mid-board run that was iced (no tickets). Seeds App.last_run from the
+## saved board (writes one score only when the board is empty).
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-results
+func _run_results() -> void:
+	await _sleep(0.6)
+	var top := SaveService.top_scores(10, "cage")
+	if top.is_empty():
+		SaveService.put_score({"score": 24, "makes": 14, "attempts": 24, "swishes": 4, "bestStreak": 6, "bonus": 5, "iced": 0, "location": "cage"})
+		top = SaveService.top_scores(10, "cage")
+	App.next_mode = "trial"
+	var best: Dictionary = top[0].duplicate()
+	best["tickets"] = 30
+	App.last_run = best
+	App.last_run_was_best = true
+	get_tree().change_scene_to_file(App.RESULTS_SCENE)
+	await _sleep(1.2)
+	await _snap("results_best")
+	var mid: Dictionary = top[mini(3, top.size() - 1)].duplicate()
+	mid["iced"] = 2
+	mid["tickets"] = 0
+	App.last_run = mid
+	App.last_run_was_best = false
+	get_tree().change_scene_to_file(App.RESULTS_SCENE)
+	await _sleep(1.2)
+	await _snap("results_iced")
+	await _click_button_named("HOME")
+	await _sleep(1.0)
+	await _snap("results_home")
+	print("QA results: done")
 	get_tree().quit(0)
 
 

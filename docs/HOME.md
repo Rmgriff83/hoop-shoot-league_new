@@ -126,7 +126,25 @@ hard one); the pill shows TICKETS, the locker money.
 An ArenaSet with `title_*` set (pose, and `title_stars` for the star row), its
 `App.MODES` rows, and a row in `title_screen.gd` `CARDS`.
 
+## Results (design "Time Trial Results", 2026-09-26)
+
+`game/screens/results_screen.gd` (a `Node3D`): the finished time trial's
+numbers over the LIVE court you just played on (the area's home pan under a
+0.5 scrim), in the same style. `★ ARCADE CAGE · TIME TRIAL`; a **NEW BEST**
+gold chip or the gap to your best (`BEST 31 · 7 SHORT`); the score at 96 px
+with the dithered shadow (gold when best); the stat tiles MAKES · SWISHES ·
+STREAK · BONUS (+ ICED when it happened); the top-ten board on a see-through
+panel, this run's row in orange with `THIS RUN`; **RUN IT BACK** (`60 S ·
+SAME CAGE`, `App.start_mode(App.next_mode)`) beside the gold tickets card
+(`+30` / `TICKETS · BEST BONUS IN`, only when tickets were earned); **HOME**
+(`App.to_title`). Copy is `game/ui/results_copy.gd` (`ResultsCopy`, pure,
+`tests/test_results.gd`); the run is `App.last_run` (+ `last_run_was_best`).
+
 ## QA and tests
+
+- `godot --path hoop_shoot --resolution 360x640 -- --qa-results` →
+  `user://qa/results_best.png`, `results_iced.png`, `results_home.png`: the
+  page as a new best with tickets, as a mid-board iced run, then HOME.
 
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-title` →
   `user://qa/title_*.png`: the cage over its pan, the beach page, back, the
