@@ -641,7 +641,7 @@ func _fill_sched() -> void:
 	var m := _season_meta()
 	var s: Dictionary = m["s"]
 	var rec := LeagueSummary.record(s)
-	vb.add_child(_caps("%d DAYS · %d-%d SO FAR" % [Season.days(s), rec[0], rec[1]]))
+	vb.add_child(_caps(("%d DAYS · %d-%d" if m["phase"] == Season.PHASE_DONE else "%d DAYS · %d-%d SO FAR") % [Season.days(s), rec[0], rec[1]]))
 	var panel := _panel(10.0, 24.0)
 	panel.name = "Schedule"
 	var col := _vcol(0)

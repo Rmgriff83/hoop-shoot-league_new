@@ -23,9 +23,23 @@ func _init() -> void:
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(col)
-	_caps = RetroTheme.on_scene(UiFont.label("LVL01", 16, COLOR))
-	_caps.name = "Caps"
-	col.add_child(_caps)
+	# `LVL · 01`: the word, a small cream square, the number (design "Home
+	# League Context v2").
+	var row := HBoxContainer.new()
+	row.name = "Caps"
+	row.add_theme_constant_override("separation", 6)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(row)
+	var word := RetroTheme.on_scene(UiFont.label("LVL", 16, COLOR)) as Label
+	word.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(word)
+	var dot := Dot.new()
+	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(dot)
+	_caps = RetroTheme.on_scene(UiFont.label("01", 16, COLOR))
+	_caps.name = "Number"
+	_caps.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(_caps)
 	_bar = PanelContainer.new()
 	_bar.name = "Bar"
 	_bar.custom_minimum_size = Vector2(BAR_W, BAR_H)
@@ -49,7 +63,7 @@ func _draw() -> void:
 
 
 func set_level(level: int, frac: float) -> void:
-	_caps.text = "LVL%02d" % level
+	_caps.text = "%02d" % level
 	_fill.set_anchors_preset(Control.PRESET_LEFT_WIDE)
 	_fill.offset_left = 2
 	_fill.offset_top = 2
@@ -59,4 +73,14 @@ func set_level(level: int, frac: float) -> void:
 
 
 func level_text() -> String:
-	return _caps.text
+	return "LVL" + _caps.text
+
+
+## The 4 px cream square between LVL and the number, with a 2 px ink shadow.
+class Dot extends Control:
+	func _init() -> void:
+		custom_minimum_size = Vector2(6, 6)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _draw() -> void:
+		draw_rect(Rect2(Vector2(2, 2), Vector2(4, 4)), RetroTheme.SCENE_OUTLINE)
+		draw_rect(Rect2(Vector2.ZERO, Vector2(4, 4)), RetroTheme.SCENE_TEXT)

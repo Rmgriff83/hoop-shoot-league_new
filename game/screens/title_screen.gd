@@ -44,9 +44,14 @@ const OPEN_S := 0.3
 ## the court's floor.
 const WASH_COLOR := Color("#1B1815")
 const WASH_ALPHA := 0.72
-## The floating layer's rows: the compact loadout strip on MATCH, the rest.
+## The floating layer's rows: the compact loadout strip on MATCH, the full
+## loadout on CARDS a little higher, the rest.
 const FLOAT_Y := 612.0
+const LOADOUT_Y := 584.0
 const STRIP_Y := 700.0
+## The season chip under the area name while the league is open.
+const CHIP_POS := Vector2(36, 362)
+const CHIP_H := 46.0
 
 var _index := 0
 var _t := 0.0
@@ -68,6 +73,9 @@ var _prev: Button
 var _next: Button
 var _ticker: HomeTicker
 var _badge: LevelBadge
+var _season_chip: ShadowPanel
+var _chip_a: Label
+var _chip_b: Label
 var _settings: SettingsPanel
 var _switching := false
 var _drag_x := NAN
@@ -230,6 +238,28 @@ func rebuild_chrome() -> void:
 		tw.tween_callback(func() -> void: soon.visible = false)
 	ranks.pressed.connect(flash)
 	multi.pressed.connect(flash)
+	# The season chip: `SEASON 2 - 2-1`, slid in from the left while the league is open.
+	_season_chip = ShadowPanel.new(RetroTheme.c("orange"), 0.0, 0.30, 16.0)
+	_season_chip.name = "SeasonChip"
+	_season_chip.position = CHIP_POS
+	_season_chip.custom_minimum_size = Vector2(0, CHIP_H + ShadowStyle.OFFSET)
+	_season_chip.visible = false
+	var chip_row := HBoxContainer.new()
+	chip_row.add_theme_constant_override("separation", 14)
+	chip_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_season_chip.add_child(chip_row)
+	_chip_a = _float_text("", 16, RetroTheme.SCENE_TEXT, true)
+	_chip_a.name = "ChipA"
+	_chip_a.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	chip_row.add_child(_chip_a)
+	var dash := ModeCards.Dash.new()
+	dash.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	chip_row.add_child(dash)
+	_chip_b = _float_text("", 16, LeagueContext.HI, true)
+	_chip_b.name = "ChipB"
+	_chip_b.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	chip_row.add_child(_chip_b)
+	_chrome.add_child(_season_chip)
 	_prev = _chevron("<", -1)
 	_prev.position = Vector2(8, CHEVRON_Y)
 	_chrome.add_child(_prev)
@@ -347,6 +377,10 @@ func _apply_area(f: float) -> void:
 		_next.visible = home
 	if _float != null:
 		_float.visible = not home
+	if _season_chip != null:
+		_season_chip.visible = f > 0.0
+		_season_chip.position = Vector2(lerpf(-1.3 * maxf(_season_chip.size.x, 1.0), CHIP_POS.x, f), CHIP_POS.y)
+		_season_chip.modulate.a = f
 
 
 func _make_league(tab := "HEAT", sub := "LOADOUT") -> LeagueContext:
@@ -425,6 +459,11 @@ func _chevron(text: String, dir: int) -> Button:
 func _update_zone() -> void:
 	var arena := CosmeticLibrary.get_arena(str(CARDS[_index]["area"]))
 	_area_name.text = (arena.display_name if arena != null else str(CARDS[_index]["area"])).to_upper()
+	if _chip_a != null:
+		var chip: Array = LeagueSummary.card(_league_state(str(CARDS[_index]["area"])))["chip"]
+		_chip_a.text = str(chip[0])
+		_chip_b.text = str(chip[1])
+		_chip_b.visible = str(chip[1]) != ""
 	for c in _stars.get_children():
 		_stars.remove_child(c)
 		c.free()
@@ -532,7 +571,7 @@ func _float_strip() -> void:
 ## CARDS: the equipped cards full size with their names; tap one to unequip it.
 func _float_loadout() -> void:
 	var slots: Array = App.loadout_slots(_league.league_id)
-	var box := _float_box(FLOAT_Y, 14)
+	var box := _float_box(LOADOUT_Y, 14)
 	box.name = "Loadout"
 	var set_n := 0
 	for id in slots:

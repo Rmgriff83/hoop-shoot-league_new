@@ -72,7 +72,7 @@ static func year_of(doc: Dictionary) -> int:
 static func card(state: Dictionary) -> Dictionary:
 	var cfg: Dictionary = state.get("league", {})
 	var out := {"top": str(cfg.get("name", "LEAGUE")).to_upper(), "sub": "NEW LEAGUE", "titles": 0,
-		"stats": [], "next_left": "", "next_right": "", "line": line(state)}
+		"stats": [], "next_left": "", "next_right": "", "line": line(state), "done": false, "chip": ["", ""]}
 	if state.is_empty():
 		return out
 	if not bool(state.get("unlocked", true)):
@@ -95,8 +95,9 @@ static func card(state: Dictionary) -> Dictionary:
 		Season.PHASE_REGULAR:
 			out["sub"] = "SEASON %d" % year
 			var p := place(cfg, s)
-			out["stats"] = [{"v": "%d-%d" % rec, "l": "RECORD"}, {"v": TickerText.ordinal(p) if p > 0 else "-", "l": "PLACE"},
+			out["stats"] = [{"v": "%d-%d" % rec, "l": "RECORD"}, {"v": str(p) if p > 0 else "-", "l": "PLACE"},
 				{"v": streak_text(s), "l": "STREAK"}]
+			out["chip"] = [out["sub"], "%d-%d" % rec]
 			var day := int(s["currentDay"])
 			var g := Season.player_game_on(s, day, PLAYER)
 			out["next_left"] = "NEXT · %s" % vs_text(g) if not g.is_empty() else "NEXT · DAY %d" % day
@@ -106,23 +107,27 @@ static func card(state: Dictionary) -> Dictionary:
 			var mine := Season.player_series(s, PLAYER)
 			var seed := place(cfg, s)
 			if mine.is_empty():
-				out["stats"] = [{"v": "%d-%d" % rec, "l": "RECORD"}, {"v": TickerText.ordinal(seed) if seed > 0 else "-", "l": "PLACE"},
+				out["stats"] = [{"v": "%d-%d" % rec, "l": "RECORD"}, {"v": str(seed) if seed > 0 else "-", "l": "PLACE"},
 					{"v": "OUT", "l": "PLAYOFFS"}]
 				out["next_left"] = "OUT OF THE PLAYOFFS"
 				out["next_right"] = "SEASON %d" % year
+				out["chip"] = [out["sub"], "OUT"]
 			else:
 				var wl := series_record(mine)
 				out["stats"] = [{"v": "%d-%d" % wl, "l": "SERIES"}, {"v": round_name(mine), "l": "ROUND"}, {"v": str(seed), "l": "SEED"}]
 				out["next_left"] = "NEXT · %s %s" % ["VS" if mine["highSeedId"] == PLAYER else "@", team_name(opponent_in(mine))]
 				out["next_right"] = "%s · GAME %d" % [series_label(s, mine), wl[0] + wl[1] + 1]
+				out["chip"] = [out["sub"], "SERIES %d-%d" % wl]
 		_:
 			out["sub"] = "SEASON %d · OVER" % year
 			var summ := Campaign.season_summary(doc, cfg)
 			var champ := str(s.get("championId", "")) == PLAYER
-			out["stats"] = [{"v": "%d-%d" % rec, "l": "RECORD"}, {"v": TickerText.ordinal(int(summ["finish"])), "l": "FINISH"},
-				{"v": "CHAMPS" if champ else playoff_short(str(summ["playoffResult"])), "l": "PLAYOFFS"}]
+			var po := "CHAMPS" if champ else playoff_short(str(summ["playoffResult"]))
+			out["stats"] = [{"v": "%d-%d" % rec, "l": "RECORD"}, {"v": str(int(summ["finish"])), "l": "FINISH"}, {"v": po, "l": "PLAYOFFS"}]
 			out["next_left"] = "SEASON %d AWAITS" % (year + 1)
 			out["next_right"] = "START INSIDE"
+			out["done"] = true
+			out["chip"] = [out["sub"], "%d-%d · %s" % [rec[0], rec[1], po]]
 	return out
 
 

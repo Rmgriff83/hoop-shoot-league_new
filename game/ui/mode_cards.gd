@@ -77,22 +77,27 @@ static func league_card(state: Dictionary, slots: Array = []) -> Button:
 	mid.add_child(stats)
 	for k in info["stats"]:
 		stats.add_child(stat(str(k["v"]), str(k["l"]), 32))
+	# A finished season narrows it to a centred chevron (the footer says START INSIDE).
+	var done := bool(info.get("done", false))
 	var enter := ShadowCard.new(CREAM)
 	enter.name = "Enter"
-	enter.custom_minimum_size = Vector2(176 + ShadowCard.OFFSET, 0)
+	enter.custom_minimum_size = Vector2((104 if done else 176) + ShadowCard.OFFSET, 0)
 	enter.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	enter.disabled = b.disabled
 	var em := _margin(0, 16)
 	enter.add_child(em)
 	var er := HBoxContainer.new()
 	er.add_theme_constant_override("separation", 10)
+	er.alignment = BoxContainer.ALIGNMENT_CENTER if done else BoxContainer.ALIGNMENT_BEGIN
 	er.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	em.add_child(er)
-	var el := _label("ENTER\nLEAGUE", 16, CREAM, true)
-	el.add_theme_constant_override("line_spacing", 8)
-	el.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	el.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	er.add_child(el)
+	if not done:
+		var el := _label("ENTER\nLEAGUE", 16, CREAM, true)
+		el.name = "EnterLabel"
+		el.add_theme_constant_override("line_spacing", 8)
+		el.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		el.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		er.add_child(el)
 	var ch := _label(">", 32, CREAM, true)
 	ch.name = "Chevron"
 	ch.vertical_alignment = VERTICAL_ALIGNMENT_CENTER

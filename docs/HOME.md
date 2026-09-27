@@ -91,6 +91,11 @@ hard one); the pill shows TICKETS, the locker money.
   SCHED → `COMING UP`, the next three games as cards (today's gold); STATS →
   `THIS SEASON` RECORD · HIGH PTS · STREAK. Rebuilt on `tab_changed` /
   `changed`, hidden with the home block.
+- **Season chip** — while the league is open a chip slides in under the area
+name (`SEASON 2 — 2-1`, `SEASON 2 · PLAYOFFS — SERIES 1-1`, `SEASON 2 · OVER
+— 10-4 · CHAMPS`; `LeagueSummary.card().chip`). The LEAGUE card's PLACE and
+FINISH are bare numbers; a finished season's ENTER LEAGUE narrows to the
+chevron (the footer says START INSIDE).
 - **Summary copy** (`game/ui/league_summary.gd`, `LeagueSummary`, pure):
   `card(state)` (the LEAGUE card's top / sub / titles / stats / next line),
   `spot`, `upcoming`, `season_stats`, and `line(state)` — the one-liner the
