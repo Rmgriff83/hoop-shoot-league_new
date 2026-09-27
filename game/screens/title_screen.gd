@@ -378,7 +378,7 @@ func _apply_area(f: float) -> void:
 	if _float != null:
 		_float.visible = not home
 	if _season_chip != null:
-		_season_chip.visible = f > 0.0
+		_season_chip.visible = f > 0.0 and _chip_a.text != ""
 		_season_chip.position = Vector2(lerpf(-1.3 * maxf(_season_chip.size.x, 1.0), CHIP_POS.x, f), CHIP_POS.y)
 		_season_chip.modulate.a = f
 
@@ -407,6 +407,7 @@ func _open_league(instant := false) -> void:
 	_open = true
 	if _league == null:
 		_league = _make_league()
+	_update_zone()   # the campaign exists now: the season chip has its copy
 	_rebuild_float()
 	if instant:
 		_apply_area(1.0)
@@ -464,6 +465,7 @@ func _update_zone() -> void:
 		_chip_a.text = str(chip[0])
 		_chip_b.text = str(chip[1])
 		_chip_b.visible = str(chip[1]) != ""
+		_season_chip.visible = _open and _chip_a.text != ""
 	for c in _stars.get_children():
 		_stars.remove_child(c)
 		c.free()
