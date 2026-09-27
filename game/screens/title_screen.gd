@@ -43,7 +43,7 @@ const OPEN_S := 0.3
 ## slightly opaque dark gray where the ticker starts, so the cards read over
 ## the court's floor.
 const WASH_COLOR := Color("#1B1815")
-const WASH_ALPHA := 0.55
+const WASH_ALPHA := 0.72
 ## The floating layer's rows: the compact loadout strip on MATCH, the rest.
 const FLOAT_Y := 612.0
 const STRIP_Y := 700.0
