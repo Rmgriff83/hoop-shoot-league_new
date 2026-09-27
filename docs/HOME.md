@@ -151,7 +151,26 @@ card drop; **CONTINUE SEASON** (`NOW 3-1 · 2ND PLACE · DAY 5 NEXT`,
 `App.to_league_hub`) and **HOME**. A heat outside a league reads QUICK HEAT
 and gets only HOME.
 
+## HUD (design "Solo Modes HUD", 2026-09-26)
+
+`game/view/hud.gd` (`Hud`, a CanvasLayer over the live game; copy in
+`game/view/hud_copy.gd`, `tests/test_hud.gd`): the top row — PAUSE
+(`IconButton("pause")`), the clock card (stopwatch + seconds, gold in the last
+ten; `OT1 12.3` in overtime) or the teal PRACTICE card, the orange SCORE card
+with the springy count-up and, in a trial, the gold BEST chip (`NEW BEST`
+once you pass it) — the dithered countdown at 160 px, and the centre banners
+on two dithered lines (`SWISH` / `+2`, `HEATING` / `UP`, `TIME!`, `+1`);
+messages too long for the big lines draw as a small note. Practice adds
+the 30S MODE row (`ToggleSwitch`) under PAUSE and the beach's spot picker
+under that. The pause menu is shared (`game/ui/pause_menu.gd`, `PauseMenu`):
+PAUSED, RESUME, SHOT HELP (taps cycle the value), QUIT TO TITLE — the old
+BACK button lives there now.
+
 ## QA and tests
+
+- `godot --path hoop_shoot --resolution 360x640 -- --qa-hud` →
+  `user://qa/hud_countdown.png`, `hud_live.png`, `hud_pause.png`,
+  `hud_practice.png`, `hud_practice30.png`.
 
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-heat-result` →
   `user://qa/heat_win.png` (OT, a card drop), `heat_loss.png`, `heat_quick.png`.

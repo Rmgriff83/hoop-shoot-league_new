@@ -283,8 +283,10 @@ func stop_track(fade_s := 0.6) -> void:
 	var tw := _amb_root().create_tween()
 	tw.tween_property(old, "volume_db", -60.0, fade_s)
 	tw.tween_callback(func() -> void:
-		old.stop()
-		old.queue_free())
+		# The player can be gone by now (a second stop, or a teardown).
+		if is_instance_valid(old):
+			old.stop()
+			old.queue_free())
 
 
 func track_id() -> String:

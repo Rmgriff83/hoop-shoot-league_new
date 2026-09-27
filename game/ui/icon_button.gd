@@ -3,7 +3,8 @@ extends Button
 ## A square see-through button (ShadowStyle) with a glyph: "locker" — the
 ## pixel ball (icon_ball, 22 px: set your ball); "ranks" — three bars, drawn;
 ## "multi" — the two-player icon (icon_multiplayer, 30×23 with an ink drop
-## shadow); "shop" — a gold square, drawn. 50 px face + the 6 px shadow.
+## shadow); "shop" — a gold square, drawn; "pause" — two cream bars with
+## ink shadows (the in-game pause). 50 px face + the 6 px shadow.
 
 const SIZE := 56.0
 const COLOR := RetroTheme.SCENE_TEXT
@@ -41,6 +42,11 @@ func _draw() -> void:
 			draw_rect(Rect2(c - Vector2(8, 8), Vector2(16, 16)), RetroTheme.LIGHT["gold"])
 		"multi":
 			_icon("icon_multiplayer", c, Vector2(30, 23), 2.0)
+		"pause":
+			for i in 2:
+				var at := Vector2(c.x - 9 + i * 12, c.y - 10)
+				draw_rect(Rect2(at + Vector2(2, 2), Vector2(6, 20)), RetroTheme.SCENE_OUTLINE)
+				draw_rect(Rect2(at, Vector2(6, 20)), COLOR)
 		_:
 			_icon("icon_ball", c, Vector2(22, 22), 0.0)
 

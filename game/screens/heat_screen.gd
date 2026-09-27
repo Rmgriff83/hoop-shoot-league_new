@@ -8,7 +8,7 @@ extends "res://game/screens/time_trial_screen.gd"
 const PIP_SIZE := Vector2i(216, 384)
 ## League heats use a smaller window (the dashboard's stats carry the story).
 const PIP_SIZE_LEAGUE := Vector2i(168, 298)
-const PIP_POS := Vector2(720 - 216 - 12, 84)
+const PIP_POS := Vector2(720 - 216 - 12, 176)   # under the HUD's score card (design "Solo Modes HUD")
 const AI_SFX_GAIN_DB := -9.0
 ## Card tray: three slots on the left edge, inside the UI zone (above the flick
 ## input's grab line at 45 % of the height) so a tap never becomes a shot.
@@ -617,7 +617,7 @@ func _handle_event(ev: Dictionary) -> void:
 		"go":
 			if heat.ot > 0:
 				# OT tip-off: keep the carried score on the board, flash GO.
-				_hud.banner("GO! 🏀", Color(0.4, 0.9, 0.55))
+				_hud.banner("GO!", Color(0.4, 0.9, 0.55))
 				_court.led.show_score(heat.player.score)
 				_court.led.flash("GO!", 2, _court.led.accent_color)
 			else:

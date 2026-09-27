@@ -14,7 +14,7 @@ var _outcomes: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
-	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result")):
+	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	if args.has("--qa-title"):
@@ -23,6 +23,8 @@ func _ready() -> void:
 		_run_results.call_deferred()
 	elif args.has("--qa-heat-result"):
 		_run_heat_result.call_deferred()
+	elif args.has("--qa-hud"):
+		_run_hud.call_deferred()
 	elif args.has("--qa-beach"):
 		_run_beach.call_deferred()
 	elif args.has("--qa-aim"):
@@ -107,6 +109,46 @@ func _run_results() -> void:
 	await _sleep(1.0)
 	await _snap("results_home")
 	print("QA results: done")
+	get_tree().quit(0)
+
+
+## HUD QA: the solo-mode HUD (design "Solo Modes HUD") — a trial's
+## countdown, a live banner after a flick, the pause menu, then practice
+## with the 30S MODE toggle off and on.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-hud
+func _run_hud() -> void:
+	await _sleep(1.2)
+	await _click_button_named("TIME TRIAL")
+	await _sleep(0.5)
+	await _snap("hud_countdown")
+	await _sleep(3.0)
+	_hook_trial()
+	await _flick(1.9, 0.30, 0.0)
+	await _sleep(1.6)
+	await _snap("hud_live")
+	await _sleep(1.5)
+	var pause: Button = get_tree().root.find_child("PauseButton", true, false)
+	if pause != null:
+		var c := (pause.global_position + pause.size / 2.0) * 0.5
+		_mouse_button(c, true)
+		await _sleep(0.08)
+		_mouse_button(c, false)
+		await _sleep(0.5)
+		await _snap("hud_pause")
+		await _click_button_named("QUIT TO TITLE")
+		await _sleep(1.5)
+	await _click_button_named("PRACTICE")
+	await _sleep(1.2)
+	await _snap("hud_practice")
+	var thirty: Button = get_tree().root.find_child("ThirtyButton", true, false)
+	if thirty != null:
+		var c2 := (thirty.global_position + thirty.size / 2.0) * 0.5
+		_mouse_button(c2, true)
+		await _sleep(0.08)
+		_mouse_button(c2, false)
+		await _sleep(0.4)
+		await _snap("hud_practice30")
+	print("QA hud: done")
 	get_tree().quit(0)
 
 
@@ -307,11 +349,15 @@ func _hook_trial() -> void:
 				s["vel_x"], s["vel_y"], s["travel_x"], s["travel_y"]]))
 	var timer := Timer.new()
 	timer.wait_time = 0.25
+	# A weak ref: a captured node would log "lambda capture freed" when the
+	# screen leaves the tree before the timer's last tick.
+	var ref: WeakRef = weakref(screen)
 	timer.timeout.connect(func() -> void:
-		if not is_instance_valid(screen) or not screen.is_inside_tree():
+		var live: Node = ref.get_ref()
+		if live == null or not live.is_inside_tree():
 			timer.stop()
 			return
-		var trial: TimeTrial = screen.get("trial")
+		var trial: TimeTrial = live.get("trial")
 		_stats = {
 			"attempts": trial.attempts, "makes": trial.makes,
 			"swishes": trial.swishes, "score": trial.score,

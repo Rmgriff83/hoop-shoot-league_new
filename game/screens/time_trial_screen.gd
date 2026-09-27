@@ -92,6 +92,8 @@ func _ready() -> void:
 	prop_layer.add_child(_prop_icons)
 	if _practice:
 		_hud.set_practice(true, _mode["hud_label"])
+	elif not bool(_mode.get("heat", false)):
+		_hud.set_best(_best_score())
 	_add_back_button()
 	_spots = _arena_set.spots() if _arena_set != null else [{"name": "KEY", "pos": Vector3.ZERO}]
 	_set_spot(0)
@@ -169,120 +171,50 @@ func _after_ready() -> void:
 	_refresh_ticker()
 
 
-## BACK to the title from either mode. Top-centre of the UI zone (well above
-## the grab line, so it never intercepts a flick) and on the topmost canvas
-## layer so the tuning strip can't sit over it. Leaving a trial mid-run just
-## abandons it — nothing is scored or saved.
+## The top row's button (design "Solo Modes HUD"): PAUSE at the top-left,
+## on the topmost canvas layer so the tuning strip can't sit over it, well
+## above the grab line. BACK lives in the pause menu as QUIT TO TITLE;
+## leaving a trial mid-run just abandons it — nothing is scored or saved.
 func _add_back_button() -> void:
 	var layer := CanvasLayer.new()
-	layer.name = "BackUi"
+	layer.name = "TopUi"
 	layer.layer = 11
 	add_child(layer)
-	var b := Button.new()
-	b.text = "◀ BACK"
-	b.add_theme_font_size_override("font_size", 24)
-	b.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	b.position = Vector2(270, 12)
-	b.custom_minimum_size = Vector2(180, 60)
-	b.focus_mode = Control.FOCUS_NONE
-	b.pressed.connect(App.to_title)
-	layer.add_child(b)
 	_add_pause_button(layer)
 
 
 ## PAUSE (every mode): freezes the whole tree — sim, AI, clocks, animations —
-## behind a dim overlay with RESUME / QUIT. The overlay itself keeps
-## processing so its buttons work while paused. Leaving the screen unpauses.
-var _pause_layer: CanvasLayer
+## behind the shared PauseMenu (RESUME / SHOT HELP / QUIT TO TITLE), which
+## keeps processing so its buttons work while paused. Leaving the screen
+## unpauses.
+var _pause_layer: PauseMenu
 
 
 func _add_pause_button(layer: CanvasLayer) -> void:
-	var b := Button.new()
+	var b := IconButton.new("pause")
 	b.name = "PauseButton"
-	b.text = "⏸"
-	b.add_theme_font_size_override("font_size", 26)
-	b.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	b.position = Vector2(196, 12)
-	b.custom_minimum_size = Vector2(64, 60)
-	b.focus_mode = Control.FOCUS_NONE
+	b.position = Vector2(36, 32)
 	b.pressed.connect(pause_game)
 	layer.add_child(b)
-
-	_pause_layer = CanvasLayer.new()
-	_pause_layer.name = "PauseUi"
-	_pause_layer.layer = 30
-	_pause_layer.process_mode = Node.PROCESS_MODE_ALWAYS
-	_pause_layer.visible = false
-	add_child(_pause_layer)
-	var dim := ColorRect.new()
-	dim.color = Color(0.05, 0.06, 0.1, 0.78)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP   # swallow touches: no flicks through the menu
-	_pause_layer.add_child(dim)
-	var vb := VBoxContainer.new()
-	vb.set_anchors_preset(Control.PRESET_CENTER)
-	vb.position = Vector2(-220, -200)
-	vb.size = Vector2(440, 400)
-	vb.alignment = BoxContainer.ALIGNMENT_CENTER
-	vb.add_theme_constant_override("separation", 22)
-	_pause_layer.add_child(vb)
-	var title := Label.new()
-	title.text = "PAUSED"
-	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title.add_theme_font_size_override("font_size", 56)
-	title.add_theme_color_override("font_color", Color(1.0, 0.81, 0.54))
-	vb.add_child(title)
-	var resume := Button.new()
-	resume.name = "Resume"
-	resume.text = "  RESUME ▶  "
-	resume.add_theme_font_size_override("font_size", 34)
-	resume.custom_minimum_size = Vector2(0, 84)
-	resume.focus_mode = Control.FOCUS_NONE
-	resume.pressed.connect(resume_game)
-	vb.add_child(resume)
-	# Shot help lives here rather than on the title screen so it can be flipped
-	# mid-run and judged on the very next shot. The views read App.shot_help
-	# every frame, so there is nothing to rewire when it changes.
-	var help := Button.new()
-	help.name = "ShotHelp"
-	help.text = _shot_help_label()
-	help.add_theme_font_size_override("font_size", 24)
-	help.custom_minimum_size = Vector2(0, 60)
-	help.focus_mode = Control.FOCUS_NONE
-	help.add_theme_color_override("font_color", Color(0.62, 0.68, 0.85))
-	help.pressed.connect(func() -> void:
-		App.cycle_shot_help()
-		help.text = _shot_help_label()
-	)
-	vb.add_child(help)
-	var quit := Button.new()
-	quit.name = "Quit"
-	quit.text = "QUIT TO TITLE"
-	quit.add_theme_font_size_override("font_size", 24)
-	quit.custom_minimum_size = Vector2(0, 60)
-	quit.focus_mode = Control.FOCUS_NONE
-	quit.add_theme_color_override("font_color", Color(0.62, 0.68, 0.85))
-	quit.pressed.connect(func() -> void:
+	_pause_layer = PauseMenu.new()
+	_pause_layer.resumed.connect(resume_game)
+	_pause_layer.quit.connect(func() -> void:
 		resume_game()
 		App.to_title()
 	)
-	vb.add_child(quit)
-
-
-func _shot_help_label() -> String:
-	return "SHOT HELP: %s" % App.SHOT_HELP_LABELS[App.shot_help]
+	add_child(_pause_layer)
 
 
 func pause_game() -> void:
 	if _pause_layer == null or _finished_handed_off:
 		return
-	_pause_layer.visible = true
+	_pause_layer.open()
 	get_tree().paused = true
 
 
 func resume_game() -> void:
 	if _pause_layer != null:
-		_pause_layer.visible = false
+		_pause_layer.close()
 	get_tree().paused = false
 
 
@@ -382,6 +314,7 @@ var _shuffle_mark_at := 0.0      # practice: clock value of the next move
 ## Practice "30 s mode" toggle: the arena's last-30-seconds mechanic on demand.
 var _thirty_on := false
 var _thirty_btn: Button
+var _thirty_switch: ToggleSwitch
 var _shuffle_target := -1        # spot index announced for the next mark
 var _shuffle_shown := -1         # last countdown second shown
 var _picker_locked := false
@@ -488,7 +421,7 @@ func _process_shuffle(dt: float) -> void:
 	if tl > mark:
 		if secs != _shuffle_shown:
 			_shuffle_shown = secs
-			_hud.banner("→ %s in %d" % [nm2, secs], Color(1.0, 0.75, 0.3))
+			_hud.banner("NEXT: %s IN %d" % [nm2, secs], Color(1.0, 0.75, 0.3))
 		# The target's button flashes.
 		if _shuffle_target < _spot_buttons.size():
 			var on := fmod(tl, 0.5) < 0.25
@@ -504,23 +437,38 @@ func _process_shuffle(dt: float) -> void:
 
 
 ## Practice-only toggle for the arena's "last 30 s" mechanic: the arcade's
-## moving hoop, the beach's spot shuffle. Sits under the top row (below the
-## spot picker / tuning strip when those are up), above the grab line.
+## moving hoop, the beach's spot shuffle. A see-through row under the pause
+## button (design "Solo Modes HUD": 30S MODE and a switch), below the tuning
+## strip when that is up, above the grab line.
 func _add_thirty_button() -> void:
 	var layer := CanvasLayer.new()
 	layer.name = "ThirtyUi"
 	layer.layer = 11
 	add_child(layer)
-	var y := 330.0 if App.tuning_mode else 84.0
-	if _spots.size() > 1:
-		y += 50.0
-	_thirty_btn = Button.new()
-	_thirty_btn.text = "30s MODE: OFF"
-	_thirty_btn.add_theme_font_size_override("font_size", 18)
-	_thirty_btn.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	_thirty_btn.position = Vector2(12, y)
-	_thirty_btn.custom_minimum_size = Vector2(220, 44)
-	_thirty_btn.focus_mode = Control.FOCUS_NONE
+	var y := 330.0 if App.tuning_mode else 104.0
+	_thirty_btn = ShadowCard.new(RetroTheme.SCENE_TEXT)
+	_thirty_btn.name = "ThirtyButton"
+	_thirty_btn.position = Vector2(36, y)
+	_thirty_btn.size = Vector2(284 + ShadowStyle.OFFSET, 60 + ShadowStyle.OFFSET)
+	var m := MarginContainer.new()
+	m.set_anchors_preset(Control.PRESET_FULL_RECT)
+	m.add_theme_constant_override("margin_left", 16)
+	m.add_theme_constant_override("margin_right", 16 + int(ShadowStyle.OFFSET))
+	m.add_theme_constant_override("margin_bottom", int(ShadowStyle.OFFSET))
+	m.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_thirty_btn.add_child(m)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	m.add_child(row)
+	var l := RetroTheme.on_scene(UiFont.label("30S MODE", 16, RetroTheme.SCENE_TEXT)) as Label
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(l)
+	_thirty_switch = ToggleSwitch.new(false)
+	_thirty_switch.name = "ThirtySwitch"
+	_thirty_switch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(_thirty_switch)
 	_thirty_btn.pressed.connect(_toggle_thirty)
 	layer.add_child(_thirty_btn)
 
@@ -568,7 +516,8 @@ func _toggle_ice_preview() -> void:
 
 func _toggle_thirty() -> void:
 	_thirty_on = not _thirty_on
-	_thirty_btn.text = "30s MODE: ON" if _thirty_on else "30s MODE: OFF"
+	if _thirty_switch != null:
+		_thirty_switch.set_on(_thirty_on)
 	if _spots.size() > 1:
 		# Beach: the spot shuffle on a rolling clock.
 		_shuffle_enabled = _thirty_on
@@ -601,8 +550,8 @@ func _add_spot_picker() -> void:
 	layer.layer = 11
 	add_child(layer)
 	var row := HBoxContainer.new()
-	row.position = Vector2(12, 330 if App.tuning_mode else 84)
-	row.size = Vector2(696, 44)
+	row.position = Vector2(36, 330 if App.tuning_mode else (176 if _practice else 84))
+	row.size = Vector2(648, 44)
 	row.add_theme_constant_override("separation", 6)
 	layer.add_child(row)
 	for k in _spots.size():
@@ -791,7 +740,7 @@ func _handle_event(ev: Dictionary) -> void:
 	match ev["kind"]:
 		"go":
 			if not _practice:
-				_hud.banner("GO! 🏀", Color(0.4, 0.9, 0.55))
+				_hud.banner("GO!", Color(0.4, 0.9, 0.55))
 				_court.led.set_text("")
 				_court.led.show_score(0)
 				_court.led.flash("GO!", 2, _court.led.accent_color)
@@ -856,12 +805,12 @@ func _handle_event(ev: Dictionary) -> void:
 				_court.led.marquee("BURNED OUT" if str(ev.get("reason", "")) == "time" else "COOLED OFF", 24.0, _court.led.accent_color)
 		"heat_up":
 			Sfx.score_pop(true)
-			_hud.banner("🔥 HEATING UP!", Color(1.0, 0.55, 0.2))
+			_hud.banner("HEATING UP", RetroTheme.LIGHT["orange"])
 			_court.led.marquee("HEATING UP", 24.0, _court.led.accent_color)
 			_court.flare_lights()
 		"buzzer":
 			Sfx.buzzer()
-			_hud.banner("⏰ TIME!", Color(1.0, 0.45, 0.45))
+			_hud.banner("TIME!", RetroTheme.LIGHT["orange"])
 			_court.led.set_text("TIME")
 			_court.led.band_solid(_court.led.band_buzzer_color, 2.0)
 			_court.play_arena("CageShake")
@@ -893,13 +842,13 @@ func _on_outcome(outcome: Dictionary, buzzer_beater: bool) -> void:
 		_court.rim_nudge()
 		# HUD banners are plain scoring only; the streak story stays on the LED.
 		if buzzer_beater:
-			_hud.banner("🚨 BUZZER BEATER +%d!" % pts, Color(1.0, 0.6, 0.2))
+			_hud.banner("BUZZER BEATER +%d" % pts, RetroTheme.LIGHT["orange"])
 			_court.led.flash("BUZZER +%d" % pts, 3, accent)
 		elif is_swish:
-			_hud.banner("✨ SWISH +%d" % pts)
+			_hud.banner("SWISH +%d" % pts)
 			_court.led.flash("SWISH +%d" % pts, 2, accent)
 		else:
-			_hud.banner("+%d" % pts, Color(0.9, 0.95, 1.0))
+			_hud.banner("+%d" % pts, RetroTheme.SCENE_TEXT)
 		if lit and streak == StreakRules.FIRE_AT:
 			_court.led.marquee("ON FIRE", 24.0, accent)
 			Sfx.score_pop(true)
@@ -916,7 +865,7 @@ func _on_outcome(outcome: Dictionary, buzzer_beater: bool) -> void:
 			_court.set_fire(false)
 			_court.led.marquee("COOLED OFF", 24.0, accent)
 		elif outcome["type"] == ShotClassify.IN_AND_OUT:
-			_hud.banner("💔 in and out!", Color(1.0, 0.5, 0.6))
+			_hud.banner("IN AND OUT", RetroTheme.SCENE_TEXT)
 
 
 func _finish() -> void:
