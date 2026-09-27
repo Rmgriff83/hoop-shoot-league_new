@@ -161,7 +161,9 @@ buys a season.
 ## Adding a card
 
 1. **Row** in `data/cards.json`: `id, name, target, effect {kind, …}, art,
-   blurb`. Leave `rarity` and `price` for step 4.
+   blurb, level` (the league band edge it opens at — docs/PROGRESSION.md;
+   a card is playable only from its level, ownable before it). Leave
+   `rarity` and `price` for step 4.
 2. **Effect**: a new `kind` needs `CardEffects.apply` / `can_apply` (and the
    `TimeTrial` hook it drives) plus `CardEffects.KINDS`; a new duration or
    magnitude of an existing kind is just the JSON row.

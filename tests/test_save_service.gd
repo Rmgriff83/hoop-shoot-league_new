@@ -93,11 +93,23 @@ func run(t) -> void:
 	svc.put_cosmetics(cos)
 	t.ok(svc.dirty_parts().has("cosmetics"), "cosmetics part marked dirty")
 
+	# Progress: level 1 with no XP to start, round-trip, marked dirty.
+	var prog: Dictionary = svc.get_progress()
+	t.eq(int(prog.get("xp", -1)), 0, "no XP to start")
+	t.eq(str(prog.get("seasonKey", "?")), "", "no season yet")
+	prog["xp"] = 140
+	prog["seasonXp"] = 40
+	prog["seasonKey"] = "cage:2"
+	svc.put_progress(prog)
+	t.ok(svc.dirty_parts().has("progress"), "progress part marked dirty")
+	t.eq(int(svc.get_progress()["xp"]), 140, "XP round-trips")
+
 	# Persistence: a brand-new instance reads the same state (atomic writes landed).
 	var svc2 := _fresh()
 	t.eq(svc2.get_client_id(), cid, "clientId stable across reload")
 	t.eq(svc2.top_scores(10).size(), 4, "scores survive reload")
 	t.ok(svc2.dirty_parts().has("time_trial_scores"), "outbox survives reload")
+	t.eq(int(svc2.get_progress()["xp"]), 140, "progress survives reload")
 	t.eq(svc2.get_tuning()["tuningMode"], true, "tuning mode survives reload")
 	t.eq(int(svc2.get_settings()["shotHelp"]), 2, "shot help mode survives reload")
 	t.eq(bool(svc2.get_settings().get("darkMode", false)), true, "dark mode survives reload")

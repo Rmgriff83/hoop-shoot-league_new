@@ -54,6 +54,15 @@ func _copy(t) -> void:
 		t.eq(r["hi"], "", "%s: a tie marks nobody" % r["l"])
 	t.eq(HeatCopy.pct_text({"attempts": 0}), "-", "no attempts, no percent")
 	t.eq(HeatCopy.coins(win), {"big": "+50", "sub": "COINS · WIN", "sub2": "+28 TICKETS"}, "the coins card with the tickets")
+	var xp_win := win.duplicate(true)
+	xp_win["xp"] = {"gained": 18, "level_before": 1, "level_after": 1}
+	t.eq(HeatCopy.coins(xp_win)["sub2"], "+28 TICKETS · +18 XP", "the XP joins the tickets line")
+	t.eq(HeatCopy.level_line(xp_win, 64), {"text": "LEVEL 1 · 64/100 XP", "gold": false}, "the level line")
+	xp_win["xp"] = {"gained": 30, "level_before": 1, "level_after": 2}
+	t.eq(HeatCopy.level_line(xp_win, 110), {"text": "LEVEL UP · LEVEL 2", "gold": true}, "a level up is gold")
+	xp_win["xp"] = {"gained": 0, "level_before": 3, "level_after": 3}
+	t.eq(HeatCopy.level_line(xp_win, 200), {"text": "LEVEL 3 · CAP", "gold": false}, "at the league's cap")
+	t.eq(HeatCopy.level_line({"league": null, "xp": {"gained": 5}}, 5), {}, "no line outside a league")
 	t.eq(HeatCopy.coins(_heat(false, 0, ""))["sub"], "COINS · LOSS", "a loss says so")
 	t.eq(HeatCopy.coins({"league": null, "coins": 9}), {}, "no card outside a league")
 	t.eq(HeatCopy.drop(win)["id"], "fire7", "the dropped card")

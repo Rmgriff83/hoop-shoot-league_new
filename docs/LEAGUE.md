@@ -58,7 +58,8 @@ Defaults: 90 s heats, 20 s overtime, 1.5 s ball-return wait (quick heats); leagu
 **Data** — `data/shooters.json` (the 15 authored AI shooters: id, name, hometown, number,
 nickname, bio, colors, signature, ratings) and `data/leagues.json` (one league per location:
 `roster` of 7 shooter ids, `err_mult`, heat/OT seconds, ball-return wait, `rounds`,
-`playoff_teams`, `semis_best_of`, `final_best_of`, `unlock` rule or null, `rewards`). The arcade
+`playoff_teams`, `semis_best_of`, `final_best_of`, `levels` band, `unlock` level or null, `xp_mult`, `rewards`;
+docs/PROGRESSION.md). The arcade
 league takes the seven lowest-rated shooters, the beach league the next seven; `starfall` is
 held back for a later league. `LeagueData` loads and validates both.
 
@@ -75,7 +76,7 @@ held back for a later league. `LeagueData` loads and validates both.
   start_playoffs / resolve_playoff_step (player playoff games are live-only); `PlayerRatings`:
   EWMA self-ratings for simmed days; `Campaign`: the per-league doc (season, self ratings, career
   totals/highs/seasons, shooter careers), `apply_live_result`, `sim_step`, `sim_to_playoffs`,
-  `maybe_finish_season`, `start_next_season`, `unlock_ok`.
+  `maybe_finish_season`, `start_next_season` (unlocks are `Progression.league_unlocked`).
 
 **Persistence** — save parts `campaign` (`{leagues: {league_id: doc}, records}`) and
 `liveGames` (the player's last 50 heat box scores, best-first per league), both dirty-tracked.
@@ -86,7 +87,8 @@ dashboard is the home page's league context, `docs/HOME.md`); `start_league(id)`
 from season seed + game) and `finish_heat` applies the result (season, career, live games,
 the league's coins and tickets from its `rewards`, docs/ECONOMY.md) before the post-match page
 (`heat_result_screen.gd`, design "League Post-Match", docs/HOME.md → Results), whose CONTINUE
-SEASON returns to the dashboard. `LEAGUE_GATING` is false: unlock rules are evaluated and displayed, not enforced.
+SEASON returns to the dashboard. `LEAGUE_GATING` is on: a league (and its whole area) opens at its
+`unlock` level, reached by playing the league before it (docs/PROGRESSION.md).
 
 **Dashboard** — `game/ui/league_context.gd` on the home page (2026-09-26, design "Home
 League Context v2"; the full-screen `league_hub_screen` is gone; docs/HOME.md). Tabs MATCH

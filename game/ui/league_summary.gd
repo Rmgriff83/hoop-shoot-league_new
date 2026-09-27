@@ -48,10 +48,14 @@ static func line(state: Dictionary) -> String:
 			return "%s · DONE · %s PLACE" % [head, TickerText.ordinal(int(summary["finish"]))]
 
 
+## `LOCKED · REACH LEVEL 3` — the level that opens the league (docs/PROGRESSION.md).
 static func locked_line(cfg: Dictionary) -> String:
-	var rule: Dictionary = cfg.get("unlock", {})
-	var parent := LeagueData.league(str(rule.get("league", "")))
-	return "LOCKED · TOP %d IN THE %s" % [int(rule.get("min_finish", 4)), str(parent.get("name", "LEAGUE")).to_upper()]
+	return "LOCKED · REACH LEVEL %d" % unlock_level(cfg)
+
+
+static func unlock_level(cfg: Dictionary) -> int:
+	var rule: Variant = cfg.get("unlock", null)
+	return int(rule.get("level", 1)) if rule is Dictionary else 1
 
 
 static func year_of(doc: Dictionary) -> int:
@@ -73,7 +77,7 @@ static func card(state: Dictionary) -> Dictionary:
 		return out
 	if not bool(state.get("unlocked", true)):
 		out["sub"] = "LOCKED"
-		out["next_left"] = locked_line(cfg).trim_prefix("LOCKED · ")
+		out["next_left"] = "REACH LEVEL %d" % unlock_level(cfg)
 		out["next_right"] = "TO UNLOCK"
 		return out
 	var doc: Dictionary = state.get("doc", {})

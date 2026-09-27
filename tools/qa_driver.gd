@@ -208,6 +208,7 @@ func _run_heat_result() -> void:
 	var opp := LeagueData.shooter("brickport")
 	var base := {"won": true, "player_score": 44, "ai_score": 42, "ot": 1, "opponent": opp, "mode": "heat", "location": "cage",
 		"league": {"id": "cage", "game": "d1", "playoff": false}, "coins": 50, "tickets": 28, "card_drop": "fire7",
+		"xp": {"gained": 30, "level_before": 1, "level_after": 2},
 		"sides": {"player": {"makes": 19, "attempts": 30, "swishes": 7, "bestStreak": 6, "bonus": 7, "iced": 0},
 			"ai": {"makes": 18, "attempts": 31, "swishes": 6, "bestStreak": 6, "bonus": 7, "iced": 0}}}
 	App.last_heat = base
@@ -222,6 +223,7 @@ func _run_heat_result() -> void:
 	loss["coins"] = 15
 	loss["tickets"] = 11
 	loss["card_drop"] = ""
+	loss["xp"] = {"gained": 4, "level_before": 2, "level_after": 2}
 	loss["sides"]["player"] = {"makes": 14, "attempts": 25, "swishes": 5, "bestStreak": 4, "bonus": 3, "iced": 1}
 	loss["sides"]["ai"] = {"makes": 16, "attempts": 26, "swishes": 5, "bestStreak": 8, "bonus": 9, "iced": 0}
 	App.last_heat = loss
@@ -276,6 +278,8 @@ func _run_title() -> void:
 		_mouse_button(pc, true)
 		await _sleep(0.25)
 		await _snap("title_press")
+		_mouse_move(Vector2(2, 2), Vector2(2, 2) - pc)   # drag off the card: releasing there does not open it
+		await _sleep(0.1)
 		_mouse_button(Vector2(2, 2), false)
 		await _sleep(0.4)
 	await _click_button_named(">")

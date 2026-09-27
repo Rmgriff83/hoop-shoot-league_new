@@ -17,6 +17,8 @@ func run(t) -> void:
 	t.eq(CardDefs.target_of("fire7"), "self", "fire is a self card")
 	t.eq(CardDefs.target_of("ice"), "opponent", "ice is an opponent card")
 	t.eq(CardDefs.target_of("nope"), "opponent", "unknown → opponent")
+	t.eq(Progression.card_level(CardDefs.get_card("ice")), 1, "Deep Freeze is a level-1 card")
+	t.eq(Progression.card_level(CardDefs.get_card("fire7")), 3, "Heat Check is level 3")
 	# The save doc: one bucket per league (docs/ECONOMY.md).
 	var full := CardDefs.empty_doc()
 	t.eq(full["v"], CardDefs.DOC_VERSION, "fresh doc carries the version")

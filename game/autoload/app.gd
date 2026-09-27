@@ -13,9 +13,9 @@ const CREDITS_SCENE := "res://game/screens/credits_screen.tscn"
 ## The intro loop (title + credits); an area's ambience replaces it.
 const TITLE_MUSIC := {"id": "title", "clip": "res://assets/music/title_moog.ogg", "gain_db": -15.0}
 
-## Location gating for leagues (data/leagues.json `unlock` rules). Off for now:
-## every league is open; the rules are evaluated and shown, never enforced.
-const LEAGUE_GATING := false
+## Level gating for leagues and areas (docs/PROGRESSION.md: a league's
+## `unlock` level, reached by playing the league before it). On.
+const LEAGUE_GATING := true
 ## The league whose dashboard / heat is active ("" outside leagues).
 var current_league := ""
 ## The home screen's last card (page index), so leaving an area returns to it.
@@ -177,6 +177,27 @@ func set_shot_help(mode: int) -> void:
 ## Step to the next setting, wrapping: off → numbers → numbers + arc → off.
 func cycle_shot_help() -> void:
 	set_shot_help((shot_help + 1) % SHOT_HELP_LABELS.size())
+
+
+# ---- the player's level (docs/PROGRESSION.md) ----------------------------------
+# XP comes only from league matches (_apply_league_heat); the level gates
+# cards (Progression.can_use) and areas (area_unlocked).
+
+
+func progress() -> Dictionary:
+	return SaveService.get_progress()
+
+
+func xp() -> int:
+	return int(progress().get("xp", 0))
+
+
+func level() -> int:
+	return Progression.level_for(xp())
+
+
+func area_unlocked(area: String) -> bool:
+	return not LEAGUE_GATING or Progression.area_unlocked(level(), area)
 
 
 # ---- tickets (global, the locker money) + cosmetics ----------------------------
@@ -400,9 +421,10 @@ func league_cfg(id := "") -> Dictionary:
 ## Every league with its open/locked state for the title's area page.
 func league_states() -> Array:
 	var campaigns: Dictionary = SaveService.get_campaign().get("leagues", {})
+	var lvl := level()
 	var out := []
 	for l in LeagueData.leagues():
-		var ok := Campaign.unlock_ok(l, campaigns)
+		var ok := Progression.league_unlocked(lvl, l)
 		out.push_back({"league": l, "unlocked": ok or not LEAGUE_GATING, "rule_met": ok,
 			"doc": campaigns.get(l["id"], {})})
 	return out
@@ -420,7 +442,7 @@ func save_league_doc(doc: Dictionary, id := "") -> void:
 ## change: the home page opens the league in place (LeagueContext).
 func enter_league(id: String) -> bool:
 	var cfg := LeagueData.league(id)
-	if cfg.is_empty():
+	if cfg.is_empty() or not (Progression.league_unlocked(level(), cfg) or not LEAGUE_GATING):
 		return false
 	current_league = id
 	if league_doc(id).is_empty():
@@ -502,6 +524,17 @@ func _apply_league_heat(result: Dictionary) -> void:
 	grant_tickets(int(pay["tickets"]))
 	last_heat["coins"] = int(pay["coins"])
 	last_heat["tickets"] = int(pay["tickets"])
+	# The level (docs/PROGRESSION.md): the match's XP into the league's band;
+	# the title straight to its cap.
+	var prog := progress()
+	var xp_info := Progression.apply_match(prog, result, cfg, int(doc.get("year", 1)))
+	if title:
+		var jump := Progression.apply_title(prog, cfg)
+		xp_info["gained"] = int(xp_info["gained"]) + int(jump["gained"])
+		xp_info["level_after"] = int(jump["level_after"])
+		xp_info["title"] = true
+	SaveService.put_progress(prog)
+	last_heat["xp"] = xp_info
 	# Card drop, seeded by the campaign so a replayed season rolls the same;
 	# it lands in this league's inventory.
 	var league: Dictionary = result.get("league", {})
@@ -512,8 +545,10 @@ func _apply_league_heat(result: Dictionary) -> void:
 	last_heat["card_drop"] = drop
 
 
-## The title's two-step pick: mode, then area.
+## The title's two-step pick: mode, then area. A locked area is refused.
 func start_area(mode: String, area: String) -> void:
+	if not area_unlocked(area):
+		return
 	var table: Dictionary = AREA_MODES.get(mode, AREA_MODES["trial"])
 	start_mode(table.get(area, table["cage"]))
 

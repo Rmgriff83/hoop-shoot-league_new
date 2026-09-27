@@ -1,0 +1,81 @@
+{
+  "xp_per_level": 100,
+  "start_level": 1,
+  "season_soft_cap": 100,
+  "over_cap_rate": 0.25,
+  "match": {
+    "win": 9,
+    "loss": 2,
+    "per_swish": 0.4,
+    "streak": [
+      [
+        5,
+        2
+      ],
+      [
+        8,
+        4
+      ]
+    ],
+    "margin": [
+      10,
+      2
+    ],
+    "ot_win": 1,
+    "playoff_mult": 1.5
+  },
+  "archetypes": [
+    {
+      "id": "terrible",
+      "wins": 1,
+      "games": 14,
+      "swishes": 1,
+      "streak": 2,
+      "margin_wins": 0,
+      "playoff_games": 0,
+      "levels": [
+        0.3,
+        0.5
+      ]
+    },
+    {
+      "id": "awful",
+      "wins": 3,
+      "games": 14,
+      "swishes": 2,
+      "streak": 3,
+      "margin_wins": 0,
+      "playoff_games": 0,
+      "levels": [
+        0.45,
+        0.7
+      ]
+    },
+    {
+      "id": "decent",
+      "wins": 7,
+      "games": 14,
+      "swishes": 4,
+      "streak": 5,
+      "margin_wins": 2,
+      "playoff_games": 0,
+      "levels": [
+        0.85,
+        1.2
+      ]
+    },
+    {
+      "id": "strong",
+      "wins": 11,
+      "games": 14,
+      "swishes": 6,
+      "streak": 6,
+      "margin_wins": 6,
+      "playoff_games": 5,
+      "levels": [
+        1.2,
+        1.5
+      ]
+    }
+  ]
+}

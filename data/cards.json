@@ -10,7 +10,8 @@
         "kind": "ice"
       },
       "art": "res://assets/textures/cards/card_ice.png",
-      "blurb": "Ices the opponent's rim over. They must swish through it, or get caught, or rattle it three times."
+      "blurb": "Ices the opponent's rim over. They must swish through it, or get caught, or rattle it three times.",
+      "level": 1
     },
     {
       "id": "fire7",
@@ -23,7 +24,8 @@
         "seconds": 7
       },
       "art": "res://assets/textures/cards/card_fire7.png",
-      "blurb": "Lights your own rim for 7 s: makes pay like a hot streak. A miss, or the clock, puts it out."
+      "blurb": "Lights your own rim for 7 s: makes pay like a hot streak. A miss, or the clock, puts it out.",
+      "level": 3
     }
   ],
   "rarity_weights": {

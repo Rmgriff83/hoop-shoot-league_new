@@ -67,6 +67,7 @@ var _open_frac := 0.0
 var _prev: Button
 var _next: Button
 var _ticker: HomeTicker
+var _badge: LevelBadge
 var _settings: SettingsPanel
 var _switching := false
 var _drag_x := NAN
@@ -161,10 +162,10 @@ func rebuild_chrome() -> void:
 	_chrome.add_child(scrim)
 
 	# Top bar.
-	var badge := LevelBadge.new()
-	badge.position = Vector2(MARGIN, 32)
-	badge.set_level(1, 0.0)
-	_chrome.add_child(badge)
+	_badge = LevelBadge.new()
+	_badge.position = Vector2(MARGIN, 32)
+	_badge.set_level(App.level(), Progression.frac_for(App.xp()))
+	_chrome.add_child(_badge)
 	var locker := IconButton.new("locker")
 	locker.name = "Locker"
 	locker.position = Vector2(230, 32)
@@ -305,6 +306,8 @@ func _fill_cards() -> void:
 	var st := _league_state(area)
 	var league_id := str(st["league"]["id"]) if not st.is_empty() else ""
 	var slots: Array = App.loadout_slots(league_id) if league_id != "" else []
+	# A locked area (docs/PROGRESSION.md): every card disabled, the level it needs on each.
+	var lock := 0 if App.area_unlocked(area) else Progression.area_level(area)
 	var league := ModeCards.league_card(st, slots)
 	league.custom_minimum_size = Vector2(0, LEAGUE_H)
 	league.pressed.connect(func() -> void: _pick("league"))
@@ -317,12 +320,12 @@ func _fill_cards() -> void:
 	pair.add_theme_constant_override("separation", 26 - int(ShadowStyle.OFFSET))
 	pair.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_cards_row.add_child(pair)
-	var trial := ModeCards.trial_card(_best(area))
+	var trial := ModeCards.trial_card(_best(area), lock)
 	trial.custom_minimum_size = Vector2(0, PAIR_H)
 	trial.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	trial.pressed.connect(func() -> void: _pick("trial"))
 	pair.add_child(trial)
-	var practice := ModeCards.practice_card()
+	var practice := ModeCards.practice_card(lock)
 	practice.custom_minimum_size = Vector2(0, PAIR_H)
 	practice.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	practice.pressed.connect(func() -> void: _pick("practice"))
@@ -561,7 +564,9 @@ func _float_loadout() -> void:
 				_league.refresh()
 			)
 			row.add_child(art)
-			names.add_child(_float_text(str(card.get("name", id)).to_upper()))
+			var usable := Progression.can_use(App.level(), card)
+			var nm := str(card.get("name", id)).to_upper() + ("" if usable else " · LVL %d" % Progression.card_level(card))
+			names.add_child(_float_text(nm, 16, RetroTheme.SCENE_TEXT if usable else RetroTheme.SCENE_MUTED))
 	var pad := Control.new()
 	pad.custom_minimum_size = Vector2(10, 0)
 	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -661,7 +666,9 @@ func _refresh_ticker() -> void:
 		var opp := Campaign.next_opponent(st["doc"])
 		if opp != "":
 			next_up = str(LeagueData.shooter(opp).get("name", ""))
-	_ticker.set_items(HomeTicker.items_from(bests, App.league_states(), App.tickets(), next_up))
+	_ticker.set_items(HomeTicker.items_from(bests, App.league_states(), App.tickets(), next_up, App.xp()))
+	if _badge != null:
+		_badge.set_level(App.level(), Progression.frac_for(App.xp()))
 
 
 # ---- actions ---------------------------------------------------------------------
@@ -672,6 +679,8 @@ func _pick(mode: String) -> void:
 		return
 	App.home_card = _index
 	var area := str(CARDS[_index]["area"])
+	if not App.area_unlocked(area):
+		return
 	if mode == "league":
 		_open_league()
 	else:

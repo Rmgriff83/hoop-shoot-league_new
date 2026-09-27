@@ -149,15 +149,20 @@ static func enter_button(card: Button) -> Button:
 	return card.get_meta("enter") if card.has_meta("enter") else null
 
 
-static func trial_card(best: int) -> Button:
-	var b := icon_card("icon_stopwatch", "TIME TRIAL", ("BEST %d" % best) if best > 0 else "NO RUNS YET", RetroTheme.c("gold"))
+## `lock_level` > 0: the area is locked below that level — the card is
+## disabled and its sub-line says so.
+static func trial_card(best: int, lock_level := 0) -> Button:
+	var sub := ("BEST %d" % best) if best > 0 else "NO RUNS YET"
+	var b := icon_card("icon_stopwatch", "TIME TRIAL", ("LOCKED · LEVEL %d" % lock_level) if lock_level > 0 else sub, RetroTheme.c("gold"))
 	b.name = "TrialCard"
+	b.disabled = lock_level > 0
 	return b
 
 
-static func practice_card() -> Button:
-	var b := icon_card("icon_jersey", "PRACTICE", "NO CLOCK", RetroTheme.c("teal"))
+static func practice_card(lock_level := 0) -> Button:
+	var b := icon_card("icon_jersey", "PRACTICE", ("LOCKED · LEVEL %d" % lock_level) if lock_level > 0 else "NO CLOCK", RetroTheme.c("teal"))
 	b.name = "PracticeCard"
+	b.disabled = lock_level > 0
 	return b
 
 

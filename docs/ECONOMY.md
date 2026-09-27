@@ -117,6 +117,13 @@ them only when the design intent moves (say, real play data shows the
 average trial scores 32, not 24) — then re-read the ledger, since every
 item's tier and every mode's rate shift together.
 
+## Not a currency: the level
+
+XP (docs/PROGRESSION.md) is earned only by league matches and cannot be
+bought; it gates which cards you can *play* and which areas open. Coins and
+tickets buy things; the level decides what you can use. That split is what
+keeps an in-app purchase from buying power.
+
 ## Save and migration
 
 - `cosmetics.tickets` replaced `cosmetics.coins`; a legacy doc with `coins`
@@ -124,4 +131,6 @@ item's tier and every mode's rate shift together.
 - `cards` v3 (`CardDefs.DOC_VERSION`): `{leagues: {id: {coins, inventory,
   loadout}}}`; v1 / v2 docs (one global inventory) are wiped by
   `CardDefs.migrate`. Dev saves only, by decision.
-- `docs/SYNC.md` lists both parts.
+- `progress` (the level: `{xp, seasonXp, seasonKey}`) needs no migration;
+  new keys default on read.
+- `docs/SYNC.md` lists the parts.

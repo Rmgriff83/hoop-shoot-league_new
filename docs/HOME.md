@@ -112,8 +112,9 @@ hard one); the pill shows TICKETS, the locker money.
 
 ## Placeholders (present, not wired)
 
-- **Level element** — `LVL01`, empty meter. No progression system exists;
-  `LevelBadge.set_level(n, frac)` is the hook.
+- ~~Level element~~ — real now (docs/PROGRESSION.md): `LVL0n` is
+  `App.level()`, the meter the progress inside the level; the beach page is
+  locked below level 3 (every card disabled with `LOCKED · LEVEL 3`).
 - **Ranks** — the icon beside the area name flashes SOON. The league hub's
   RECORDS tab and `results_screen` hold the leaderboard logic to lift.
 - **Shop** — off the home page by design; to be built into the league view

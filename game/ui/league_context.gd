@@ -808,6 +808,22 @@ func _fill_shop(vb: VBoxContainer) -> void:
 		chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		chip.add_child(UiFont.label(str(card.get("rarity", "")).to_upper(), 16, INK, UiFont.body_bold()))
 		head.add_child(chip)
+		# The level the card plays from (docs/PROGRESSION.md): gold once you have it.
+		var usable := Progression.can_use(App.level(), card)
+		var lvl := PanelContainer.new()
+		lvl.name = "Level_" + str(card["id"])
+		var lsb := StyleBoxFlat.new()
+		lsb.bg_color = Color(INK, 0.6)
+		lsb.border_color = RetroTheme.c("gold") if usable else CREAM
+		lsb.set_border_width_all(2)
+		lsb.set_content_margin_all(4)
+		lsb.content_margin_left = 8
+		lsb.content_margin_right = 8
+		lvl.add_theme_stylebox_override("panel", lsb)
+		lvl.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		lvl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		lvl.add_child(UiFont.label("LVL %d" % Progression.card_level(card), 16, RetroTheme.c("gold") if usable else CREAM, UiFont.body_bold()))
+		head.add_child(lvl)
 		col.add_child(head)
 		col.add_child(_body(str(card.get("blurb", ""))))
 		var foot := _hrow(12)

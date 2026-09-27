@@ -99,8 +99,11 @@ static func validate() -> PackedStringArray:
 		if (Array(l.get("roster", [])).size() + 1) % 2 != 0:
 			problems.push_back("league %s needs an even team count" % l.get("id", "?"))
 		var unlock: Variant = l.get("unlock", null)
-		if unlock != null and (not (unlock is Dictionary) or not unlock.has("league") or not unlock.has("min_finish")):
-			problems.push_back("league %s has a malformed unlock rule" % l.get("id", "?"))
+		if unlock != null and (not (unlock is Dictionary) or not unlock.has("level")):
+			problems.push_back("league %s has a malformed unlock rule (needs a level)" % l.get("id", "?"))
+		var levels: Variant = l.get("levels", null)
+		if not (levels is Dictionary) or not levels.has("min") or not levels.has("cap"):
+			problems.push_back("league %s needs a levels band {min, cap}" % l.get("id", "?"))
 		for key in ["win_coins", "loss_coins", "title_coins", "win_tickets", "loss_tickets", "title_tickets"]:
 			if not Dictionary(l.get("rewards", {})).has(key):
 				problems.push_back("league %s rewards missing %s" % [l.get("id", "?"), key])

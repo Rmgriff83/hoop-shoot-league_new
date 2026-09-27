@@ -133,9 +133,31 @@ static func coins(heat: Dictionary) -> Dictionary:
 	if league_of(heat).is_empty():
 		return {}
 	var out := {"big": "+%d" % int(heat.get("coins", 0)), "sub": "COINS · %s" % ("WIN" if bool(heat.get("won", false)) else "LOSS"), "sub2": ""}
+	var parts := []
 	if int(heat.get("tickets", 0)) > 0:
-		out["sub2"] = "+%d TICKETS" % int(heat["tickets"])
+		parts.push_back("+%d TICKETS" % int(heat["tickets"]))
+	var xp: Dictionary = heat.get("xp", {})
+	if int(xp.get("gained", 0)) > 0:
+		parts.push_back("+%d XP" % int(xp["gained"]))
+	out["sub2"] = " · ".join(parts)
 	return out
+
+
+## The level line under the opponent (docs/PROGRESSION.md): `LEVEL UP · LEVEL
+## 2` (gold) when it rose, `LEVEL 3 · CAP` at the league's cap, else `LEVEL 2
+## · 64/100 XP`; {} outside a league.
+static func level_line(heat: Dictionary, xp_now: int) -> Dictionary:
+	var xp: Dictionary = heat.get("xp", {})
+	if league_of(heat).is_empty() or xp.is_empty():
+		return {}
+	var after := int(xp.get("level_after", Progression.level_for(xp_now)))
+	if after > int(xp.get("level_before", after)):
+		return {"text": "LEVEL UP · LEVEL %d" % after, "gold": true}
+	var cfg := LeagueData.league(str(league_of(heat).get("id", "")))
+	if not cfg.is_empty() and Progression.at_cap(xp_now, cfg):
+		return {"text": "LEVEL %d · CAP" % after, "gold": false}
+	var inl := Progression.xp_in_level(xp_now)
+	return {"text": "LEVEL %d · %d/%d XP" % [after, inl[0], inl[1]], "gold": false}
 
 
 ## The dropped card's row, or {}.

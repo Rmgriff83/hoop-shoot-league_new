@@ -132,11 +132,20 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	vs.name = "Vs"
 	vs.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	head.add_child(vs)
+	# The level line (docs/PROGRESSION.md) adds a row: everything below drops with it.
+	var lv := HeatCopy.level_line(heat, App.xp())
+	var shift := 0.0
+	if not lv.is_empty():
+		var ll := _text(str(lv["text"]), 16, GOLD if bool(lv["gold"]) else CREAM, true)
+		ll.name = "LevelLine"
+		ll.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		head.add_child(ll)
+		shift = 42.0
 
 	# The box score.
 	var box := ShadowPanel.new(CREAM, 14.0, 0.14, 24.0)
 	box.name = "Box"
-	box.position = Vector2(MARGIN, BOX_Y)
+	box.position = Vector2(MARGIN, BOX_Y + shift)
 	box.size = Vector2(BOX_W + ShadowStyle.OFFSET, 0)
 	chrome.add_child(box)
 	var bcol := _vbox(0)
@@ -169,7 +178,7 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	if in_league:
 		var cards := _hbox(26 - int(ShadowStyle.OFFSET))
 		cards.name = "Cards"
-		cards.position = Vector2(MARGIN, CARDS_Y)
+		cards.position = Vector2(MARGIN, CARDS_Y + shift)
 		cards.size = Vector2(RIGHT - MARGIN + ShadowStyle.OFFSET, CARD_H + ShadowStyle.OFFSET)
 		chrome.add_child(cards)
 		var ck := HeatCopy.coins(heat)
@@ -218,7 +227,7 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 			cards.add_child(dp)
 		var cont := ShadowCard.new(RetroTheme.c("orange"))
 		cont.name = "ContinueSeason"
-		cont.position = Vector2(MARGIN, CONT_Y)
+		cont.position = Vector2(MARGIN, CONT_Y + shift)
 		cont.size = Vector2(RIGHT - MARGIN + ShadowStyle.OFFSET, CONT_H + ShadowStyle.OFFSET)
 		var cm := _margin(0, 24)
 		cont.add_child(cm)
@@ -239,7 +248,7 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 		chrome.add_child(cont)
 	var home := ShadowCard.new(CREAM)
 	home.name = "Home"
-	home.position = Vector2(MARGIN, HOME_Y)
+	home.position = Vector2(MARGIN, HOME_Y + shift)
 	home.size = Vector2(RIGHT - MARGIN + ShadowStyle.OFFSET, HOME_H + ShadowStyle.OFFSET)
 	home.text = "HOME"
 	home.add_theme_font_override("font", UiFont.display())

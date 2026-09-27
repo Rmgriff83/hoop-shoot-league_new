@@ -93,7 +93,7 @@ func _league_line(t) -> void:
 	var cage := LeagueData.league("cage")
 	t.eq(ModeCards.league_line({"league": cage, "unlocked": true, "doc": {}}), "NEW LEAGUE", "no campaign → new")
 	var locked := {"league": LeagueData.league("beach"), "unlocked": false, "doc": {}}
-	t.eq(ModeCards.league_line(locked), "LOCKED · TOP 4 IN THE ARCADE LEAGUE", "locked line names the rule")
+	t.eq(ModeCards.league_line(locked), "LOCKED · REACH LEVEL 3", "locked line names the level")
 	var doc := Campaign.new_doc(cage, 7, 1000)
 	var st := {"league": cage, "unlocked": true, "doc": doc}
 	t.eq(ModeCards.league_line(st), "SEASON 1 · DAY 1 · TIP OFF", "fresh season, nothing played")
@@ -123,7 +123,7 @@ func _summary(t) -> void:
 	t.eq(fresh["next_right"], "DAY 1 OF 14", "and counts the season (%s)" % fresh["next_right"])
 	var locked := LeagueSummary.card({"league": LeagueData.league("beach"), "unlocked": false, "doc": {}})
 	t.eq(locked["sub"], "LOCKED", "a locked league says so")
-	t.eq(locked["next_left"], "TOP 4 IN THE ARCADE LEAGUE", "and names the rule")
+	t.eq(locked["next_left"], "REACH LEVEL 3", "and names the level")
 	t.eq(Array(locked["stats"]).size(), 0, "with no numbers")
 	var doc := Campaign.new_doc(cage, 7, 1000)
 	var st := {"league": cage, "unlocked": true, "doc": doc}
@@ -251,6 +251,12 @@ func _widgets(t) -> void:
 	trial.free()
 	t.eq(ModeCards.sub_text(ModeCards.trial_card(0)), "NO RUNS YET", "no best yet")
 	t.eq(ModeCards.sub_text(ModeCards.practice_card()), "NO CLOCK", "practice card")
+	var locked_trial := ModeCards.trial_card(29, 3)
+	t.ok(locked_trial.disabled and ModeCards.sub_text(locked_trial) == "LOCKED · LEVEL 3", "a locked area's trial card says the level")
+	locked_trial.free()
+	t.ok(ModeCards.practice_card(3).disabled, "and its practice card is off")
+	var with_xp := HomeTicker.items_from([], [], 0, "", 164)
+	t.ok(with_xp.has("LEVEL 2 · 64/100 XP"), "the ticker carries the level (%s)" % str(with_xp))
 	# The locker lists the owned balls and sets one.
 	var locker := LockerPanel.new()
 	locker._ready()

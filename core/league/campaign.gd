@@ -175,18 +175,3 @@ static func start_next_season(doc: Dictionary, league: Dictionary) -> void:
 	doc["year"] = int(doc["year"]) + 1
 	doc["season"] = Season.create(league, LeagueData.team_ids(league), int(doc["year"]),
 		QuickSim.seed_from([s["seed"], "next", doc["year"]]))
-
-
-## Does the player satisfy this league's unlock rule given their campaigns
-## ({league_id: doc})? A null rule is always open.
-static func unlock_ok(league: Dictionary, campaigns: Dictionary) -> bool:
-	var rule: Variant = league.get("unlock", null)
-	if rule == null:
-		return true
-	var doc: Dictionary = campaigns.get(str(rule["league"]), {})
-	if doc.is_empty():
-		return false
-	for summary in doc["career"]["seasons"]:
-		if int(summary["finish"]) > 0 and int(summary["finish"]) <= int(rule["min_finish"]):
-			return true
-	return false

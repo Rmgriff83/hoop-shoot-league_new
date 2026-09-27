@@ -31,7 +31,7 @@ func _data(t) -> void:
 		t.eq(LeagueData.team_ids(l).size(), 8, "%s has 8 teams" % l["id"])
 		t.eq(LeagueData.league_ratings(l).size(), 7, "%s has 7 AI ratings" % l["id"])
 	t.ok(LeagueData.league("cage")["unlock"] == null, "arcade league is open")
-	t.eq(LeagueData.league("beach")["unlock"]["league"], "cage", "beach unlock keyed on the cage league")
+	t.eq(int(LeagueData.league("beach")["unlock"]["level"]), 3, "the beach opens at level 3")
 	t.close(LeagueData.ratings_of("starfall").accuracy, 0.8, 1e-9, "ratings parse")
 	for l in LeagueData.leagues():
 		t.close(float(l["ball_return_s"]), 1.0, 1e-9, "%s league ball-return wait is 1 s" % l["id"])
@@ -301,12 +301,8 @@ func _campaign(t) -> void:
 	t.eq(int(doc["year"]), 2, "year 2")
 	t.eq(doc["season"]["phase"], "regular", "fresh season")
 	t.eq(int(doc["career"]["championships"]), titles_before, "career persists across seasons")
-	# Unlock rule.
+	# Unlock rule: by level (docs/PROGRESSION.md).
 	var beach := LeagueData.league("beach")
-	t.ok(not Campaign.unlock_ok(beach, {}), "beach locked with no cage campaign")
-	var fake := Campaign.new_doc(league, 1, 0)
-	fake["career"]["seasons"].push_back({"year": 1, "w": 10, "l": 4, "finish": 3, "playoffResult": "semifinal", "championId": "x"})
-	t.ok(Campaign.unlock_ok(beach, {"cage": fake}), "top-4 cage finish unlocks the beach")
-	fake["career"]["seasons"][0]["finish"] = 6
-	t.ok(not Campaign.unlock_ok(beach, {"cage": fake}), "6th does not")
-	t.ok(Campaign.unlock_ok(league, {}), "no rule → open")
+	t.ok(not Progression.league_unlocked(2, beach), "the beach is locked at level 2")
+	t.ok(Progression.league_unlocked(3, beach), "and opens at 3")
+	t.ok(Progression.league_unlocked(1, league), "no rule → open")

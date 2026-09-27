@@ -142,7 +142,7 @@ static func validate() -> PackedStringArray:
 	var problems := PackedStringArray()
 	var ids := {}
 	for c in all():
-		for key in ["id", "name", "rarity", "price", "target", "effect", "blurb"]:
+		for key in ["id", "name", "rarity", "price", "target", "effect", "blurb", "level"]:
 			if not c.has(key):
 				problems.push_back("card %s missing %s" % [c.get("id", "?"), key])
 		if ids.has(c.get("id", "")):

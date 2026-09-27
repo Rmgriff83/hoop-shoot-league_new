@@ -51,7 +51,12 @@
         "win_tickets": 28,
         "loss_tickets": 11,
         "title_tickets": 80
-      }
+      },
+      "levels": {
+        "min": 1,
+        "cap": 3
+      },
+      "xp_mult": 1.0
     },
     {
       "id": "beach",
@@ -79,8 +84,7 @@
       "semis_best_of": 3,
       "final_best_of": 5,
       "unlock": {
-        "league": "cage",
-        "min_finish": 4
+        "level": 3
       },
       "ai_cards_per_season": 10,
       "ai_hand_max": 2,
@@ -118,7 +122,12 @@
         "win_tickets": 35,
         "loss_tickets": 14,
         "title_tickets": 100
-      }
+      },
+      "levels": {
+        "min": 3,
+        "cap": 5
+      },
+      "xp_mult": 1.0
     }
   ]
 }

@@ -19,6 +19,8 @@ const SETTINGS_PART := "settings"
 const CAMPAIGN_PART := "campaign"
 const LIVE_GAMES_PART := "liveGames"
 const CARDS_PART := "cards"
+## The player's level: XP from league matches (docs/PROGRESSION.md).
+const PROGRESS_PART := "progress"
 const LIVE_GAMES_KEEP := 50
 const SCHEMA_VERSION := 1
 
@@ -29,6 +31,7 @@ var _tuning: Dictionary = {}
 var _campaign: Dictionary = {}
 var _live_games: Dictionary = {}
 var _cards: Dictionary = {}
+var _progress: Dictionary = {}
 var _cosmetics: Dictionary = {}
 var _settings: Dictionary = {}
 
@@ -81,6 +84,29 @@ func load_all() -> void:
 		_cards = CardDefs.empty_doc()
 	elif CardDefs.migrate(_cards):
 		_write_json(CARDS_PART, _cards)
+	_progress = _read_json(PROGRESS_PART)
+	if _progress.is_empty():
+		_progress = default_progress()
+
+
+## The player's level state (Progression.empty_state + updatedAt). New keys
+## need no migration: Progression reads with .get().
+static func default_progress() -> Dictionary:
+	var d := Progression.empty_state()
+	d["updatedAt"] = 0
+	return d
+
+
+func get_progress() -> Dictionary:
+	return _progress.duplicate(true)
+
+
+## Persist the level state. Player state: marked dirty for sync.
+func put_progress(doc: Dictionary) -> void:
+	_progress = doc.duplicate(true)
+	_progress["updatedAt"] = _now_ms()
+	_write_json(PROGRESS_PART, _progress)
+	mark_dirty(PROGRESS_PART)
 
 
 ## Power-up cards, v3: {leagues: {id: {coins, inventory: {id: n}, loadout: [id|null ×3]}}}.

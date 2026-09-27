@@ -301,6 +301,8 @@ func tray_states() -> Array:
 			out.push_back("empty")
 		elif _tray_ids[i] == "used":
 			out.push_back("fire" if i == _fire_slot and heat.player.fire_card else "used")
+		elif not Progression.can_use(App.level(), CardDefs.get_card(_tray_ids[i])):
+			out.push_back("locked")
 		elif heat.can_play(Heat.PLAYER, _tray_ids[i]):
 			out.push_back("ready")
 		else:
@@ -314,6 +316,8 @@ func _on_card_tapped(i: int) -> void:
 	var id: String = _tray_ids[i]
 	if id == "" or id == "used" or not heat.can_play(Heat.PLAYER, id):
 		return
+	if not Progression.can_use(App.level(), CardDefs.get_card(id)):
+		return   # owned early: playable once the level is reached (docs/PROGRESSION.md)
 	# One-time use: the slot leaves the loadout first; a card the save no longer
 	# holds (played from another device, say) is not deployed.
 	if not App.consume_slot(i, id):
@@ -347,6 +351,8 @@ func _refresh_tray() -> void:
 				_remove_from_tray(i)   # a fire card whose window just closed
 			"wait":
 				_tray[i].set_state("wait", "WAIT")
+			"locked":
+				_tray[i].set_state("wait", "LVL %d" % Progression.card_level(CardDefs.get_card(_tray_ids[i])))
 			_:
 				_tray[i].set_state("", "")
 

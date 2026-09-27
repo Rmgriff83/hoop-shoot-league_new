@@ -60,8 +60,11 @@ func _process(dt: float) -> void:
 
 ## The copy, from data: bests = [{name, best}], states = App.league_states()
 ## rows, tickets, and the next opponent's name (or "").
-static func items_from(bests: Array, states: Array, coins: int, next_up := "") -> PackedStringArray:
+static func items_from(bests: Array, states: Array, coins: int, next_up := "", xp := -1) -> PackedStringArray:
 	var out := PackedStringArray()
+	if xp >= 0:
+		var inl := Progression.xp_in_level(xp)
+		out.push_back("LEVEL %d · %d/%d XP" % [Progression.level_for(xp), inl[0], inl[1]])
 	for b in bests:
 		if int(b.get("best", 0)) > 0:
 			out.push_back("%s BEST %d" % [str(b.get("name", "")).to_upper(), int(b["best"])])
