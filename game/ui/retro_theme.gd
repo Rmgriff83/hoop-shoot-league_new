@@ -40,7 +40,8 @@ const OUTLINE := 3
 const SCENE_MUTED := Color("#E6D9B8")
 const SCENE_DIM := Color("#CFC3A3")
 const SCENE_SHADOW := Color("#F1E8D0", 0.5)
-const TEXT_SHADOW := Vector2(7, 7)
+## The design's (7, 7), pulled well in (Ross, 2026-09-26).
+const TEXT_SHADOW := Vector2(4, 4)
 ## The active tab's face: solid cream with tan dots and an orange shadow.
 const TAN := Color("#CDBF9C")
 

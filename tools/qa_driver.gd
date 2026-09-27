@@ -269,6 +269,15 @@ func _run_title() -> void:
 		await _snap("title_cage_%02d" % i)
 		if i < 3:
 			await _sleep(5.0 if i < 2 else 4.0)
+	# The press state: hold the LEAGUE card, snap, release off it (no open).
+	var card: Button = get_tree().root.find_child("LeagueCard", true, false)
+	if card != null:
+		var pc := (card.global_position + Vector2(160, 60)) * 0.5
+		_mouse_button(pc, true)
+		await _sleep(0.25)
+		await _snap("title_press")
+		_mouse_button(Vector2(2, 2), false)
+		await _sleep(0.4)
 	await _click_button_named(">")
 	await _sleep(1.2)
 	await _snap("title_beach_00")

@@ -23,4 +23,4 @@ func _init(p_color := Color.WHITE, pad := 20.0, p_tint := ShadowStyle.TINT, pad_
 
 func _draw() -> void:
 	var s := shadow if shadow.a > 0.0 else Color(color, ShadowStyle.SHADOW_ALPHA)
-	ShadowStyle.draw_ex(self, size, color, Color(color, tint), Color(color, ShadowStyle.DOT_ALPHA), s, false, false, false)
+	ShadowStyle.draw_ex(self, size, color, Color(color, ShadowStyle.face_alpha(tint)), Color(color, ShadowStyle.DOT_ALPHA), s, false, false, false)

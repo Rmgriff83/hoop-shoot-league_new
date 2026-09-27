@@ -11,9 +11,16 @@ extends RefCounted
 ## one-colour form; `draw_ex` takes the edge, fill, dot and shadow colours
 ## apart (a solid cream tab with an orange shadow, a pine card at 30 %).
 
-const OFFSET := 6.0
+## The shadow strip's offset and width (the design's 6; Ross, 2026-09-26: a
+## touch tighter).
+const OFFSET := 5.0
 const EDGE := 2.0
+## The face's tint from the design, and the gain every face gets on top so
+## they read less transparent over the court (Ross, 2026-09-26).
 const TINT := 0.22
+const FACE_GAIN := 1.5
+## How much more opaque a pressed face gets.
+const PRESSED_GAIN := 3.2
 ## Dither cell, in design px (about 1.5 device px on the phone).
 const CELL := 3
 
@@ -55,7 +62,12 @@ static func dither_tex() -> ImageTexture:
 
 ## Draw the one-colour style into `ci` (which must have texture_repeat enabled).
 static func draw(ci: CanvasItem, size: Vector2, color: Color, pressed: bool, hovered: bool, disabled: bool) -> void:
-	draw_ex(ci, size, color, Color(color, TINT), Color(color, DOT_ALPHA), Color(color, SHADOW_ALPHA), pressed, hovered, disabled)
+	draw_ex(ci, size, color, Color(color, face_alpha(TINT)), Color(color, DOT_ALPHA), Color(color, SHADOW_ALPHA), pressed, hovered, disabled)
+
+
+## A design tint with the face gain applied (solid faces stay solid).
+static func face_alpha(tint: float) -> float:
+	return minf(1.0, tint * FACE_GAIN)
 
 
 ## The style with its colours apart: `edge` (the flat line), `fill` (the
@@ -71,7 +83,8 @@ static func draw_ex(ci: CanvasItem, size: Vector2, edge: Color, fill: Color, dot
 		dot = dot.darkened(0.45)
 		shadow = shadow.darkened(0.45)
 	if pressed:
-		_face(ci, Rect2(Vector2(OFFSET, OFFSET), Vector2(w, h)), edge, Color(fill, minf(1.0, fill.a * 2.5)), dot)
+		# Dropped onto its shadow, and a touch more opaque (Ross, 2026-09-26).
+		_face(ci, Rect2(Vector2(OFFSET, OFFSET), Vector2(w, h)), edge, Color(fill, minf(1.0, fill.a * PRESSED_GAIN)), dot)
 		return
 	var tex := dither_tex()
 	ci.draw_texture_rect(tex, Rect2(Vector2(w, OFFSET), Vector2(OFFSET, h)), true, shadow)
