@@ -11,6 +11,7 @@ AreaZone    ★ (one star per difficulty step, ArenaSet.title_stars)
             ARCADE CAGE (52 px, wraps at 430, dithered drop shadow) [ranks] [multiplayer]
             big < > chevrons at the screen edges (y 520), dithered shadows too
 Float       over the court above the area, only while the league is open (per tab)
+Wash        a vertical gradient from clear at y 781 to dark gray (0.55) at the ticker
 CardArea    a fixed box (y 781 → 1206) holding the home block or the league in context
   League    orange, 270 high: NAME — n TITLES / SEASON n · three numbers (RECORD ·
             PLACE · STREAK, or SERIES · ROUND · SEED) · ENTER LEAGUE > · dashed rule ·

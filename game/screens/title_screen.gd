@@ -39,6 +39,11 @@ const LEAGUE_H := ModeCards.LEAGUE_H + ShadowStyle.OFFSET
 const PAIR_H := ModeCards.PAIR_H + ShadowStyle.OFFSET
 const CARDS_H := LEAGUE_H + CARD_GAP + PAIR_H
 const OPEN_S := 0.3
+## The wash under the card area: transparent at the area's top, easing to a
+## slightly opaque dark gray where the ticker starts, so the cards read over
+## the court's floor.
+const WASH_COLOR := Color("#1B1815")
+const WASH_ALPHA := 0.55
 ## The floating layer's rows: the compact loadout strip on MATCH, the rest.
 const FLOAT_Y := 612.0
 const STRIP_Y := 700.0
@@ -230,6 +235,24 @@ func rebuild_chrome() -> void:
 	_next = _chevron(">", 1)
 	_next.position = Vector2(720 - 8 - CHEVRON_SIZE.x, CHEVRON_Y)
 	_chrome.add_child(_next)
+
+	# The wash under the card area: a vertical gradient from nothing at the
+	# area's top to a dark gray at the ticker.
+	var wash := TextureRect.new()
+	wash.name = "Wash"
+	var grad := Gradient.new()
+	grad.set_color(0, Color(WASH_COLOR, 0.0))
+	grad.set_color(1, Color(WASH_COLOR, WASH_ALPHA))
+	var gt := GradientTexture2D.new()
+	gt.gradient = grad
+	gt.fill_from = Vector2(0, 0)
+	gt.fill_to = Vector2(0, 1)
+	wash.texture = gt
+	wash.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	wash.position = Vector2(0, AREA_TOP)
+	wash.size = Vector2(720, 1280 - HomeTicker.HEIGHT - AREA_TOP)
+	wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_chrome.add_child(wash)
 
 	# The card area: the home cards, and the league in context when open.
 	_area = Control.new()
