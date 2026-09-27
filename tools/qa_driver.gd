@@ -14,13 +14,15 @@ var _outcomes: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
-	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results")):
+	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	if args.has("--qa-title"):
 		_run_title.call_deferred()
 	elif args.has("--qa-results"):
 		_run_results.call_deferred()
+	elif args.has("--qa-heat-result"):
+		_run_heat_result.call_deferred()
 	elif args.has("--qa-beach"):
 		_run_beach.call_deferred()
 	elif args.has("--qa-aim"):
@@ -105,6 +107,48 @@ func _run_results() -> void:
 	await _sleep(1.0)
 	await _snap("results_home")
 	print("QA results: done")
+	get_tree().quit(0)
+
+
+## Post-match QA: the league post-match page in three states without
+## playing a heat — a win in overtime with a card drop, a loss without one,
+## and a heat outside a league (HOME only). Seeds App.last_heat against the
+## cage campaign (created if missing).
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-heat-result
+func _run_heat_result() -> void:
+	await _sleep(0.6)
+	App.enter_league("cage")
+	var opp := LeagueData.shooter("brickport")
+	var base := {"won": true, "player_score": 44, "ai_score": 42, "ot": 1, "opponent": opp, "mode": "heat", "location": "cage",
+		"league": {"id": "cage", "game": "d1", "playoff": false}, "coins": 50, "tickets": 28, "card_drop": "fire7",
+		"sides": {"player": {"makes": 19, "attempts": 30, "swishes": 7, "bestStreak": 6, "bonus": 7, "iced": 0},
+			"ai": {"makes": 18, "attempts": 31, "swishes": 6, "bestStreak": 6, "bonus": 7, "iced": 0}}}
+	App.last_heat = base
+	get_tree().change_scene_to_file(App.HEAT_RESULT_SCENE)
+	await _sleep(1.2)
+	await _snap("heat_win")
+	var loss := base.duplicate(true)
+	loss["won"] = false
+	loss["player_score"] = 33
+	loss["ai_score"] = 36
+	loss["ot"] = 0
+	loss["coins"] = 15
+	loss["tickets"] = 11
+	loss["card_drop"] = ""
+	loss["sides"]["player"] = {"makes": 14, "attempts": 25, "swishes": 5, "bestStreak": 4, "bonus": 3, "iced": 1}
+	loss["sides"]["ai"] = {"makes": 16, "attempts": 26, "swishes": 5, "bestStreak": 8, "bonus": 9, "iced": 0}
+	App.last_heat = loss
+	get_tree().change_scene_to_file(App.HEAT_RESULT_SCENE)
+	await _sleep(1.2)
+	await _snap("heat_loss")
+	var quick := base.duplicate(true)
+	quick["league"] = null
+	quick["card_drop"] = ""
+	App.last_heat = quick
+	get_tree().change_scene_to_file(App.HEAT_RESULT_SCENE)
+	await _sleep(1.2)
+	await _snap("heat_quick")
+	print("QA heat result: done")
 	get_tree().quit(0)
 
 

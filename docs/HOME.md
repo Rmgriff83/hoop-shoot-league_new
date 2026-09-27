@@ -140,8 +140,21 @@ SAME CAGE`, `App.start_mode(App.next_mode)`) beside the gold tickets card
 (`App.to_title`). Copy is `game/ui/results_copy.gd` (`ResultsCopy`, pure,
 `tests/test_results.gd`); the run is `App.last_run` (+ `last_run_was_best`).
 
+**League post-match** (`game/screens/heat_result_screen.gd`, design "League
+Post-Match", `HeatCopy` in `game/ui/heat_copy.gd`, `tests/test_heat_result.gd`):
+the same recipe after a league heat — `ARCADE LEAGUE · SEASON 2 · DAY 4` (or
+`SEMI 2 · GAME 3`), YOU WIN in gold / THEY TOOK IT, the score with an OT chip,
+`VS NAME · "NICKNAME"`; the box score (MAKES · SHOOTING · SWISHES · BEST
+STREAK · STREAK BONUS · ICED OVER) with a YOU chip and the opponent's chip in
+their colour, the better number in gold; the coins card (+ tickets) beside the
+card drop; **CONTINUE SEASON** (`NOW 3-1 · 2ND PLACE · DAY 5 NEXT`,
+`App.to_league_hub`) and **HOME**. A heat outside a league reads QUICK HEAT
+and gets only HOME.
+
 ## QA and tests
 
+- `godot --path hoop_shoot --resolution 360x640 -- --qa-heat-result` →
+  `user://qa/heat_win.png` (OT, a card drop), `heat_loss.png`, `heat_quick.png`.
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-results` →
   `user://qa/results_best.png`, `results_iced.png`, `results_home.png`: the
   page as a new best with tickets, as a mid-board iced run, then HOME.

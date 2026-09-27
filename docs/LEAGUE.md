@@ -84,8 +84,9 @@ held back for a later league. `LeagueData` loads and validates both.
 dashboard is the home page's league context, `docs/HOME.md`); `start_league(id)` also goes there;
 `start_league_heat()` builds the heat config (opponent card + ratings, league format, a seed
 from season seed + game) and `finish_heat` applies the result (season, career, live games,
-the league's coins and tickets from its `rewards`, docs/ECONOMY.md) before the result screen, whose Continue returns to the
-dashboard. `LEAGUE_GATING` is false: unlock rules are evaluated and displayed, not enforced.
+the league's coins and tickets from its `rewards`, docs/ECONOMY.md) before the post-match page
+(`heat_result_screen.gd`, design "League Post-Match", docs/HOME.md → Results), whose CONTINUE
+SEASON returns to the dashboard. `LEAGUE_GATING` is false: unlock rules are evaluated and displayed, not enforced.
 
 **Dashboard** — `game/ui/league_context.gd` on the home page (2026-09-26, design "Home
 League Context v2"; the full-screen `league_hub_screen` is gone; docs/HOME.md). Tabs MATCH

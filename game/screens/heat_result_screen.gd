@@ -1,106 +1,319 @@
-extends Control
-## Heat result: WIN / LOSS, the score line (with OT), a you/them table, then
-## Continue when a league sent us here (M2c), else Title (test-only heats).
+extends Node3D
+## League post-match (design "League Post-Match", docs/HOME.md → Results):
+## the heat's numbers over the LIVE court you just played on (the area's
+## home pan under a half scrim), in the home's retro style. Top to bottom:
+## `ARCADE LEAGUE · SEASON 2 · DAY 4`, the result big with the dithered
+## shadow (YOU WIN in gold), the score with an OT chip when it went there,
+## `VS NAME · "NICKNAME"`; the box score on a see-through panel with a YOU
+## chip and the opponent's chip in their colour, the better number in gold;
+## the coins card (with the tickets) beside the card drop; CONTINUE SEASON
+## back to the home with the league open, and HOME. A heat outside a league
+## (test-only) gets the header QUICK HEAT and only HOME. Copy from HeatCopy
+## (pure); the heat from App.last_heat, the doc from App.league_doc.
+
+const MARGIN := 36.0
+const RIGHT := 720.0 - 42.0
+const SCRIM_ALPHA := 0.5
+const HEAD_Y := 80.0
+const BOX_Y := 392.0
+const BOX_W := 642.0
+const CARDS_Y := 814.0
+const CARD_H := 150.0
+const CONT_Y := 1002.0
+const CONT_H := 128.0
+const HOME_Y := 1158.0
+const HOME_H := 64.0
+const CREAM := RetroTheme.SCENE_TEXT
+const GOLD := Color("#F0B84A")
+
+var _t := 0.0
+var _spec: Dictionary = {}
+var _court: CourtGeometry
+var _cam: Camera3D
 
 
 func _ready() -> void:
-	var bg := ColorRect.new()
-	bg.color = Color(0.15, 0.17, 0.26)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(bg)
+	var heat: Dictionary = App.last_heat
+	_build_court(str(heat.get("location", "cage")), str(heat.get("mode", "heat")))
+	var ui := CanvasLayer.new()
+	ui.name = "Ui"
+	ui.layer = 10
+	add_child(ui)
+	var league := HeatCopy.league_of(heat)
+	var lid := str(league.get("id", ""))
+	ui.add_child(build_chrome(heat, App.league_doc(lid) if lid != "" else {}, LeagueData.league(lid) if lid != "" else {}))
 
-	var vbox := VBoxContainer.new()
-	vbox.set_anchors_preset(Control.PRESET_CENTER)
-	vbox.position = Vector2(-300, -480)
-	vbox.size = Vector2(600, 960)
-	vbox.add_theme_constant_override("separation", 12)
-	add_child(vbox)
 
-	var r := App.last_heat
-	var won: bool = r.get("won", false)
-	var opp: Dictionary = r.get("opponent", {})
-	var you: Dictionary = r.get("sides", {}).get("player", {})
-	var them: Dictionary = r.get("sides", {}).get("ai", {})
-	vbox.add_child(_label("🏆 YOU WIN" if won else "😤 THEY TOOK IT", 56, Color(1.0, 0.85, 0.3) if won else Color(0.8, 0.83, 0.92)))
-	var ot: int = int(r.get("ot", 0))
-	vbox.add_child(_label("%d — %d%s" % [int(r.get("player_score", 0)), int(r.get("ai_score", 0)), ("   (%dOT)" % ot) if ot > 0 else ""], 64, Color(1.0, 0.81, 0.54)))
-	vbox.add_child(_label("vs %s  #%d  ·  %s" % [opp.get("name", "?"), int(opp.get("number", 0)), opp.get("nickname", "")], 22, Color(0.62, 0.68, 0.85)))
-	vbox.add_child(_spacer(18))
-	var grid := GridContainer.new()
-	grid.columns = 3
-	grid.add_theme_constant_override("h_separation", 40)
-	grid.add_theme_constant_override("v_separation", 6)
-	vbox.add_child(grid)
-	_row(grid, "", "YOU", "THEM", Color(0.62, 0.68, 0.85))
-	_row(grid, "makes", "%d/%d" % [int(you.get("makes", 0)), int(you.get("attempts", 0))], "%d/%d" % [int(them.get("makes", 0)), int(them.get("attempts", 0))])
-	_row(grid, "shooting", _pct(you), _pct(them))
-	_row(grid, "swishes", str(int(you.get("swishes", 0))), str(int(them.get("swishes", 0))))
-	_row(grid, "best streak", str(int(you.get("bestStreak", 0))), str(int(them.get("bestStreak", 0))))
-	_row(grid, "streak bonus", "+%d" % int(you.get("bonus", 0)), "+%d" % int(them.get("bonus", 0)))
-	_row(grid, "iced over", str(int(you.get("iced", 0))), str(int(them.get("iced", 0))))
-	vbox.add_child(_spacer(30))
+func _process(dt: float) -> void:
+	_t += dt
+	if _court != null:
+		var p := TitlePan.pose(_spec, _t)
+		_cam.position = p["pos"]
+		_cam.look_at(p["look"])
+		_court.step_rim(dt)
 
-	if r.get("league", null) != null:
-		var pay := []
-		if int(r.get("coins", 0)) > 0:
-			pay.push_back("+%d COINS" % int(r["coins"]))
-		if int(r.get("tickets", 0)) > 0:
-			pay.push_back("+%d TICKETS" % int(r["tickets"]))
-		if not pay.is_empty():
-			vbox.add_child(_label("   ·   ".join(pay), 26, Color(1.0, 0.85, 0.3)))
-		var drop := str(r.get("card_drop", ""))
-		if drop != "":
-			var card := CardDefs.get_card(drop)
-			var row := HBoxContainer.new()
-			row.alignment = BoxContainer.ALIGNMENT_CENTER
-			row.add_theme_constant_override("separation", 16)
-			var art := TextureRect.new()
-			art.texture = load(str(card.get("art", "res://assets/textures/cards/card_back.png")))
-			art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			art.stretch_mode = TextureRect.STRETCH_SCALE
-			art.custom_minimum_size = Vector2(72, 96)
-			row.add_child(art)
-			row.add_child(_label("CARD DROP: %s" % str(card.get("name", drop)), 26, Color(0.72, 0.88, 1.0)))
-			vbox.add_child(row)
-		var cont := Button.new()
-		cont.text = "  CONTINUE SEASON →  "
-		cont.add_theme_font_size_override("font_size", 30)
-		cont.custom_minimum_size = Vector2(0, 76)
+
+# ---- the court behind (the home page's recipe) -----------------------------------
+
+
+func _build_court(location: String, mode: String) -> void:
+	var arena := CosmeticLibrary.get_arena(location)
+	if arena == null:
+		arena = CosmeticLibrary.starter_arena()
+	if not App.MODES.has(mode):
+		mode = "heat"
+	_cam = Camera3D.new()
+	_cam.name = "Camera"
+	add_child(_cam)
+	_court = CourtGeometry.new()
+	_court.name = "Court"
+	_court.geo = App.geo_for_mode(mode)
+	_court.arena_set = arena
+	_court.hoop_set = App.hoop_for_mode(mode)
+	add_child(_court)
+	_court.led.set_text("HOOP SHOOT", _court.led.accent_color)
+	_spec = TitlePan.spec_of(arena)
+	_cam.fov = float(_spec["fov"])
+	var p := TitlePan.pose(_spec, 0.0)
+	_cam.position = p["pos"]
+	_cam.look_at(p["look"])
+
+
+# ---- the chrome ------------------------------------------------------------------
+
+
+## Everything over the court, as one Control (also built off-tree by tests).
+func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control:
+	var chrome := Control.new()
+	chrome.name = "Chrome"
+	chrome.set_anchors_preset(Control.PRESET_FULL_RECT)
+	chrome.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var scrim := ColorRect.new()
+	scrim.name = "Scrim"
+	scrim.color = Color(RetroTheme.SCENE_OUTLINE, SCRIM_ALPHA)
+	scrim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chrome.add_child(scrim)
+	var in_league := not HeatCopy.league_of(heat).is_empty()
+
+	# Header: the league line, the result, the score (+ OT), the opponent.
+	var head := _vbox(26)
+	head.name = "Head"
+	head.position = Vector2(MARGIN, HEAD_Y)
+	head.size = Vector2(720 - 2 * MARGIN, 0)
+	chrome.add_child(head)
+	var hl := _text(HeatCopy.header(heat, doc))
+	hl.name = "Header"
+	hl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	head.add_child(hl)
+	var res := HeatCopy.result(heat)
+	var rl := _text(str(res["text"]), int(res["size"]), GOLD if bool(res["gold"]) else CREAM, true)
+	rl.name = "Result"
+	rl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	RetroTheme.dithered(rl)
+	head.add_child(rl)
+	var score_row := _hbox(20)
+	score_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	head.add_child(score_row)
+	var sl := _text(HeatCopy.score_line(heat), 88, CREAM, true)
+	sl.name = "ScoreLine"
+	RetroTheme.dithered(sl)
+	score_row.add_child(sl)
+	if HeatCopy.ot(heat):
+		var chip := ShadowPanel.new(GOLD, 0.0, 0.30, 12.0)
+		chip.name = "OT"
+		chip.custom_minimum_size = Vector2(0, 40 + ShadowStyle.OFFSET)
+		chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var ot := _text("OT", 16, CREAM, true)
+		ot.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		chip.add_child(ot)
+		score_row.add_child(chip)
+	var vs := _text(HeatCopy.vs_line(heat), 20)
+	vs.name = "Vs"
+	vs.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	head.add_child(vs)
+
+	# The box score.
+	var box := ShadowPanel.new(CREAM, 14.0, 0.14, 24.0)
+	box.name = "Box"
+	box.position = Vector2(MARGIN, BOX_Y)
+	box.size = Vector2(BOX_W + ShadowStyle.OFFSET, 0)
+	chrome.add_child(box)
+	var bcol := _vbox(0)
+	box.add_child(bcol)
+	var bh := _hbox(0)
+	bh.custom_minimum_size = Vector2(0, 52)
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bh.add_child(spacer)
+	var oc := HeatCopy.opponent_chip(heat)
+	for spec in [["YOU", RetroTheme.c("orange"), 0.30, "YouChip"], [str(oc["text"]), oc["color"], 0.40, "ThemChip"]]:
+		var cell := _hbox(0)
+		cell.custom_minimum_size = Vector2(150, 0)
+		cell.alignment = BoxContainer.ALIGNMENT_END
+		var chip := ShadowPanel.new(spec[1], 0.0, float(spec[2]), 12.0)
+		chip.name = str(spec[3])
+		chip.custom_minimum_size = Vector2(0, 36 + ShadowStyle.OFFSET)
+		chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		var l := _text(str(spec[0]), 16, CREAM, true)
+		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		chip.add_child(l)
+		cell.add_child(chip)
+		bh.add_child(cell)
+	bcol.add_child(bh)
+	for r in HeatCopy.box(heat):
+		bcol.add_child(_box_row(r))
+
+	# Coins beside the card drop, CONTINUE SEASON, HOME.
+	if in_league:
+		var cards := _hbox(26 - int(ShadowStyle.OFFSET))
+		cards.name = "Cards"
+		cards.position = Vector2(MARGIN, CARDS_Y)
+		cards.size = Vector2(RIGHT - MARGIN + ShadowStyle.OFFSET, CARD_H + ShadowStyle.OFFSET)
+		chrome.add_child(cards)
+		var ck := HeatCopy.coins(heat)
+		var coins := ShadowPanel.new(GOLD, 0.0, 0.22, 22.0)
+		coins.name = "Coins"
+		coins.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		coins.custom_minimum_size = Vector2(0, CARD_H + ShadowStyle.OFFSET)
+		var cr := _hbox(18)
+		cr.alignment = BoxContainer.ALIGNMENT_BEGIN
+		var coin := PixelIcon.new("icon_coin", Vector2(48, 48), 3.0)
+		coin.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		cr.add_child(coin)
+		var cc := _vbox(12)
+		cc.alignment = BoxContainer.ALIGNMENT_CENTER
+		var big := _text(str(ck.get("big", "+0")), 32, CREAM, true)
+		big.name = "CoinsBig"
+		cc.add_child(big)
+		cc.add_child(_text(str(ck.get("sub", ""))))
+		if str(ck.get("sub2", "")) != "":
+			var t2 := _text(str(ck["sub2"]))
+			t2.name = "TicketsLine"
+			cc.add_child(t2)
+		cr.add_child(cc)
+		coins.add_child(cr)
+		cards.add_child(coins)
+		var card := HeatCopy.drop(heat)
+		if not card.is_empty():
+			var dp := ShadowPanel.new(RetroTheme.c("teal"), 0.0, 0.22, 20.0)
+			dp.name = "Drop"
+			dp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			dp.custom_minimum_size = Vector2(0, CARD_H + ShadowStyle.OFFSET)
+			var dr := _hbox(18)
+			var art := ModeCards.art(card, Vector2(84, 112), 4.0)
+			art.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			dr.add_child(art)
+			var dc := _vbox(12)
+			dc.alignment = BoxContainer.ALIGNMENT_CENTER
+			dc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			dc.add_child(_text("CARD DROP"))
+			var nm := _text(str(card.get("name", "")).to_upper().replace(" ", "\n"), 16, CREAM, true)
+			nm.name = "DropName"
+			nm.add_theme_constant_override("line_spacing", 6)
+			dc.add_child(nm)
+			dr.add_child(dc)
+			dp.add_child(dr)
+			cards.add_child(dp)
+		var cont := ShadowCard.new(RetroTheme.c("orange"))
+		cont.name = "ContinueSeason"
+		cont.position = Vector2(MARGIN, CONT_Y)
+		cont.size = Vector2(RIGHT - MARGIN + ShadowStyle.OFFSET, CONT_H + ShadowStyle.OFFSET)
+		var cm := _margin(0, 24)
+		cont.add_child(cm)
+		var crow := _hbox(16)
+		cm.add_child(crow)
+		var ccol := _vbox(14)
+		ccol.alignment = BoxContainer.ALIGNMENT_CENTER
+		ccol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		ccol.add_child(_text("CONTINUE SEASON", 24, CREAM, true))
+		var sub := _text(HeatCopy.continue_sub(doc, cfg))
+		sub.name = "ContinueSub"
+		ccol.add_child(sub)
+		crow.add_child(ccol)
+		var ch := _text(">", 32, CREAM, true)
+		ch.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		crow.add_child(ch)
 		cont.pressed.connect(App.to_league_hub)
-		vbox.add_child(cont)
-	var title_btn := Button.new()
-	title_btn.text = "Title"
-	title_btn.add_theme_font_size_override("font_size", 24)
-	title_btn.custom_minimum_size = Vector2(0, 56)
-	title_btn.pressed.connect(App.to_title)
-	vbox.add_child(title_btn)
+		chrome.add_child(cont)
+	var home := ShadowCard.new(CREAM)
+	home.name = "Home"
+	home.position = Vector2(MARGIN, HOME_Y)
+	home.size = Vector2(RIGHT - MARGIN + ShadowStyle.OFFSET, HOME_H + ShadowStyle.OFFSET)
+	home.text = "HOME"
+	home.add_theme_font_override("font", UiFont.display())
+	home.add_theme_font_size_override("font_size", UiFont.snap(16))
+	RetroTheme.on_scene(home)
+	home.pressed.connect(App.to_title)
+	chrome.add_child(home)
+	return chrome
 
 
-func _pct(side: Dictionary) -> String:
-	var a := int(side.get("attempts", 0))
-	return "%d%%" % roundi(100.0 * int(side.get("makes", 0)) / a) if a > 0 else "–"
+## A box row: the label, then you / them in 150-px columns, the better in gold.
+func _box_row(r: Dictionary) -> Control:
+	var row := _hbox(0)
+	row.name = "Row_" + str(r["l"]).replace(" ", "_")
+	row.custom_minimum_size = Vector2(0, 50)
+	var l := _text(str(r["l"]))
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(l)
+	for spec in [[str(r["a"]), r["hi"] == "a"], [str(r["b"]), r["hi"] == "b"]]:
+		var c := _text(spec[0], 16, GOLD if bool(spec[1]) else CREAM, true)
+		c.custom_minimum_size = Vector2(150, 0)
+		c.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		c.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		row.add_child(c)
+	var wrap := Control.new()
+	wrap.custom_minimum_size = Vector2(0, 50)
+	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var rule := RowRule.new()
+	wrap.add_child(rule)
+	row.set_anchors_preset(Control.PRESET_FULL_RECT)
+	wrap.add_child(row)
+	return wrap
 
 
-func _row(grid: GridContainer, name_: String, a: String, b: String, color := Color(0.85, 0.88, 0.95)) -> void:
-	for text in [name_, a, b]:
-		var l := _label(text, 24, color)
-		l.custom_minimum_size = Vector2(150, 0)
-		grid.add_child(l)
+## The dashed rule along a box row's top (cream at 35 %, 2 px).
+class RowRule extends Control:
+	func _init() -> void:
+		set_anchors_preset(Control.PRESET_TOP_WIDE)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _draw() -> void:
+		draw_dashed_line(Vector2(0, 1), Vector2(size.x, 1), Color(RetroTheme.SCENE_TEXT, 0.35), 2.0, 8.0)
 
 
-func _label(text: String, size_: int, color: Color) -> Label:
-	var l := Label.new()
-	l.text = text
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	l.add_theme_font_size_override("font_size", size_)
+# ---- helpers ---------------------------------------------------------------------
+
+
+func _text(text: String, size_ := 16, color := CREAM, display := false) -> Label:
+	var l := UiFont.label(text, size_, color, UiFont.display() if display else UiFont.body_bold())
+	RetroTheme.on_scene(l)
 	l.add_theme_color_override("font_color", color)
-	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return l
 
 
-func _spacer(h: float) -> Control:
-	var c := Control.new()
-	c.custom_minimum_size = Vector2(0, h)
-	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return c
+func _vbox(gap: int) -> VBoxContainer:
+	var v := VBoxContainer.new()
+	v.add_theme_constant_override("separation", gap)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return v
+
+
+func _hbox(gap: int) -> HBoxContainer:
+	var h := HBoxContainer.new()
+	h.add_theme_constant_override("separation", gap)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return h
+
+
+func _margin(v: int, h: int) -> MarginContainer:
+	var m := MarginContainer.new()
+	m.set_anchors_preset(Control.PRESET_FULL_RECT)
+	m.add_theme_constant_override("margin_left", h)
+	m.add_theme_constant_override("margin_right", h + int(ShadowStyle.OFFSET))
+	m.add_theme_constant_override("margin_top", v)
+	m.add_theme_constant_override("margin_bottom", v + int(ShadowStyle.OFFSET))
+	m.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return m
