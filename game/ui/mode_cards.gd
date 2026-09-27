@@ -271,25 +271,18 @@ static func art(card: Dictionary, size_: Vector2, shadow := 6.0, button := false
 	sh.size = size_
 	sh.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(sh)
-	var path := str(card.get("art", "res://assets/textures/cards/card_back.png"))
-	var tex: Texture2D = load(path) if ResourceLoader.exists(path) else null
+	var face := CardFace.new(card, size_)
+	face.name = "Face"
+	holder.add_child(face)
 	if button:
+		# A textureless button over the face: the tap target, nothing drawn.
 		var b := TextureButton.new()
-		b.texture_normal = tex
 		b.ignore_texture_size = true
 		b.stretch_mode = TextureButton.STRETCH_SCALE
 		b.size = size_
 		b.focus_mode = Control.FOCUS_NONE
 		holder.add_child(b)
 		holder.set_meta("button", b)
-	else:
-		var t := TextureRect.new()
-		t.texture = tex
-		t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		t.stretch_mode = TextureRect.STRETCH_SCALE
-		t.size = size_
-		t.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		holder.add_child(t)
 	return holder
 
 
@@ -304,8 +297,8 @@ static func empty_slot(size_: Vector2, font := 16, border := 2.0, shadow := 0.0)
 	return d
 
 
-## A 40 px loadout chip: a crop of the card's art in an ink frame with a 3 px
-## shadow; an empty slot is the dashed "+".
+## A 40 px loadout chip: the card's sprite loop on the card's own colour in
+## an ink frame with a 3 px shadow; an empty slot is the dashed "+".
 static func chip(card: Dictionary) -> Control:
 	if card.is_empty():
 		return empty_slot(Vector2(CHIP, CHIP), 16, 2.0, 3.0)
@@ -386,32 +379,29 @@ class Dashed extends Control:
 			draw_dashed_line(pts[i], pts[i + 1], RetroTheme.SCENE_TEXT, border, 8.0)
 
 
-## A loadout chip: the card's art scaled to 48×64 and cropped to a 40 px ink
-## frame (2 px border), with a 3 px ink shadow.
+## A loadout chip (design "Card Icons" 9a): a 40 px ink frame (2 px border,
+## 3 px ink shadow) filled with the card's `fx.chip_bg`, the card's sprite
+## loop (`fx.chip` px, a sprite-only CardFace) centred in it.
 class Chip extends Control:
 	var card: Dictionary = {}
+	var bg: Color = RetroTheme.SCENE_OUTLINE
 	func _init(p_card: Dictionary) -> void:
 		card = p_card
 		custom_minimum_size = Vector2(ModeCards.CHIP + 3, ModeCards.CHIP + 3)
 		size = custom_minimum_size
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		var clip := Control.new()
-		clip.position = Vector2(2, 2)
-		clip.size = Vector2(ModeCards.CHIP - 4, ModeCards.CHIP - 4)
-		clip.clip_contents = true
-		clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(clip)
-		var path := str(card.get("art", "res://assets/textures/cards/card_back.png"))
-		var t := TextureRect.new()
-		t.texture = load(path) if ResourceLoader.exists(path) else null
-		t.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		t.stretch_mode = TextureRect.STRETCH_SCALE
-		t.position = Vector2(-6, -6)
-		t.size = Vector2(48, 64)
-		t.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		clip.add_child(t)
+		var fx: Dictionary = card["fx"] if card.get("fx", null) is Dictionary else {}
+		if Color.html_is_valid(str(fx.get("chip_bg", ""))):
+			bg = Color.html(str(fx["chip_bg"]))
+		var cs: Array = fx["chip"] if fx.get("chip", null) is Array and fx["chip"].size() == 2 else [36, 36]
+		var spr_size := Vector2(float(cs[0]), float(cs[1]))
+		var spr := CardFace.new(card, spr_size, true)
+		spr.name = "Sprite"
+		spr.position = ((Vector2.ONE * ModeCards.CHIP - spr_size) * 0.5).floor()
+		add_child(spr)
 	func _draw() -> void:
 		var box := Vector2.ONE * ModeCards.CHIP
 		draw_rect(Rect2(Vector2(3, 3), box), RetroTheme.SCENE_OUTLINE)
 		draw_rect(Rect2(Vector2.ZERO, box), RetroTheme.SCENE_OUTLINE)
+		draw_rect(Rect2(Vector2(2, 2), box - Vector2(4, 4)), bg)

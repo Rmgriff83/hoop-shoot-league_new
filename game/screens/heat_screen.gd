@@ -153,20 +153,26 @@ var _tray_tween: Tween
 ## chip across its middle for WAIT (ink, the card dimmed) or the fire
 ## window's seconds (orange).
 class TrayCard extends Control:
+	var face: CardFace
 	var button: TextureButton
 	var tag: PanelContainer
+	var tag_row: HBoxContainer
+	var tag_glyph: PixelIcon
 	var tag_label: Label
 	var _sb: StyleBoxFlat
 	var _pressed := false
 
-	func _init(art: Texture2D, card_size: Vector2) -> void:
+	func _init(card: Dictionary, card_size: Vector2) -> void:
 		size = card_size + Vector2.ONE * ShadowStyle.OFFSET
 		custom_minimum_size = size
 		texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		face = CardFace.new(card, card_size)
+		face.name = "Art"
+		add_child(face)
+		# A textureless button over the face: the tap target, nothing drawn.
 		button = TextureButton.new()
-		button.name = "Art"
-		button.texture_normal = art
+		button.name = "Button"
 		button.ignore_texture_size = true
 		button.stretch_mode = TextureButton.STRETCH_SCALE
 		button.size = card_size
@@ -184,32 +190,44 @@ class TrayCard extends Control:
 		tag.size = Vector2(card_size.x + 12, 28)
 		tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		tag.visible = false
+		tag_row = HBoxContainer.new()
+		tag_row.alignment = BoxContainer.ALIGNMENT_CENTER
+		tag_row.add_theme_constant_override("separation", 6)
+		tag_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tag.add_child(tag_row)
+		# The fire window's flame glyph (design 8d: 14 px before `5S`).
+		tag_glyph = PixelIcon.new("cards/glyph_fire", Vector2(14, 14))
+		tag_glyph.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		tag_glyph.visible = false
+		tag_row.add_child(tag_glyph)
 		tag_label = RetroTheme.on_scene(UiFont.label("", 16, RetroTheme.SCENE_TEXT)) as Label
 		tag_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		tag_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		tag.add_child(tag_label)
+		tag_row.add_child(tag_label)
 		add_child(tag)
 
 	func _press(down: bool) -> void:
 		_pressed = down
 		button.position = Vector2(4, 4) if down else Vector2.ZERO
+		face.position = button.position
 		tag.position = Vector2(-6 + (4 if down else 0), 42 + (4 if down else 0))
 		queue_redraw()
 
-	## "wait" (WAIT, dimmed), "fire" (the seconds left) or "" (ready).
+	## "wait" (WAIT, dimmed), "fire" (the seconds left, with the flame) or "" (ready).
 	func set_state(kind: String, text: String) -> void:
 		tag.visible = kind != ""
 		tag_label.text = text
+		tag_glyph.visible = kind == "fire"
 		if kind == "wait":
-			_sb.bg_color = Color(RetroTheme.SCENE_OUTLINE, 0.8)
+			_sb.bg_color = Color(RetroTheme.SCENE_OUTLINE, 0.85)
 			_sb.border_color = RetroTheme.SCENE_TEXT
-			button.modulate = Color(1, 1, 1, 0.7)
+			face.modulate = Color(1, 1, 1, 0.7)
 		elif kind == "fire":
-			_sb.bg_color = Color(RetroTheme.LIGHT["orange"], 0.85)
+			_sb.bg_color = Color(RetroTheme.LIGHT["orange"], 0.9)
 			_sb.border_color = RetroTheme.LIGHT["orange"]
-			button.modulate = Color.WHITE
+			face.modulate = Color.WHITE
 		else:
-			button.modulate = Color.WHITE
+			face.modulate = Color.WHITE
 
 	func _draw() -> void:
 		if _pressed:
@@ -239,7 +257,7 @@ func _build_tray() -> void:
 		var id := "" if i >= slots.size() or slots[i] == null else str(slots[i])
 		_tray_ids.push_back(id)
 		var card := CardDefs.get_card(id) if id != "" else {}
-		var tc := TrayCard.new(load(str(card.get("art", "res://assets/textures/cards/card_back.png"))), TRAY_CARD)
+		var tc := TrayCard.new(card, TRAY_CARD)
 		tc.name = "Card%d" % i
 		tc.visible = id != ""
 		tc.button.pressed.connect(_on_card_tapped.bind(i))
@@ -438,24 +456,23 @@ const DEAL_FLY_S := 0.4
 
 var _deal: DealCard
 var _deal_chip: ShadowPanel
+var _deal_glyph: TextureRect
 var _deal_left: Label
 var _deal_right: Label
 var _deal_tween: Tween
 
 
-## The dealt card: its art over a dithered ink shadow that follows the fly.
+## The dealt card: its animated face over a dithered ink shadow that follows the fly.
 class DealCard extends Control:
-	var art: TextureRect
+	var face: CardFace
 
 	func _init() -> void:
 		texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		art = TextureRect.new()
-		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		art.stretch_mode = TextureRect.STRETCH_SCALE
-		art.set_anchors_preset(Control.PRESET_FULL_RECT)
-		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		add_child(art)
+		face = CardFace.new({}, Vector2.ZERO)
+		face.name = "Art"
+		face.set_anchors_preset(Control.PRESET_FULL_RECT)
+		add_child(face)
 
 	func _draw() -> void:
 		var o := ShadowStyle.OFFSET * clampf(size.x / DEAL_BIG.x, 0.3, 1.0)
@@ -487,6 +504,17 @@ func _build_toast() -> void:
 	row.add_theme_constant_override("separation", 14)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_deal_chip.add_child(row)
+	# The card's glyph leads the caption (design 8d: the 42 px snowflake).
+	_deal_glyph = TextureRect.new()
+	_deal_glyph.name = "Glyph"
+	_deal_glyph.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_deal_glyph.stretch_mode = TextureRect.STRETCH_SCALE
+	_deal_glyph.custom_minimum_size = Vector2(42, 42)
+	_deal_glyph.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_deal_glyph.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	_deal_glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_deal_glyph.visible = false
+	row.add_child(_deal_glyph)
 	_deal_left = _ot_text("", 16, RetroTheme.SCENE_TEXT, true)
 	_deal_left.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(_deal_left)
@@ -528,18 +556,20 @@ func _pip_point() -> Vector2:
 
 func _show_card_play(card_id: String, by_ai: bool, target: String) -> void:
 	var card := CardDefs.get_card(card_id)
-	var art: Texture2D = load(str(card.get("art", "res://assets/textures/cards/card_back.png")))
 	var cname: String = str(card.get("name", card_id))
 	var on_you := target == Heat.PLAYER
 	var from: Rect2 = Rect2(_pip_point() - DEAL_SMALL * 0.5, DEAL_SMALL) if by_ai else _dealt_from
 	var to: Vector2 = _hoop_point() if on_you else _pip_point()
-	_deal_card(art, from, to, HudCopy.deal_caption(cname, on_you, _opp_short), RetroTheme.LIGHT["orange"] if by_ai else LeagueContext.BLUE)
+	_deal_card(card, from, to, HudCopy.deal_caption(cname, on_you, _opp_short), RetroTheme.LIGHT["orange"] if by_ai else LeagueContext.BLUE)
 
 
-func _deal_card(art: Texture2D, from: Rect2, to: Vector2, caption: Array, colour: Color) -> void:
+func _deal_card(card: Dictionary, from: Rect2, to: Vector2, caption: Array, colour: Color) -> void:
 	if _deal_tween != null:
 		_deal_tween.kill()
-	_deal.art.texture = art
+	_deal.face.set_card(card)
+	var fx: Dictionary = card["fx"] if card.get("fx", null) is Dictionary else {}
+	_deal_glyph.texture = CardFace.tex(str(fx.get("glyph", "")))
+	_deal_glyph.visible = _deal_glyph.texture != null
 	_deal.position = from.position
 	_deal.size = from.size
 	_deal.modulate = Color.WHITE

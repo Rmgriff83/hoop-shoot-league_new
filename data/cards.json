@@ -10,6 +10,23 @@
         "kind": "ice"
       },
       "art": "res://assets/textures/cards/card_ice.png",
+      "fx": {
+        "sheet": "res://assets/textures/cards/fx_snow.png",
+        "frames": 12,
+        "fps": 7.5,
+        "rect": [
+          16,
+          18,
+          64,
+          64
+        ],
+        "chip": [
+          36,
+          36
+        ],
+        "chip_bg": "#2E6AA6",
+        "glyph": "res://assets/ui/cards/glyph_ice.png"
+      },
       "blurb": "Ices the opponent's rim over. They must swish through it, or get caught, or rattle it three times.",
       "level": 1
     },
@@ -24,6 +41,23 @@
         "seconds": 7
       },
       "art": "res://assets/textures/cards/card_fire7.png",
+      "fx": {
+        "sheet": "res://assets/textures/cards/fx_flame.png",
+        "frames": 16,
+        "fps": 12,
+        "rect": [
+          20,
+          17,
+          56,
+          68
+        ],
+        "chip": [
+          30,
+          36
+        ],
+        "chip_bg": "#3A140C",
+        "glyph": "res://assets/ui/cards/glyph_fire.png"
+      },
       "blurb": "Lights your own rim for 7 s: makes pay like a hot streak. A miss, or the clock, puts it out.",
       "level": 3
     }

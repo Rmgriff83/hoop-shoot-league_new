@@ -19,6 +19,7 @@ func run(t) -> void:
 	t.eq(CardDefs.target_of("nope"), "opponent", "unknown → opponent")
 	t.eq(Progression.card_level(CardDefs.get_card("ice")), 1, "Deep Freeze is a level-1 card")
 	t.eq(Progression.card_level(CardDefs.get_card("fire7")), 3, "Heat Check is level 3")
+	_run_art(t)
 	# The save doc: one bucket per league (docs/ECONOMY.md).
 	var full := CardDefs.empty_doc()
 	t.eq(full["v"], CardDefs.DOC_VERSION, "fresh doc carries the version")
@@ -184,3 +185,47 @@ func run(t) -> void:
 	t.eq(CardLab.measure("ice", short_league, 2, 99), m, "lab replays from its seed")
 	var both := CardLab.measure_all(["ice", "fire7"], short_league, 2, 99)
 	t.close(float(both["ice"]["without"]), float(m["without"]), 1e-9, "one control heat per seed serves every card")
+
+
+## The faces and their loops (design "Card Icons" 9a): every file exists,
+## the sheet is `frames` frames of the sprite rect side by side, the chip
+## sprite fits, and the frame clock steps and wraps.
+func _run_art(t) -> void:
+	for c in CardDefs.all():
+		var id := str(c["id"])
+		t.eq(CardDefs.validate_fx(c), PackedStringArray(), "%s fx row validates" % id)
+		var fx: Dictionary = c["fx"]
+		for key in ["art", "fx/sheet", "fx/glyph"]:
+			var path := str(c["art"]) if key == "art" else str(fx[key.substr(3)])
+			t.ok(ResourceLoader.exists(path), "%s %s exists (%s)" % [id, key, path])
+		var sheet := load(str(fx["sheet"])) as Texture2D
+		var face := load(str(c["art"])) as Texture2D
+		if sheet != null and face != null:
+			t.eq([face.get_width(), face.get_height()], [CardDefs.FACE_W, CardDefs.FACE_H], "%s face is 96x128" % id)
+			t.eq(sheet.get_width(), int(fx["frames"]) * int(fx["rect"][2]), "%s sheet is frames x rect.w wide" % id)
+			t.eq(sheet.get_height(), int(fx["rect"][3]), "%s sheet is rect.h tall" % id)
+	var bad := CardDefs.get_card("ice").duplicate(true)
+	bad["fx"]["rect"] = [40, 80, 64, 64]
+	t.ok(not CardDefs.validate_fx(bad).is_empty(), "a rect off the face fails")
+	bad["fx"] = {}
+	t.ok(CardDefs.validate_fx(bad).size() >= 7, "an empty fx row lists every missing key")
+	t.eq(CardFace.frame_at(0, 16, 12.0), 0, "frame 0 at t=0")
+	t.eq(CardFace.frame_at(500, 16, 12.0), 6, "12 fps: frame 6 at 500 ms")
+	t.eq(CardFace.frame_at(1333, 16, 12.0), 15, "the last frame just before the loop")
+	t.eq(CardFace.frame_at(1334, 16, 12.0), 0, "and it wraps")
+	t.eq(CardFace.frame_at(1600, 12, 7.5), 0, "7.5 fps x 12 frames: 1.6 s loop")
+	t.eq(CardFace.frame_at(999, 1, 12.0), 0, "a single frame never moves")
+	var face := CardFace.new(CardDefs.get_card("fire7"), Vector2(168, 224))
+	t.eq(face.frames, 16, "the face reads its frame count")
+	face.set_frame(9)
+	t.eq(face.frame_now(), 9, "a pinned frame holds")
+	face.set_frame(-1)
+	t.ok(face.frame_now() >= 0 and face.frame_now() < 16, "released: back on the clock")
+	face.free()
+	var chip := ModeCards.chip(CardDefs.get_card("ice")) as ModeCards.Chip
+	t.eq(chip.bg, Color.html("#2E6AA6"), "the ice chip sits on the card's blue")
+	t.ok(chip.get_node("Sprite") is CardFace and (chip.get_node("Sprite") as CardFace).sprite_only, "the chip runs the sprite alone")
+	chip.free()
+	var deal := ModeCards.art(CardDefs.get_card("fire7"), Vector2(96, 128), 6.0, true)
+	t.ok(deal.get_node("Face") is CardFace and deal.get_meta("button") is TextureButton, "art holder: a face and its tap target")
+	deal.free()

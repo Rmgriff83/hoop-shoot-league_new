@@ -156,7 +156,42 @@ static func validate() -> PackedStringArray:
 			problems.push_back("card %s has unknown target" % c.get("id", "?"))
 		if str(c.get("effect", {}).get("kind", "")) == "fire" and float(c.get("effect", {}).get("seconds", 0.0)) <= 0.0:
 			problems.push_back("card %s fire effect needs seconds > 0" % c.get("id", "?"))
+		problems.append_array(validate_fx(c))
 	return problems
+
+
+## The face's loop (design "Card Icons" 9a, game/ui/card_face.gd): `fx =
+## {sheet, frames, fps, rect: [x, y, w, h] in face pixels at 96×128, chip:
+## [w, h] (the 40 px chip's sprite), chip_bg (the chip's colour), glyph (the
+## small static icon for tags and captions)}. Files are checked by the suite.
+const FACE_W := 96
+const FACE_H := 128
+
+
+static func validate_fx(c: Dictionary) -> PackedStringArray:
+	var out := PackedStringArray()
+	var id := str(c.get("id", "?"))
+	if not (c.get("fx", null) is Dictionary):
+		out.push_back("card %s missing fx" % id)
+		return out
+	var fx: Dictionary = c["fx"]
+	for key in ["sheet", "frames", "fps", "rect", "chip", "chip_bg", "glyph"]:
+		if not fx.has(key):
+			out.push_back("card %s fx missing %s" % [id, key])
+	if int(fx.get("frames", 0)) < 1:
+		out.push_back("card %s fx needs frames >= 1" % id)
+	if float(fx.get("fps", 0.0)) <= 0.0:
+		out.push_back("card %s fx needs fps > 0" % id)
+	var r: Array = fx.get("rect", []) if fx.get("rect", null) is Array else []
+	if r.size() != 4 or int(r[0]) < 0 or int(r[1]) < 0 or int(r[2]) < 1 or int(r[3]) < 1 \
+			or int(r[0]) + int(r[2]) > FACE_W or int(r[1]) + int(r[3]) > FACE_H:
+		out.push_back("card %s fx rect must be [x, y, w, h] inside the %dx%d face" % [id, FACE_W, FACE_H])
+	var ch: Array = fx.get("chip", []) if fx.get("chip", null) is Array else []
+	if ch.size() != 2 or int(ch[0]) < 1 or int(ch[0]) > 36 or int(ch[1]) < 1 or int(ch[1]) > 36:
+		out.push_back("card %s fx chip must be [w, h] within the chip's 36 px" % id)
+	if not Color.html_is_valid(str(fx.get("chip_bg", ""))):
+		out.push_back("card %s fx chip_bg is not a colour" % id)
+	return out
 
 
 ## Who a card acts on: "self" (a boost for the player who plays it) or

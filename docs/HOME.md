@@ -103,8 +103,8 @@ chevron (the footer says START INSIDE).
   1 · DAY 1 · TIP OFF`, `SEASON 2 · DAY 4 · 3RD PLACE`, `SEASON 2 · SEMIS
   1-0`, `SEASON 2 · CHAMPIONS`, `SEASON 2 · DONE · 5TH PLACE`.
 - **Cards** (`game/ui/mode_cards.gd`, `ModeCards`): `league_card(state,
-  slots)` (trophies up to five then `+n`, chips = `Chip` crops of the card
-  art or the dashed `+`), `trial_card` / `practice_card` (`icon_card`),
+  slots)` (trophies up to five then `+n`, chips = `Chip`: the card's sprite
+  loop on its own colour, or the dashed `+`), `trial_card` / `practice_card` (`icon_card`),
   `text_card`, and the shared `art` / `empty_slot` / `chip` / `stat`
   pieces. LEAGUE → opens the league in context; TIME TRIAL / PRACTICE →
   `App.start_area(mode, area)`. **Quick heat is not on the home screen**.
@@ -190,12 +190,18 @@ the period's note. ON FIRE joins the banners.
 ## QA and tests
 
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-heat` →
-  `user://qa/heat_countdown.png`, `heat_live.png`, `heat_pipmin.png`,
-  `heat_pause.png` on a real cage league heat.
+  `user://qa/heat_countdown.png`, `heat_live.png` (the tray's animated
+  faces), `heat_deal.png` (the deal and its glyph caption), `heat_pipmin.png`,
+  `heat_pause.png` on a real cage league heat (it equips ice + fire7 in
+  empty slots of the dev save).
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-hud` →
   `user://qa/hud_countdown.png`, `hud_live.png`, `hud_pause.png`,
   `hud_practice.png`, `hud_practice30.png`.
 
+- `godot --path hoop_shoot --resolution 360x640 -- --qa-cards` →
+  `user://qa/cards_f0.png`, `cards_f5.png`, `cards_live.png`: the animated
+  card faces (ice, fire, the pending vortex) at tray / loadout / shop / deal
+  size, the chips, the WAIT and `5S` tray tags, the deal caption.
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-heat-result` →
   `user://qa/heat_win.png` (OT, a card drop), `heat_loss.png`, `heat_quick.png`.
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-results` →

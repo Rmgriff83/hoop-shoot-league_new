@@ -14,7 +14,7 @@ var _outcomes: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
-	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat")):
+	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	if args.has("--qa-title"):
@@ -27,6 +27,8 @@ func _ready() -> void:
 		_run_hud.call_deferred()
 	elif args.has("--qa-heat"):
 		_run_heat.call_deferred()
+	elif args.has("--qa-cards"):
+		_run_cards.call_deferred()
 	elif args.has("--qa-beach"):
 		_run_beach.call_deferred()
 	elif args.has("--qa-aim"):
@@ -121,6 +123,13 @@ func _run_results() -> void:
 func _run_heat() -> void:
 	await _sleep(0.8)
 	App.enter_league("cage")
+	# Cards in the tray (design "Card Icons"): a Deep Freeze and a Heat Check
+	# in the first two slots when they are empty (this touches the dev save).
+	var loadout: Array = App.cards_bucket("cage").get("loadout", [null, null, null])
+	for pair in [[0, "ice"], [1, "fire7"]]:
+		if loadout[pair[0]] == null:
+			App.add_card(str(pair[1]), 1, "cage")
+			App.equip_card(int(pair[0]), str(pair[1]), "cage")
 	App.start_league_heat()
 	await _sleep(1.0)
 	await _snap("heat_countdown")
@@ -129,6 +138,15 @@ func _run_heat() -> void:
 	await _flick(1.9, 0.30, 0.0)
 	await _sleep(1.4)
 	await _snap("heat_live")
+	# Deal the first card: the face flies out under its caption.
+	var card0: Control = get_tree().root.find_child("Card0", true, false)
+	if card0 != null and card0.is_visible_in_tree():
+		var c := (card0.global_position + Vector2(42, 56)) * 0.5
+		_mouse_button(c, true)
+		await _sleep(0.08)
+		_mouse_button(c, false)
+		await _sleep(0.45)
+		await _snap("heat_deal")
 	await _sleep(2.0)
 	await _click_named("PipMin")
 	await _sleep(0.5)
@@ -238,6 +256,101 @@ func _run_heat_result() -> void:
 	await _sleep(1.2)
 	await _snap("heat_quick")
 	print("QA heat result: done")
+	get_tree().quit(0)
+
+
+## Card icons QA (design "Card Icons" 9a / 10a): the animated faces at every
+## size the game uses, the chips, the tray tags and the deal caption, on the
+## cage carpet. Snaps frame 0, frame 5 (pinned) and the live loop.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-cards
+const VORTEX_QA := {"id": "vortex6", "name": "Vortex", "target": "self",
+	"art": "res://assets/textures/cards/card_vortex6.png",
+	"fx": {"sheet": "res://assets/textures/cards/fx_vortex.png", "frames": 16, "fps": 14.5,
+		"rect": [16, 29, 64, 56], "chip": [30, 36], "chip_bg": "#1E4A41", "glyph": ""}}
+
+
+func _run_cards() -> void:
+	await _sleep(0.6)
+	var layer := CanvasLayer.new()
+	layer.layer = 50
+	add_child(layer)
+	var bg := TextureRect.new()
+	bg.texture = load("res://assets/textures/cage_carpet.png")
+	bg.stretch_mode = TextureRect.STRETCH_TILE
+	bg.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	layer.add_child(bg)
+	var col := VBoxContainer.new()
+	col.position = Vector2(28, 40)
+	col.add_theme_constant_override("separation", 26)
+	layer.add_child(col)
+	var faces: Array[CardFace] = []
+	for card in [CardDefs.get_card("ice"), CardDefs.get_card("fire7"), VORTEX_QA]:
+		var row := HBoxContainer.new()
+		row.alignment = BoxContainer.ALIGNMENT_END
+		row.add_theme_constant_override("separation", 24)
+		for sz in [Vector2(84, 112), Vector2(96, 128), Vector2(120, 160), Vector2(168, 224)]:
+			var holder := ModeCards.art(card, sz, 6.0)
+			holder.size_flags_vertical = Control.SIZE_SHRINK_END
+			row.add_child(holder)
+			faces.push_back(holder.get_node("Face") as CardFace)
+		col.add_child(row)
+	# The chips, the tray tags, the deal caption.
+	var last := HBoxContainer.new()
+	last.add_theme_constant_override("separation", 28)
+	last.alignment = BoxContainer.ALIGNMENT_CENTER
+	var chips := HBoxContainer.new()
+	chips.add_theme_constant_override("separation", 10)
+	chips.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	for card in [CardDefs.get_card("ice"), CardDefs.get_card("fire7"), VORTEX_QA, {}]:
+		var chip := ModeCards.chip(card)
+		chips.add_child(chip)
+		if chip is ModeCards.Chip:
+			faces.push_back(chip.get_node("Sprite") as CardFace)
+	last.add_child(chips)
+	var heat_script: GDScript = load("res://game/screens/heat_screen.gd")
+	var wait_card: Control = heat_script.TrayCard.new(CardDefs.get_card("ice"), Vector2(84, 112))
+	wait_card.set_state("wait", "WAIT")
+	last.add_child(wait_card)
+	faces.push_back(wait_card.face)
+	var fire_card: Control = heat_script.TrayCard.new(CardDefs.get_card("fire7"), Vector2(84, 112))
+	fire_card.set_state("fire", "5S")
+	last.add_child(fire_card)
+	faces.push_back(fire_card.face)
+	col.add_child(last)
+	var cap := ShadowPanel.new(LeagueContext.BLUE, 0.0, 0.30, 18.0)
+	cap.custom_minimum_size = Vector2(0, 50 + ShadowStyle.OFFSET)
+	cap.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	var crow := HBoxContainer.new()
+	crow.add_theme_constant_override("separation", 14)
+	var glyph := TextureRect.new()
+	glyph.texture = load("res://assets/ui/cards/glyph_ice.png")
+	glyph.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	glyph.stretch_mode = TextureRect.STRETCH_SCALE
+	glyph.custom_minimum_size = Vector2(42, 42)
+	glyph.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	glyph.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	crow.add_child(glyph)
+	for part in [["DEEP FREEZE", 16], [">", 24], ["OLLIE", 16]]:
+		var l := RetroTheme.on_scene(UiFont.label(str(part[0]), int(part[1]), RetroTheme.SCENE_TEXT, UiFont.display())) as Label
+		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		crow.add_child(l)
+	cap.add_child(crow)
+	col.add_child(cap)
+	await _sleep(0.5)
+	for f in faces:
+		f.set_frame(0)
+	await _sleep(0.2)
+	await _snap("cards_f0")
+	for f in faces:
+		f.set_frame(5)
+	await _sleep(0.2)
+	await _snap("cards_f5")
+	for f in faces:
+		f.set_frame(-1)
+	await _sleep(0.7)
+	await _snap("cards_live")
+	print("QA cards: done")
 	get_tree().quit(0)
 
 

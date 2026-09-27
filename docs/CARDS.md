@@ -167,7 +167,21 @@ buys a season.
 2. **Effect**: a new `kind` needs `CardEffects.apply` / `can_apply` (and the
    `TimeTrial` hook it drives) plus `CardEffects.KINDS`; a new duration or
    magnitude of an existing kind is just the JSON row.
-3. **Art**: `tools/aseprite/gen_card_textures.lua` → `assets/textures/cards/`.
+3. **Art** (design "Card Icons" 9a): a 96×128 face PNG — frame, target
+   badge, name plate, empty art area — in `assets/textures/cards/` and a
+   horizontal sprite strip beside it, both from the design project's
+   export; the card's `fx` row says how to run it: `{sheet, frames, fps,
+   rect: [x, y, w, h]` (where the loop sits on the face, in face pixels),
+   `chip: [w, h]` (the sprite's size in the 40 px chip), `chip_bg` (the
+   chip's colour), `glyph` (a small static icon for the tray tag and the
+   deal caption, `assets/ui/cards/`)`}`. `CardDefs.validate_fx` checks the
+   row; the suite checks the files and that the sheet is `frames × w` by
+   `h`. `game/ui/card_face.gd` (`CardFace`) draws it everywhere — the tray,
+   the deal, loadout, spares, shop, the drop and the chips. Only
+   `card_back.png` is still generated (`gen_card_textures.lua`).
+   Pending: VORTEX's art is in (`card_vortex6.png`, `fx_vortex.png`: 16
+   frames at 14.5 fps, rect `[16, 29, 64, 56]`, chip 30×36 on `#1E4A41`)
+   but the card has no effect yet, so no row — `--qa-cards` shows it.
 4. **Measure**: `tools/card_lab.gd -- <id>`. Read its power per league in
    the output; set `rarity` to `CardDefs.rarity_for(mean)` and `price` to
    `CardDefs.price_for(mean)` (nudge inside the tolerance if it feels wrong).
