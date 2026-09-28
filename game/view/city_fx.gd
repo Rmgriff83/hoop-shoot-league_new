@@ -31,10 +31,12 @@ const HEADLIGHT_ENERGY := 0.9
 const HEADLIGHT_RANGE := 14.0
 const HEADLIGHT_ANGLE := 32.0
 ## The court's floodlights: a spot hung on every FloodHead*, aimed at the key.
-const FLOOD_TARGET := Vector3(-1.5, 0.0, 0.0)
-const FLOOD_ENERGY := 3.2
-const FLOOD_RANGE := 36.0
-const FLOOD_ANGLE := 42.0
+## Aimed at the floor around the key with a cone tight enough that the pale
+## steel board only catches its edge (inverse-square falloff from 8 m up).
+const FLOOD_TARGET := Vector3(-0.5, 0.0, 0.0)
+const FLOOD_ENERGY := 8.0
+const FLOOD_RANGE := 40.0
+const FLOOD_ANGLE := 32.0
 ## Window lights: the share of panes lit, and each pane's own switching
 ## period (minutes), mirrored by windows.gdshader.
 const LIT_SHARE := 0.6
@@ -141,7 +143,8 @@ func _hang_flood(head: MeshInstance3D) -> void:
 	lamp.light_energy = FLOOD_ENERGY
 	lamp.spot_range = FLOOD_RANGE
 	lamp.spot_angle = FLOOD_ANGLE
-	lamp.spot_attenuation = 0.7
+	lamp.spot_attenuation = 1.0
+	lamp.light_specular = 0.25   # the steel board sits in the cone: no hot spot
 	lamp.shadow_enabled = false
 	head.add_child(lamp)
 	# The head quad's local frame is its own; aim in the arena's frame.

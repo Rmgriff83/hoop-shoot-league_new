@@ -278,9 +278,11 @@ def build():
         cage.add_quad("Tree%d" % i, [(x, 0, z - wdt / 2), (x, 0, z + wdt / 2), (x, hgt, z + wdt / 2), (x, hgt, z - wdt / 2)],
                       (-1, 0, 0), tree, c_props, trig, (1.0, 1.0), origin=(x, 0.0, z))
 
-    # ---- Floodlight poles at all four corners of the court, heads aimed at
-    # it (CityFx hangs a SpotLight3D on every FloodHead* — the court's light).
-    for i, (fx, fz, toward) in enumerate(((-10.5, -7.9, 1), (-10.5, 7.9, 1), (7.0, -9.4, -1), (7.0, 9.4, -1))):
+    # ---- Floodlight poles: two close behind the shooter, left and right (the
+    # court's light — spot lights fall off with distance squared, so they sit
+    # near), two beyond the hoop's fence. CityFx hangs a SpotLight3D on every
+    # FloodHead*, aimed at the court.
+    for i, (fx, fz, toward) in enumerate(((-4.5, -7.4, 1), (-4.5, 7.4, 1), (7.0, -9.4, -1), (7.0, 9.4, -1))):
         cage.add_box("FloodPost%d" % i, (0.16, 8.0, 0.16), (fx, 4.0, fz), pole_tex, c_props, root)
         cage.add_box("FloodArm%d" % i, (1.2, 0.1, 0.1), (fx + 0.6 * toward, 8.0, fz), steel, c_props, root)
         cage.add_box("FloodBox%d" % i, (0.5, 0.36, 0.7), (fx + 1.3 * toward, 7.9, fz), dark, c_props, root)
