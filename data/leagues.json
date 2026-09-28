@@ -26,7 +26,7 @@
       "semis_best_of": 3,
       "final_best_of": 5,
       "unlock": null,
-      "ai_cards_per_season": 6,
+      "ai_cards_per_season": 5,
       "ai_hand_max": 2,
       "ai_pool": [
         "ice",
@@ -127,6 +127,41 @@
         "min": 3,
         "cap": 5
       },
+      "xp_mult": 1.0
+    },
+    {
+      "id": "city",
+      "name": "City League",
+      "location": "city",
+      "mode": "heat_city",
+      "arena": "city",
+      "hoop": "chain",
+      "calib_key": "city",
+      "roster": ["starfall", "kingsbridge", "ferry-row", "union-yards", "eastgate", "north-tunnel", "rooftop-hill"],
+      "err_mult": 0.9,
+      "heat_seconds": 90,
+      "ot_seconds": 20,
+      "ball_return_s": 1.0,
+      "rounds": 2,
+      "playoff_teams": 4,
+      "semis_best_of": 3,
+      "final_best_of": 5,
+      "unlock": { "level": 5 },
+      "ai_cards_per_season": 14,
+      "ai_hand_max": 2,
+      "ai_pool": ["ice", "fire7", "vortex6"],
+      "card_parity": 1.0,
+      "ai_cards": {
+        "starfall": ["ice", "vortex6"],
+        "union-yards": ["vortex6"],
+        "north-tunnel": ["ice", "ice"],
+        "rooftop-hill": ["fire7"],
+        "kingsbridge": ["ice"],
+        "ferry-row": ["ice"]
+      },
+      "rewards": { "win_coins": 66, "loss_coins": 27, "title_coins": 440,
+                   "win_tickets": 45, "loss_tickets": 18, "title_tickets": 130 },
+      "levels": { "min": 5, "cap": 7 },
       "xp_mult": 1.0
     }
   ]

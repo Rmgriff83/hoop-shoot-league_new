@@ -14,7 +14,7 @@ var _outcomes: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
-	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards")):
+	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	if args.has("--qa-title"):
@@ -31,6 +31,8 @@ func _ready() -> void:
 		_run_cards.call_deferred()
 	elif args.has("--qa-beach"):
 		_run_beach.call_deferred()
+	elif args.has("--qa-city"):
+		_run_city.call_deferred()
 	elif args.has("--qa-aim"):
 		_run_aim.call_deferred()
 	else:
@@ -126,7 +128,7 @@ func _run_heat() -> void:
 	# Cards in the tray (design "Card Icons"): a Deep Freeze and a Heat Check
 	# in the first two slots when they are empty (this touches the dev save).
 	var loadout: Array = App.cards_bucket("cage").get("loadout", [null, null, null])
-	for pair in [[0, "ice"], [1, "fire7"]]:
+	for pair in [[0, "ice"], [1, "fire7"], [2, "vortex6"]]:
 		if loadout[pair[0]] == null:
 			App.add_card(str(pair[1]), 1, "cage")
 			App.equip_card(int(pair[0]), str(pair[1]), "cage")
@@ -263,10 +265,7 @@ func _run_heat_result() -> void:
 ## size the game uses, the chips, the tray tags and the deal caption, on the
 ## cage carpet. Snaps frame 0, frame 5 (pinned) and the live loop.
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-cards
-const VORTEX_QA := {"id": "vortex6", "name": "Vortex", "target": "self",
-	"art": "res://assets/textures/cards/card_vortex6.png",
-	"fx": {"sheet": "res://assets/textures/cards/fx_vortex.png", "frames": 16, "fps": 14.5,
-		"rect": [16, 29, 64, 56], "chip": [30, 36], "chip_bg": "#1E4A41", "glyph": ""}}
+## (Vortex is a real card now — data/cards.json.)
 
 
 func _run_cards() -> void:
@@ -285,7 +284,7 @@ func _run_cards() -> void:
 	col.add_theme_constant_override("separation", 26)
 	layer.add_child(col)
 	var faces: Array[CardFace] = []
-	for card in [CardDefs.get_card("ice"), CardDefs.get_card("fire7"), VORTEX_QA]:
+	for card in [CardDefs.get_card("ice"), CardDefs.get_card("fire7"), CardDefs.get_card("vortex6")]:
 		var row := HBoxContainer.new()
 		row.alignment = BoxContainer.ALIGNMENT_END
 		row.add_theme_constant_override("separation", 24)
@@ -302,7 +301,7 @@ func _run_cards() -> void:
 	var chips := HBoxContainer.new()
 	chips.add_theme_constant_override("separation", 10)
 	chips.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	for card in [CardDefs.get_card("ice"), CardDefs.get_card("fire7"), VORTEX_QA, {}]:
+	for card in [CardDefs.get_card("ice"), CardDefs.get_card("fire7"), CardDefs.get_card("vortex6"), {}]:
 		var chip := ModeCards.chip(card)
 		chips.add_child(chip)
 		if chip is ModeCards.Chip:
@@ -372,6 +371,30 @@ func _run_beach() -> void:
 		await _sleep(4.5)
 	await _snap("beach_last")
 	print("QA beach: done")
+	get_tree().quit(0)
+
+
+## City QA: the third home page (the city card, stars, the lock or the league),
+## then the city time trial over ~45 s so cars cross the street, the trees
+## and windows show, and the spot shuffle lands.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-city
+func _run_city() -> void:
+	await _sleep(1.2)
+	await _click_button_named(">")
+	await _sleep(1.0)
+	await _click_button_named(">")           # page to the city card
+	await _sleep(1.0)
+	await _snap("city_home")
+	App.start_mode("trial_city")             # straight in (the dev save may be under level 5)
+	await _sleep(4.4)
+	for i in 10:
+		await _snap("city_%02d" % i)
+		await _sleep(4.5)
+	await _snap("city_last")
+	var fx: Node = get_tree().root.find_child("CityFx", true, false)
+	if fx != null:
+		print("QA city: cars sent %d, on the road %d, windows %d" % [fx.sent(), fx.car_count(), fx.window_count()])
+	print("QA city: done")
 	get_tree().quit(0)
 
 

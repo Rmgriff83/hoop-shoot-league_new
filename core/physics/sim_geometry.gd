@@ -48,6 +48,14 @@ var rim_log_impact: float = 0.4
 ## Cold streak: the rim is iced over (ShotSim catches would-be makes). Off by
 ## default so every preset and the golden fixtures are unaffected.
 var ice := false
+## Card VORTEX (docs/CARDS.md): the rim pulls any ball that has touched iron
+## or board through. Off by default, so no preset or fixture sees it.
+var vortex := false
+## Net material. Regulation / arcade / beach keep SimConstants exactly (the
+## golden fixtures run the nylon numbers); the city's CHAIN net is lighter on
+## the ball and stiffer at the wall — see CHAIN_NET_DRAG.
+var net_drag: float = SimConstants.NET_DRAG
+var net_wall_e: float = SimConstants.E_NET_WALL
 ## Environment colliders (scalar, optional). Walls are the INSIDE faces of an
 ## axis-aligned enclosure around the court (±INF = no wall; wall_y_max is a
 ## roof). The pole is a vertical cylinder `pole_off` behind the board face,
@@ -80,6 +88,16 @@ const ARCADE_RIM_LOG_IMPACT := 0.2
 const BEACH_RIM_E := ARCADE_RIM_E * 1.33
 ## Beach practice hoop distance: 17.5 % farther than the arcade base pose.
 const BEACH_DIST := 2.9 * 1.175
+## Chain net (the city court): steel links weigh ~10x nylon and neither drape
+## nor grip, so the ball keeps more of its speed through the funnel (drag
+## 2.6 → 1.6: it sheds ~40 % less speed per second and exits sooner) and a
+## sideways rattle meets a stiff ring of links that throws it back at the
+## axis harder (wall e 0.08 → 0.20). The catch depth stays the gym rim's: a
+## chain hangs from the same ring, and a rattle-out is still a rattle-out.
+const CHAIN_NET_DRAG := 1.6
+const CHAIN_NET_WALL_E := 0.20
+## City court hoop distance: 25 % farther than the arcade base pose.
+const CITY_DIST := 2.9 * 1.25
 
 
 func _init(p_hoop_x: float, p_hoop_y: float, p_release_h: float,
@@ -112,6 +130,9 @@ func _init(p_hoop_x: float, p_hoop_y: float, p_release_h: float,
 func with_pose(dist: float, lateral: float) -> SimGeometry:
 	var g := SimGeometry.new(dist, hoop_y, release_h, board_half_w, board_bottom, board_top, lateral)
 	g.ice = ice
+	g.vortex = vortex
+	g.net_drag = net_drag
+	g.net_wall_e = net_wall_e
 	g.rim_e = rim_e
 	g.board_e = board_e
 	g.rim_mu = rim_mu
@@ -138,6 +159,14 @@ func with_pose(dist: float, lateral: float) -> SimGeometry:
 func with_ice(on: bool) -> SimGeometry:
 	var g := with_pose(hoop_x, hoop_z)
 	g.ice = on
+	return g
+
+
+## Clone with the VORTEX card on (or off), same pose: ShotSim pulls a ball
+## that has touched iron or board through the ring.
+func with_vortex(on: bool) -> SimGeometry:
+	var g := with_pose(hoop_x, hoop_z)
+	g.vortex = on
 	return g
 
 
@@ -198,6 +227,34 @@ static func beach(dist := BEACH_DIST) -> SimGeometry:
 	return g
 
 
+## City court: the beach's street geometry (8 ft rim, arcade release, a
+## regulation board, the unforgiving beach iron) 25 % out, inside a fence,
+## with a CHAIN net.
+static func city(dist := CITY_DIST) -> SimGeometry:
+	var rim_h := 2.44
+	var b_bottom := rim_h - 0.15
+	var g := _chain_feel(_arcade_feel(SimGeometry.new(dist, rim_h, 1.85, SimConstants.BOARD_HALF_W, b_bottom, b_bottom + 1.05)))
+	g.rim_e = BEACH_RIM_E
+	# The fence enclosure (tools/blender/build_city.py) and the in-ground pole.
+	g.wall_x_min = -11.2
+	g.wall_x_max = 5.7
+	g.wall_z_min = -8.6
+	g.wall_z_max = 8.6
+	g.pole_r = 0.06
+	g.pole_off = 0.3
+	g.pole_top = g.board_top + 0.05
+	return g
+
+
+## How rigid this net is, relative to the shipped nylon, from its own wall
+## restitution (a net that returns more energy at the wall flexes less —
+## chain links). 1.0 everywhere but the city; presentation (the visible
+## chain, the clatter) is checked against it so what you see follows the
+## physics.
+func net_rigidity() -> float:
+	return net_wall_e / SimConstants.E_NET_WALL
+
+
 ## How rigid this ring is, relative to the shipped arcade rim, derived from its
 ## own restitution — a bouncier rim returns more energy because it flexes less,
 ## which is what rigid steel does. Presentation reads this so what you see and
@@ -218,4 +275,11 @@ static func _arcade_feel(g: SimGeometry) -> SimGeometry:
 	g.neck_is_rim = true
 	g.net_catch_depth = ARCADE_NET_CATCH_DEPTH
 	g.rim_log_impact = ARCADE_RIM_LOG_IMPACT
+	return g
+
+
+## The chain net's feel (city()).
+static func _chain_feel(g: SimGeometry) -> SimGeometry:
+	g.net_drag = CHAIN_NET_DRAG
+	g.net_wall_e = CHAIN_NET_WALL_E
 	return g

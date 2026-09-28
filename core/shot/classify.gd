@@ -73,4 +73,5 @@ static func classify_shot(s: BallState) -> Dictionary:
 		"flight_time": flight_time,
 		"events": s.events,
 		"max_penetration": s.max_penetration,
+		"vortex": s.vortex_caught,
 	}

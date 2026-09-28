@@ -70,6 +70,12 @@ const MODES := {
 	"trial_beach": {"arena": "beach", "hoop": "street", "geo": "beach", "dist": SimGeometry.BEACH_DIST,
 		"endless": false, "board_motion": false, "hud_label": "", "led_text": "READY", "location": "beach",
 		"spot_shuffle": true},
+	# The city court (docs/HOME.md): the beach's spot game on a chain-net hoop.
+	"city": {"arena": "city", "hoop": "chain", "geo": "city", "dist": SimGeometry.CITY_DIST,
+		"endless": true, "board_motion": false, "hud_label": "CITY", "led_text": "", "location": "city"},
+	"trial_city": {"arena": "city", "hoop": "chain", "geo": "city", "dist": SimGeometry.CITY_DIST,
+		"endless": false, "board_motion": false, "hud_label": "", "led_text": "READY", "location": "city",
+		"spot_shuffle": true},
 	# Head-to-head heats (core/match/heat.gd): a static hoop, the ball-return
 	# wait, an AI opponent in the picture-in-picture court.
 	# The last 30 s trigger the location's mechanic for both sides: the cage's
@@ -80,11 +86,14 @@ const MODES := {
 	"heat_beach": {"arena": "beach", "hoop": "street", "geo": "beach", "dist": SimGeometry.BEACH_DIST,
 		"endless": false, "board_motion": false, "hud_label": "", "led_text": "READY", "location": "beach",
 		"heat": true, "calib_key": "beach", "spot_shuffle": true},
+	"heat_city": {"arena": "city", "hoop": "chain", "geo": "city", "dist": SimGeometry.CITY_DIST,
+		"endless": false, "board_motion": false, "hud_label": "", "led_text": "READY", "location": "city",
+		"heat": true, "calib_key": "city", "spot_shuffle": true},
 }
-## mode ("trial"/"practice"/"heat") × area ("cage"/"beach") → MODES id.
+## mode ("trial"/"practice"/"heat") × area ("cage"/"beach"/"city") → MODES id.
 const AREA_MODES := {
-	"trial": {"cage": "trial", "beach": "trial_beach"},
-	"practice": {"cage": "practice", "beach": "beach"},
+	"trial": {"cage": "trial", "beach": "trial_beach", "city": "trial_city"},
+	"practice": {"cage": "practice", "beach": "beach", "city": "city"},
 }
 var next_mode := "trial"
 
@@ -109,6 +118,8 @@ static func geo_for_mode(id: String) -> SimGeometry:
 	var cfg := mode_config(id)
 	if cfg["geo"] == "beach":
 		return SimGeometry.beach(cfg["dist"])
+	if cfg["geo"] == "city":
+		return SimGeometry.city(cfg["dist"])
 	return SimGeometry.arcade(cfg["dist"])
 
 

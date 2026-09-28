@@ -45,7 +45,7 @@ func _ready() -> void:
 		"rim_clang_0", "rim_clang_1", "rim_clang_2",
 		"board_thud_0", "board_thud_1", "board_thud_2",
 		"bounce_0", "bounce_1", "bounce_2",
-		"swish", "net", "score_pop", "score_pop_swish", "buzzer",
+		"swish", "net", "chain_rattle_0", "chain_rattle_1", "score_pop", "score_pop_swish", "buzzer",
 		"ice_freeze", "ice_crack_0", "ice_crack_1", "ice_shatter",
 		"fx/fire_burst", "fx/ice_form", "fx/ice_break", "fx/ice_swish", "fx/fire_out",
 	]:
@@ -68,12 +68,17 @@ static func _load_list(paths: PackedStringArray) -> Array:
 	return out
 
 
+var _net_kind := "nylon"
+
+
 ## Load a hoop set's sounds (replacing the previous hoop's).
 func load_hoop_set(set: HoopSet) -> void:
 	_hoop = {}
 	_hoop_id = ""
+	_net_kind = "nylon"
 	if set == null:
 		return
+	_net_kind = set.net_kind
 	_hoop = {
 		"make": _load_list(set.make_clips),
 		"miss": _load_list(set.miss_clips),
@@ -103,6 +108,11 @@ func load_ball_set(set: BallSet) -> void:
 
 func hoop_id() -> String:
 	return _hoop_id
+
+
+## The live hoop's net: "nylon" or "chain" (the links rattle under rim hits).
+func net_kind() -> String:
+	return _net_kind
 
 
 func ball_id() -> String:
@@ -405,6 +415,9 @@ func contact(kind: String, speed: float) -> void:
 			# generated clang on top of a real recording only muddied it.
 			if contact_source("rim") == "hoop":
 				_play_stream(_hoop["rim"][variant], vol + rim_level_db(), rim_pitch())
+			# A chain net jangles on every rim hit — its most recognisable sound.
+			if _net_kind == "chain":
+				_play("chain_rattle_%d" % (variant % 2), vol - 6.0)
 		"board":
 			if contact_source("board") == "hoop":
 				_play_stream(_hoop["board"][variant], vol)
@@ -464,7 +477,7 @@ func swish() -> void:
 
 
 func net_rustle() -> void:
-	_play("net")
+	_play("chain_rattle_0" if _net_kind == "chain" else "net")
 
 
 func score_pop(is_swish: bool) -> void:

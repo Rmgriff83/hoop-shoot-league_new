@@ -20,6 +20,8 @@ static func geo_for(key: String) -> SimGeometry:
 			return SimGeometry.arcade()
 		"beach":
 			return SimGeometry.beach()
+		"city":
+			return SimGeometry.city()
 		_:
 			return SimGeometry.regulation()
 
@@ -81,7 +83,7 @@ func _calibrate(key: String) -> void:
 
 func _initialize() -> void:
 	var args := OS.get_cmdline_user_args()
-	var keys: Array = args if not args.is_empty() else ["regulation", "arcade", "beach"]
+	var keys: Array = args if not args.is_empty() else ["regulation", "arcade", "beach", "city"]
 	for k in keys:
 		_calibrate(str(k))
 	quit(0)

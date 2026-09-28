@@ -56,3 +56,11 @@ var ice_popped := false
 var ice_hold_t := 0.0
 var ice_catch := SimVec3.new()
 var ice_seat := SimVec3.new()
+## Card VORTEX (docs/CARDS.md): the rim's pull took the ball — it glides to
+## the axis from `vortex_from` (at its own height when already inside the
+## ring, else to a hover above the plane), then is released straight down.
+var vortex_caught := false
+var vortex_released := false
+var vortex_below := false
+var vortex_t := 0.0
+var vortex_from := SimVec3.new()

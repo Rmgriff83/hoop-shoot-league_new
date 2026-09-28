@@ -39,6 +39,8 @@ func run(t) -> void:
 	var cage: ArenaSet = CosmeticLibrary.get_arena("cage")
 	t.eq(cage.ambient_clips.size(), 1, "cage has its ambience now")
 	t.eq(cage.validate(), PackedStringArray(), "cage arena validates")
+	var models: Array = credits.get("models", [])
+	t.ok(models.size() >= 1 and str(models[0].get("author", "")) == "GGBot", "the city's cars credit GGBot's PSX Style Cars")
 	var fonts: Array = credits.get("fonts", [])
 	t.ok(fonts.size() >= 1 and str(fonts[0]["title"]) == "Caveat", "the chalk font is credited")
 	t.ok(FileAccess.file_exists("res://assets/fonts/caveat/Caveat.ttf") and FileAccess.file_exists("res://assets/fonts/caveat/OFL.txt"), "font and its licence ship together")

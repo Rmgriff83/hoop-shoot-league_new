@@ -12,6 +12,10 @@ extends CosmeticSet
 @export var rim_clips := PackedStringArray()
 @export var board_clips := PackedStringArray()
 
+## "nylon" (the classic cord lattice) or "chain" (the city court's steel
+## links: Sfx layers the link rattle under rim hits; CourtGeometry checks it
+## against SimGeometry.net_rigidity() so the visible net matches the sim).
+@export var net_kind := "nylon"
 ## Net feel (see NetSim for what each does). Defaults = the classic net.
 @export var net_stiffness := 0.08
 @export var net_damping := 0.999
@@ -44,4 +48,11 @@ func referenced_paths() -> PackedStringArray:
 	for arr in [make_clips, miss_clips, rim_clips, board_clips]:
 		for p in arr:
 			out.push_back(p)
+	return out
+
+
+func validate() -> PackedStringArray:
+	var out := super()
+	if not (net_kind in ["nylon", "chain"]):
+		out.push_back("<net_kind %s>" % net_kind)
 	return out

@@ -24,6 +24,7 @@ func run(t) -> void:
 	_scoring_and_streaks(t)
 	_streak_tiers(t)
 	_card_fire(t)
+	_card_vortex(t)
 	_cold_streak(t)
 	_rapid_fire(t)
 	_buzzer_beater(t)
@@ -120,7 +121,7 @@ func _card_fire(t) -> void:
 	t.ok(tt.fire_card and tt.fire_left() > 0.0, "still burning inside the window (%.2f s left)" % tt.fire_left())
 	_tick_seconds(tt, 3.0)
 	t.ok(not tt.fire_card, "window closed")
-	t.eq(tt.streak, 0, "streak reset when the card burned out")
+	t.eq(tt.streak, 3, "the card's loan is withdrawn; the three makes stay a (cold) streak")
 	t.eq(tt.fire_left(), 0.0, "no time left")
 	var offs := []
 	for ev in tt.drain_events():
@@ -169,7 +170,7 @@ func _card_fire(t) -> void:
 		if ev["kind"] == "outcome":
 			hot_pts = int(ev["outcome"]["points"])
 	t.eq(hot_pts, 3, "the in-flight shot still paid the hot tier")
-	t.ok(not tt5.fire_card and tt5.streak == 0, "then the window closed")
+	t.ok(not tt5.fire_card and tt5.streak == 1, "then the window closed; the one make under it stays a streak")
 
 
 ## Overtime period: the arena resets (balls gone, hoop home, no board slide or
@@ -440,3 +441,56 @@ func run_endless(t) -> void:
 	t.ok(tt.release({"angle_deg": 48.0, "speed": 6.0}), "can still shoot in endless")
 	t.eq(tt.attempts, 1, "attempts count in endless")
 
+
+
+## The vortex card (docs/CARDS.md): a timed self window on the city rim.
+func _card_vortex(t) -> void:
+	var g := SimGeometry.city()
+	var tt := TimeTrial.new(g)
+	t.ok(not tt.spin_rim(6.0), "no vortex during the countdown")
+	_tick_seconds(tt, TimeTrial.COUNTDOWN_SECONDS + 0.05)
+	tt.drain_events()
+	t.ok(tt.spin_rim(6.0), "the card spins the rim")
+	t.ok(tt.vortex_card and tt.geo.vortex, "vortex on, on the live geometry")
+	t.close(tt.vortex_left(), 6.0, 0.01, "six seconds on the card")
+	t.ok(_has_kind(tt.drain_events(), "vortex_on"), "vortex_on event")
+	t.ok(not tt.spin_rim(6.0), "no second card while it pulls")
+	# A miss does not end it (nothing to "break": it is a make-rate window).
+	var airball := Ballistics.ideal_launch_for(52.0, g)
+	airball["speed"] = airball["speed"] * 0.8
+	t.ok(tt.pickup() and tt.release(airball), "brick under the vortex")
+	_tick_seconds(tt, 2.5)
+	t.ok(tt.vortex_card, "a miss leaves the vortex on")
+	for ev in tt.drain_events():
+		if ev["kind"] == "outcome":
+			t.ok(not ev["outcome"]["made"] and not ev["outcome"].get("vortex", false), "an airball is not pulled in")
+	_tick_seconds(tt, 4.0)
+	t.ok(not tt.vortex_card and not tt.geo.vortex, "window closed on the clock")
+	t.eq(tt.vortex_left(), 0.0, "no time left")
+	var offs := []
+	for ev in tt.drain_events():
+		if ev["kind"] == "vortex_off":
+			offs.push_back(ev["reason"])
+	t.eq(offs, ["time"], "vortex_off by time")
+	# Ice ends it.
+	var tt2 := TimeTrial.new(g)
+	_tick_seconds(tt2, TimeTrial.COUNTDOWN_SECONDS + 0.05)
+	t.ok(tt2.spin_rim(6.0), "second trial spinning")
+	t.ok(tt2.freeze_rim(), "then iced")
+	t.ok(tt2.iced and not tt2.vortex_card and tt2.geo.ice and not tt2.geo.vortex, "the ice wins")
+	var reasons := []
+	for ev in tt2.drain_events():
+		if ev["kind"] == "vortex_off":
+			reasons.push_back(ev["reason"])
+	t.eq(reasons, ["ice"], "vortex_off by ice")
+	t.ok(not tt2.spin_rim(6.0), "no vortex on an iced rim")
+	# The last ball of the window still counts: a ball in the air at the
+	# deadline keeps the pull until it lands.
+	var tt3 := TimeTrial.new(g)
+	_tick_seconds(tt3, TimeTrial.COUNTDOWN_SECONDS + 0.05)
+	t.ok(tt3.spin_rim(0.5), "a half-second window")
+	t.ok(tt3.pickup() and tt3.release(Ballistics.ideal_launch_for(52.0, g)), "shot on release")
+	_tick_seconds(tt3, 0.6)
+	t.ok(tt3.vortex_card, "still on with a ball in the air past the deadline")
+	_tick_seconds(tt3, 2.5)
+	t.ok(not tt3.vortex_card, "closed once it landed")

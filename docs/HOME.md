@@ -130,7 +130,11 @@ chevron (the footer says START INSIDE).
 ## Adding an area
 
 An ArenaSet with `title_*` set (pose, and `title_stars` for the star row), its
-`App.MODES` rows, and a row in `title_screen.gd` `CARDS`.
+`App.MODES` rows, and a row in `title_screen.gd` `CARDS`. The city (2026-09-27)
+is the worked example: `SimGeometry.city()` + `geo_for_mode`, the `city` /
+`trial_city` / `heat_city` rows, `AREA_MODES`, the league row (level 5→7),
+seven shooters, `data/economy.json` multipliers, `calibrate_ai -- city`,
+the card lab, `ResultsCopy.board_name`, and `tests/test_city.gd`.
 
 ## Results (design "Time Trial Results", 2026-09-26)
 
@@ -198,6 +202,10 @@ the period's note. ON FIRE joins the banners.
   `user://qa/hud_countdown.png`, `hud_live.png`, `hud_pause.png`,
   `hud_practice.png`, `hud_practice30.png`.
 
+- `godot --path hoop_shoot --resolution 360x640 -- --qa-city` →
+  `user://qa/city_home.png` (the third page: CITY COURT, three stars, the
+  lock or the league) then `city_00..09.png`, `city_last.png` on a city time
+  trial over ~45 s (cars cross the street, windows switch, the spot shuffle).
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-cards` →
   `user://qa/cards_f0.png`, `cards_f5.png`, `cards_live.png`: the animated
   card faces (ice, fire, the pending vortex) at tray / loadout / shop / deal

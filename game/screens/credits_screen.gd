@@ -1,5 +1,5 @@
 extends Control
-## Credits: attributions for third-party sounds (data/credits.json) — the
+## Credits: attributions for third-party sounds, fonts and models (data/credits.json) — the
 ## plain text each author asks for, plus the tools. Reached from the title.
 
 const PATH := "res://data/credits.json"
@@ -17,7 +17,7 @@ static func load_credits() -> Dictionary:
 static func validate() -> PackedStringArray:
 	var problems := PackedStringArray()
 	var doc := load_credits()
-	for section in ["sounds", "fonts"]:
+	for section in ["sounds", "fonts", "models"]:
 		for c in doc.get(section, []):
 			for key in ["title", "author", "url", "license"]:
 				if str(c.get(key, "")) == "":
@@ -66,6 +66,18 @@ func _ready() -> void:
 		vbox.add_child(_spacer(12))
 		vbox.add_child(_label("— FONTS —", 24, Color(0.62, 0.68, 0.85)))
 		for c in fonts:
+			var block := VBoxContainer.new()
+			block.add_theme_constant_override("separation", 2)
+			block.add_child(_label(str(c.get("used_for", "")), 18, Color(0.42, 0.85, 0.64)))
+			var line := _label(attribution_line(c), 20, Color(0.92, 0.93, 0.97))
+			line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			block.add_child(line)
+			vbox.add_child(block)
+	var models: Array = load_credits().get("models", [])
+	if not models.is_empty():
+		vbox.add_child(_spacer(12))
+		vbox.add_child(_label("— MODELS —", 24, Color(0.62, 0.68, 0.85)))
+		for c in models:
 			var block := VBoxContainer.new()
 			block.add_theme_constant_override("separation", 2)
 			block.add_child(_label(str(c.get("used_for", "")), 18, Color(0.42, 0.85, 0.64)))

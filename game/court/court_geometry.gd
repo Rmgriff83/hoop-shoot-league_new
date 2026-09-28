@@ -78,6 +78,7 @@ var _fire: RimFire
 var _ice: RimIce              # on-fire flames/smoke/glow on the rim
 var _beach_fx: BeachFx          # waves + tide, only when arena_set.ocean
 var _arcade_fx: ArcadeFx        # cabinet screens + marquees, only when arena_set.arcade_life
+var _city_fx: CityFx            # traffic, window lights, trees, only when arena_set.traffic
 var _arena_anim: AnimationPlayer  # the arena glb's clips (one per NLA track), null on fallback
 
 
@@ -204,6 +205,14 @@ func _build_arena_model() -> bool:
 		else:
 			_arcade_fx.free()
 			_arcade_fx = null
+	if arena_set.traffic:
+		_city_fx = CityFx.new()
+		_city_fx.name = "CityFx"
+		if _city_fx.setup(_arena):
+			add_child(_city_fx)
+		else:
+			_city_fx.free()
+			_city_fx = null
 	return true
 
 
@@ -272,6 +281,8 @@ func _build_hoop_model() -> bool:
 		net_sim = NetSim.new()
 		net_sim.name = "NetSim"
 		net_sim.configure(hoop_set)
+		if (hoop_set.net_kind == "chain") != (geo.net_rigidity() > 1.0):
+			push_warning("CourtGeometry: hoop %s hangs a %s net on a geometry whose net rigidity is %.2f" % [hoop_set.id, hoop_set.net_kind, geo.net_rigidity()])
 		add_child(net_sim)
 		if not net_sim.setup(net_mi):
 			net_sim.queue_free()

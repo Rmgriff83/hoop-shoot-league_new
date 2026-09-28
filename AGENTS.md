@@ -73,7 +73,7 @@ custom pixel style (`game/ui/`, `docs/HOME.md`), not HTML/CSS.
 
 must report `0 failures` and `golden grid agreement: 100.00%` before
 anything is pushed. Visual changes: the QA driver (`--qa-title`, `--qa-aim`,
-`--qa-beach`) and a phone deploy.
+`--qa-beach`, `--qa-city`) and a phone deploy.
 
 ## Never touch without asking Ross
 

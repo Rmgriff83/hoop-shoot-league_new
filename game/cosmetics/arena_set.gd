@@ -53,6 +53,9 @@ extends CosmeticSet
 
 ## Attach BeachFx (animated Ocean waves + tide-driven Shore) at build time.
 @export var ocean := false
+## The city court: cars pass on the street beyond the fence and the buildings'
+## windows switch on and off (CityFx).
+@export var traffic := false
 ## Arcade hall life: cabinets with live screens and chasing marquees
 ## (CabScreen*/CabMarquee* meshes; game/view/arcade_fx.gd).
 @export var arcade_life := false

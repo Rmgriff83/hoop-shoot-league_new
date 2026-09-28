@@ -145,7 +145,29 @@ func _street_and_arenas(t) -> void:
 		t.close(street.model_board_h, 1.05, 1e-12, "street board authored at regulation height")
 		t.close(street.model_board_half_w, 0.915, 1e-12, "street board authored at regulation width")
 		t.eq(street.make_clips.size(), 7, "street reuses the 7 make clips")
+		t.eq(street.net_kind, "nylon", "the street hoop hangs nylon")
 		t.eq(street.miss_clips.size(), 5, "street reuses the 5 miss clips")
+	var chain := CosmeticLibrary.get_hoop("chain")
+	t.ok(chain != null, "chain hoop set resolves")
+	if chain != null:
+		t.eq(chain.validate(), PackedStringArray(), "chain set references only files that exist")
+		t.eq(chain.net_kind, "chain", "it hangs a chain")
+		t.ok(chain.net_stiffness > 0.9 and chain.net_friction < 0.5, "links: near-inextensible, little grip")
+		t.close(chain.model_board_h, 1.05, 1e-12, "regulation board")
+		t.eq(chain.make_clips.size(), 3, "three chain swishes")
+		t.ok(chain.price_coins > 0, "not a starter")
+		var bad := HoopSet.new()
+		bad.id = "y"
+		bad.net_kind = "rope"
+		t.ok(bad.validate().size() == 1, "an unknown net kind fails validation")
+		var sfx = Engine.get_main_loop().root.get_node_or_null("Sfx")
+		if sfx != null:
+			sfx.load_hoop_set(chain)
+			t.eq(sfx.net_kind(), "chain", "Sfx knows the chain")
+			t.eq(sfx.hoop_clip_count("make"), 3, "and its swishes")
+			sfx.load_hoop_set(CosmeticLibrary.starter_hoop())
+			t.eq(sfx.net_kind(), "nylon", "back to nylon with the classic")
+	t.eq(CosmeticLibrary.starter_hoop().id, "classic", "the classic is still the starter hoop")
 	t.close(HoopSet.new().model_board_h, 0.76, 1e-12, "default board dims are the classic's")
 	t.eq(HoopSet.new().miss_anim, "", "a bare set has no miss clip")
 	t.eq(CosmeticLibrary.get_hoop("classic").miss_anim, "Miss", "classic names its rim reaction")
@@ -160,6 +182,9 @@ func _street_and_arenas(t) -> void:
 		t.eq(beach.validate(), PackedStringArray(), "beach arena files exist")
 		t.eq(CosmeticLibrary.starter_arena().id, "cage", "cage is the starter arena")
 		t.ok(beach.ocean and not cage.ocean, "only the beach has an ocean")
+		var city := CosmeticLibrary.get_arena("city")
+		t.ok(city != null and city.validate() == PackedStringArray() and city.traffic and not beach.traffic and not cage.traffic,
+			"the city resolves, validates, and is the one with traffic")
 		t.ok(not cage.emissive_nodes.has("Marquee"), "the HOOP SHOOT sign is gone (string lights replace it)")
 		t.ok(beach.sun_rotation_deg.y > 0.0 and beach.sun_rotation_deg.y < 60.0 and beach.sun_rotation_deg.x < 0.0,
 			"beach sun sits low in the east-north-east (yaw %.1f)" % beach.sun_rotation_deg.y)

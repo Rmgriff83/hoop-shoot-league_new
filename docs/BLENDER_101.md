@@ -676,6 +676,43 @@ Both creator scripts refuse to overwrite an existing `.blend` without `-- --forc
 from the live file with `exec(open("tools/blender/build_beach.py").read()); cage.export_glb(bpy.data.collections["Beach"], GLB_PATH)`
 or File > Export with the §8 settings.
 
+## 14b. Lesson 5b — the city court and the chain hoop (2026-09-27)
+
+`tools/blender/build_city.py` (`-- --force`) forks the beach: the same sim
+frame, the beach's fence loop (`ENC_X0..X1 -11.2..5.7`, `±8.6`, every side
+3.6 m — `SimGeometry.city()` mirrors it), a 14.6 × 15.2 m slab whose lines
+`gen_city_textures.lua` paints with the rim at x 3.625 and the baseline at
+4.6, then, behind the back fence, kerb → sidewalk → a two-lane road
+(`STREET_X 11.1`, an empty `StreetRig` on its centre line for
+`game/view/city_fx.gd`) → far sidewalk → a vacant lot with hoardings → the
+tenement row at x 25 (each block four brick walls + a roof from `_block()`,
+a `Windows%d` quad just in front of the street face, fire escapes and water
+tanks) → two glass towers. Brick buildings flank the court (the left one
+carries the mural), a low one sits behind the shooter, `TreeRig%d` empties
+hold billboard trees, two `FloodHead%d` heads on 8 m poles light the court,
+and the dusk sky is the beach's cylinder with `city_sky.png`.
+
+**Windows** are not emissive textures: `CityFx` swaps every `Windows*`
+face's material for `game/court/windows.gdshader`, which reads the wall
+tile as a grid of window cells (4 × 4 per tile, 4 × 8 on the towers) and
+lights each pane by a per-cell hash — about six in ten lit, every cell on
+its own multi-minute switching period, so a pane or two per building
+changes at any moment. The `clock` uniform is the FX node's own time, so
+tests step it (`CityFx.lit_fraction`).
+
+**Cars** are the hometown pack's glbs under `assets/vehicles/` (GGBot,
+credited): `CityFx.spawn_car()` instances one, strips its `StaticBody3D`,
+adds a headlight spot, and slides it along z on one lane at 8–11 m/s.
+
+**The chain hoop** (`build_chain_hoop.py` → `assets/hoops/chain/`) is the
+street hoop with a white perforated-steel board (`city_board.png`) and the
+same tapered 12-strand net lattice one ring taller, skinned with
+`hoop_chain.png` (steel links along the nylon's diagonals), so `NetSim`
+drives it unchanged; `hoop_set.tres` sets `net_kind = "chain"` and stiff,
+low-grip feel numbers, and its makes are the generated `chain_swish_*`
+clatters (`tools/gen_sfx.gd`). The sim side is `SimGeometry.city()`'s
+`net_drag 1.6` / `net_wall_e 0.20` (docs/PROGRESSION.md → the city).
+
 ## 15. Flipbooks: authoring fire (and other effects) in Blender
 
 The rim's "on fire" flames are not particles in Godot: they are a looping

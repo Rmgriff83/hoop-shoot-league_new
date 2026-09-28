@@ -19,6 +19,9 @@ func run(t) -> void:
 	t.eq(CardDefs.target_of("nope"), "opponent", "unknown → opponent")
 	t.eq(Progression.card_level(CardDefs.get_card("ice")), 1, "Deep Freeze is a level-1 card")
 	t.eq(Progression.card_level(CardDefs.get_card("fire7")), 3, "Heat Check is level 3")
+	t.eq(Progression.card_level(CardDefs.get_card("vortex6")), 5, "Vortex is level 5 (opens with the city)")
+	t.eq(CardDefs.target_of("vortex6"), "self", "vortex is a self card")
+	_run_vortex(t)
 	_run_art(t)
 	# The save doc: one bucket per league (docs/ECONOMY.md).
 	var full := CardDefs.empty_doc()
@@ -229,3 +232,26 @@ func _run_art(t) -> void:
 	var deal := ModeCards.art(CardDefs.get_card("fire7"), Vector2(96, 128), 6.0, true)
 	t.ok(deal.get_node("Face") is CardFace and deal.get_meta("button") is TextureButton, "art holder: a face and its tap target")
 	deal.free()
+
+
+## The Vortex card in a heat: the player spins their own rim; the AI plays
+## its signature copy on itself.
+func _run_vortex(t) -> void:
+	var geo := SimGeometry.city()
+	var h := Heat.new({"geo": geo, "seconds": 40.0, "ai": AiRatings.make(0.9, 0.9, 2.0), "seed": 9,
+		"calib_key": "city", "player_cards": ["vortex6"], "ai_cards": ["vortex6"]})
+	t.ok(not h.can_play(Heat.PLAYER, "vortex6"), "no vortex during the countdown")
+	_tick(h, TimeTrial.COUNTDOWN_SECONDS + 0.1)
+	t.ok(h.can_play(Heat.PLAYER, "vortex6"), "vortex playable once running")
+	t.ok(h.play_card(Heat.PLAYER, "vortex6"), "vortex applied to the player")
+	t.ok(h.player.vortex_card and h.player.geo.vortex, "the player's rim pulls")
+	t.ok(not h.ai.vortex_card, "the AI's does not")
+	t.eq(h.hands[Heat.PLAYER].size(), 0, "the card is spent")
+	t.ok(not h.can_play(Heat.PLAYER, "vortex6"), "cannot play it twice")
+	_tick(h, 30.0)
+	var ai_played := false
+	for ev in h.drain_events():
+		if ev["kind"] == "card_played" and ev.get("ok", false) and str(ev.get("side", "")) == Heat.AI:
+			ai_played = true
+			t.eq(ev["target"], Heat.AI, "the AI spins its own rim")
+	t.ok(ai_played, "the AI plays its vortex within 30 s")

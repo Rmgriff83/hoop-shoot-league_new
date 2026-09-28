@@ -39,7 +39,7 @@ func _pan(t) -> void:
 
 
 func _poses(t) -> void:
-	for id in ["cage", "beach"]:
+	for id in ["cage", "beach", "city"]:
 		var a := CosmeticLibrary.get_arena(id)
 		t.ok(a != null, "%s arena resolves" % id)
 		if a == null:
@@ -56,7 +56,7 @@ func _routing(t) -> void:
 	var app = Engine.get_main_loop().root.get_node_or_null("App")
 	if app == null:
 		return
-	for card in ["cage", "beach"]:
+	for card in ["cage", "beach", "city"]:
 		for mode in ["trial", "practice"]:
 			var id: String = app.AREA_MODES[mode][card]
 			t.eq(app.mode_config(id)["location"], card, "%s/%s resolves to a %s mode" % [card, mode, card])

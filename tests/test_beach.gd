@@ -28,7 +28,8 @@ func _geometry(t) -> void:
 	t.ok(g.rim_e > a.rim_e, "beach iron is livelier than the cage's (%.3f > %.3f)" % [g.rim_e, a.rim_e])
 	t.ok(g.rim_mu == a.rim_mu and g.rim_spin_decay == a.rim_spin_decay, "beach grip and spin decay still match the cage")
 	t.close(g.with_pose(3.6, 0.2).rim_e, SimGeometry.BEACH_RIM_E, 1e-12, "a moved board keeps the beach rim's bounce")
-	t.ok(g.neck_is_rim == a.neck_is_rim and g.net_catch_depth == a.net_catch_depth and g.rim_log_impact == a.rim_log_impact, "beach gym-rim fields = arcade")
+	t.ok(g.neck_is_rim == a.neck_is_rim and g.net_catch_depth == a.net_catch_depth and g.rim_log_impact == a.rim_log_impact
+		and g.net_drag == a.net_drag and g.net_wall_e == a.net_wall_e, "beach gym-rim and net fields = arcade (nylon)")
 	var moved := g.with_pose(3.6, 0.2)
 	t.ok(moved.board_half_w == 0.915 and moved.neck_is_rim, "with_pose keeps board dims and feel")
 	t.close(a.board_half_w, 0.61, 1e-12, "arcade board width unchanged by the refactor")

@@ -7,6 +7,7 @@ func run(t) -> void:
 	_regulation_has_none(t)
 	_cage_walls(t)
 	_beach_fence_and_pole(t)
+	_city_fence(t)
 	_with_pose_keeps(t)
 
 
@@ -52,6 +53,20 @@ func _cage_walls(t) -> void:
 	t.ok(_kinds(s3).has("wall"), "a moon ball hits the cage roof (%s)" % str(_kinds(s3)))
 	# An ordinary make still goes in.
 	t.ok(ShotSim.simulate_shot(Ballistics.ideal_launch_for(52.0, g), false, g)["made"], "ideal shot still swishes in the cage")
+
+
+func _city_fence(t) -> void:
+	var g := SimGeometry.city()
+	t.ok(g.has_walls() and g.wall_x_max == 5.7 and g.wall_x_min == -11.2 and g.wall_z_max == 8.6 and g.wall_y_max == INF, "city: the fence loop, no roof")
+	t.ok(g.pole_r > 0.0, "city has a pole")
+	var over := ShotSim.create_shot({"angle_deg": 30.0, "speed": 9.5}, g)
+	var max_x := 0.0
+	for i in int(3.0 / SimConstants.SIM_DT):
+		if over.settled:
+			break
+		ShotSim.step_shot(over)
+		max_x = maxf(max_x, over.pos.x)
+	t.ok(max_x <= g.wall_x_max + 1e-6, "the ball never leaves the city fence (%.2f)" % max_x)
 
 
 func _beach_fence_and_pole(t) -> void:

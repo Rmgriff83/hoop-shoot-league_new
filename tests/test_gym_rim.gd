@@ -36,8 +36,18 @@ func _fields(t) -> void:
 	t.close(arc.rim_log_impact, SimGeometry.ARCADE_RIM_LOG_IMPACT, 1e-12, "arcade: soft rubs logged")
 	var moved := arc.with_pose(3.1, 0.3)
 	var kept: bool = (moved.neck_is_rim and moved.net_catch_depth == arc.net_catch_depth
-		and moved.rim_log_impact == arc.rim_log_impact)
-	t.ok(kept, "with_pose keeps the gym-rim fields")
+		and moved.rim_log_impact == arc.rim_log_impact and moved.net_drag == arc.net_drag
+		and moved.net_wall_e == arc.net_wall_e)
+	t.ok(kept, "with_pose keeps the gym-rim and net fields")
+	# The net is the nylon of SimConstants everywhere but the city (the golden grid runs it).
+	t.ok(reg.net_drag == SimConstants.NET_DRAG and reg.net_wall_e == SimConstants.E_NET_WALL, "regulation: the nylon net of SimConstants")
+	t.ok(arc.net_drag == SimConstants.NET_DRAG and arc.net_wall_e == SimConstants.E_NET_WALL, "arcade: the same nylon net")
+	t.close(reg.net_rigidity(), 1.0, 1e-12, "nylon rigidity is 1")
+	t.ok(not reg.vortex and not arc.vortex, "no preset starts with the vortex on")
+	t.ok(arc.with_vortex(true).vortex and not arc.vortex, "with_vortex clones")
+	t.ok(arc.with_vortex(true).with_pose(3.1, 0.2).vortex, "with_pose keeps the vortex")
+	var both := arc.with_vortex(true).with_ice(true)
+	t.ok(both.vortex and both.ice, "ice and vortex clones keep each other")
 
 
 func _neck_kind(t) -> void:

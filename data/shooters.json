@@ -344,6 +344,144 @@
         "streakiness": 0.2,
         "consistency": 0.9
       }
+    },
+    {
+        "id": "kingsbridge",
+        "name": "Dre Okafor",
+        "hometown": "Kingsbridge",
+        "conference": "EAST",
+        "number": 11,
+        "nickname": "Gridlock",
+        "bio": "Learned the game between parked cars. Nothing gets past him, on the court or off it.",
+        "colors": {
+          "primary": "#2f4858",
+          "secondary": "#1b2a33",
+          "accent": "#f2a541"
+        },
+        "signature": "A defender who happens to shoot — every make is a dare.",
+        "ratings": {
+          "accuracy": 0.68,
+          "swishRate": 0.7,
+          "pace": 4.0,
+          "composure": 0.8,
+          "streakiness": 0.3,
+          "consistency": 0.82
+        }
+    },
+    {
+        "id": "ferry-row",
+        "name": "Sol Marchetti",
+        "hometown": "Ferry Row",
+        "conference": "EAST",
+        "number": 5,
+        "nickname": "Tollbooth",
+        "bio": "Runs the pier courts at dawn before the first boat. Slow, sure, and impossible to hurry.",
+        "colors": {
+          "primary": "#5a3e2b",
+          "secondary": "#2d1f16",
+          "accent": "#8fd3f4"
+        },
+        "signature": "Pays every shot in full — no rushed releases, ever.",
+        "ratings": {
+          "accuracy": 0.66,
+          "swishRate": 0.5,
+          "pace": 3.2,
+          "composure": 0.7,
+          "streakiness": 0.5,
+          "consistency": 0.7
+        }
+    },
+    {
+        "id": "union-yards",
+        "name": "Tasha Greer",
+        "hometown": "Union Yards",
+        "conference": "EAST",
+        "number": 32,
+        "nickname": "Switchyard",
+        "bio": "Grew up shooting over freight cars. Changes direction mid-air like she owns the rails.",
+        "colors": {
+          "primary": "#7a1f2b",
+          "secondary": "#3a0f15",
+          "accent": "#ffd166"
+        },
+        "signature": "Swishes in bunches; when the tracks clear she does not miss.",
+        "ratings": {
+          "accuracy": 0.74,
+          "swishRate": 0.82,
+          "pace": 4.6,
+          "composure": 0.85,
+          "streakiness": 0.15,
+          "consistency": 0.88
+        }
+    },
+    {
+        "id": "eastgate",
+        "name": "Malik Rowe",
+        "hometown": "Eastgate",
+        "conference": "WEST",
+        "number": 14,
+        "nickname": "Turnstile",
+        "bio": "Fastest hands on the line. Shoots like the train is pulling out.",
+        "colors": {
+          "primary": "#1f6f5f",
+          "secondary": "#0f3a32",
+          "accent": "#ff8c42"
+        },
+        "signature": "Volume and speed — the score climbs before you look up.",
+        "ratings": {
+          "accuracy": 0.7,
+          "swishRate": 0.6,
+          "pace": 5.2,
+          "composure": 0.6,
+          "streakiness": 0.6,
+          "consistency": 0.6
+        }
+    },
+    {
+        "id": "north-tunnel",
+        "name": "Ines Castellano",
+        "hometown": "North Tunnel",
+        "conference": "WEST",
+        "number": 9,
+        "nickname": "Undertow",
+        "bio": "Quiet, patient, and always one make ahead of where you think she is.",
+        "colors": {
+          "primary": "#3b3b6b",
+          "secondary": "#1d1d3a",
+          "accent": "#9ef01a"
+        },
+        "signature": "Never rattled — the cold streak is somebody else's problem.",
+        "ratings": {
+          "accuracy": 0.69,
+          "swishRate": 0.78,
+          "pace": 3.7,
+          "composure": 0.9,
+          "streakiness": 0.2,
+          "consistency": 0.9
+        }
+    },
+    {
+        "id": "rooftop-hill",
+        "name": "Benny Szabo",
+        "hometown": "Rooftop Hill",
+        "conference": "WEST",
+        "number": 77,
+        "nickname": "Fire Escape",
+        "bio": "Shoots from the top of the key like he is dropping it off a balcony. Streaky, loud, unmissable when hot.",
+        "colors": {
+          "primary": "#b5451b",
+          "secondary": "#5a220d",
+          "accent": "#f1e8d0"
+        },
+        "signature": "Runs hot — five in a row, then the whole block hears about it.",
+        "ratings": {
+          "accuracy": 0.76,
+          "swishRate": 0.66,
+          "pace": 4.1,
+          "composure": 0.75,
+          "streakiness": 0.35,
+          "consistency": 0.8
+        }
     }
   ]
 }

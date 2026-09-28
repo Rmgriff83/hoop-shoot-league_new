@@ -22,6 +22,18 @@ const ICE_TOP := 0.02
 const ICE_SEAT_H := 0.07
 const ICE_POP_VX := -1.6
 const ICE_POP_VY := 3.0
+## Card VORTEX: once a ball has touched iron or board, the rim pulls it in.
+## Capture radius: a centre within R_RIM + R_BALL + 5 cm of the axis is still
+## "at the hoop" (on the tube, on the board face, rattling beside the ring);
+## anything farther is a brick flying away and is left alone. The pull is a
+## glide (like the ice hold), provably terminal: it ends on the axis with the
+## ball released straight down through the ring.
+const VORTEX_CAPTURE_R := SimConstants.R_RIM + SimConstants.R_BALL + 0.05
+const VORTEX_CAPTURE_ABOVE := 0.45
+const VORTEX_CAPTURE_BELOW := SimConstants.R_BALL * 0.5
+const VORTEX_PULL_S := 0.35
+const VORTEX_HOVER := SimConstants.R_BALL + SimConstants.R_TUBE + 0.03
+const VORTEX_DROP_VY := -2.5
 
 static func create_shot(launch: Dictionary, geo: SimGeometry = null) -> BallState:
 	var th: float = deg_to_rad(launch["angle_deg"])
@@ -192,8 +204,8 @@ static func _update_cylinder_state(s: BallState, prev_x: float, prev_y: float, p
 	# the tube: the torus can throw it back out — a rattle-out.
 	var in_net := geo.net_catch_depth <= 0.0 or pos.y < geo.hoop_y - geo.net_catch_depth
 	if s.in_cylinder and not s.made and in_net:
-		# Net drag while threading the cylinder.
-		var k := exp(-SimConstants.NET_DRAG * SimConstants.SIM_DT)
+		# Net drag while threading the cylinder (the geometry's net: nylon or chain).
+		var k := exp(-geo.net_drag * SimConstants.SIM_DT)
 		vel.x *= k
 		vel.y *= k
 		vel.z *= k
@@ -205,8 +217,8 @@ static func _update_cylinder_state(s: BallState, prev_x: float, prev_y: float, p
 			var nz := (geo.hoop_z - pos.z) / hd
 			var v_out := -(vel.x * nx + vel.z * nz)
 			if v_out > 0.0:
-				vel.x += (1.0 + SimConstants.E_NET_WALL) * v_out * nx
-				vel.z += (1.0 + SimConstants.E_NET_WALL) * v_out * nz
+				vel.x += (1.0 + geo.net_wall_e) * v_out * nx
+				vel.z += (1.0 + geo.net_wall_e) * v_out * nz
 	if s.in_cylinder and not s.made:
 		if pos.y < geo.hoop_y - SimConstants.MAKE_DEPTH:
 			s.made = true
@@ -298,6 +310,60 @@ static func _touched_iron(s: BallState) -> bool:
 	return false
 
 
+## VORTEX capture test, run after the cylinder update each step. Needs the
+## card on (and no ice — the ice rule wins), a logged rim or board touch (so a
+## clean entry is never taken: the swish rule), and the ball either inside the
+## ring above make depth or within the capture radius level with the hoop.
+static func _maybe_vortex_capture(s: BallState) -> void:
+	var geo := s.geo
+	if not geo.vortex or geo.ice or s.vortex_caught or s.ice_caught or s.made or s.settled:
+		return
+	if not _touched_iron(s):
+		return
+	var pos := s.pos
+	var hd := _horiz_dist_to_axis(pos.x, pos.z, geo.hoop_x, geo.hoop_z)
+	var inside := s.in_cylinder
+	var at_hoop := (not s.in_cylinder) and hd < VORTEX_CAPTURE_R \
+		and pos.y >= geo.hoop_y - VORTEX_CAPTURE_BELOW and pos.y <= geo.hoop_y + VORTEX_CAPTURE_ABOVE
+	if not (inside or at_hoop):
+		return
+	var speed := s.vel.length()
+	s.vortex_caught = true
+	s.vortex_released = false
+	s.vortex_below = inside
+	s.vortex_t = 0.0
+	s.vortex_from = SimVec3.new(pos.x, pos.y, pos.z)
+	s.vel = SimVec3.new(0.0, 0.0, 0.0)
+	s.spin = 0.0
+	s.events.push_back({
+		"kind": "vortex_pull", "t": s.t,
+		"pos": {"x": pos.x, "y": pos.y, "z": pos.z},
+		"normal": {"x": 0.0, "y": 1.0, "z": 0.0},
+		"speed": speed,
+	})
+
+
+## The vortex glide: a smoothstep from the capture point to the hoop axis (at
+## the ball's own height inside the ring, else a hover just above the plane),
+## then a release straight down so the normal stepper fires "enter" and made.
+## The live geo is read every step, so a moving hoop keeps the ball.
+static func _step_vortex_pull(s: BallState) -> void:
+	s.t += SimConstants.SIM_DT
+	s.vortex_t += SimConstants.SIM_DT
+	var geo := s.geo
+	var k := clampf(s.vortex_t / VORTEX_PULL_S, 0.0, 1.0)
+	k = k * k * (3.0 - 2.0 * k)
+	var to_y := s.vortex_from.y if s.vortex_below else geo.hoop_y + VORTEX_HOVER
+	s.pos.x = s.vortex_from.x + (geo.hoop_x - s.vortex_from.x) * k
+	s.pos.y = s.vortex_from.y + (to_y - s.vortex_from.y) * k
+	s.pos.z = s.vortex_from.z + (geo.hoop_z - s.vortex_from.z) * k
+	if s.vortex_t >= VORTEX_PULL_S:
+		s.vortex_released = true
+		s.pos = SimVec3.new(geo.hoop_x, to_y, geo.hoop_z)
+		s.vel = SimVec3.new(0.0, VORTEX_DROP_VY, 0.0)
+		s.spin = 0.0
+
+
 ## Cold streak hold: the caught ball settles into the ice's hole, sits for
 ## ICE_HOLD_S, then pops back out toward the shooter as the ice breaks (or at
 ## once if the ice is already gone). Deterministic, no RNG.
@@ -331,6 +397,9 @@ static func step_shot(s: BallState) -> void:
 	if s.ice_caught and not s.ice_popped:
 		_step_ice_hold(s)
 		return
+	if s.vortex_caught and not s.vortex_released:
+		_step_vortex_pull(s)
+		return
 	var prev_x := s.pos.x
 	var prev_y := s.pos.y
 	var prev_z := s.pos.z
@@ -357,6 +426,7 @@ static func step_shot(s: BallState) -> void:
 		else:
 			_resolve_in_place(s, hit)
 	_update_cylinder_state(s, prev_x, prev_y, prev_z)
+	_maybe_vortex_capture(s)
 	# Tunneling invariant: after resolution the ball must sit outside every collider.
 	var residual := Colliders.find_contact(s.pos, s.geo)
 	if residual != null and residual.depth > s.max_penetration:

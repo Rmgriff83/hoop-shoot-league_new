@@ -25,13 +25,14 @@ func run(t) -> void:
 
 func _data(t) -> void:
 	t.eq(LeagueData.validate(), PackedStringArray(), "league data validates")
-	t.eq(LeagueData.shooters().size(), 15, "15 authored shooters")
-	t.eq(LeagueData.leagues().size(), 2, "two leagues (cage, beach)")
+	t.eq(LeagueData.shooters().size(), 21, "21 authored shooters")
+	t.eq(LeagueData.leagues().size(), 3, "three leagues (cage, beach, city)")
 	for l in LeagueData.leagues():
 		t.eq(LeagueData.team_ids(l).size(), 8, "%s has 8 teams" % l["id"])
 		t.eq(LeagueData.league_ratings(l).size(), 7, "%s has 7 AI ratings" % l["id"])
 	t.ok(LeagueData.league("cage")["unlock"] == null, "arcade league is open")
 	t.eq(int(LeagueData.league("beach")["unlock"]["level"]), 3, "the beach opens at level 3")
+	t.eq(int(LeagueData.league("city")["unlock"]["level"]), 5, "the city opens at level 5")
 	t.close(LeagueData.ratings_of("starfall").accuracy, 0.8, 1e-9, "ratings parse")
 	for l in LeagueData.leagues():
 		t.close(float(l["ball_return_s"]), 1.0, 1e-9, "%s league ball-return wait is 1 s" % l["id"])
@@ -210,8 +211,8 @@ func _season(t) -> void:
 	var before := Season.card_hand(state, "brickport").size()
 	Season.consume_cards(state, "brickport", ["fire7"])
 	t.eq(Season.card_hand(state, "brickport").size(), before - 1, "a played card leaves the season hand")
-	Season.consume_cards(state, "brickport", ["fire7", "nope"])
-	t.eq(Season.card_hand(state, "brickport").size(), maxi(before - 2, 0), "consuming ids it does not hold is a no-op")
+	Season.consume_cards(state, "brickport", ["nope"])
+	t.eq(Season.card_hand(state, "brickport").size(), before - 1, "consuming ids it does not hold is a no-op")
 	var old := Season.create(league, team_ids, 1, 42)
 	old.erase("cardHands")
 	Season.ensure_card_hands(old, league)

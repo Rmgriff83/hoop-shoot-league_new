@@ -120,3 +120,39 @@ do
   end
   save(spr, "card_back.png")
 end
+
+-- glyph_vortex.png 14x14 RGBA (assets/ui/cards) — the Vortex card's small
+-- glyph for the tray tag and the deal caption: a teal funnel, wide at the
+-- top, with a pale spiral band. Sits beside glyph_fire / glyph_ice from the
+-- design export.
+do
+  local W, H = 14, 14
+  local spr = Sprite(W, H, ColorMode.RGB)
+  local img = spr.cels[1].image
+  local none = pc.rgba(0, 0, 0, 0)
+  local teal = pc.rgba(46, 150, 132, 255)
+  local dark = pc.rgba(24, 84, 74, 255)
+  local pale = pc.rgba(214, 240, 232, 255)
+  for y = 0, H - 1 do
+    for x = 0, W - 1 do
+      img:drawPixel(x, y, none)
+    end
+  end
+  -- funnel: half-width shrinks from 6 at y=1 to 1 at y=12
+  for y = 1, 12 do
+    local hw = math.floor(6 - (y - 1) * 5 / 11 + 0.5)
+    for x = 7 - hw, 6 + hw do
+      local band = ((x + y * 2) % 5 == 0)
+      img:drawPixel(x, y, band and pale or teal)
+    end
+    img:drawPixel(7 - hw, y, dark)
+    img:drawPixel(6 + hw, y, dark)
+  end
+  -- the cloud lip
+  for x = 1, 12 do img:drawPixel(x, 0, pale) end
+  img:drawPixel(7, 13, dark)
+  local out_ui = app.fs.joinPath(app.fs.filePath(app.fs.filePath(app.fs.filePath(debug.getinfo(1).source:sub(2)))), "assets/ui/cards")
+  app.fs.makeDirectory(out_ui)
+  spr:saveCopyAs(app.fs.joinPath(out_ui, "glyph_vortex.png"))
+  print("wrote glyph_vortex.png")
+end

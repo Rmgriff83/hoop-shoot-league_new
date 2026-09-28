@@ -32,6 +32,10 @@ func _initialize() -> void:
 	for i in 2:
 		_save("ice_crack_%d" % i, _ice_crack(i))
 	_save("ice_shatter", _ice_shatter())
+	for i in 3:
+		_save("chain_swish_%d" % i, _chain_swish(i))
+	for i in 2:
+		_save("chain_rattle_%d" % i, _chain_rattle(i))
 	print("sfx done")
 	quit(0)
 
@@ -141,6 +145,46 @@ func _swish() -> PackedFloat64Array:
 	n = _biquad_bandpass(n, 2600.0, 700.0, 0.28, 1.2)
 	_apply_env(n, 0.5, 0.02, 0.3)
 	return n
+
+
+## Chain net make (the city court) — a metallic clatter: a short bright noise
+## burst, five detuned metallic partials with fast decays, then a thinning
+## tail of link ticks. Three seeded variants.
+func _chain_swish(variant: int) -> PackedFloat64Array:
+	_rng.seed = 5000 + variant
+	var buf := _silence(0.6)
+	var burst := _noise(0.12, 5100 + variant)
+	burst = _biquad_bandpass(burst, 2600.0, 1400.0, 0.10, 1.0)
+	_apply_env(burst, 0.35, 0.004, 0.09)
+	_mix(buf, burst, 0.0)
+	for partial: Array in [[1850.0, 0.9], [2450.0, 0.7], [3100.0, 0.55], [3700.0, 0.4], [4200.0, 0.3]]:
+		var f: float = float(partial[0]) * (0.97 + _rng.randf() * 0.06)
+		var tone := _osc("triangle", f, f * 0.97, 0.15, 0.25)
+		_apply_env(tone, 0.14 * float(partial[1]), 0.002, 0.10 + _rng.randf() * 0.05)
+		_mix(buf, tone, _rng.randf() * 0.03)
+	for i in 10:
+		var f := 2200.0 + _rng.randf() * 2600.0
+		var tick := _osc("triangle", f, f * 0.95, 0.03, 0.035)
+		_apply_env(tick, 0.05 * (1.0 - i / 12.0), 0.001, 0.025)
+		_mix(buf, tick, 0.06 + i * 0.035 + _rng.randf() * 0.02)
+	return buf
+
+
+## Chain rattle — the links jangling on a rim hit: a handful of ticks and a
+## short 2.6 kHz noise, quiet (it rides under the recorded rim clip).
+func _chain_rattle(variant: int) -> PackedFloat64Array:
+	_rng.seed = 5300 + variant
+	var buf := _silence(0.3)
+	var n := _noise(0.05, 5400 + variant)
+	n = _biquad_bandpass(n, 2600.0, 1600.0, 0.05, 1.2)
+	_apply_env(n, 0.12, 0.002, 0.04)
+	_mix(buf, n, 0.0)
+	for i in 6:
+		var f := 2400.0 + _rng.randf() * 2200.0
+		var tick := _osc("triangle", f, f * 0.95, 0.03, 0.035)
+		_apply_env(tick, 0.04, 0.001, 0.025)
+		_mix(buf, tick, 0.02 + i * 0.04 + _rng.randf() * 0.02)
+	return buf
 
 
 ## Net rustle for non-swish makes — quieter, shorter than the full swish.

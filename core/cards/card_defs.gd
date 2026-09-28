@@ -154,8 +154,8 @@ static func validate() -> PackedStringArray:
 			problems.push_back("card %s has unknown rarity" % c.get("id", "?"))
 		if not (str(c.get("target", "")) in TARGETS):
 			problems.push_back("card %s has unknown target" % c.get("id", "?"))
-		if str(c.get("effect", {}).get("kind", "")) == "fire" and float(c.get("effect", {}).get("seconds", 0.0)) <= 0.0:
-			problems.push_back("card %s fire effect needs seconds > 0" % c.get("id", "?"))
+		if str(c.get("effect", {}).get("kind", "")) in ["fire", "vortex"] and float(c.get("effect", {}).get("seconds", 0.0)) <= 0.0:
+			problems.push_back("card %s %s effect needs seconds > 0" % [c.get("id", "?"), c.get("effect", {}).get("kind", "")])
 		problems.append_array(validate_fx(c))
 	return problems
 

@@ -52,6 +52,7 @@ func _envelope(t) -> void:
 	var chain := CardBudget.unlock_chain(leagues)
 	t.eq(chain[0]["id"], "cage", "the open league heads the chain")
 	t.eq(chain[1]["id"], "beach", "the beach follows it")
+	t.eq(chain[2]["id"], "city", "then the city")
 	for i in range(1, chain.size()):
 		t.ok(float(chain[i]["card_parity"]) >= float(chain[i - 1]["card_parity"]), "parity does not fall from %s to %s" % [chain[i - 1]["id"], chain[i]["id"]])
 	# The cage's arithmetic, by hand: 7 opponents × 2 rounds = 14 games; drops at
@@ -63,7 +64,7 @@ func _envelope(t) -> void:
 	t.close(float(inc["coins"]), 18 * 35.0 + 0.2 * 300.0, 1e-9, "expected coins per season")
 	var a := CardBudget.ai_budget(cage)
 	t.eq(int(a["authored_n"]), 3, "cage authors 3 signature cards")
-	t.eq(int(a["per_season"]), 6, "cage allowance is 6")
+	t.eq(int(a["per_season"]), 5, "cage allowance is 5")
 	# Drift is caught: the same league with a swollen allowance leaves its envelope.
 	var hot := cage.duplicate(true)
 	hot["ai_cards_per_season"] = 40

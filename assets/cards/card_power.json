@@ -1,27 +1,40 @@
 {
   "cards": {
     "fire7": {
-      "beach": 0.55,
-      "cage": 0.78
+      "beach": 0.97,
+      "cage": 0.82,
+      "city": 0.9
     },
     "ice": {
       "beach": 0.85,
-      "cage": 0.61
+      "cage": 0.61,
+      "city": 1.03
+    },
+    "vortex6": {
+      "beach": 2.73,
+      "cage": 0.98,
+      "city": 2.12
     }
   },
   "detail": {
     "fire7": {
       "beach": {
         "played": 1.0,
-        "se": 0.133,
-        "with": 0.89,
+        "se": 0.102,
+        "with": 1.32,
         "without": 0.34
       },
       "cage": {
         "played": 1.0,
-        "se": 0.066,
-        "with": 0.63,
+        "se": 0.067,
+        "with": 0.67,
         "without": -0.15
+      },
+      "city": {
+        "played": 1.0,
+        "se": 0.178,
+        "with": 0.26,
+        "without": -0.63
       }
     },
     "ice": {
@@ -36,10 +49,36 @@
         "se": 0.06,
         "with": 0.46,
         "without": -0.15
+      },
+      "city": {
+        "played": 1.0,
+        "se": 0.164,
+        "with": 0.39,
+        "without": -0.63
+      }
+    },
+    "vortex6": {
+      "beach": {
+        "played": 1.0,
+        "se": 0.198,
+        "with": 3.07,
+        "without": 0.34
+      },
+      "cage": {
+        "played": 1.0,
+        "se": 0.076,
+        "with": 0.83,
+        "without": -0.15
+      },
+      "city": {
+        "played": 1.0,
+        "se": 0.201,
+        "with": 1.49,
+        "without": -0.63
       }
     }
   },
-  "generated": "2026-09-22",
+  "generated": "2026-09-27",
   "n": 500.0,
   "seed": 4242.0
 }

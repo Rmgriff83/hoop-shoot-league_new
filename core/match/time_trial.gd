@@ -84,6 +84,14 @@ var holding := false
 ## hot streak; the window's end, a miss, or ice puts it out and resets the streak.
 var fire_card := false
 var fire_until := -1.0
+## The streak the fire card lent (FIRE_AT minus the streak it found): withdrawn
+## when the window closes, so the makes shot during it stay a real streak and
+## a strong shooter is never worse off for having played the card.
+var _fire_loan := 0
+## Card vortex (docs/CARDS.md): the rim pulls any ball that touched iron or
+## board through, for a window of the trial clock. Ice ends it; a miss does not.
+var vortex_card := false
+var vortex_until := -1.0
 
 # Each flight: { "state": BallState, "seen_events": int, "scored": bool }
 var _flights: Array[Dictionary] = []
@@ -120,6 +128,7 @@ func freeze_rim(reason := "card") -> bool:
 	_set_geo(geo)
 	_events.push_back({"kind": "ice_on", "misses": miss_streak, "reason": reason})
 	_end_card_fire("ice")
+	_end_vortex("ice")
 	return true
 
 
@@ -131,6 +140,7 @@ func light_rim(seconds: float, reason := "card") -> bool:
 		return false
 	fire_card = true
 	fire_until = t + seconds
+	_fire_loan = StreakRules.FIRE_AT - streak
 	streak = StreakRules.FIRE_AT
 	_events.push_back({"kind": "fire_on", "reason": reason, "seconds": seconds})
 	return true
@@ -146,8 +156,42 @@ func _end_card_fire(reason: String) -> void:
 		return
 	fire_card = false
 	fire_until = -1.0
-	streak = 0
+	# A miss broke the streak outright. The clock (or ice) puts the fire OUT:
+	# the card's loan is taken back and the makes shot under it stay a real
+	# but unlit streak (capped under FIRE_AT — a card never hands over a hot
+	# streak, the shooter has to earn the next one). Never worse than not
+	# having played it. (The card lab found the old hard reset made Heat
+	# Check a net LOSS for strong shooters: it wiped the streak they built.)
+	streak = 0 if reason == "miss" else clampi(streak - _fire_loan, 0, StreakRules.FIRE_AT - 1)
+	_fire_loan = 0
 	_events.push_back({"kind": "fire_off", "reason": reason})
+
+
+## Spin the rim from a power-up card for `seconds` of the trial clock: every
+## ball that touches iron or board is pulled through (ShotSim). Refused during
+## the countdown, while iced, while already spinning. Emits vortex_on.
+func spin_rim(seconds: float, reason := "card") -> bool:
+	if vortex_card or iced or phase != PHASE_RUNNING:
+		return false
+	vortex_card = true
+	vortex_until = t + seconds
+	_set_geo(geo)
+	_events.push_back({"kind": "vortex_on", "reason": reason, "seconds": seconds})
+	return true
+
+
+## Seconds of the vortex left (0 when none).
+func vortex_left() -> float:
+	return maxf(vortex_until - t, 0.0) if vortex_card else 0.0
+
+
+func _end_vortex(reason: String) -> void:
+	if not vortex_card:
+		return
+	vortex_card = false
+	vortex_until = -1.0
+	_set_geo(geo)
+	_events.push_back({"kind": "vortex_off", "reason": reason})
 
 
 ## Any shot still unresolved (in the air or rattling)?
@@ -220,7 +264,12 @@ func _break_ice(by: String) -> void:
 ## The live geometry always carries the ice flag (the moving board rebuilds
 ## the pose every step, so it is re-applied here).
 func _set_geo(g: SimGeometry) -> void:
-	geo = g.with_ice(true) if iced else (g.with_ice(false) if g.ice else g)
+	var out := g
+	if out.ice != iced:
+		out = out.with_ice(iced)
+	if out.vortex != vortex_card:
+		out = out.with_vortex(vortex_card)
+	geo = out
 
 
 ## Grab a ball — only while the clock runs and hands are empty.
@@ -311,6 +360,8 @@ func _step_fixed() -> void:
 	# The card's window closes once the last shot of it has landed.
 	if fire_card and t >= fire_until and not _shot_pending():
 		_end_card_fire("time")
+	if vortex_card and t >= vortex_until and not _shot_pending():
+		_end_vortex("time")
 	if was_waiting and ball_ready() and phase == PHASE_RUNNING:
 		_events.push_back({"kind": "ball_ready"})
 	if phase == PHASE_COUNTDOWN:
@@ -400,6 +451,7 @@ func _step_fixed() -> void:
 					times_iced += 1
 					_set_geo(geo)
 					_events.push_back({"kind": "ice_on", "misses": miss_streak})
+					_end_vortex("ice")
 			outcome["streak"] = streak
 			outcome["miss_streak"] = miss_streak
 			outcome["iced"] = iced

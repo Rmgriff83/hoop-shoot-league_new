@@ -759,6 +759,9 @@ func _handle_event(ev: Dictionary) -> void:
 				return
 			if c["kind"] == "ice_catch" or c["kind"] == "ice_pop":
 				return  # the trial's ice_caught / ice_break events carry the show
+			if c["kind"] == "vortex_pull":
+				_court.rim_nudge()   # the rim takes the ball: a shiver, no clang
+				return
 			Sfx.contact(c["kind"], c["speed"])
 			# GROUND ONLY. The dent offsets the ball's drawn position by up to
 			# R_BALL * MAX_SQUASH (3.6 cm) into the surface so the flattened
@@ -803,6 +806,13 @@ func _handle_event(ev: Dictionary) -> void:
 			if _court.fire_lit():
 				_court.set_fire(false)
 				_court.led.marquee("BURNED OUT" if str(ev.get("reason", "")) == "time" else "COOLED OFF", 24.0, _court.led.accent_color)
+		"vortex_on":
+			# A vortex card: the rim pulls touched balls through for the window.
+			_court.led.marquee("VORTEX", 24.0, _court.led.accent_color)
+			Sfx.score_pop(true)
+		"vortex_off":
+			_court.led.show_score(trial.score)
+			_court.led.marquee("VORTEX SPENT" if str(ev.get("reason", "")) == "time" else "VORTEX ICED", 24.0, _court.led.accent_color)
 		"heat_up":
 			Sfx.score_pop(true)
 			_hud.banner("HEATING UP", RetroTheme.LIGHT["orange"])

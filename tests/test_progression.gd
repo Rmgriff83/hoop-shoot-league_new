@@ -34,6 +34,11 @@ func _levels(t) -> void:
 	t.eq(Progression.cap_xp(cage), 200, "= 200 XP")
 	t.eq(Progression.min_level(beach), 3, "the beach starts at 3")
 	t.eq(Progression.cap_xp(beach), 400, "and caps at 5 = 400 XP")
+	var city := LeagueData.league("city")
+	t.eq(Progression.min_level(city), 5, "the city starts at 5")
+	t.eq(Progression.cap_xp(city), 600, "and caps at 7 = 600 XP")
+	t.eq(Progression.area_level("city"), 5, "the city area opens at level 5")
+	t.ok(not Progression.area_unlocked(4, "city") and Progression.area_unlocked(5, "city"), "city gate at 5")
 	t.ok(Progression.at_cap(200, cage) and not Progression.at_cap(199, cage), "at the cap at 200")
 
 
@@ -102,7 +107,9 @@ func _gates(t) -> void:
 	t.ok(Progression.can_use(1, ice), "Deep Freeze from level 1")
 	t.ok(not Progression.can_use(2, fire) and Progression.can_use(3, fire), "Heat Check from level 3")
 	t.eq(Progression.next_card(1)["id"], "fire7", "the next card up from level 1")
-	t.eq(Progression.next_card(3), {}, "nothing above level 3 yet")
+	t.eq(Progression.next_card(3)["id"], "vortex6", "the next card up from level 3 is the Vortex")
+	t.ok(not Progression.can_use(4, CardDefs.get_card("vortex6")) and Progression.can_use(5, CardDefs.get_card("vortex6")), "Vortex from level 5")
+	t.eq(Progression.next_card(5), {}, "nothing above level 5 yet")
 	t.eq(Progression.area_level("cage"), 1, "the cage is open")
 	t.eq(Progression.area_level("beach"), 3, "the beach needs level 3")
 	t.ok(not Progression.area_unlocked(2, "beach") and Progression.area_unlocked(3, "beach"), "the whole beach area follows")

@@ -1,0 +1,40 @@
+[gd_resource type="Resource" script_class="ArenaSet" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/cosmetics/arena_set.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "city"
+display_name = "City Court"
+price_coins = 0
+model_path = "res://assets/arena/city/city.glb"
+emissive_nodes = PackedStringArray("Sky")
+sun_rotation_deg = Vector3(-52, 160, 0)
+sun_energy = 0.6
+sun_color = Color(1, 0.86, 0.72, 1)
+ambient_color = Color(0.32, 0.36, 0.52, 1)
+ambient_energy = 0.75
+background_color = Color(0.1, 0.12, 0.24, 1)
+fill_rotation_deg = Vector3(-20, -30, 0)
+fill_energy = 0.4
+fill_color = Color(0.5, 0.58, 0.85, 1)
+sun_shadows = true
+fog_enabled = true
+fog_color = Color(0.28, 0.3, 0.45, 1)
+fog_density = 0.012
+camera_fov = 60.0
+camera_look_height = 2.2
+title_cam_pos = Vector3(-1.6, 1.75, -0.4)
+title_look_at = Vector3(3.62, 2.2, 0.1)
+title_drift = Vector3(0.05, 0, 0.35)
+title_period_s = 30.0
+title_fov = 66.0
+title_stars = 3
+traffic = true
+spot_names = PackedStringArray("KEY", "L ELBOW", "R ELBOW", "L BASE", "R BASE")
+spot_positions = PackedVector3Array(0, 0, 0, 0.953, 0, -2.45, 0.953, 0, 2.45, 2.291, 0, -3.37, 2.291, 0, 3.37)
+league_banner_kind = "standings"
+league_banner_pos = Vector3(5.62, 2.35, 2.25)
+league_banner_size = Vector2(2.2, 1.35)
+league_banner_yaw_deg = -90.0
+league_banner_lit = true

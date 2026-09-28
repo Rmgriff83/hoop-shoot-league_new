@@ -30,6 +30,7 @@ save's `progress` part holds `{xp, seasonXp, seasonKey}`.
 |---|---|---|---|
 | Arcade (cage) | 1 → 3 | — | 200 |
 | Beach | 3 → 5 | level 3 | 400 |
+| City | 5 → 7 | level 5 | 600 |
 
 A league's matches never push XP past its cap (`Progression.apply_match`
 clamps; `capped` says so). The next league starts where this one caps and
@@ -40,6 +41,7 @@ breaks the chain, and every card's level must be a band edge.
 |---|---|
 | Deep Freeze (ice) | 1 |
 | Heat Check (fire7) | 3 |
+| Vortex (vortex6) | 5 |
 
 ## 2. A match's XP
 
@@ -107,7 +109,7 @@ is not a band edge fails `Progression.validate()`.
 
 ## Not modelled (yet)
 
-- Anything above level 5: the next league adds the next band.
+- Anything above level 7: the next league adds the next band.
 - Multiplayer's use of the level (matchmaking, card eligibility) — the
   level is global and saved, that is all the hook it needs.
 - Prestige / resets; time-trial XP (by decision: leagues only).

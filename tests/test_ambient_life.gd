@@ -12,6 +12,7 @@ func _count(root: Node, prefix: String, mesh_only := true) -> int:
 
 
 func run(t) -> void:
+	_city(t)
 	# Cage: ten cabinets with screens and marquees; ArcadeFx binds them.
 	var cage: Node = load("res://assets/arena/cage/cage.glb").instantiate()
 	t.eq(_count(cage, "Cabinet"), 14, "14 cabinet bodies")
@@ -120,3 +121,72 @@ func run(t) -> void:
 
 	bfx.free()
 	beach.free()
+
+
+## The city: cars cross the street beyond the fence (seeded, freed past the
+## edge, no colliders), the windows run the pane shader, the trees billboard.
+func _city(t) -> void:
+	for path in CityFx.MODELS:
+		t.ok(FileAccess.file_exists(path), "vehicle model shipped (%s)" % path.get_file())
+	t.ok(FileAccess.file_exists("res://assets/arena/city/city.glb"), "city arena built")
+	if not FileAccess.file_exists("res://assets/arena/city/city.glb"):
+		return
+	var city: Node = load("res://assets/arena/city/city.glb").instantiate()
+	t.eq(_count(city, "StreetRig", false), 1, "one street line")
+	t.ok(_count(city, "Windows") >= 8, "the blocks carry window faces (%d)" % _count(city, "Windows"))
+	t.eq(_count(city, "TreeRig", false), 4, "4 street trees")
+	t.ok(_count(city, "FloodHead") >= 2, "floodlight heads")
+	t.ok(CosmeticLibrary.get_arena("city").traffic, "the city arena set asks for traffic")
+	var cfx := CityFx.new()
+	t.ok(cfx.setup(city), "CityFx sets up")
+	t.eq(cfx.window_count(), _count(city, "Windows"), "every window face is bound")
+	t.ok(cfx.window_material_count() >= 1 and cfx.window_material_count() <= 2, "one shared window material per texture (%d)" % cfx.window_material_count())
+	var lit0 := CityFx.lit_fraction(0.0)
+	t.ok(lit0 > 0.4 and lit0 < 0.8, "about six panes in ten are lit (%.2f)" % lit0)
+	t.ok(absf(CityFx.lit_fraction(90.0) - lit0) > 0.005, "and some have switched a minute and a half later")
+	t.close(CityFx.lit_fraction(0.0), lit0, 1e-12, "the window rule is pure")
+	t.eq(cfx.car_count(), 0, "no car yet")
+	cfx.spawn_car()
+	t.eq(cfx.car_count(), 1, "a car spawned")
+	var car: Node3D = cfx._cars[0]["node"]
+	t.eq(car.find_children("*", "StaticBody3D", true, false).size(), 0, "a passing car carries no collider")
+	t.ok(car.find_children("*", "SpotLight3D", true, false).size() >= 1, "its headlights are on")
+	var p0 := cfx.car_position(0)
+	t.ok(absf(p0.z) > CityFx.CAR_EDGE - 1.0, "it starts beyond the edge (z %.1f)" % p0.z)
+	t.close(absf(p0.x - CityFx.STREET_X), CityFx.LANE_HALF, 1e-6, "in a lane of the street")
+	t.ok(Vector2(p0.x, p0.z).length() < 58.0, "inside the sky cylinder")
+	t.ok(absf(sin(car.rotation.y)) < 1e-6, "aligned with the street")
+	var v0 := absf(cfx.car_velocity(0))
+	t.ok(v0 >= CityFx.CAR_SPEED.x and v0 <= CityFx.CAR_SPEED.y, "city speed (%.1f m/s)" % v0)
+	for i in 120:
+		cfx._process(1.0 / 60.0)
+	t.ok(absf(cfx.car_position(0).z) < absf(p0.z), "it drives inward")
+	for i in int(20.0 * 60):
+		cfx._process(1.0 / 60.0)
+		if cfx.car_count() == 0:
+			break
+	t.eq(cfx.car_count(), 0, "it crosses and is freed")
+	t.ok(cfx.sent() >= 1, "counted")
+	cfx.spawn_car()
+	cfx.spawn_car()
+	cfx.spawn_car()
+	t.eq(cfx.car_count(), CityFx.MAX_CARS, "the street holds %d cars at most" % CityFx.MAX_CARS)
+	# Determinism: two fresh cities spawn the same first car.
+	var c2: Node = load("res://assets/arena/city/city.glb").instantiate()
+	var f2 := CityFx.new()
+	f2.setup(c2)
+	f2.spawn_car()
+	var c3: Node = load("res://assets/arena/city/city.glb").instantiate()
+	var f3 := CityFx.new()
+	f3.setup(c3)
+	f3.spawn_car()
+	t.eq(f2.car_position(0), f3.car_position(0), "traffic replays identically (seeded RNG)")
+	t.close(f2.car_velocity(0), f3.car_velocity(0), 1e-9, "and at the same speed")
+	for i in 60:
+		f2._process(1.0 / 60.0)
+		f3._process(1.0 / 60.0)
+	t.eq(f2.car_position(0), f3.car_position(0), "still in step a second later")
+	for n in [cfx, f2, f3]:
+		n.free()
+	for n in [city, c2, c3]:
+		n.free()

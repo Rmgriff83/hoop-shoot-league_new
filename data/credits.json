@@ -121,5 +121,14 @@
       "license": "SIL Open Font License 1.1",
       "used_for": "Pixel body face: small labels and status lines"
     }
+  ],
+  "models": [
+    {
+      "title": "PSX Style Cars",
+      "author": "GGBot",
+      "url": "https://ggbot.itch.io/",
+      "license": "see the itch.io page",
+      "used_for": "The cars passing the city court"
+    }
   ]
 }

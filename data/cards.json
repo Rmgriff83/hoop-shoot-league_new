@@ -33,8 +33,8 @@
     {
       "id": "fire7",
       "name": "Heat Check",
-      "rarity": "common",
-      "price": 100,
+      "rarity": "rare",
+      "price": 170,
       "target": "self",
       "effect": {
         "kind": "fire",
@@ -60,6 +60,37 @@
       },
       "blurb": "Lights your own rim for 7 s: makes pay like a hot streak. A miss, or the clock, puts it out.",
       "level": 3
+    },
+    {
+      "id": "vortex6",
+      "name": "Vortex",
+      "rarity": "epic",
+      "price": 470,
+      "target": "self",
+      "effect": {
+        "kind": "vortex",
+        "seconds": 6
+      },
+      "art": "res://assets/textures/cards/card_vortex6.png",
+      "fx": {
+        "sheet": "res://assets/textures/cards/fx_vortex.png",
+        "frames": 16,
+        "fps": 14.5,
+        "rect": [
+          16,
+          29,
+          64,
+          56
+        ],
+        "chip": [
+          30,
+          36
+        ],
+        "chip_bg": "#1E4A41",
+        "glyph": "res://assets/ui/cards/glyph_vortex.png"
+      },
+      "blurb": "Your rim pulls for 6 s: any ball that touches iron or board is dragged through. A clean swish still pays 2.",
+      "level": 5
     }
   ],
   "rarity_weights": {

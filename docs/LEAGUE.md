@@ -19,7 +19,7 @@ a picture-in-picture opponent, and one-time-use power-up cards (M3).
     sim resolves it; no dice on outcomes.
 - **Calibration per rim.** The speed-sigma and compensation tables are fitted by
   `tools/calibrate_ai.gd` (Monte Carlo, seeded) into `assets/ai/calibration_<key>.json` for
-  `regulation`, `arcade` (2.6 m) and `beach` (3.41 m). Re-run after any physics change:
+  `regulation`, `arcade` (2.6 m), `beach` (3.41 m) and `city` (3.63 m, chain net). Re-run after any physics change:
   `godot --headless --path . -s tools/calibrate_ai.gd` (all) or `-- arcade` (one). About a minute
   per key. `tests/test_ai.gd` checks the observed make rate tracks the rating within ±0.08 on the
   arcade rim.
@@ -60,8 +60,9 @@ nickname, bio, colors, signature, ratings) and `data/leagues.json` (one league p
 `roster` of 7 shooter ids, `err_mult`, heat/OT seconds, ball-return wait, `rounds`,
 `playoff_teams`, `semis_best_of`, `final_best_of`, `levels` band, `unlock` level or null, `xp_mult`, `rewards`;
 docs/PROGRESSION.md). The arcade
-league takes the seven lowest-rated shooters, the beach league the next seven; `starfall` is
-held back for a later league. `LeagueData` loads and validates both.
+league takes the seven lowest-rated shooters, the beach league the next seven, and the city
+league `starfall` plus six city shooters (Kingsbridge, Ferry Row, Union Yards, Eastgate,
+North Tunnel, Rooftop Hill). `LeagueData` loads and validates all three.
 
 **Core (`core/league/`)** — all pure, all seeded:
 - `ScheduleGen.generate(team_ids, rounds, seed)`: circle-method round robin, 8 teams × 2

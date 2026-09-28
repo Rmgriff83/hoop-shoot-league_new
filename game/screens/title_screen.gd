@@ -16,7 +16,7 @@ extends Node3D
 ## court lives at a time: a page turn covers the screen, rebuilds the court
 ## and refreshes the chrome.
 
-const CARDS := [{"area": "cage", "mode": "practice"}, {"area": "beach", "mode": "beach"}]
+const CARDS := [{"area": "cage", "mode": "practice"}, {"area": "beach", "mode": "beach"}, {"area": "city", "mode": "city"}]
 const MARGIN := 36.0
 const COLUMN_W := 648.0
 const SCRIM_ALPHA := 0.25

@@ -9,6 +9,7 @@ extends RefCounted
 const HOOPS: Array[String] = [
 	"res://assets/hoops/classic/hoop_set.tres",
 	"res://assets/hoops/street/hoop_set.tres",
+	"res://assets/hoops/chain/hoop_set.tres",
 ]
 const BALLS: Array[String] = [
 	"res://assets/balls/classic/ball_set.tres",
@@ -36,6 +37,7 @@ const BALLS: Array[String] = [
 const ARENAS: Array[String] = [
 	"res://assets/arena/cage/arena_set.tres",
 	"res://assets/arena/beach/arena_set.tres",
+	"res://assets/arena/city/arena_set.tres",
 ]
 
 static var _cache := {}

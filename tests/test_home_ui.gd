@@ -51,8 +51,9 @@ func _theme(t) -> void:
 	t.eq(over.get_theme_color("font_color"), RetroTheme.SCENE_TEXT, "on-scene text is cream")
 	t.eq(over.get_theme_constant("outline_size"), RetroTheme.OUTLINE, "on-scene text carries an ink outline")
 	over.free()
-	for id in ["cage", "beach"]:
+	for id in ["cage", "beach", "city"]:
 		t.ok(int(CosmeticLibrary.get_arena(id).title_stars) >= 1, "%s rates its difficulty in stars" % id)
+	t.eq(int(CosmeticLibrary.get_arena("city").title_stars), 3, "the city is three stars")
 	t.eq(int(CosmeticLibrary.get_arena("cage").title_stars), 1, "the cage is one star")
 	t.ok(int(CosmeticLibrary.get_arena("beach").title_stars) > int(CosmeticLibrary.get_arena("cage").title_stars), "the beach is harder")
 	for icon in ["ball", "coin", "jersey", "multiplayer", "star", "stopwatch", "trophy"]:

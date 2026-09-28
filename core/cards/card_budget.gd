@@ -53,6 +53,19 @@ static func all_ids() -> Array:
 	return CardDefs.all().map(func(c): return str(c["id"]))
 
 
+## The cards a player can actually PLAY while in this league: those whose
+## level sits below the league's cap (docs/PROGRESSION.md — at the cap you
+## have graduated, and a card that opens there is the next league's). A card
+## you cannot play yet is not income, however often it drops.
+static func usable_ids(league: Dictionary) -> Array:
+	var cap := Progression.cap_level(league)
+	var out := []
+	for c in CardDefs.all():
+		if Progression.card_level(c) < cap:
+			out.push_back(str(c["id"]))
+	return out
+
+
 static func mean_price() -> float:
 	var cards := CardDefs.all()
 	if cards.is_empty():
@@ -91,12 +104,13 @@ static func player_income(league: Dictionary, p_win := P_WIN) -> Dictionary:
 	var p_drop := p_win * float(odds.get("win", 0.6)) + (1.0 - p_win) * float(odds.get("loss", 0.25))
 	var games := regular_games(league)
 	var drops := games * p_drop + PLAYOFF_GAMES * minf(p_drop + float(odds.get("playoff_bonus", 0.15)), 1.0)
-	var drop_power := drops * mean_dealt_power(all_ids(), lid)
+	var usable := usable_ids(league)
+	var drop_power := drops * mean_dealt_power(usable, lid)
 	var rewards: Dictionary = league.get("rewards", {})
 	var coins_per_game := p_win * float(rewards.get("win_coins", 50)) + (1.0 - p_win) * float(rewards.get("loss_coins", 20))
 	var coins := (games + PLAYOFF_GAMES) * coins_per_game + P_TITLE * float(rewards.get("title_coins", 300))
 	var bought := coins / mean_price()
-	var bought_power := bought * mean_dealt_power(all_ids(), lid)
+	var bought_power := bought * mean_dealt_power(usable, lid)
 	return {"drops": drops, "drop_power": drop_power, "coins": coins, "bought": bought,
 		"bought_power": bought_power, "power": drop_power + bought_power}
 

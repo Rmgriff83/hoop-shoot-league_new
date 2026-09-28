@@ -142,6 +142,7 @@ const TRAY_PITCH := TRAY_CARD.y + 8
 const TRAY_CENTRE_Y := TRAY_POS.y + TRAY_CARD.y * 0.5 - TRAY_PITCH
 ## The slot whose fire card is burning (its tag counts the window down).
 var _fire_slot := -1
+var _vortex_slot := -1
 ## The slot a card was just dealt from, and where it sat (the deal starts there).
 var _dealt_slot := -1
 var _dealt_from := Rect2(TRAY_POS, TRAY_CARD)
@@ -213,11 +214,21 @@ class TrayCard extends Control:
 		tag.position = Vector2(-6 + (4 if down else 0), 42 + (4 if down else 0))
 		queue_redraw()
 
-	## "wait" (WAIT, dimmed), "fire" (the seconds left, with the flame) or "" (ready).
+	## "wait" (WAIT, dimmed), "fire" / "vortex" (the seconds left, with the
+	## card's glyph) or "" (ready).
 	func set_state(kind: String, text: String) -> void:
 		tag.visible = kind != ""
 		tag_label.text = text
-		tag_glyph.visible = kind == "fire"
+		tag_glyph.visible = kind == "fire" or kind == "vortex"
+		if kind == "vortex":
+			tag_glyph.icon_name = "cards/glyph_vortex"
+			tag_glyph.queue_redraw()
+			_sb.bg_color = Color(Color("#1E4A41"), 0.9)
+			_sb.border_color = Color("#2E9684")
+			face.modulate = Color.WHITE
+		elif kind == "fire":
+			tag_glyph.icon_name = "cards/glyph_fire"
+			tag_glyph.queue_redraw()
 		if kind == "wait":
 			_sb.bg_color = Color(RetroTheme.SCENE_OUTLINE, 0.85)
 			_sb.border_color = RetroTheme.SCENE_TEXT
@@ -318,7 +329,12 @@ func tray_states() -> Array:
 		if _tray_ids[i] == "":
 			out.push_back("empty")
 		elif _tray_ids[i] == "used":
-			out.push_back("fire" if i == _fire_slot and heat.player.fire_card else "used")
+			if i == _fire_slot and heat.player.fire_card:
+				out.push_back("fire")
+			elif i == _vortex_slot and heat.player.vortex_card:
+				out.push_back("vortex")
+			else:
+				out.push_back("used")
 		elif not Progression.can_use(App.level(), CardDefs.get_card(_tray_ids[i])):
 			out.push_back("locked")
 		elif heat.can_play(Heat.PLAYER, _tray_ids[i]):
@@ -345,8 +361,11 @@ func _on_card_tapped(i: int) -> void:
 	_dealt_from = Rect2(_tray[i].position, TRAY_CARD)
 	if heat.play_card(Heat.PLAYER, id):
 		_tray_ids[i] = "used"
-		if str(CardDefs.get_card(id).get("effect", {}).get("kind", "")) == "fire":
+		var kind := str(CardDefs.get_card(id).get("effect", {}).get("kind", ""))
+		if kind == "fire":
 			_fire_slot = i   # stays in the tray while it burns
+		elif kind == "vortex":
+			_vortex_slot = i   # stays in the tray while it pulls
 		else:
 			_remove_from_tray(i)
 	else:
@@ -365,6 +384,8 @@ func _refresh_tray() -> void:
 		match st:
 			"fire":
 				_tray[i].set_state("fire", "%dS" % ceili(heat.player.fire_left()))
+			"vortex":
+				_tray[i].set_state("vortex", "%dS" % ceili(heat.player.vortex_left()))
 			"used":
 				_remove_from_tray(i)   # a fire card whose window just closed
 			"wait":
@@ -889,6 +910,11 @@ func _handle_ai_event(ev: Dictionary) -> void:
 			if _ai_court.fire_lit():
 				_ai_court.set_fire(false)
 				_ai_court.led.marquee("BURNED OUT" if str(ev.get("reason", "")) == "time" else "COOLED OFF", 24.0, _ai_court.led.accent_color)
+		"vortex_on":
+			_ai_court.led.marquee("VORTEX", 24.0, _ai_court.led.accent_color)
+		"vortex_off":
+			_ai_court.led.show_score(heat.ai.score)
+			_ai_court.led.marquee("VORTEX SPENT" if str(ev.get("reason", "")) == "time" else "VORTEX ICED", 24.0, _ai_court.led.accent_color)
 		"card_played":
 			if ev.get("ok", false):
 				Sfx.gain_db = prev_gain

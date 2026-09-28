@@ -3,7 +3,7 @@ extends RefCounted
 ## The effect registry: `apply(kind, params, heat, target)` acts on one side of
 ## a Heat. Returns true when the effect took (a card is only consumed then).
 
-const KINDS := ["ice", "fire"]
+const KINDS := ["ice", "fire", "vortex"]
 
 
 static func apply(kind: String, params: Dictionary, heat: Heat, target: String) -> bool:
@@ -17,6 +17,10 @@ static func apply(kind: String, params: Dictionary, heat: Heat, target: String) 
 			# The target's own rim burns for `seconds`: makes pay like a hot
 			# streak from FIRE_AT; a miss or the clock puts it out.
 			return side.light_rim(float(params.get("seconds", 0.0)), "card")
+		"vortex":
+			# The target's own rim pulls for `seconds`: any ball that touches
+			# iron or board is dragged through. Only the clock (or ice) ends it.
+			return side.spin_rim(float(params.get("seconds", 0.0)), "card")
 		_:
 			return false
 
@@ -29,5 +33,8 @@ static func can_apply(kind: String, heat: Heat, target: String) -> bool:
 		"fire":
 			var side := heat.side(target)
 			return side.phase == TimeTrial.PHASE_RUNNING and not side.iced and not side.fire_card and not StreakRules.is_lit(side.streak)
+		"vortex":
+			var side := heat.side(target)
+			return side.phase == TimeTrial.PHASE_RUNNING and not side.iced and not side.vortex_card
 		_:
 			return false

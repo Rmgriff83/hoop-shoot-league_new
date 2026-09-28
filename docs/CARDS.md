@@ -74,6 +74,18 @@ Calibration record (2026-09-22, lab n 500, seed 4242):
 | Deep Freeze `ice` | +0.61 ± 0.06 | +0.85 ± 0.13 | 0.73 | rare | 150 (curve 130) |
 | Heat Check `fire7` | +0.78 ± 0.07 | +0.55 ± 0.13 | 0.67 | common | 100 (curve 120; was 80) |
 
+Re-measured 2026-09-27 with the city league and the fire window's loan rule
+(below), lab n 500, seed 4242:
+
+| Card | cage | beach | city | mean | band | price |
+|---|---|---|---|---|---|---|
+| Deep Freeze `ice` | +0.61 ± 0.06 | +0.85 ± 0.13 | +1.03 ± 0.16 | 0.83 | rare | 150 (curve 160) |
+| Heat Check `fire7` | +0.82 ± 0.07 | +0.97 ± 0.10 | +0.90 ± 0.18 | 0.90 | rare (was common) | 170 (curve 170) |
+| Vortex `vortex6` | +0.98 ± 0.08 | +2.73 ± 0.20 | +2.12 ± 0.20 | 1.94 | epic | 470 (curve 470) |
+
+The Vortex is worth most where rattle-outs are commonest (the beach's
+lively iron); Heat Check's old hard reset had measured −0.84 in the city.
+
 So a card is worth well under a point per heat, and the two are nearly
 equal: Ice bites harder on the beach's better shooters (more makes to
 catch), Heat Check pays more in the cage where a lit rim outruns the weak
@@ -124,8 +136,10 @@ authored hand over the cap, and authored totals over the allowance.
   (allowance − signature count) × the pool's rarity-weighted mean power.
 - **Player income** = expected drops (regular games × drop odds at a coin-flip
   win rate, plus ~4 playoff games with the playoff bonus) × the rarity-weighted
-  mean power, plus what the coin income (win/loss/title rewards) buys at the
-  shop at the mean price.
+  mean power of the cards the player can PLAY in that league (level below
+  the league's cap — `CardBudget.usable_ids`; a card that opens at the cap
+  is the next league's), plus what the coin income (win/loss/title rewards)
+  buys at the shop at the mean price.
 - **Parity** = AI budget ÷ player income.
 
 Rules the suite enforces (`CardBudget.problems()`):
@@ -145,7 +159,9 @@ Shipped envelope (2026-09-22): cage allowance 6 (3 signature) → AI 4.2 power
 vs player income 9.9 → parity **0.42** against a target of 0.5 (the open
 league runs player-favoured); beach allowance 10 (8 signature) → 8.1 vs 9.8 →
 **0.82** against 1.0. Each league's player income is ~8 drops and ~6 shop
-buys a season.
+buys a season. Re-run 2026-09-27 with the city (allowance 14, 8 signature,
+target 1.0) and playable-only income: cage allowance 5 → parity 0.53, beach
+0.83, city 1.18 — see `tools/card_ledger.gd` for the live numbers.
 
 ## 5. What is deliberately not modelled
 
@@ -157,6 +173,31 @@ buys a season.
   `cardsPlayed` per side for the season bookkeeping only; the result screen
   shows makes, shooting, swishes, streaks, bonus and *iced over* (a natural
   stat that includes card ice), never a card count.
+
+## Heat Check's window (changed 2026-09-27)
+
+`TimeTrial.light_rim` lends the streak up to `FIRE_AT`; when the window
+closes on the clock (or the rim ices) the loan is withdrawn and the makes
+shot under it stay a real streak, capped under `FIRE_AT` — the fire goes
+out, the shooter earns the next one. A miss still puts the fire out and
+breaks the streak. Before this the
+close hard-reset the streak to 0, which the card lab caught as a NEGATIVE
+power in the city (−0.84 ± 0.26): a strong shooter lost the streak the card
+had helped build, then shot the next five makes at base points.
+
+## The Vortex (`vortex6`, level 5, the city)
+
+A self card with a 6 s window (`TimeTrial.spin_rim` / `vortex_left`, the
+fire window's shape): while `SimGeometry.vortex` is on, `ShotSim` pulls any
+ball that has touched iron or board and is at the hoop — inside the ring
+above make depth, or within `R_RIM + R_BALL + 5 cm` of the axis between
+6 cm below and 45 cm above the plane — into a 0.35 s glide to the axis and
+a straight drop through the ring (`vortex_pull` event, then the normal
+`enter` and make). A clean entry is never taken, so a swish still pays 2; an
+airball never scores (no iron or board event); a board-only miss becomes a
+BANK. The window ends on the clock (after the last pending ball lands) or
+when the rim ices; a miss does not end it. Ice has precedence: an iced,
+spinning rim catches.
 
 ## Adding a card
 
@@ -179,20 +220,9 @@ buys a season.
    `h`. `game/ui/card_face.gd` (`CardFace`) draws it everywhere — the tray,
    the deal, loadout, spares, shop, the drop and the chips. Only
    `card_back.png` is still generated (`gen_card_textures.lua`).
-   Pending: VORTEX's art is in (`card_vortex6.png`, `fx_vortex.png`: 16
-   frames at 14.5 fps, rect `[16, 29, 64, 56]`, chip 30×36 on `#1E4A41`)
-   but the card has no effect yet, so no row — `--qa-cards` shows it.
-4. **Measure**: `tools/card_lab.gd -- <id>`. Read its power per league in
-   the output; set `rarity` to `CardDefs.rarity_for(mean)` and `price` to
-   `CardDefs.price_for(mean)` (nudge inside the tolerance if it feels wrong).
-5. **Deal it**: add the id to the leagues' `ai_pool` where the AI should
-   draw it, and to a shooter's `ai_cards` if it is a signature card. Raise
-   `ai_cards_per_season` only if the ledger says parity has room.
-6. **Ledger**: `tools/card_ledger.gd`. Every league must still be inside its
-   envelope; if adding the card to the pool pushed a league out, lower that
-   league's allowance or leave the card out of that pool.
-7. **Suite**: `tests/run_tests.gd`. `test_card_budget.gd` is the gate;
-   `test_cards.gd` covers the effect and policy.
+   Vortex (`vortex6`, 2026-09-27): `card_vortex6.png` + `fx_vortex.png` (16
+   frames at 14.5 fps, rect `[16, 29, 64, 56]`, chip 30×36 on `#1E4A41`),
+   `glyph_vortex.png` from `gen_card_textures.lua`.
 
 ## Adding a league
 
