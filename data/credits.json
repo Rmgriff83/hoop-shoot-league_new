@@ -129,6 +129,13 @@
       "url": "https://ggbot.itch.io/",
       "license": "see the itch.io page",
       "used_for": "The cars passing the city court"
+    },
+    {
+      "title": "Low Poly Buildings Pack",
+      "author": "Sam Grady",
+      "url": "https://samgrady.itch.io/low-poly-buildings-pack",
+      "license": "Attribution 4.0",
+      "used_for": "The buildings around the city court"
     }
   ]
 }

@@ -41,6 +41,11 @@ func run(t) -> void:
 	t.eq(cage.validate(), PackedStringArray(), "cage arena validates")
 	var models: Array = credits.get("models", [])
 	t.ok(models.size() >= 1 and str(models[0].get("author", "")) == "GGBot", "the city's cars credit GGBot's PSX Style Cars")
+	var grady := false
+	for c in models:
+		if str(c.get("author", "")) == "Sam Grady" and str(c.get("license", "")).begins_with("Attribution"):
+			grady = true
+	t.ok(grady, "the city's buildings credit Sam Grady's pack (CC BY)")
 	var fonts: Array = credits.get("fonts", [])
 	t.ok(fonts.size() >= 1 and str(fonts[0]["title"]) == "Caveat", "the chalk font is credited")
 	t.ok(FileAccess.file_exists("res://assets/fonts/caveat/Caveat.ttf") and FileAccess.file_exists("res://assets/fonts/caveat/OFL.txt"), "font and its licence ship together")

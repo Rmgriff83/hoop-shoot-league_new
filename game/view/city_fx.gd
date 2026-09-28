@@ -1,12 +1,15 @@
 class_name CityFx
 extends Node
 ## Presentation-only city life (docs/HOME.md → Adding an area): cars pass on
-## the street beyond the back fence, the buildings' windows switch on and off
-## a pane at a time, the floodlight and lamp heads glow, the street trees
-## face the camera. Never touches the sim. Seeded (never randomize()) so a QA
-## screenshot or a test replays identically.
+## the street beyond the back fence, the buildings (Sam Grady's pack on one
+## photo atlas) are dusked by the facade shader with their windows switching
+## on and off a pane at a time, the floodlight and lamp heads glow, the
+## street trees face the camera. Never touches the sim. Seeded (never
+## randomize()) so a QA screenshot or a test replays identically.
 
 const WINDOW_SHADER := preload("res://game/court/windows.gdshader")
+const FACADE_MASK := "res://assets/textures/city_facades_lit.png"
+const FACADE_CELLS := Vector2(32, 32)
 ## The traffic pool: the hometown pack's cars (GGBot "PSX Style Cars",
 ## data/credits.json). Forward is Godot +Z, the origin is on the ground.
 const MODELS: Array[String] = [
@@ -60,6 +63,8 @@ func setup(arena: Node) -> bool:
 	for n in BeachFx._descendants(arena):
 		if n is Node3D and n.name.begins_with("TreeRig"):
 			_tree_rigs.push_back(n as Node3D)
+		elif n is MeshInstance3D and n.name.begins_with("Building"):
+			_bind_facade(n as MeshInstance3D)
 		elif n is MeshInstance3D and n.name.begins_with("Windows"):
 			_bind_windows(n as MeshInstance3D)
 		elif n is MeshInstance3D and n.name.begins_with("FloodHead"):
@@ -70,6 +75,29 @@ func setup(arena: Node) -> bool:
 	_rng.seed = RNG_SEED
 	_next_car = _rng.randf_range(3.0, CAR_GAP.y)
 	return true
+
+
+## The pack's buildings: one shared facade material over the atlas + the
+## derived window mask, an instance seed per building so they light apart.
+func _bind_facade(mi: MeshInstance3D) -> void:
+	var tex := BeachFx._albedo_of(mi)
+	var key := "facade:" + (tex.resource_path if tex != null else "<none>")
+	if not _window_mats.has(key):
+		var m := ShaderMaterial.new()
+		m.shader = WINDOW_SHADER
+		if tex != null:
+			m.set_shader_parameter("albedo", tex)
+		if ResourceLoader.exists(FACADE_MASK):
+			m.set_shader_parameter("mask", load(FACADE_MASK))
+		m.set_shader_parameter("use_mask", true)
+		m.set_shader_parameter("cells", FACADE_CELLS)
+		m.set_shader_parameter("lit_share", LIT_SHARE)
+		m.set_shader_parameter("period_base", PERIOD_BASE)
+		m.set_shader_parameter("period_spread", PERIOD_SPREAD)
+		_window_mats[key] = m
+	mi.material_override = _window_mats[key]
+	mi.set_instance_shader_parameter("seed", float(_window_faces))
+	_window_faces += 1
 
 
 ## One shared material per window texture (so the faces still batch): the
@@ -83,6 +111,7 @@ func _bind_windows(mi: MeshInstance3D) -> void:
 		if tex != null:
 			m.set_shader_parameter("albedo", tex)
 		var tower := key.contains("tower")
+		m.set_shader_parameter("use_mask", false)
 		m.set_shader_parameter("cells", Vector2(4, 8) if tower else Vector2(4, 4))
 		m.set_shader_parameter("pane_min", Vector2(0.125, 0.125) if tower else Vector2(0.25, 0.19))
 		m.set_shader_parameter("pane_max", Vector2(0.875, 0.875) if tower else Vector2(0.75, 0.81))

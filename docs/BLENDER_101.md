@@ -685,20 +685,26 @@ frame, the beach's fence loop (`ENC_X0..X1 -11.2..5.7`, `±8.6`, every side
 4.6, then, behind the back fence, kerb → sidewalk → a two-lane road
 (`STREET_X 11.1`, an empty `StreetRig` on its centre line for
 `game/view/city_fx.gd`) → far sidewalk → a vacant lot with hoardings → the
-tenement row at x 25 (each block four brick walls + a roof from `_block()`,
-a `Windows%d` quad just in front of the street face, fire escapes and water
-tanks) → two glass towers. Brick buildings flank the court (the left one
-carries the mural), a low one sits behind the shooter, `TreeRig%d` empties
-hold billboard trees, two `FloodHead%d` heads on 8 m poles light the court,
-and the dusk sky is the beach's cylinder with `city_sky.png`.
+city blocks. The blocks are **Sam Grady's Low Poly Buildings Pack**
+(`art/third_party/buildings/`, CC BY 4.0, credited): `_building()` imports
+each CopperCube OBJ at real scale (Y-up metres), shifts its v by +1, gives
+it the one `City_Facade` material (the atlas conformed by
+`tools/aseprite/conform_buildings.lua` to `city_facades.png`) and stands it
+where `LAYOUT` says — low-rises across the street, mid-rises behind, the
+two towers (85 and 118 m) 200–300 m out, low-rises flanking the court and
+behind the shooter — under a 300 m sky cylinder. `TreeRig%d` empties hold
+billboard trees, two `FloodHead%d` heads on 8 m poles light the court.
 
-**Windows** are not emissive textures: `CityFx` swaps every `Windows*`
-face's material for `game/court/windows.gdshader`, which reads the wall
-tile as a grid of window cells (4 × 4 per tile, 4 × 8 on the towers) and
-lights each pane by a per-cell hash — about six in ten lit, every cell on
-its own multi-minute switching period, so a pane or two per building
-changes at any moment. The `clock` uniform is the FX node's own time, so
-tests step it (`CityFx.lit_fraction`).
+**Windows** are not painted on: `CityFx` swaps every `Building*` mesh's
+material for `game/court/windows.gdshader`, a shaded facade shader (the
+arena's low sun and cool ambient dusk the daylit photos) that reads
+`city_facades_lit.png` — a window mask `conform_buildings.lua` derives from
+the atlas (facade pixels darker than their block, cleaned to 4 px cells) —
+and lights each 32 × 32 atlas cell by a per-cell hash, about six in ten
+lit, every cell on its own multi-minute switching period, offset by an
+instance `seed` so the buildings sharing the atlas light differently. The
+`clock` uniform is the FX node's own time, so tests step it
+(`CityFx.lit_fraction`).
 
 **Cars** are the hometown pack's glbs under `assets/vehicles/` (GGBot,
 credited): `CityFx.spawn_car()` instances one, strips its `StaticBody3D`,

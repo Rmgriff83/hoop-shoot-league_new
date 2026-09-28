@@ -1,8 +1,11 @@
 """Build the city arena: an inner-city cage court at dusk — a teal blacktop
 slab inside a chain-link fence, a two-lane street behind the hoop's fence
-(cars drive it: game/view/city_fx.gd), brick tenements and two glass towers
-beyond, brick walls flanking the court (one with a mural), street trees,
-floodlight poles, a dusk sky cylinder and the hoop's in-ground pole.
+(cars drive it: game/view/city_fx.gd), real-scale city blocks beyond it from
+Sam Grady's Low Poly Buildings Pack (art/third_party/buildings, CC BY 4.0:
+low-rises across the street, mid-rises behind, two towers at the back, and
+low-rises flanking the court and behind the shooter), hoardings on the
+vacant lot, street trees, floodlight poles, a dusk sky cylinder and the
+hoop's in-ground pole.
 
 Run headless:
   /Applications/Blender.app/Contents/MacOS/Blender -b --python tools/blender/build_city.py
@@ -16,8 +19,8 @@ blender (x, y, z) = (sim x, -sim z, sim y). Numbers are SIM metres.
 
 Runtime contract (game/court/court_geometry.gd + game/view/city_fx.gd): the
 empty `Pole` is placed by Godot behind the board; `StreetRig` (an empty on
-the street's centre line) gives CityFx the lane line; every `Windows*` face
-gets the windows shader (lit panes switching on and off); `FloodHead*` quads
+the street's centre line) gives CityFx the lane line; every `Building*` mesh
+gets the facade shader (dusk + lit panes switching on and off); `FloodHead*` quads
 are unshaded; `TreeRig*` billboards turn to the camera; `ScoreboardRig` /
 `LedFace` host the ground LED board. `City` is the static root / shake handle.
 
@@ -57,53 +60,84 @@ WALK_X0, WALK_X1 = ENC_X1 + 0.25, 7.6
 ROAD_X0, ROAD_X1 = 7.6, 14.6
 FAR_X0, FAR_X1 = 14.6, 16.3
 STREET_X = (ROAD_X0 + ROAD_X1) / 2.0       # 11.1: CityFx.STREET_X
-STREET_HALF_LEN = 46.0
-BLOCK_X0 = 25.0                            # the tenement row starts here (a vacant lot between)
-SKY_R, SKY_Y0, SKY_Y1 = 60.0, -3.0, 50.0
-# Window grid: a city_windows tile is 4 windows across (8 m) by 4 storeys
-# (12.8 m); a city_tower tile is 4 panes (4 m) by 8 panes (8 m).
-WIN_TILE = (8.0, 12.8)
-TOWER_TILE = (4.0, 8.0)
-BRICK_PER_M = 0.4
+STREET_HALF_LEN = 100.0
+BLOCK_X0 = 22.0                            # the frontage row starts here (a vacant lot between)
+# Real-scale blocks (the towers stand 118 m tall, 300 m out): a big sky.
+SKY_R, SKY_Y0, SKY_Y1 = 300.0, -3.0, 240.0
+GROUND = 320.0
+PACK = os.path.join(ROOT, "art", "third_party", "buildings")
+# The pack's buildings: file → (x extent, height, z extent) in metres, from
+# their bounding boxes (CopperCube exports, Y-up, centred in x/z).
+PACK_DIMS = {
+    1: (70, 41, 90), 2: (140, 118, 95), 3: (90, 31, 70), 4: (90, 61, 70), 5: (60, 41, 60),
+    6: (81, 20, 26), 7: (60, 15, 30), 8: (30, 27, 30), 9: (120, 28, 30), 10: (70, 16, 20), 11: (80, 85, 60),
+}
+# Where each stands (sim metres, footprint centre on the ground) and its yaw
+# (degrees about y; the model's x extent runs along sim x — toward the hoop —
+# at yaw 0, so the frontage row turns 90 to lay its long run along the street).
+# Rows: A the frontage across the street (x 22+), B the mid-rises (x 60+),
+# C the skyline (x 140+), plus the flanks beside the court and the block
+# behind the shooter.
+LAYOUT = [
+    # Row A, across the street: the grand stone block dead ahead (its ornate
+    # facade, 41 m, clears the fence line from the key), shops and a brick
+    # office down the street either side, long runs along z.
+    ("Building01", 1, (57.0, 0.0), 0.0), ("Building10", 10, (32.0, -85.0), 90.0), ("Building07", 7, (37.0, 75.0), 90.0),
+    # Row B: the office block, small blocks down the street.
+    ("Building09", 9, (100.0, -100.0), 90.0), ("Building05", 5, (70.0, 150.0), 0.0), ("Building08", 8, (70.0, -170.0), 0.0),
+    ("Building06", 6, (60.0, 225.0), 90.0),
+    # Row C: the skyline — the towers close enough to rise above the frontage.
+    ("Building11", 11, (150.0, -30.0), 0.0), ("Building02", 2, (170.0, 70.0), 0.0), ("Building04", 4, (150.0, -180.0), 0.0),
+    ("Building03", 3, (150.0, 170.0), 0.0),
+    # The flanks beside the court and the block behind the shooter.
+    ("Building12", 7, (-25.0, -28.0), 180.0), ("Building13", 10, (-30.0, 22.0), 0.0), ("Building14", 6, (-60.0, 0.0), 90.0),
+]
 
 
-def _block(name, x0, x1, z0, z1, h, wall_mat, coll, parent, uv_per_m=BRICK_PER_M, windows=None, win_mat=None, win_idx=0):
-    """A building: four wall quads + a roof, brick-tiled; `windows` lists the
-    faces ("-x", "+x", "-z", "+z") that get a Windows%d quad just in front."""
-    faces = {
-        "-x": ([(x0, 0, z1), (x0, 0, z0), (x0, h, z0), (x0, h, z1)], (-1, 0, 0), z1 - z0),
-        "+x": ([(x1, 0, z0), (x1, 0, z1), (x1, h, z1), (x1, h, z0)], (1, 0, 0), z1 - z0),
-        "-z": ([(x0, 0, z0), (x1, 0, z0), (x1, h, z0), (x0, h, z0)], (0, 0, -1), x1 - x0),
-        "+z": ([(x1, 0, z1), (x0, 0, z1), (x0, h, z1), (x1, h, z1)], (0, 0, 1), x1 - x0),
-    }
-    for key, (corners, toward, length) in faces.items():
-        cage.add_quad("%s_%s" % (name, key.replace("-", "n").replace("+", "p")), corners, toward, wall_mat, coll, parent,
-                      (length * uv_per_m, h * uv_per_m))
-    cage.add_quad("%s_roof" % name, [(x0, h, z0), (x1, h, z0), (x1, h, z1), (x0, h, z1)], (0, 1, 0), wall_mat, coll, parent,
-                  ((x1 - x0) * uv_per_m, (z1 - z0) * uv_per_m))
-    idx = win_idx
-    for key in (windows or []):
-        corners, toward, length = faces[key]
-        eps = 0.02
-        off = {"-x": (-eps, 0, 0), "+x": (eps, 0, 0), "-z": (0, 0, -eps), "+z": (0, 0, eps)}[key]
-        # Inset the window field a little from the corners and the roof.
-        inset = 0.6
-        c = []
-        for (px, py, pz) in corners:
-            nx = px + off[0]
-            nz = pz + off[2]
-            if key in ("-x", "+x"):
-                nz = nz + inset if pz == z0 else nz - inset
-            else:
-                nx = nx + inset if px == x0 else nx - inset
-            ny = 0.9 if py == 0 else h - 0.8
-            c.append((nx, ny, nz))
-        w = length - 2 * inset
-        hh = h - 1.7
-        tile = TOWER_TILE if win_mat is not None and win_mat.name.startswith("City_Tower") else WIN_TILE
-        cage.add_quad("Windows%d" % idx, c, toward, win_mat, coll, parent, (w / tile[0], hh / tile[1]))
-        idx += 1
-    return idx
+def _building(name, index, mat, coll, parent, sim_xz, yaw_deg):
+    """Import one pack OBJ (Y-up metres), shift its CopperCube v (−1..0) into
+    0..1, give it the shared facade material, put its origin at the footprint
+    centre on the ground and stand it at `sim_xz` turned by `yaw_deg`."""
+    path = os.path.join(PACK, "building_%02d_smooth.obj" % index)
+    before = set(bpy.data.objects)
+    bpy.ops.wm.obj_import(filepath=path, forward_axis="NEGATIVE_Z", up_axis="Y")
+    new = [o for o in bpy.data.objects if o not in before and o.type == "MESH"]
+    if not new:
+        raise RuntimeError("nothing imported from %s" % path)
+    bpy.ops.object.select_all(action="DESELECT")
+    for o in new:
+        o.select_set(True)
+    bpy.context.view_layer.objects.active = new[0]
+    if len(new) > 1:
+        bpy.ops.object.join()
+    obj = bpy.context.view_layer.objects.active
+    obj.name = obj.data.name = name
+    me = obj.data
+    me.materials.clear()
+    me.materials.append(mat)
+    for poly in me.polygons:
+        poly.material_index = 0
+    bm = bmesh.new()
+    bm.from_mesh(me)
+    uvl = bm.loops.layers.uv.verify()
+    for f in bm.faces:
+        for loop in f.loops:
+            u, v = loop[uvl].uv
+            loop[uvl].uv = (u, v + 1.0)
+    # Origin: footprint centre, ground level (blender z is up after import).
+    xs = [v.co.x for v in bm.verts]
+    ys = [v.co.y for v in bm.verts]
+    zs = [v.co.z for v in bm.verts]
+    cx, cy, z0 = (min(xs) + max(xs)) / 2.0, (min(ys) + max(ys)) / 2.0, min(zs)
+    for v in bm.verts:
+        v.co.x -= cx
+        v.co.y -= cy
+        v.co.z -= z0
+    bm.to_mesh(me)
+    bm.free()
+    cage.link_obj(obj, coll, parent, cage.s2b((sim_xz[0], 0.0, sim_xz[1])))
+    obj.rotation_euler = (0.0, 0.0, math.radians(yaw_deg))
+    return obj
 
 
 def build():
@@ -121,8 +155,7 @@ def build():
     kerb = cage.mat_tex("City_Kerb", TEX("city_kerb.png"))
     walk = cage.mat_tex("City_Walk", TEX("beach_concrete.png"))
     brick = cage.mat_tex("City_Brick", TEX("city_brick.png"))
-    windows = cage.mat_tex("City_Windows", TEX("city_windows.png"), emissive=True)
-    tower = cage.mat_tex("City_Tower", TEX("city_tower.png"), emissive=True)
+    facade = cage.mat_tex("City_Facade", TEX("city_facades.png"))
     sky = cage.mat_tex("City_Sky", TEX("city_sky.png"), emissive=True)
     tree = cage.mat_tex("City_Tree", TEX("city_tree.png"), alpha_clip=True, double_sided=True)
     mural = cage.mat_tex("City_Mural", TEX("city_mural.png"))
@@ -136,7 +169,7 @@ def build():
     steel = cage.mat_flat("City_Steel", (70, 72, 78), roughness=0.6)
     yellow = cage.mat_flat("City_Yellow", (232, 196, 74), roughness=0.9)
     # Smooth look on the big surfaces (the pixel-crisp fence and windows stay nearest).
-    for m in (court, asphalt, sky, tree, mural, walk, concrete):
+    for m in (court, asphalt, sky, tree, mural, walk, concrete, facade):
         for n in m.node_tree.nodes:
             if n.type == "TEX_IMAGE":
                 n.interpolation = "Linear"
@@ -152,8 +185,8 @@ def build():
     cage.add_quad("Court", [(COURT_X0, 0, -w), (COURT_X1, 0, -w), (COURT_X1, 0, w), (COURT_X0, 0, w)],
                   (0, 1, 0), court, c_court, root, (1.0, 1.0))
     # The ground everywhere else: dark wet asphalt out past the sky cylinder.
-    cage.add_quad("Ground", [(-70, -0.01, -70), (70, -0.01, -70), (70, -0.01, 70), (-70, -0.01, 70)],
-                  (0, 1, 0), asphalt, c_street, root, (70.0, 70.0))
+    cage.add_quad("Ground", [(-GROUND, -0.01, -GROUND), (GROUND, -0.01, -GROUND), (GROUND, -0.01, GROUND), (-GROUND, -0.01, GROUND)],
+                  (0, 1, 0), asphalt, c_street, root, (GROUND, GROUND))
 
     # Knee-high wall + chain-link fence: one loop, all four sides full height.
     corners = [(ENC_X0, -ENC_HALF_W), (ENC_X1, -ENC_HALF_W), (ENC_X1, ENC_HALF_W), (ENC_X0, ENC_HALF_W)]
@@ -226,22 +259,9 @@ def build():
                                             (lx - 1.0, KERB_H + 4.95, lz + 0.28), (lx - 1.55, KERB_H + 4.95, lz + 0.28)],
                       (0, -1, 0), flood, c_street, root, (1.0, 1.0))
 
-    # ---- The blocks: a row of tenements across the street, two towers behind
-    # them, brick buildings flanking the court and one behind the shooter.
-    win = 0
-    row = [(-47, -35, 12.5), (-35, -23, 15.5), (-23, -12, 11.5), (-12, -1, 14.5), (-1, 10, 17.0), (10, 21, 12.0), (21, 33, 14.0), (33, 47, 11.0)]
-    for i, (z0, z1, h) in enumerate(row):
-        depth = 9.0 + (i % 3) * 1.5
-        win = _block("Block%d" % i, BLOCK_X0, BLOCK_X0 + depth, z0 + 0.15, z1 - 0.15, h, brick, c_blocks, root,
-                     windows=["-x"], win_mat=windows, win_idx=win)
-        # A fire escape: a zigzag of thin landings on every other block.
-        if i % 2 == 1:
-            fz = (z0 + z1) / 2.0
-            for k in range(1, int(h // 3.2)):
-                cage.add_box("Escape%d_%d" % (i, k), (0.9, 0.06, 2.6), (BLOCK_X0 - 0.47, k * 3.2, fz), dark, c_blocks, root)
-                cage.add_box("EscapeRail%d_%d" % (i, k), (0.04, 0.9, 2.6), (BLOCK_X0 - 0.9, k * 3.2 + 0.45, fz), dark, c_blocks, root)
-    # The vacant lot between the far sidewalk and the row: a low wall with
-    # a billboard hoarding, so the gap reads as a city block, not a void.
+    # ---- The blocks: Sam Grady's pack at real scale (see LAYOUT), plus the
+    # vacant lot between the far sidewalk and the frontage: a low wall and two
+    # hoardings (one carries the mural) so the gap reads as a city block.
     cage.add_box("LotWall", (0.3, 1.8, 2 * L), (FAR_X1 + 2.0, 0.9, 0.0), brick, c_blocks, root)
     for i, bz in enumerate((-14.0, 6.0)):
         cage.add_box("Hoarding%d" % i, (0.25, 3.2, 7.0), (BLOCK_X0 - 2.0, 4.6, bz), dark, c_blocks, root)
@@ -249,25 +269,8 @@ def build():
                                               (BLOCK_X0 - 2.14, 6.1, bz - 3.3), (BLOCK_X0 - 2.14, 6.1, bz + 3.3)],
                       (-1, 0, 0), mural, c_blocks, root, (1.0, 1.0))
         cage.add_box("HoardingLeg%d" % i, (0.2, 3.0, 0.2), (BLOCK_X0 - 2.0, 1.5, bz), steel, c_blocks, root)
-    # Rooftop water tanks on three of them.
-    for i, (z0, z1, h) in ((1, row[1]), (4, row[4]), (6, row[6])):
-        bpy.ops.mesh.primitive_cylinder_add(vertices=10, radius=1.3, depth=2.6, location=(0, 0, 0))
-        tank = bpy.context.active_object
-        tank.name = tank.data.name = "Tank%d" % i
-        tank.data.materials.append(dark)
-        cage.link_obj(tank, c_blocks, root, cage.s2b((BLOCK_X0 + 5.0, h + 1.3 + 0.6, (z0 + z1) / 2.0 + 2.0)))
-        cage.add_box("TankLegs%d" % i, (2.0, 0.6, 2.0), (BLOCK_X0 + 5.0, h + 0.3, (z0 + z1) / 2.0 + 2.0), dark, c_blocks, root)
-    # Towers: glass, every face lit panes.
-    for i, (x0, x1, z0, z1, h) in enumerate(((40.0, 52.0, -30.0, -17.0, 36.0), (42.0, 54.0, 14.0, 27.0, 44.0))):
-        win = _block("Tower%d" % i, x0, x1, z0, z1, h, steel, c_blocks, root, uv_per_m=0.25,
-                     windows=["-x", "-z", "+z"], win_mat=tower, win_idx=win)
-    # Flanking brick buildings (their court-facing walls carry windows; the
-    # left one a mural), and the low one behind the shooter.
-    win = _block("Flank0", -9.0, 5.6, -16.5, -10.2, 12.0, brick, c_blocks, root, windows=["+z"], win_mat=windows, win_idx=win)
-    win = _block("Flank1", -8.0, 5.6, 10.2, 16.5, 10.0, brick, c_blocks, root, windows=["-z"], win_mat=windows, win_idx=win)
-    cage.add_quad("Mural", [(-6.5, 0.4, -10.17), (0.5, 0.4, -10.17), (0.5, 3.9, -10.17), (-6.5, 3.9, -10.17)],
-                  (0, 0, 1), mural, c_blocks, root, (1.0, 1.0))
-    win = _block("Back0", -22.0, -12.6, -11.0, 11.0, 8.0, brick, c_blocks, root, windows=["+x"], win_mat=windows, win_idx=win)
+    for name, index, xz, yaw in LAYOUT:
+        _building(name, index, facade, c_blocks, root, xz, yaw)
 
     # ---- Trees at the court's corners, billboarded by CityFx.
     for i, (x, z) in enumerate(((-12.3, -9.6), (-12.3, 9.6), (6.6, -10.6), (6.6, 10.6))):
