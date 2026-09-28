@@ -145,6 +145,8 @@ func _city(t) -> void:
 	t.eq(cfx.window_material_count(), 1, "one shared facade material (they still batch)")
 	t.eq(cfx.flood_count(), 4, "a spot light hangs on each court floodlight")
 	t.ok(_count(city, "LampHead") >= 5, "street lamps line the far sidewalk (%d)" % _count(city, "LampHead"))
+	t.ok(_count(city, "LampGlow") >= 5, "their bulbs glow toward the court")
+	t.eq(_count(city, "BusSign"), 1, "the shelter's roof sign")
 	t.ok(_count(city, "BusStop", false) == 1 and _count(city, "BusPoster") == 1, "a bus shelter with a lit poster")
 	t.eq(cfx.lamp_count(), _count(city, "LampHead") + 1, "an omni under every lamp head and one in the shelter")
 	var lit0 := CityFx.lit_fraction(0.0)

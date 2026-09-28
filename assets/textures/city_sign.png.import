@@ -2,19 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cerniedmhj8k0"
-path="res://.godot/imported/city_city_poster.png-83b89debfdade9e9b7c14ed34aef1eb6.ctex"
+uid="uid://kx7tt6t5qky3"
+path="res://.godot/imported/city_sign.png-2293517b74ba9b922db31e58c8c57c89.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "f0dffa91cfa313de066f75b3e54978d8"
 }
 
 [deps]
 
-source_file="res://assets/arena/city/city_city_poster.png"
-dest_files=["res://.godot/imported/city_city_poster.png-83b89debfdade9e9b7c14ed34aef1eb6.ctex"]
+source_file="res://assets/textures/city_sign.png"
+dest_files=["res://.godot/imported/city_sign.png-2293517b74ba9b922db31e58c8c57c89.ctex"]
 
 [params]
 
@@ -26,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

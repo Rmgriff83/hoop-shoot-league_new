@@ -266,36 +266,47 @@ def build():
         n += 1
         z += 4.5
     cage.add_empty("StreetRig", c_street, root, (STREET_X, 0.0, 0.0))
-    # Street lamps along the far sidewalk: heads glow (unshaded) and CityFx
-    # hangs a warm OmniLight3D under each (`LampHead*`).
-    for i, lz in enumerate(range(-36, 37, 12)):
+    # Street lamps along the far sidewalk, built to be SEEN from the court:
+    # a thicker pale post, a steel head box (`LampHead*`, unshaded, an omni
+    # under it) and a warm bulb glow quad (`LampGlow*`) facing the court.
+    lamp_steel = cage.mat_flat("City_LampSteel", (150, 154, 162), roughness=0.5)
+    head_mat = cage.mat_flat("City_LampHead", (236, 226, 200), roughness=0.4)
+    # Every 8 m from z ±4: from the key the frame at 16 m spans z ±5.2 and the
+    # board hides z 0, so the nearest pair straddles the board in view.
+    for i, lz in enumerate(range(-36, 37, 8)):
         lx = FAR_X1 - 0.35
-        cage.add_box("LampPost%d" % i, (0.12, 5.2, 0.12), (lx, KERB_H + 2.6, lz), steel, c_street, root)
-        cage.add_box("LampArm%d" % i, (1.4, 0.08, 0.08), (lx - 0.7, KERB_H + 5.2, lz), steel, c_street, root)
-        cage.add_quad("LampHead%d" % i, [(lx - 1.55, KERB_H + 4.95, lz - 0.28), (lx - 1.0, KERB_H + 4.95, lz - 0.28),
-                                          (lx - 1.0, KERB_H + 4.95, lz + 0.28), (lx - 1.55, KERB_H + 4.95, lz + 0.28)],
-                      (0, -1, 0), flood, c_street, root, (1.0, 1.0))
-    # A bus shelter on the far sidewalk, to the shooter's right: steel posts,
-    # a flat roof, a glass back, a bench, and a lit poster panel facing the
-    # court (`BusPoster`, unshaded; CityFx puts an OmniLight3D at `BusStop`).
-    bx, bz = FAR_X0 + 0.95, 14.0
+        cage.add_box("LampPost%d" % i, (0.16, 5.2, 0.16), (lx, KERB_H + 2.6, lz), lamp_steel, c_street, root)
+        cage.add_box("LampArm%d" % i, (1.4, 0.10, 0.10), (lx - 0.7, KERB_H + 5.2, lz), lamp_steel, c_street, root)
+        cage.add_box("LampHead%d" % i, (0.6, 0.25, 0.3), (lx - 1.3, KERB_H + 5.1, lz), head_mat, c_street, root)
+        hx, hy = lx - 1.62, KERB_H + 4.95
+        cage.add_quad("LampGlow%d" % i, [(hx, hy - 0.55, lz + 0.55), (hx, hy - 0.55, lz - 0.55), (hx, hy + 0.55, lz - 0.55), (hx, hy + 0.55, lz + 0.55)],
+                      (-1, 0, 0), flood, c_street, root, (1.0, 1.0))
+    # A bus shelter on the far sidewalk, to the shooter's right and clear of
+    # the board: steel posts, a flat roof, a bench, and its back wall a lit
+    # 3 x 2 m BILLBOARD facing the court (`BusPoster`, unshaded), a lit
+    # `BusSign` on the roof; CityFx puts an OmniLight3D at `BusStop`.
+    bx, bz = FAR_X0 + 0.95, 5.2      # just right of the board from the key, in frame
     glass = cage.mat_flat("City_Glass", (58, 70, 92), roughness=0.2)
     poster = cage.mat_tex("City_Poster", TEX("city_poster.png"), emissive=True)
-    stop = cage.add_empty("BusStop", c_street, root, (bx, 1.6, bz))
+    sign = cage.mat_tex("City_Sign", TEX("city_sign.png"), emissive=True)
+    cage.add_empty("BusStop", c_street, root, (bx, 1.6, bz))
     for sx in (-1, 1):
         for sz in (-1, 1):
-            cage.add_box("BusPost%d%d" % (sx + 1, sz + 1), (0.08, 2.5, 0.08), (bx + sx * 0.65, KERB_H + 1.25, bz + sz * 1.7), steel, c_street, root)
-    cage.add_box("BusRoof", (1.7, 0.08, 3.9), (bx, KERB_H + 2.54, bz), dark, c_street, root)
-    cage.add_box("BusBack", (0.03, 2.2, 3.5), (bx + 0.66, KERB_H + 1.2, bz), glass, c_street, root)
-    cage.add_box("BusEnd", (1.4, 2.2, 0.03), (bx, KERB_H + 1.2, bz + 1.72), glass, c_street, root)
-    cage.add_box("BusBench", (0.45, 0.06, 2.4), (bx + 0.3, KERB_H + 0.5, bz), dark, c_street, root)
-    cage.add_box("BusBenchLeg0", (0.4, 0.44, 0.06), (bx + 0.3, KERB_H + 0.22, bz - 1.0), steel, c_street, root)
-    cage.add_box("BusBenchLeg1", (0.4, 0.44, 0.06), (bx + 0.3, KERB_H + 0.22, bz + 1.0), steel, c_street, root)
-    # the poster: a lit panel in the shelter's back, facing the street and the court
-    cage.add_box("PosterFrame", (0.10, 1.9, 1.3), (bx + 0.6, KERB_H + 1.25, bz - 0.6), steel, c_street, root)
-    cage.add_quad("BusPoster", [(bx + 0.54, KERB_H + 0.35, bz - 1.2), (bx + 0.54, KERB_H + 0.35, bz),
-                                (bx + 0.54, KERB_H + 2.15, bz), (bx + 0.54, KERB_H + 2.15, bz - 1.2)],
+            cage.add_box("BusPost%d%d" % (sx + 1, sz + 1), (0.10, 2.6, 0.10), (bx + sx * 0.7, KERB_H + 1.3, bz + sz * 1.8), lamp_steel, c_street, root)
+    cage.add_box("BusRoof", (1.8, 0.10, 4.0), (bx, KERB_H + 2.65, bz), dark, c_street, root)
+    cage.add_box("BusEnd", (1.5, 2.3, 0.03), (bx, KERB_H + 1.25, bz - 1.82), glass, c_street, root)
+    cage.add_box("BusBench", (0.45, 0.06, 2.6), (bx + 0.3, KERB_H + 0.5, bz), dark, c_street, root)
+    cage.add_box("BusBenchLeg0", (0.4, 0.44, 0.06), (bx + 0.3, KERB_H + 0.22, bz - 1.1), lamp_steel, c_street, root)
+    cage.add_box("BusBenchLeg1", (0.4, 0.44, 0.06), (bx + 0.3, KERB_H + 0.22, bz + 1.1), lamp_steel, c_street, root)
+    # the billboard: the whole back wall, lit, framed
+    cage.add_box("PosterFrame", (0.10, 2.2, 3.4), (bx + 0.72, KERB_H + 1.35, bz), lamp_steel, c_street, root)
+    cage.add_quad("BusPoster", [(bx + 0.66, KERB_H + 0.35, bz - 1.5), (bx + 0.66, KERB_H + 0.35, bz + 1.5),
+                                (bx + 0.66, KERB_H + 2.35, bz + 1.5), (bx + 0.66, KERB_H + 2.35, bz - 1.5)],
                   (-1, 0, 0), poster, c_street, root, (1.0, 1.0))
+    cage.add_box("SignBox", (0.14, 0.5, 1.0), (bx - 0.6, KERB_H + 2.95, bz), dark, c_street, root)
+    cage.add_quad("BusSign", [(bx - 0.68, KERB_H + 2.72, bz - 0.48), (bx - 0.68, KERB_H + 2.72, bz + 0.48),
+                              (bx - 0.68, KERB_H + 3.18, bz + 0.48), (bx - 0.68, KERB_H + 3.18, bz - 0.48)],
+                  (-1, 0, 0), sign, c_street, root, (1.0, 1.0))
 
     # ---- The blocks: Sam Grady's pack at real scale (see LAYOUT). Nothing
     # stands between the far sidewalk and the frontage: the facades ARE the view.

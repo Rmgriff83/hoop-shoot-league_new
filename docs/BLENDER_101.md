@@ -699,8 +699,10 @@ two towers (85 and 118 m) 200–300 m out, low-rises flanking the court and
 behind the shooter — under a 300 m sky cylinder. `TreeRig%d` empties hold
 billboard trees, four `FloodHead%d` heads on 8 m poles light the court
 (spots hung by CityFx), seven `LampHead%d` street lamps line the far
-sidewalk (omnis), and a bus shelter (`BusStop`, a lit `BusPoster` from
-`city_poster.png`) glows by the road.
+sidewalk (omnis under pale heads with `LampGlow%d` bulbs facing the
+court), and a bus shelter (`BusStop`, its back wall the lit 3 × 2 m
+`BusPoster` from `city_poster.png`, a `BusSign` on the roof) glows by the
+road to the shooter's right.
 
 **Windows** are not painted on: `CityFx` swaps every `Building*` mesh's
 material for `game/court/windows.gdshader`, a shaded facade shader (the

@@ -39,10 +39,10 @@ const FLOOD_RANGE := 40.0
 const FLOOD_ANGLE := 32.0
 ## The far sidewalk's street lamps (sodium-warm omnis under `LampHead*`) and
 ## the bus shelter's glow (`BusStop`).
-const LAMP_ENERGY := 1.6
-const LAMP_RANGE := 11.0
-const SHELTER_ENERGY := 1.2
-const SHELTER_RANGE := 7.0
+const LAMP_ENERGY := 2.6
+const LAMP_RANGE := 12.0
+const SHELTER_ENERGY := 2.0
+const SHELTER_RANGE := 8.0
 ## Window lights: the share of panes lit, and each pane's own switching
 ## period (minutes), mirrored by windows.gdshader.
 const LIT_SHARE := 0.6
@@ -88,7 +88,7 @@ func setup(arena: Node) -> bool:
 		elif n is MeshInstance3D and n.name.begins_with("LampHead"):
 			_unshade(n as MeshInstance3D)
 			_hang_omni(n as Node3D, Vector3(0, -0.3, 0), Color(1.0, 0.86, 0.6), LAMP_ENERGY, LAMP_RANGE)
-		elif n is MeshInstance3D and n.name == "BusPoster":
+		elif n is MeshInstance3D and (n.name.begins_with("LampGlow") or n.name == "BusPoster" or n.name == "BusSign"):
 			_unshade(n as MeshInstance3D)
 		elif n is Node3D and n.name == "BusStop":
 			_hang_omni(n as Node3D, Vector3.ZERO, Color(1.0, 0.95, 0.85), SHELTER_ENERGY, SHELTER_RANGE)

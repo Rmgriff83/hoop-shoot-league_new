@@ -339,11 +339,11 @@ do
   save(spr, "city_flood.png")
 end
 
--- city_poster.png 128x192 RGB — the bus shelter's lit poster (2:3, 1.2 x
--- 1.8 m): a ball over a chain hoop on a hot orange field, bold title bars,
--- a stripe of small print. Unshaded in-game, so it glows in the shelter.
+-- city_poster.png 192x128 RGB — the bus shelter's lit billboard (3:2, 3.0 x
+-- 2.0 m, its back wall): a ball over a chain hoop on a hot orange field,
+-- bold title bars. Unshaded in-game, so it glows across the street.
 do
-  local W, H = 128, 192
+  local W, H = 192, 128
   local spr, img = newImage(W, H)
   for y = 0, H - 1 do
     for x = 0, W - 1 do
@@ -353,8 +353,7 @@ do
   end
   fill(img, 0, 0, W - 1, 3, rgb(34, 28, 24)); fill(img, 0, H - 4, W - 1, H - 1, rgb(34, 28, 24))
   fill(img, 0, 0, 3, H - 1, rgb(34, 28, 24)); fill(img, W - 4, 0, W - 1, H - 1, rgb(34, 28, 24))
-  -- the ball
-  local cx, cy, r = 64, 78, 34
+  local cx, cy, r = 52, 62, 32
   for y = cy - r, cy + r do
     for x = cx - r, cx + r do
       local dx, dy = x - cx, y - cy
@@ -367,21 +366,37 @@ do
       end
     end
   end
-  -- the hoop: a rim line and hanging chains
-  fill(img, 26, 118, 102, 121, rgb(226, 230, 236))
+  -- the hoop right of the ball: a rim line and hanging chains
+  fill(img, 100, 50, 176, 53, rgb(226, 230, 236))
   for i = 0, 8 do
-    local x0 = 28 + i * 9
-    for y = 122, 150 - (i % 2) * 4 do
-      if (y // 3) % 2 == 0 then img:drawPixel(x0 + (y - 122) // 6, y, rgb(226, 230, 236)) end
+    local x0 = 102 + i * 9
+    for y = 54, 86 - (i % 2) * 4 do
+      if (y // 3) % 2 == 0 then img:drawPixel(x0 + (y - 54) // 6, y, rgb(226, 230, 236)) end
     end
   end
   -- title bars (bold blocks read as lettering from the court)
-  fill(img, 12, 14, 116, 30, rgb(241, 232, 208))
-  fill(img, 18, 18, 110, 26, rgb(34, 28, 24))
-  for i = 0, 6 do fill(img, 20 + i * 13, 19, 27 + i * 13, 25, rgb(241, 232, 208)) end
-  fill(img, 12, 158, 116, 170, rgb(241, 232, 208))
-  for i = 0, 4 do fill(img, 16 + i * 20, 161, 30 + i * 20, 167, rgb(34, 28, 24)) end
-  -- small print
-  for i = 0, 3 do fill(img, 14 + i * 28, 178, 34 + i * 28, 180, rgb(60, 40, 30)) end
+  fill(img, 12, 10, 180, 26, rgb(241, 232, 208))
+  fill(img, 18, 14, 174, 22, rgb(34, 28, 24))
+  for i = 0, 10 do fill(img, 20 + i * 14, 15, 28 + i * 14, 21, rgb(241, 232, 208)) end
+  fill(img, 100, 96, 180, 108, rgb(241, 232, 208))
+  for i = 0, 3 do fill(img, 104 + i * 20, 99, 118 + i * 20, 105, rgb(34, 28, 24)) end
+  for i = 0, 5 do fill(img, 14 + i * 28, 114, 34 + i * 28, 116, rgb(60, 40, 30)) end
   save(spr, "city_poster.png")
+end
+
+-- city_sign.png 64x32 RGB — the shelter's lit roof sign: a bus pictogram
+-- on blue, a pale border.
+do
+  local W, H = 64, 32
+  local spr, img = newImage(W, H)
+  fill(img, 0, 0, W - 1, H - 1, rgb(28, 66, 140))
+  fill(img, 0, 0, W - 1, 1, rgb(230, 234, 240)); fill(img, 0, H - 2, W - 1, H - 1, rgb(230, 234, 240))
+  fill(img, 0, 0, 1, H - 1, rgb(230, 234, 240)); fill(img, W - 2, 0, W - 1, H - 1, rgb(230, 234, 240))
+  -- the bus: a body, three windows, two wheels
+  fill(img, 10, 8, 40, 22, rgb(236, 238, 242))
+  for i = 0, 2 do fill(img, 13 + i * 9, 11, 19 + i * 9, 16, rgb(28, 66, 140)) end
+  fill(img, 14, 22, 18, 25, rgb(230, 234, 240)); fill(img, 32, 22, 36, 25, rgb(230, 234, 240))
+  -- "BUS" as three bold blocks
+  for i = 0, 2 do fill(img, 46 + i * 5, 10, 49 + i * 5, 21, rgb(236, 238, 242)) end
+  save(spr, "city_sign.png")
 end

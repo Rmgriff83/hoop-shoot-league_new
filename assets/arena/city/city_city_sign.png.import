@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cerniedmhj8k0"
-path="res://.godot/imported/city_city_poster.png-83b89debfdade9e9b7c14ed34aef1eb6.ctex"
+uid="uid://niyug5rsottf"
+path="res://.godot/imported/city_city_sign.png-61c18de629ebe6709280855e36b2798f.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "f0dffa91cfa313de066f75b3e54978d8"
+"md5": "de0a3945c39c0250d5329cfd26c5d81b"
 }
 
 [deps]
 
-source_file="res://assets/arena/city/city_city_poster.png"
-dest_files=["res://.godot/imported/city_city_poster.png-83b89debfdade9e9b7c14ed34aef1eb6.ctex"]
+source_file="res://assets/arena/city/city_city_sign.png"
+dest_files=["res://.godot/imported/city_city_sign.png-61c18de629ebe6709280855e36b2798f.ctex"]
 
 [params]
 
