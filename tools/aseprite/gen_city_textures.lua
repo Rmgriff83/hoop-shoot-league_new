@@ -338,3 +338,50 @@ do
   end
   save(spr, "city_flood.png")
 end
+
+-- city_poster.png 128x192 RGB — the bus shelter's lit poster (2:3, 1.2 x
+-- 1.8 m): a ball over a chain hoop on a hot orange field, bold title bars,
+-- a stripe of small print. Unshaded in-game, so it glows in the shelter.
+do
+  local W, H = 128, 192
+  local spr, img = newImage(W, H)
+  for y = 0, H - 1 do
+    for x = 0, W - 1 do
+      local t = y / H
+      img:drawPixel(x, y, rgb(232 - t * 40, 112 - t * 30, 58 - t * 10))
+    end
+  end
+  fill(img, 0, 0, W - 1, 3, rgb(34, 28, 24)); fill(img, 0, H - 4, W - 1, H - 1, rgb(34, 28, 24))
+  fill(img, 0, 0, 3, H - 1, rgb(34, 28, 24)); fill(img, W - 4, 0, W - 1, H - 1, rgb(34, 28, 24))
+  -- the ball
+  local cx, cy, r = 64, 78, 34
+  for y = cy - r, cy + r do
+    for x = cx - r, cx + r do
+      local dx, dy = x - cx, y - cy
+      local d = math.sqrt(dx * dx + dy * dy)
+      if d <= r then
+        local shade = 1 - 0.35 * math.max(0, (dx + dy) / r)
+        local seam = (math.abs(dx) < 2) or (math.abs(dy) < 2) or (math.abs(math.sqrt(dx * dx + (dy + r * 0.7) * (dy + r * 0.7)) - r * 1.1) < 2)
+        img:drawPixel(x, y, seam and rgb(40, 24, 16) or rgb(214 * shade, 96 * shade, 40 * shade))
+        if d > r - 2 then img:drawPixel(x, y, rgb(40, 24, 16)) end
+      end
+    end
+  end
+  -- the hoop: a rim line and hanging chains
+  fill(img, 26, 118, 102, 121, rgb(226, 230, 236))
+  for i = 0, 8 do
+    local x0 = 28 + i * 9
+    for y = 122, 150 - (i % 2) * 4 do
+      if (y // 3) % 2 == 0 then img:drawPixel(x0 + (y - 122) // 6, y, rgb(226, 230, 236)) end
+    end
+  end
+  -- title bars (bold blocks read as lettering from the court)
+  fill(img, 12, 14, 116, 30, rgb(241, 232, 208))
+  fill(img, 18, 18, 110, 26, rgb(34, 28, 24))
+  for i = 0, 6 do fill(img, 20 + i * 13, 19, 27 + i * 13, 25, rgb(241, 232, 208)) end
+  fill(img, 12, 158, 116, 170, rgb(241, 232, 208))
+  for i = 0, 4 do fill(img, 16 + i * 20, 161, 30 + i * 20, 167, rgb(34, 28, 24)) end
+  -- small print
+  for i = 0, 3 do fill(img, 14 + i * 28, 178, 34 + i * 28, 180, rgb(60, 40, 30)) end
+  save(spr, "city_poster.png")
+end

@@ -59,7 +59,7 @@ do
     for x = 0, W - 1 do
       local spangle = vnoise(x, y, 9, 401) * 0.5 + vnoise(x, y, 28, 402) * 0.35 + noise(x, y, 403) * 0.15
       local streak = math.max(0, vnoise(x * 6, y, 40, 404) - 0.55) * 0.6 * (y / H)
-      local v = 150 + spangle * 50 - streak * 60
+      local v = 112 + spangle * 46 - streak * 55   -- mid-grey zinc: under the floodlights it must not read as paper
       -- rust bleed spreading down from the rim mount (bottom centre)
       local dx, dy = (x - W / 2) / (0.22 * px), (H - 1 - y) / (0.30 * px)
       local rust = math.max(0, 1 - math.sqrt(dx * dx + dy * dy * 0.5)) * (0.6 + 0.4 * vnoise(x, y, 6, 405))

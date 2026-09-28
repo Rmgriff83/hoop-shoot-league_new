@@ -2,19 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bjdpxxrcfox0e"
-path="res://.godot/imported/hoop_city_board.png-b0204324ef139b2f6a2f64fbaf9d310f.ctex"
+uid="uid://crw5o51yq3kxt"
+path="res://.godot/imported/city_poster.png-3911ca42a27ce792e680e05caaac3ee6.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "04cd95ded5a62c767dca063c13f5f0f8"
 }
 
 [deps]
 
-source_file="res://assets/hoops/chain/hoop_city_board.png"
-dest_files=["res://.godot/imported/hoop_city_board.png-b0204324ef139b2f6a2f64fbaf9d310f.ctex"]
+source_file="res://assets/textures/city_poster.png"
+dest_files=["res://.godot/imported/city_poster.png-3911ca42a27ce792e680e05caaac3ee6.ctex"]
 
 [params]
 
@@ -26,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

@@ -37,6 +37,12 @@ const FLOOD_TARGET := Vector3(-0.5, 0.0, 0.0)
 const FLOOD_ENERGY := 8.0
 const FLOOD_RANGE := 40.0
 const FLOOD_ANGLE := 32.0
+## The far sidewalk's street lamps (sodium-warm omnis under `LampHead*`) and
+## the bus shelter's glow (`BusStop`).
+const LAMP_ENERGY := 1.6
+const LAMP_RANGE := 11.0
+const SHELTER_ENERGY := 1.2
+const SHELTER_RANGE := 7.0
 ## Window lights: the share of panes lit, and each pane's own switching
 ## period (minutes), mirrored by windows.gdshader.
 const LIT_SHARE := 0.6
@@ -56,6 +62,7 @@ var _tree_rigs: Array[Node3D] = []
 var _window_mats: Dictionary = {}     # texture path → the one ShaderMaterial its faces share
 var _window_faces := 0
 var _flood_lights: Array[SpotLight3D] = []
+var _lamp_lights: Array[OmniLight3D] = []
 var _t := 0.0
 
 
@@ -77,8 +84,14 @@ func setup(arena: Node) -> bool:
 			_bind_windows(n as MeshInstance3D)
 		elif n is MeshInstance3D and n.name.begins_with("FloodHead"):
 			_unshade(n as MeshInstance3D)
-			if not n.name.begins_with("FloodHeadL"):
-				_hang_flood(n as MeshInstance3D)
+			_hang_flood(n as MeshInstance3D)
+		elif n is MeshInstance3D and n.name.begins_with("LampHead"):
+			_unshade(n as MeshInstance3D)
+			_hang_omni(n as Node3D, Vector3(0, -0.3, 0), Color(1.0, 0.86, 0.6), LAMP_ENERGY, LAMP_RANGE)
+		elif n is MeshInstance3D and n.name == "BusPoster":
+			_unshade(n as MeshInstance3D)
+		elif n is Node3D and n.name == "BusStop":
+			_hang_omni(n as Node3D, Vector3.ZERO, Color(1.0, 0.95, 0.85), SHELTER_ENERGY, SHELTER_RANGE)
 	_fx_root = Node3D.new()
 	_fx_root.name = "Traffic"
 	arena.add_child(_fx_root)
@@ -155,6 +168,24 @@ func _hang_flood(head: MeshInstance3D) -> void:
 
 func flood_count() -> int:
 	return _flood_lights.size()
+
+
+## A warm omni under a lamp head or in the shelter, no shadows.
+func _hang_omni(at: Node3D, offset: Vector3, colour: Color, energy: float, range_m: float) -> void:
+	var lamp := OmniLight3D.new()
+	lamp.name = "Lamp"
+	lamp.light_color = colour
+	lamp.light_energy = energy
+	lamp.omni_range = range_m
+	lamp.light_specular = 0.3
+	lamp.shadow_enabled = false
+	at.add_child(lamp)
+	lamp.global_position = at.global_position + offset
+	_lamp_lights.push_back(lamp)
+
+
+func lamp_count() -> int:
+	return _lamp_lights.size()
 
 
 static func _unshade(mi: MeshInstance3D) -> void:
