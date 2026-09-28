@@ -11,7 +11,7 @@
 shader_type spatial;
 render_mode unshaded, cull_back;
 
-uniform sampler2D albedo : source_color, filter_linear;
+uniform sampler2D albedo : source_color, filter_linear_mipmap;
 uniform sampler2D mask : hint_default_black, filter_nearest;
 uniform bool use_mask = true;
 uniform vec2 cells = vec2(32.0, 32.0);

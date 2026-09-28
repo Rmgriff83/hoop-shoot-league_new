@@ -82,9 +82,9 @@ LAYOUT = [
     # Row A, across the street: the grand stone block dead ahead (its ornate
     # facade, 41 m, clears the fence line from the key), shops and a brick
     # office down the street either side, long runs along z.
-    ("Building01", 1, (57.0, 0.0), 0.0), ("Building10", 10, (32.0, -85.0), 90.0), ("Building07", 7, (37.0, 75.0), 90.0),
+    ("Building01", 1, (66.0, 0.0), 0.0), ("Building10", 10, (32.0, -85.0), 90.0), ("Building07", 7, (37.0, 75.0), 90.0),
     # Row B: the office block, small blocks down the street.
-    ("Building09", 9, (100.0, -100.0), 90.0), ("Building05", 5, (70.0, 150.0), 0.0), ("Building08", 8, (70.0, -170.0), 0.0),
+    ("Building09", 9, (110.0, -100.0), 90.0), ("Building05", 5, (70.0, 150.0), 0.0), ("Building08", 8, (70.0, -170.0), 0.0),
     ("Building06", 6, (60.0, 225.0), 90.0),
     # Row C: the skyline — the towers close enough to rise above the frontage.
     ("Building11", 11, (150.0, -30.0), 0.0), ("Building02", 2, (170.0, 70.0), 0.0), ("Building04", 4, (150.0, -180.0), 0.0),
@@ -266,16 +266,8 @@ def build():
                                             (lx - 1.0, KERB_H + 4.95, lz + 0.28), (lx - 1.55, KERB_H + 4.95, lz + 0.28)],
                       (0, -1, 0), flood, c_street, root, (1.0, 1.0))
 
-    # ---- The blocks: Sam Grady's pack at real scale (see LAYOUT), plus the
-    # vacant lot between the far sidewalk and the frontage: a low wall and two
-    # hoardings (one carries the mural) so the gap reads as a city block.
-    cage.add_box("LotWall", (0.3, 1.8, 2 * L), (FAR_X1 + 2.0, 0.9, 0.0), brick, c_blocks, root)
-    for i, bz in enumerate((-14.0, 6.0)):
-        cage.add_box("Hoarding%d" % i, (0.25, 3.2, 7.0), (BLOCK_X0 - 2.0, 4.6, bz), dark, c_blocks, root)
-        cage.add_quad("HoardingFace%d" % i, [(BLOCK_X0 - 2.14, 3.1, bz + 3.3), (BLOCK_X0 - 2.14, 3.1, bz - 3.3),
-                                              (BLOCK_X0 - 2.14, 6.1, bz - 3.3), (BLOCK_X0 - 2.14, 6.1, bz + 3.3)],
-                      (-1, 0, 0), mural, c_blocks, root, (1.0, 1.0))
-        cage.add_box("HoardingLeg%d" % i, (0.2, 3.0, 0.2), (BLOCK_X0 - 2.0, 1.5, bz), steel, c_blocks, root)
+    # ---- The blocks: Sam Grady's pack at real scale (see LAYOUT). Nothing
+    # stands between the far sidewalk and the frontage: the facades ARE the view.
     for name, index, xz, yaw in LAYOUT:
         _building(name, index, facade, c_blocks, root, xz, yaw)
 
@@ -286,15 +278,15 @@ def build():
         cage.add_quad("Tree%d" % i, [(x, 0, z - wdt / 2), (x, 0, z + wdt / 2), (x, hgt, z + wdt / 2), (x, hgt, z - wdt / 2)],
                       (-1, 0, 0), tree, c_props, trig, (1.0, 1.0), origin=(x, 0.0, z))
 
-    # ---- Floodlight poles at the shooter's end, heads aimed at the court.
-    for i, fz in enumerate((-7.9, 7.9)):
-        fx = -10.5
+    # ---- Floodlight poles at all four corners of the court, heads aimed at
+    # it (CityFx hangs a SpotLight3D on every FloodHead* — the court's light).
+    for i, (fx, fz, toward) in enumerate(((-10.5, -7.9, 1), (-10.5, 7.9, 1), (7.0, -9.4, -1), (7.0, 9.4, -1))):
         cage.add_box("FloodPost%d" % i, (0.16, 8.0, 0.16), (fx, 4.0, fz), pole_tex, c_props, root)
-        cage.add_box("FloodArm%d" % i, (1.2, 0.1, 0.1), (fx + 0.6, 8.0, fz), steel, c_props, root)
-        cage.add_box("FloodBox%d" % i, (0.5, 0.36, 0.7), (fx + 1.3, 7.9, fz), dark, c_props, root)
-        cage.add_quad("FloodHead%d" % i, [(fx + 1.56, 7.72, fz - 0.33), (fx + 1.56, 7.72, fz + 0.33),
-                                          (fx + 1.56, 8.08, fz + 0.33), (fx + 1.56, 8.08, fz - 0.33)],
-                      (1, 0, 0), flood, c_props, root, (1.0, 1.0))
+        cage.add_box("FloodArm%d" % i, (1.2, 0.1, 0.1), (fx + 0.6 * toward, 8.0, fz), steel, c_props, root)
+        cage.add_box("FloodBox%d" % i, (0.5, 0.36, 0.7), (fx + 1.3 * toward, 7.9, fz), dark, c_props, root)
+        hx = fx + 1.56 * toward
+        cage.add_quad("FloodHead%d" % i, [(hx, 7.72, fz - 0.33), (hx, 7.72, fz + 0.33), (hx, 8.08, fz + 0.33), (hx, 8.08, fz - 0.33)],
+                      (toward, 0, 0), flood, c_props, root, (1.0, 1.0))
 
     # ---- Sky: an open cylinder seen from inside (the beach's recipe).
     bpy.ops.mesh.primitive_cylinder_add(vertices=32, radius=SKY_R, depth=SKY_Y1 - SKY_Y0,

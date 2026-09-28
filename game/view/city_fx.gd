@@ -30,6 +30,11 @@ const MAX_CARS := 2
 const HEADLIGHT_ENERGY := 0.9
 const HEADLIGHT_RANGE := 14.0
 const HEADLIGHT_ANGLE := 32.0
+## The court's floodlights: a spot hung on every FloodHead*, aimed at the key.
+const FLOOD_TARGET := Vector3(-1.5, 0.0, 0.0)
+const FLOOD_ENERGY := 3.2
+const FLOOD_RANGE := 36.0
+const FLOOD_ANGLE := 42.0
 ## Window lights: the share of panes lit, and each pane's own switching
 ## period (minutes), mirrored by windows.gdshader.
 const LIT_SHARE := 0.6
@@ -48,6 +53,7 @@ var _rng := RandomNumberGenerator.new()
 var _tree_rigs: Array[Node3D] = []
 var _window_mats: Dictionary = {}     # texture path → the one ShaderMaterial its faces share
 var _window_faces := 0
+var _flood_lights: Array[SpotLight3D] = []
 var _t := 0.0
 
 
@@ -69,6 +75,8 @@ func setup(arena: Node) -> bool:
 			_bind_windows(n as MeshInstance3D)
 		elif n is MeshInstance3D and n.name.begins_with("FloodHead"):
 			_unshade(n as MeshInstance3D)
+			if not n.name.begins_with("FloodHeadL"):
+				_hang_flood(n as MeshInstance3D)
 	_fx_root = Node3D.new()
 	_fx_root.name = "Traffic"
 	arena.add_child(_fx_root)
@@ -123,6 +131,27 @@ func _bind_windows(mi: MeshInstance3D) -> void:
 		_window_mats[key] = m
 	mi.material_override = _window_mats[key]
 	_window_faces += 1
+
+
+## A warm spot at the head, aimed at the key, no shadows (the phone's budget).
+func _hang_flood(head: MeshInstance3D) -> void:
+	var lamp := SpotLight3D.new()
+	lamp.name = "Flood"
+	lamp.light_color = Color(1.0, 0.94, 0.82)
+	lamp.light_energy = FLOOD_ENERGY
+	lamp.spot_range = FLOOD_RANGE
+	lamp.spot_angle = FLOOD_ANGLE
+	lamp.spot_attenuation = 0.7
+	lamp.shadow_enabled = false
+	head.add_child(lamp)
+	# The head quad's local frame is its own; aim in the arena's frame.
+	lamp.global_position = head.global_position
+	lamp.look_at(head.get_parent_node_3d().to_global(FLOOD_TARGET) if head.get_parent_node_3d() != null else FLOOD_TARGET)
+	_flood_lights.push_back(lamp)
+
+
+func flood_count() -> int:
+	return _flood_lights.size()
 
 
 static func _unshade(mi: MeshInstance3D) -> void:
