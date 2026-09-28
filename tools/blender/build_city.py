@@ -112,6 +112,13 @@ def _building(name, index, mat, coll, parent, sim_xz, yaw_deg):
         bpy.ops.object.join()
     obj = bpy.context.view_layer.objects.active
     obj.name = obj.data.name = name
+    # The importer keeps its Y-up → Z-up conversion as a rotation on the
+    # OBJECT; bake it into the vertices before measuring the footprint (or the
+    # yaw below would replace it and stand every building on its side).
+    bpy.ops.object.select_all(action="DESELECT")
+    obj.select_set(True)
+    bpy.context.view_layer.objects.active = obj
+    bpy.ops.object.transform_apply(location=True, rotation=True, scale=True)
     me = obj.data
     me.materials.clear()
     me.materials.append(mat)

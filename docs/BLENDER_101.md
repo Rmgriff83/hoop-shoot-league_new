@@ -687,7 +687,11 @@ frame, the beach's fence loop (`ENC_X0..X1 -11.2..5.7`, `±8.6`, every side
 `game/view/city_fx.gd`) → far sidewalk → a vacant lot with hoardings → the
 city blocks. The blocks are **Sam Grady's Low Poly Buildings Pack**
 (`art/third_party/buildings/`, CC BY 4.0, credited): `_building()` imports
-each CopperCube OBJ at real scale (Y-up metres), shifts its v by +1, gives
+each CopperCube OBJ at real scale (Y-up metres — and bakes the importer's
+Y-up → Z-up conversion into the vertices with `transform_apply` first,
+because the importer leaves it as a rotation on the object and setting the
+yaw would otherwise replace it and lay every building on its side), shifts
+its v by +1, gives
 it the one `City_Facade` material (the atlas conformed by
 `tools/aseprite/conform_buildings.lua` to `city_facades.png`) and stands it
 where `LAYOUT` says — low-rises across the street, mid-rises behind, the

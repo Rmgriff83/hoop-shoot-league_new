@@ -50,19 +50,17 @@ void fragment() {
 	bool flipped = mod(flips, 2.0) >= 1.0;
 	bool lit = base_lit != flipped;
 	float warm = 0.8 + 0.4 * hash2(cell + vec2(11.1, 11.1));
+	// Unshaded: the lit pane is painted straight into ALBEDO (EMISSION is a
+	// lighting term and never reaches an unshaded surface).
 	if (use_mask) {
 		float pane = texture(mask, uv).r;
-		ALBEDO = tex;
-		EMISSION = lit ? lit_color * warm * pane * emission_energy : vec3(0.0);
-		if (pane > 0.5 && !lit) {
-			ALBEDO = mix(tex, dark_color, 0.6);
-		}
+		vec3 glow = lit_color * warm * emission_energy;
+		ALBEDO = lit ? mix(tex, glow, pane) : mix(tex, dark_color, 0.6 * pane);
 	} else {
 		bool in_pane = all(greaterThan(f, pane_min)) && all(lessThan(f, pane_max));
 		ALBEDO = tex;
 		if (in_pane) {
-			ALBEDO = lit ? lit_color * warm : dark_color;
-			EMISSION = lit ? lit_color * warm * emission_energy : vec3(0.0);
+			ALBEDO = lit ? lit_color * warm * emission_energy : dark_color;
 		}
 	}
 	ROUGHNESS = 1.0;
