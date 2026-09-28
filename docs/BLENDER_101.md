@@ -721,9 +721,13 @@ mount, a riveted rolled edge) as an extruded outline with its two lower
 corners chamfered 45° over 0.22 m — the sim keeps the rectangle collider,
 the cut sits where a ball is a wide miss — a bare steel gym rim
 (`hoop_rim_steel.png`, add_gym_rim's neck / flange / spring box / hooks),
-the same 12-strand tapered net lattice `NetSim` drives skinned with
-`hoop_chain.png` (runs of real chain links along the diagonals, every
-other one edge-on) gathered on a small steel `NetRing`, and a GOOSENECK:
+a net with the chain net's own topology — a diamond lattice of 5 rings
+of 12 nodes, each ring turned half a step, so the springs `NetSim` drives
+ARE the 12 chains' diagonal runs — which `NetSim.set_chain(true)` draws
+as a multimesh of real steel links (one procedural oval link per 2.8 cm
+of every spring between rings, every other link turned 90°, re-placed
+each frame the net moves; the cord surface itself is hidden), open at the
+bottom, and a GOOSENECK:
 one bent tube swept by `_tube()` from the ground on the sim's pole line up
 to 2.1 m, round a 0.55 m bend and up to a bolted mount on the board's back.
 The city arena builds no pole. `hoop_set.tres` sets `net_kind = "chain"`

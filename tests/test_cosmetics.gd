@@ -158,7 +158,10 @@ func _street_and_arenas(t) -> void:
 		var hoop_scene: PackedScene = load(chain.model_path)
 		var inst: Node = hoop_scene.instantiate()
 		t.ok(inst.find_child("Gooseneck", true, false) != null, "the chain hoop stands on its own gooseneck")
-		t.ok(inst.find_child("NetRing", true, false) != null and inst.find_child("Net", true, false) != null, "chains gather on a ring under the lattice")
+		var netm: MeshInstance3D = inst.find_child("Net", true, false)
+		t.ok(inst.find_child("NetRing", true, false) == null and netm != null, "the chain net is open at the bottom (no ring)")
+		if netm != null:
+			t.ok(netm.mesh.surface_get_arrays(0)[Mesh.ARRAY_VERTEX].size() >= 60, "the chain lattice has its 5 rings of 12")
 		t.ok(inst.find_child("BoardArm", true, false) == null, "no street arm on it")
 		inst.free()
 		t.ok(chain.price_coins > 0, "not a starter")

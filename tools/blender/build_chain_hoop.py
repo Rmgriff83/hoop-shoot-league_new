@@ -2,8 +2,9 @@
 (2026-09-27): a weathered GALVANISED STEEL board, the regulation 1.83 x 1.05 m
 rectangle with its two lower corners chamfered 45 deg over 0.22 m, a riveted
 rolled edge, a bare steel gym rim (add_gym_rim's neck, flange, spring box and
-12 hooks), a net of chain links — the same 12-strand tapered lattice NetSim
-drives, skinned with hoop_chain.png, gathered on a small steel ring — and a
+12 hooks), a net of chain links — a diamond lattice of 12 chains NetSim
+drives and renders as a multimesh of real links (net_sim.gd set_chain),
+open at the bottom — and a
 GOOSENECK pole: one bent steel tube from the ground on the sim's pole line
 (board face + 0.3 m) up and over to a bolted mount on the board's back. The
 arena builds no pole for the city; this hoop brings its own.
@@ -188,36 +189,39 @@ def build():
     rim.data.materials.append(rim_mat)
     bh.link_obj(rim, coll, pivot, (-R_RIM, 0, 0))
 
-    bpy.ops.mesh.primitive_cylinder_add(vertices=12, radius=R_RIM, depth=NET_HEIGHT,
-                                        end_fill_type="NOTHING", location=(0, 0, 0))
-    net = bpy.context.active_object
-    net.name = net.data.name = "Net"
+    # The net: a DIAMOND lattice, the chain net's own topology — 5 rings of 12
+    # nodes, each ring turned half a step so every node hangs between the two
+    # above it; the triangles between rings make the two diagonal families
+    # (the chains NetSim renders as links) plus each ring's horizontals (kept
+    # as invisible stiffeners). Top ring at the rim under the 12 hooks, the
+    # bottom NET_HEIGHT down at NET_BOTTOM_R.
     bm = bmesh.new()
-    bm.from_mesh(net.data)
-    vertical = [e for e in bm.edges if abs(e.verts[0].co.z - e.verts[1].co.z) > 1e-6]
-    bmesh.ops.subdivide_edges(bm, edges=vertical, cuts=NET_RINGS, use_grid_fill=True)
-    for v in bm.verts:
-        t = (NET_HEIGHT / 2 - v.co.z) / NET_HEIGHT
-        r = R_RIM + (NET_BOTTOM_R - R_RIM) * t
-        ang = math.atan2(v.co.y, v.co.x)
-        v.co.x, v.co.y = r * math.cos(ang), r * math.sin(ang)
     uvl = bm.loops.layers.uv.verify()
-    for f in bm.faces:
-        for loop in f.loops:
-            u, vv = loop[uvl].uv
-            loop[uvl].uv = (u * 3.0, vv)
-    bm.to_mesh(net.data)
+    rings = []
+    for r in range(NET_RINGS + 1):
+        t = r / NET_RINGS
+        rad = R_RIM + (NET_BOTTOM_R - R_RIM) * t
+        z = -NET_HEIGHT * t
+        row = []
+        for i in range(12):
+            ang = math.tau * (i + 0.5 * r) / 12
+            row.append(bm.verts.new((rad * math.cos(ang), rad * math.sin(ang), z)))
+        rings.append(row)
+    for r in range(NET_RINGS):
+        for i in range(12):
+            a0, a1 = rings[r][i], rings[r][(i + 1) % 12]
+            b0, b1 = rings[r + 1][i], rings[r + 1][(i + 1) % 12]
+            for tri in ((a0, a1, b0), (a1, b1, b0)):
+                f = bm.faces.new(tri)
+                for loop in f.loops:
+                    v = loop.vert
+                    loop[uvl].uv = (math.atan2(v.co.y, v.co.x) / math.tau * 3.0, 1.0 + v.co.z / NET_HEIGHT)
+    me = bpy.data.meshes.new("Net")
+    bm.to_mesh(me)
     bm.free()
-    net.data.materials.append(net_mat)
-    bh.link_obj(net, coll, pivot, (-R_RIM, 0, -NET_HEIGHT / 2))
-    # The chains gather on a small steel ring under the lattice.
-    bpy.ops.mesh.primitive_torus_add(major_radius=NET_BOTTOM_R, minor_radius=0.006,
-                                     major_segments=16, minor_segments=5, location=(0, 0, 0))
-    ring = bpy.context.active_object
-    ring.name = ring.data.name = "NetRing"
-    ring.data.materials.append(rim_mat)
-    bh.link_obj(ring, coll, pivot, (-R_RIM, 0, -NET_HEIGHT))
-
+    me.materials.append(net_mat)
+    net = bpy.data.objects.new("Net", me)
+    bh.link_obj(net, coll, pivot, (-R_RIM, 0, 0))
     meshes = [o for o in coll.objects if o.type == "MESH"]
     bpy.ops.object.select_all(action="DESELECT")
     for o in meshes:

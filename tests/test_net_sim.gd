@@ -117,4 +117,32 @@ func run(t) -> void:
 		diff = maxf(diff, c.particle_position(i).distance_to(d.particle_position(i)))
 	t.ok(diff > 0.005, "spin changes how the cords are dragged (%.4f m)" % diff)
 
+	# 5. Chain rendering (the city hoop): the surface hides, links line every
+	#    spring between rings, they sit inside the net and follow a pass.
+	var e := NetSim.new()
+	var me := _make_net()
+	root.add_child(me)
+	root.add_child(e)
+	e.setup(me)
+	e.set_chain(true)
+	var chain: Node = root.find_child("Chain", true, false)
+	t.ok(chain is MultiMeshInstance3D and not me.visible, "chain: a link multimesh replaces the cord surface")
+	t.ok(e.chain_link_count() > 100, "hundreds of links (%d)" % e.chain_link_count())
+	var inside := true
+	for i in e.chain_link_count():
+		var o := e.chain_instance_transform(i).origin
+		if absf(o.x) > 0.3 or absf(o.z) > 0.3 or o.y > 0.3 or o.y < -0.5:   # the test cylinder is centred at the origin
+			inside = false
+	t.ok(inside, "every link sits on the net")
+	var before := PackedVector3Array()
+	for i in e.chain_link_count():
+		before.push_back(e.chain_instance_transform(i).origin)
+	_run_drop(e, 0.0, 0.25)
+	var moved := 0.0
+	for i in e.chain_link_count():
+		moved = maxf(moved, e.chain_instance_transform(i).origin.distance_to(before[i]))
+	t.ok(moved > 0.005, "the links follow the ball's pass (%.4f m)" % moved)
+	e.set_chain(false)
+	t.ok(me.visible and e.chain_link_count() == 0, "chain off: the surface is back")
+
 	root.free()

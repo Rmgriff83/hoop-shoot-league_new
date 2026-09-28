@@ -289,6 +289,8 @@ func _build_hoop_model() -> bool:
 			net_sim = null
 		else:
 			_strip_blend_shape_tracks()
+			# A chain hoop draws its springs as runs of steel links, not a surface.
+			net_sim.set_chain(hoop_set.net_kind == "chain")
 	# LED surfaces are optional (a street hoop has none: the HUD keeps score).
 	if face is MeshInstance3D:
 		(face as MeshInstance3D).material_override = led.material

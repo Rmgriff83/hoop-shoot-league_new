@@ -55,6 +55,16 @@ var _spring_len := PackedFloat32Array()
 var _awake := false
 var _ready_ok := false
 var _accum := 0.0
+## Chain rendering (the city hoop): the driven surface is hidden and every
+## spring between rings is drawn as a run of steel links in a multimesh.
+const LINK_PITCH := 0.028
+const LINK_LEN := 0.034
+const LINK_W := 0.017
+const LINK_WIRE := 0.0028
+var _chain: MultiMeshInstance3D
+var _chain_edges: PackedInt32Array = PackedInt32Array()   # spring index per rendered edge
+var _chain_n: PackedInt32Array = PackedInt32Array()       # links per rendered edge
+var _chain_xf: Array[Transform3D] = []                     # the placed links (a CPU copy: tests, headless)
 
 
 ## Ball description for step(): world position/velocity (m, m/s), scalar spin
@@ -166,6 +176,147 @@ func _settle_rest() -> void:
 			_substep(STEP, [])
 		_rest = _pos.duplicate()
 		_prev = _pos.duplicate()
+
+
+## Draw the net as CHAIN: hide the cord surface and place a link mesh along
+## every spring that runs between rings (the chains), re-placed whenever the
+## particles move. Off: the surface shows again.
+func set_chain(on: bool) -> void:
+	if not _ready_ok:
+		return
+	if _chain != null:
+		_chain.queue_free()
+		_chain = null
+	_chain_edges = PackedInt32Array()
+	_chain_n = PackedInt32Array()
+	_chain_xf = []
+	_mi.visible = not on
+	if not on:
+		return
+	for s in _spring_a.size():
+		var a := _rest[_spring_a[s]]
+		var b := _rest[_spring_b[s]]
+		if absf(a.y - b.y) < 1e-4:
+			continue   # a ring's horizontal: a stiffener, not a chain
+		_chain_edges.push_back(s)
+		_chain_n.push_back(maxi(1, roundi(a.distance_to(b) / LINK_PITCH)))
+	var total := 0
+	for n in _chain_n:
+		total += n
+	var mm := MultiMesh.new()
+	mm.transform_format = MultiMesh.TRANSFORM_3D
+	mm.mesh = _link_mesh()
+	mm.instance_count = total
+	_chain = MultiMeshInstance3D.new()
+	_chain.name = "Chain"
+	_chain.multimesh = mm
+	_chain.transform = _mi.transform
+	var parent := _mi.get_parent()
+	if parent != null:
+		parent.add_child(_chain)
+	_upload_chain()
+
+
+func chain_link_count() -> int:
+	return _chain_xf.size()
+
+
+func chain_instance_transform(i: int) -> Transform3D:
+	return _chain_xf[i] if i < _chain_xf.size() else Transform3D()
+
+
+## One link: an oval ring of wire (LINK_LEN x LINK_W, wire LINK_WIRE), its
+## long axis along +y, its flat plane x-y. ~80 tris; galvanised grey.
+static func _link_mesh() -> ArrayMesh:
+	var st := SurfaceTool.new()
+	st.begin(Mesh.PRIMITIVE_TRIANGLES)
+	var around := 10
+	var tube := 4
+	var half_l := LINK_LEN * 0.5 - LINK_W * 0.5
+	var ring_r := LINK_W * 0.5 - LINK_WIRE
+	# Centre-line of the oval: two straight runs joined by semicircles (a stadium).
+	var path: Array[Vector3] = []
+	var tangents: Array[Vector3] = []
+	for i in around:
+		var t := float(i) / around
+		var p: Vector3
+		var tg: Vector3
+		if t < 0.5:
+			var ang := PI * (t / 0.5) - PI * 0.5      # right semicircle, from bottom to top
+			p = Vector3(ring_r * cos(ang), half_l + ring_r * sin(ang), 0.0)
+			tg = Vector3(-sin(ang), cos(ang), 0.0)
+			if i == 0:
+				p = Vector3(ring_r, -half_l, 0.0)
+				tg = Vector3(0, 1, 0)
+		else:
+			var ang := PI * ((t - 0.5) / 0.5) + PI * 0.5   # left semicircle, top to bottom
+			p = Vector3(ring_r * cos(ang), -half_l + ring_r * sin(ang), 0.0)
+			tg = Vector3(-sin(ang), cos(ang), 0.0)
+			if i == around / 2:
+				p = Vector3(-ring_r, half_l, 0.0)
+				tg = Vector3(0, -1, 0)
+		path.push_back(p)
+		tangents.push_back(tg.normalized())
+	var rings: Array = []
+	for i in around:
+		var tg := tangents[i]
+		var side := Vector3(0, 0, 1)
+		var out := tg.cross(side).normalized()
+		var ring := []
+		for k in tube:
+			var a := TAU * k / tube
+			var nrm := (out * cos(a) + side * sin(a)).normalized()
+			ring.push_back([path[i] + nrm * LINK_WIRE, nrm])
+		rings.push_back(ring)
+	for i in around:
+		var r0: Array = rings[i]
+		var r1: Array = rings[(i + 1) % around]
+		for k in tube:
+			var k1 := (k + 1) % tube
+			for tri in [[r0[k], r1[k], r1[k1]], [r0[k], r1[k1], r0[k1]]]:
+				for v in tri:
+					st.set_normal(v[1])
+					st.add_vertex(v[0])
+	var mesh := st.commit()
+	var mat := StandardMaterial3D.new()
+	mat.albedo_color = Color(0.72, 0.74, 0.78)
+	mat.metallic = 0.6
+	mat.roughness = 0.45
+	mesh.surface_set_material(0, mat)
+	return mesh
+
+
+## Place every link along its spring: y along the edge, the flat plane
+## turned 90 degrees on every other link, as a real chain hangs.
+func _upload_chain() -> void:
+	if _chain == null:
+		return
+	var mm := _chain.multimesh
+	if _chain_xf.size() != mm.instance_count:
+		_chain_xf.resize(mm.instance_count)
+	var idx := 0
+	for e in _chain_edges.size():
+		var s := _chain_edges[e]
+		var a := _pos[_spring_a[s]]
+		var b := _pos[_spring_b[s]]
+		var dir := (b - a)
+		var n := _chain_n[e]
+		if dir.length() < 1e-6:
+			for k in n:
+				_chain_xf[idx] = Transform3D(Basis(), a)
+				mm.set_instance_transform(idx, _chain_xf[idx])
+				idx += 1
+			continue
+		var y := dir.normalized()
+		var ref := Vector3(0, 0, 1) if absf(y.z) < 0.9 else Vector3(1, 0, 0)
+		var x := y.cross(ref).normalized()
+		var z := x.cross(y).normalized()
+		for k in n:
+			var p := a + dir * ((k + 0.5) / n)
+			var basis := Basis(x, y, z) if k % 2 == 0 else Basis(z, y, -x)
+			_chain_xf[idx] = Transform3D(basis, p)
+			mm.set_instance_transform(idx, _chain_xf[idx])
+			idx += 1
 
 
 func particle_count() -> int:
@@ -308,3 +459,4 @@ func _upload() -> void:
 	_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, _arrays)
 	if _material != null:
 		_mesh.surface_set_material(0, _material)
+	_upload_chain()
