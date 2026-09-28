@@ -714,14 +714,22 @@ instance `seed` so the buildings sharing the atlas light differently. The
 credited): `CityFx.spawn_car()` instances one, strips its `StaticBody3D`,
 adds a headlight spot, and slides it along z on one lane at 8–11 m/s.
 
-**The chain hoop** (`build_chain_hoop.py` → `assets/hoops/chain/`) is the
-street hoop with a white perforated-steel board (`city_board.png`) and the
-same tapered 12-strand net lattice one ring taller, skinned with
-`hoop_chain.png` (steel links along the nylon's diagonals), so `NetSim`
-drives it unchanged; `hoop_set.tres` sets `net_kind = "chain"` and stiff,
-low-grip feel numbers, and its makes are the generated `chain_swish_*`
-clatters (`tools/gen_sfx.gd`). The sim side is `SimGeometry.city()`'s
-`net_drag 1.6` / `net_wall_e 0.20` (docs/PROGRESSION.md → the city).
+**The chain hoop** (`build_chain_hoop.py` → `assets/hoops/chain/`), after
+Ross's references (2026-09-27): a weathered galvanised steel board
+(`city_board.png`: zinc spangle, weathering streaks, rust bleed under the
+mount, a riveted rolled edge) as an extruded outline with its two lower
+corners chamfered 45° over 0.22 m — the sim keeps the rectangle collider,
+the cut sits where a ball is a wide miss — a bare steel gym rim
+(`hoop_rim_steel.png`, add_gym_rim's neck / flange / spring box / hooks),
+the same 12-strand tapered net lattice `NetSim` drives skinned with
+`hoop_chain.png` (runs of real chain links along the diagonals, every
+other one edge-on) gathered on a small steel `NetRing`, and a GOOSENECK:
+one bent tube swept by `_tube()` from the ground on the sim's pole line up
+to 2.1 m, round a 0.55 m bend and up to a bolted mount on the board's back.
+The city arena builds no pole. `hoop_set.tres` sets `net_kind = "chain"`
+and stiff, low-grip feel numbers; its makes are the generated
+`chain_swish_*` clatters (`tools/gen_sfx.gd`). The sim side is
+`SimGeometry.city()`'s `net_drag 1.6` / `net_wall_e 0.20`.
 
 ## 15. Flipbooks: authoring fire (and other effects) in Blender
 

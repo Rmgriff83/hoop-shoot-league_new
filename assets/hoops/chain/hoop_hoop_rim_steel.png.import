@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bjdpxxrcfox0e"
-path="res://.godot/imported/hoop_city_board.png-b0204324ef139b2f6a2f64fbaf9d310f.ctex"
+uid="uid://bais5fujm6ee4"
+path="res://.godot/imported/hoop_hoop_rim_steel.png-590c2878ded288ed2719e9add8f74db2.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "7e457849eb32836a9ce07b27bd2152af"
+"md5": "c3e16ddc939a8a5d158dd24fa3c68601"
 }
 
 [deps]
 
-source_file="res://assets/hoops/chain/hoop_city_board.png"
-dest_files=["res://.godot/imported/hoop_city_board.png-b0204324ef139b2f6a2f64fbaf9d310f.ctex"]
+source_file="res://assets/hoops/chain/hoop_hoop_rim_steel.png"
+dest_files=["res://.godot/imported/hoop_hoop_rim_steel.png-590c2878ded288ed2719e9add8f74db2.ctex"]
 
 [params]
 

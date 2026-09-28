@@ -1,9 +1,17 @@
-"""Build the chain-net hoop for the city court: the street hoop's regulation
-1.83 x 1.05 m board as white perforated steel with a red target, the gym rim,
-and a NET of steel links — the same tapered 12-strand lattice as the nylon
-net (NetSim reads its vertices) but one ring taller and skinned with
-hoop_chain.png, so it reads as chain and the sim's chain feel
-(SimGeometry.city(): CHAIN_NET_DRAG / CHAIN_NET_WALL_E) has a body to match.
+"""Build the chain-net hoop for the city court, after Ross's references
+(2026-09-27): a weathered GALVANISED STEEL board, the regulation 1.83 x 1.05 m
+rectangle with its two lower corners chamfered 45 deg over 0.22 m, a riveted
+rolled edge, a bare steel gym rim (add_gym_rim's neck, flange, spring box and
+12 hooks), a net of chain links — the same 12-strand tapered lattice NetSim
+drives, skinned with hoop_chain.png, gathered on a small steel ring — and a
+GOOSENECK pole: one bent steel tube from the ground on the sim's pole line
+(board face + 0.3 m) up and over to a bolted mount on the board's back. The
+arena builds no pole for the city; this hoop brings its own.
+
+The sim keeps the rectangle collider (SimGeometry.city(): board 1.83 x 1.05,
+a straight pole cylinder r 0.06): the chamfer is 0.22 m at the far bottom
+corners, where a ball is a wide miss, and the tube above the bend is out of
+any ball's way.
 
 Run headless:
   /Applications/Blender.app/Contents/MacOS/Blender -b --python tools/blender/build_chain_hoop.py
@@ -12,17 +20,15 @@ Produces  art/blender/chain_hoop.blend  (source, ignored by Godot) and
           assets/hoops/chain/hoop.glb   (game export, Y-up, transforms applied).
 
 Same conventions as build_street_hoop.py: origin is the RIM CENTRE, blender
-(x, y, z) = (sim x, -sim z, sim y); add_gym_rim.apply() adds the neck,
-spring box, flange and hooks and wires the net alpha for the exporter.
-
-CREATOR script: refuses to overwrite an existing chain_hoop.blend unless run
-with `-- --force`. Never touches the other hoops.
+(x, y, z) = (sim x, -sim z, sim y). CREATOR script: refuses to overwrite an
+existing chain_hoop.blend unless run with `-- --force`.
 """
 import math
 import os
 import sys
 import bmesh
 import bpy
+from mathutils import Vector
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -40,12 +46,97 @@ BOARD_OFF = bh.BOARD_OFF
 BOARD_BOTTOM = -0.15
 BOARD_TOP = 0.90
 BOARD_HALF_W = 0.915
-BOARD_THICK = 0.05
+BOARD_THICK = 0.04
+CHAMFER = 0.22
+FRAME = 0.05
 NET_BOTTOM_R = bh.NET_BOTTOM_R
 NET_HEIGHT = bh.NET_HEIGHT
-NET_RINGS = 4                  # vertical cuts: 5 rings of links
-POLE_X = BOARD_OFF + 0.3
-ARM_Y = 0.35
+NET_RINGS = 4
+POLE_X = BOARD_OFF + 0.3       # the sim's pole line (SimGeometry pole_off)
+POLE_R = 0.06                  # SimGeometry.city() pole_r
+GROUND = -2.44                 # the floor, in rim-centre space (rim 8 ft up)
+MOUNT_X = BOARD_OFF + BOARD_THICK + 0.02   # the board's back, where the tube lands
+MOUNT_Z = BOARD_BOTTOM + (BOARD_TOP - BOARD_BOTTOM) * 0.62
+BEND_R = POLE_X - MOUNT_X       # the bend spans exactly pole line -> board back (0.24 m)
+NECK_Z = MOUNT_Z - BEND_R       # where the vertical run starts to bend
+
+
+def _tube(name, points, radius, mat, coll, parent, sides=12):
+    """A tube swept along a polyline (blender coords): rings of `sides` verts
+    at every point, quads between them, caps at both ends."""
+    bm = bmesh.new()
+    rings = []
+    for i, p in enumerate(points):
+        prev_p = points[max(i - 1, 0)]
+        next_p = points[min(i + 1, len(points) - 1)]
+        tangent = (Vector(next_p) - Vector(prev_p)).normalized()
+        up = Vector((0, 1, 0)) if abs(tangent.y) < 0.9 else Vector((1, 0, 0))
+        a = tangent.cross(up).normalized()
+        b = tangent.cross(a).normalized()
+        ring = []
+        for k in range(sides):
+            ang = math.tau * k / sides
+            ring.append(bm.verts.new(Vector(p) + a * (radius * math.cos(ang)) + b * (radius * math.sin(ang))))
+        rings.append(ring)
+    uvl = bm.loops.layers.uv.verify()
+    for i in range(len(rings) - 1):
+        for k in range(sides):
+            f = bm.faces.new((rings[i][k], rings[i][(k + 1) % sides], rings[i + 1][(k + 1) % sides], rings[i + 1][k]))
+            for loop, uv in zip(f.loops, ((k / sides, i * 0.3), ((k + 1) / sides, i * 0.3), ((k + 1) / sides, (i + 1) * 0.3), (k / sides, (i + 1) * 0.3))):
+                loop[uvl].uv = uv
+    bm.faces.new(tuple(reversed(rings[0])))
+    bm.faces.new(tuple(rings[-1]))
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    me.materials.append(mat)
+    obj = bpy.data.objects.new(name, me)
+    bh.link_obj(obj, coll, parent, (0, 0, 0))
+    return obj
+
+
+def _board(coll, parent, body, face, steel):
+    """The chamfered steel board: an extruded outline, its front face
+    UV-mapped over city_board.png in board space."""
+    h = BOARD_TOP - BOARD_BOTTOM
+    w = BOARD_HALF_W
+    # outline in the board's plane: (y lateral, z up), counter-clockwise seen from the shooter (-x)
+    outline = [(-w, BOARD_BOTTOM + CHAMFER), (-w + CHAMFER, BOARD_BOTTOM), (w - CHAMFER, BOARD_BOTTOM),
+               (w, BOARD_BOTTOM + CHAMFER), (w, BOARD_TOP), (-w, BOARD_TOP)]
+    bm = bmesh.new()
+    uvl = bm.loops.layers.uv.verify()
+    front = [bm.verts.new((BOARD_OFF, y, z)) for (y, z) in outline]
+    back = [bm.verts.new((BOARD_OFF + BOARD_THICK, y, z)) for (y, z) in outline]
+    ff = bm.faces.new(tuple(reversed(front)))          # normal toward -x (the shooter)
+    fb = bm.faces.new(tuple(back))
+    for i in range(len(outline)):
+        j = (i + 1) % len(outline)
+        bm.faces.new((front[i], back[i], back[j], front[j]))
+    bm.normal_update()
+    for f in bm.faces:
+        if f.normal.x < -0.5:
+            f.material_index = 1
+            for loop in f.loops:
+                y, z = loop.vert.co.y, loop.vert.co.z
+                loop[uvl].uv = ((w - y) / (2 * w), (z - BOARD_BOTTOM) / h)
+        else:
+            f.material_index = 0
+            for loop in f.loops:
+                loop[uvl].uv = (loop.vert.co.y * 2.0, loop.vert.co.z * 2.0)
+    me = bpy.data.meshes.new("Backboard")
+    bm.to_mesh(me)
+    bm.free()
+    me.materials.append(body)
+    me.materials.append(face)
+    obj = bpy.data.objects.new("Backboard", me)
+    bh.link_obj(obj, coll, parent, (0, 0, 0))
+    # The rolled edge: thin steel boxes along the top and the two sides.
+    t = 0.012
+    bh.add_box("EdgeTop", (BOARD_THICK + 0.02, 2 * w + 0.02, t), (BOARD_OFF + BOARD_THICK / 2, 0, BOARD_TOP), steel, coll, parent)
+    for s in (-1, 1):
+        bh.add_box("EdgeSide%d" % (s + 1), (BOARD_THICK + 0.02, t, h - CHAMFER + 0.02),
+                   (BOARD_OFF + BOARD_THICK / 2, s * w, (BOARD_TOP + BOARD_BOTTOM + CHAMFER) / 2), steel, coll, parent)
+    return obj
 
 
 def build():
@@ -58,32 +149,32 @@ def build():
     root.empty_display_size = 0.15
     bh.link_obj(root, coll)
 
-    body = bh.mat_flat("Chain_Body", (200, 204, 210), roughness=0.5)
+    body = bh.mat_flat("Chain_Body", (140, 144, 152), roughness=0.55)
     face = bh.mat_tex("Chain_Face", TEX("city_board.png"))
-    metal = bh.mat_flat("Chain_Metal", (54, 58, 66))
-    rim_mat = bh.mat_tex("Rim", TEX("hoop_rim.png"))
+    steel = bh.mat_tex("Chain_Steel", TEX("city_steel.png"))
+    bolt = bh.mat_flat("Chain_Bolt", (90, 94, 104), roughness=0.5)
+    rim_mat = bh.mat_tex("Rim", TEX("hoop_rim_steel.png"))
     net_mat = bh.mat_tex("Net", TEX("hoop_chain.png"), alpha_clip=True, double_sided=True)
 
-    h = BOARD_TOP - BOARD_BOTTOM
-    board = bh.add_box("Backboard", (BOARD_THICK, BOARD_HALF_W * 2, h),
-                       (BOARD_OFF + BOARD_THICK / 2, 0, (BOARD_TOP + BOARD_BOTTOM) / 2), body, coll, root)
-    board.data.materials.append(face)
-    bm = bmesh.new()
-    bm.from_mesh(board.data)
-    uv = bm.loops.layers.uv.verify()
-    for f in bm.faces:
-        if f.normal.x < -0.5:
-            f.material_index = 1
-            for loop in f.loops:
-                y, z = loop.vert.co.y, loop.vert.co.z
-                loop[uv].uv = ((BOARD_HALF_W - y) / (2 * BOARD_HALF_W), (z + h / 2) / h)
-    bm.to_mesh(board.data)
-    bm.free()
+    _board(coll, root, body, face, steel)
 
-    bh.add_box("BoardArm", (0.25, 0.10, 0.06), (BOARD_OFF + BOARD_THICK + 0.125, 0, ARM_Y), metal, coll, root)
-    bh.add_box("BoardYoke", (0.06, 0.14, 0.70), (POLE_X - 0.08, 0, ARM_Y), metal, coll, root)
-    # A steel strap across the board's back and a brace up to the arm.
-    bh.add_box("BoardStrap", (0.02, BOARD_HALF_W * 2 - 0.1, 0.08), (BOARD_OFF + BOARD_THICK + 0.01, 0, ARM_Y), metal, coll, root)
+    # The gooseneck: up from the ground on the pole line, a bend forward, and
+    # a short run to a bolted mount plate on the board's back.
+    # A quarter circle from the top of the vertical run, curling forward (-x)
+    # so the tube arrives horizontal at the board's back, then the mount.
+    pts = [(POLE_X, 0.0, GROUND), (POLE_X, 0.0, NECK_Z)]
+    cx, cz = POLE_X - BEND_R, NECK_Z            # the bend's centre
+    for k in range(1, 9):
+        a = math.pi / 2 * k / 8                  # 0 = at the pole, pi/2 = above the centre, heading -x
+        pts.append((cx + BEND_R * math.cos(a), 0.0, cz + BEND_R * math.sin(a)))
+    mount = (MOUNT_X, 0.0, MOUNT_Z)
+    pts.append((mount[0] - 0.02, 0.0, MOUNT_Z))
+    _tube("Gooseneck", pts, POLE_R, steel, coll, root)
+    bh.add_box("MountPlate", (0.02, 0.24, 0.20), (mount[0] + 0.01, 0.0, mount[2]), steel, coll, root)
+    for sy in (-1, 1):
+        for sz in (-1, 1):
+            bh.add_box("MountBolt%d%d" % (sy + 1, sz + 1), (0.02, 0.03, 0.03), (mount[0] + 0.03, sy * 0.09, mount[2] + sz * 0.07), bolt, coll, root)
+    bh.add_box("PoleSleeve", (0.2, 0.2, 0.25), (POLE_X, 0.0, GROUND + 0.125), bolt, coll, root)
 
     pivot = bpy.data.objects.new("RimPivot", None)
     pivot.empty_display_type = "SPHERE"
@@ -119,6 +210,13 @@ def build():
     bm.free()
     net.data.materials.append(net_mat)
     bh.link_obj(net, coll, pivot, (-R_RIM, 0, -NET_HEIGHT / 2))
+    # The chains gather on a small steel ring under the lattice.
+    bpy.ops.mesh.primitive_torus_add(major_radius=NET_BOTTOM_R, minor_radius=0.006,
+                                     major_segments=16, minor_segments=5, location=(0, 0, 0))
+    ring = bpy.context.active_object
+    ring.name = ring.data.name = "NetRing"
+    ring.data.materials.append(rim_mat)
+    bh.link_obj(ring, coll, pivot, (-R_RIM, 0, -NET_HEIGHT))
 
     meshes = [o for o in coll.objects if o.type == "MESH"]
     bpy.ops.object.select_all(action="DESELECT")

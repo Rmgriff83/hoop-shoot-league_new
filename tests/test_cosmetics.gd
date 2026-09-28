@@ -155,6 +155,12 @@ func _street_and_arenas(t) -> void:
 		t.ok(chain.net_stiffness > 0.9 and chain.net_friction < 0.5, "links: near-inextensible, little grip")
 		t.close(chain.model_board_h, 1.05, 1e-12, "regulation board")
 		t.eq(chain.make_clips.size(), 3, "three chain swishes")
+		var hoop_scene: PackedScene = load(chain.model_path)
+		var inst: Node = hoop_scene.instantiate()
+		t.ok(inst.find_child("Gooseneck", true, false) != null, "the chain hoop stands on its own gooseneck")
+		t.ok(inst.find_child("NetRing", true, false) != null and inst.find_child("Net", true, false) != null, "chains gather on a ring under the lattice")
+		t.ok(inst.find_child("BoardArm", true, false) == null, "no street arm on it")
+		inst.free()
 		t.ok(chain.price_coins > 0, "not a starter")
 		var bad := HoopSet.new()
 		bad.id = "y"

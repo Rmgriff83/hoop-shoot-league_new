@@ -18,7 +18,7 @@ floor, +x toward the hoop and the street, +z shooter's right, y up;
 blender (x, y, z) = (sim x, -sim z, sim y). Numbers are SIM metres.
 
 Runtime contract (game/court/court_geometry.gd + game/view/city_fx.gd): the
-empty `Pole` is placed by Godot behind the board; `StreetRig` (an empty on
+chain hoop brings its own gooseneck pole (no arena `Pole`); `StreetRig` (an empty on
 the street's centre line) gives CityFx the lane line; every `Building*` mesh
 gets the facade shader (dusk + lit panes switching on and off); `FloodHead*` quads
 are unshaded; `TreeRig*` billboards turn to the camera; `ScoreboardRig` /
@@ -155,7 +155,7 @@ def build():
     coll = bpy.data.collections.new("City")
     scene.collection.children.link(coll)
     c_court, c_street, c_blocks = cage.sub(coll, "Court"), cage.sub(coll, "Street"), cage.sub(coll, "Blocks")
-    c_sky, c_props, c_pole = cage.sub(coll, "Sky"), cage.sub(coll, "Props"), cage.sub(coll, "Pole")
+    c_sky, c_props = cage.sub(coll, "Sky"), cage.sub(coll, "Props")
 
     court = cage.mat_tex("City_Court", TEX("city_court.png"))
     asphalt = cage.mat_tex("City_Asphalt", TEX("city_asphalt.png"))
@@ -325,11 +325,8 @@ def build():
                   (-1, 0, 0), led_off, c_props, rig, (1.0, 1.0), origin=(0, 0, 0))
     cage.add_box("ScoreboardTrim", (0.15, 0.02, 0.68), (0.0, 0.365, 0.0), curb, c_props, rig)
 
-    # Pole: a top-level empty Godot positions behind the board.
-    pole = cage.add_empty("Pole", c_pole, None, (POLE_X, 0.0, 0.0))
-    cage.add_box("PoleSleeve", (0.16, 0.30, 0.16), (0, 0.15, 0), dark, c_pole, pole)
-    cage.add_box("PolePost", (0.10, 3.4, 0.10), (0, 1.7, 0), pole_tex, c_pole, pole)
-    cage.add_box("PoleCap", (0.12, 0.03, 0.12), (0, 3.415, 0), dark, c_pole, pole)
+    # No arena pole: the chain hoop (build_chain_hoop.py) brings its own
+    # gooseneck on the same pole line.
 
     meshes = [o for o in coll.all_objects if o.type == "MESH"]
     bpy.ops.object.select_all(action="DESELECT")
