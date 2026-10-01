@@ -44,11 +44,11 @@ const LAMP_ENERGY := 2.6
 const LAMP_RANGE := 12.0
 const SHELTER_ENERGY := 2.0
 const SHELTER_RANGE := 8.0
-## Window lights: the share of panes lit, and each pane's own switching
-## period (minutes), mirrored by windows.gdshader.
-const LIT_SHARE := 0.6
-const PERIOD_BASE := 180.0
-const PERIOD_SPREAD := 300.0
+## Window lights, SPARING: about a third of the windows lit, each on its
+## own 4-14 minute switching period, mirrored by windows.gdshader.
+const LIT_SHARE := 0.34
+const PERIOD_BASE := 240.0
+const PERIOD_SPREAD := 600.0
 
 var _rig: Node3D
 var _street_x := STREET_X
@@ -206,16 +206,32 @@ static func lit_fraction(clock: float, cols := 32, rows := 32) -> float:
 	for y in rows:
 		for x in cols:
 			var cell := Vector2(x, y)
-			var h1 := _hash(cell + Vector2(0.1, 0.1))
 			var h2 := _hash(cell + Vector2(7.3, 7.3))
 			var h3 := _hash(cell + Vector2(3.7, 3.7))
 			var period := PERIOD_BASE + PERIOD_SPREAD * h2
-			var flips := floorf((clock + h3 * period) / period)
-			var base_lit := h1 < LIT_SHARE
-			var flipped := fmod(flips, 2.0) >= 1.0
-			if base_lit != flipped:
+			var epoch := floorf((clock + h3 * period) / period)
+			if _hash(cell + Vector2(epoch * 0.37 + 0.1, 0.1)) < LIT_SHARE:
 				lit += 1
 	return float(lit) / float(cols * rows)
+
+
+## One window's state at `clock` (the shader's rule).
+static func window_lit(cell: Vector2, clock: float) -> bool:
+	var h2 := _hash(cell + Vector2(7.3, 7.3))
+	var h3 := _hash(cell + Vector2(3.7, 3.7))
+	var period := PERIOD_BASE + PERIOD_SPREAD * h2
+	var epoch := floorf((clock + h3 * period) / period)
+	return _hash(cell + Vector2(epoch * 0.37 + 0.1, 0.1)) < LIT_SHARE
+
+
+## The share of windows whose state differs between two clocks.
+static func lit_changed(t0: float, t1: float, cols := 32, rows := 32) -> float:
+	var n := 0
+	for y in rows:
+		for x in cols:
+			if window_lit(Vector2(x, y), t0) != window_lit(Vector2(x, y), t1):
+				n += 1
+	return float(n) / float(cols * rows)
 
 
 static func _hash(p: Vector2) -> float:

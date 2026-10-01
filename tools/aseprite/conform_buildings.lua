@@ -51,18 +51,21 @@ save(out, "city_facades.png")
 -- every pane is a rectangle in this table (atlas px: x, y, w, h), read off
 -- the atlas at 4x. One rectangle = one window = one id in the shader.
 local WINDOWS = {
-  -- col 0: the ornate stone facade (arched windows down the column), a shop at the foot
-  {8, 5, 17, 25}, {8, 41, 17, 20}, {8, 72, 17, 21}, {8, 100, 17, 25}, {10, 130, 15, 30}, {8, 165, 17, 25}, {5, 230, 25, 20},
-  -- col 1: a plain window, a curtained one, the tall black one
-  {42, 10, 12, 18}, {40, 100, 14, 15}, {41, 132, 13, 43},
-  -- col 2: the tall arched window, a small one, the industrial row, a small one
-  {72, 8, 14, 52}, {75, 104, 11, 13}, {69, 163, 18, 15}, {75, 229, 12, 11},
+  -- RECTANGULAR windows only: the arched ones (the ornate stone column, the
+  -- tall arch, the col-5 arch) sit under curved frames the glow cannot follow.
+  -- col 0: the shop at the foot (the tall dark window above it and col 1's
+  -- tall black one are mapped off their frames on the models — left dark)
+  {5, 230, 25, 20},
+  -- col 1: a plain window, a curtained one
+  {42, 10, 12, 18}, {40, 100, 14, 15},
+  -- col 2: a small one, the industrial row, a small one
+  {75, 104, 11, 13}, {69, 163, 18, 15}, {75, 229, 12, 11},
   -- col 3 / 4: windows, the industrial row's other two panes
   {104, 10, 13, 18}, {108, 104, 9, 13}, {140, 104, 10, 13}, {100, 163, 25, 15}, {132, 163, 23, 15},
   -- col 4 / 5: the stained glass at the foot
   {130, 228, 27, 24}, {162, 228, 28, 24},
-  -- col 5: the arched window, the tall blue strip, the teal shop front
-  {165, 70, 25, 22}, {172, 98, 8, 50}, {165, 163, 25, 17}, {165, 195, 25, 25},
+  -- col 5: the tall blue strip, the teal shop front
+  {172, 98, 8, 50}, {165, 163, 25, 17}, {165, 195, 25, 25},
   -- col 6 / 7: a small square window, the blue strip, the shop fronts
   {200, 75, 15, 8}, {202, 105, 8, 20}, {197, 135, 13, 15}, {212, 135, 38, 15}, {197, 165, 58, 25}, {193, 198, 62, 24},
 }

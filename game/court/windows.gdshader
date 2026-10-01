@@ -20,9 +20,9 @@ uniform vec2 cells = vec2(32.0, 32.0);
 uniform vec2 pane_min = vec2(0.25, 0.19);
 uniform vec2 pane_max = vec2(0.75, 0.81);
 uniform float clock = 0.0;
-uniform float lit_share = 0.6;
-uniform float period_base = 180.0;
-uniform float period_spread = 300.0;
+uniform float lit_share = 0.34;
+uniform float period_base = 240.0;
+uniform float period_spread = 600.0;
 uniform vec3 lit_color : source_color = vec3(1.0, 0.82, 0.55);
 uniform vec3 dark_color : source_color = vec3(0.09, 0.12, 0.2);
 uniform float emission_energy = 1.4;
@@ -48,14 +48,13 @@ void fragment() {
 	vec3 nrm = normalize((INV_VIEW_MATRIX * vec4(NORMAL, 0.0)).xyz);
 	float form = 1.0 - face_light + face_light * clamp(0.5 + 0.5 * nrm.y - 0.35 * nrm.x, 0.0, 1.0) * 2.0;
 	vec3 tex = texture(albedo, uv).rgb * dusk_tint * form;
-	float h1 = hash2(cell + vec2(0.1, 0.1));
 	float h2 = hash2(cell + vec2(7.3, 7.3));
 	float h3 = hash2(cell + vec2(3.7, 3.7));
 	float period = period_base + period_spread * h2;
-	float flips = floor((clock + h3 * period) / period);
-	bool base_lit = h1 < lit_share;
-	bool flipped = mod(flips, 2.0) >= 1.0;
-	bool lit = base_lit != flipped;
+	// Every period the window re-rolls its state (not a toggle: a toggle
+	// drifts every building toward half lit; a re-roll holds lit_share).
+	float epoch = floor((clock + h3 * period) / period);
+	bool lit = hash2(cell + vec2(epoch * 0.37 + 0.1, 0.1)) < lit_share;
 	float warm = 0.8 + 0.4 * hash2(cell + vec2(11.1, 11.1));
 	// Unshaded: the lit pane is painted straight into ALBEDO (EMISSION is a
 	// lighting term and never reaches an unshaded surface).
