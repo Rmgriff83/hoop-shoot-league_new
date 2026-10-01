@@ -726,7 +726,9 @@ instance `seed` so the buildings sharing the atlas light differently. The
 (`CityFx.lit_fraction`).
 
 **Cars** are the hometown pack's glbs under `assets/vehicles/` (GGBot,
-credited): heavy evening traffic — every car follows what is ahead
+credited): light traffic since 2026-10-01 (a car every 14–34 s a lane, at
+most two on the street, one real headlight spot — the bumper-to-bumper
+wave lagged the phone), each following what is ahead
 (`CityFx.gap_ahead`: open-road pace with clear road, a stop 1.6 m behind
 a bumper, a proportional crawl between, at its own 1.8 m/s² pull-away and
 3 m/s² braking), and nothing else ever slows one: the front of each queue

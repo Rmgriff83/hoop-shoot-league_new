@@ -42,9 +42,11 @@ const STOP_GAP := 1.6                       # m bumper to bumper when stopped
 const FOLLOW_GAP := 3.0                     # m of clear road a car keeps while rolling
 const ACCEL := 1.8                          # m/s² pulling away
 const BRAKE := 3.0                          # m/s² stopping
-const CAR_GAP := Vector2(3.0, 9.0)          # s between cars joining a lane
-const MAX_CARS := 14
-const HEADLIGHT_SPOTS := 4                  # real spot lights on this many cars (the rest glow)
+# Light traffic (Ross, 2026-10-01: the phone lagged under the bumper-to-bumper
+# wave): a car passes now and then, at most one per lane, one real spot.
+const CAR_GAP := Vector2(14.0, 34.0)        # s between cars joining a lane
+const MAX_CARS := 2
+const HEADLIGHT_SPOTS := 1                  # real spot lights on this many cars (the rest glow)
 const HEADLIGHT_ENERGY := 0.9
 const HEADLIGHT_RANGE := 14.0
 const HEADLIGHT_ANGLE := 32.0
