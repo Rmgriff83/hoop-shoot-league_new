@@ -725,9 +725,9 @@ credited): `CityFx.spawn_car()` instances one, strips its `StaticBody3D`,
 adds a headlight spot, and slides it along z on one lane at 8–11 m/s.
 
 **The chain hoop** (`build_chain_hoop.py` → `assets/hoops/chain/`), after
-Ross's references (2026-09-27): a weathered galvanised steel board
-(`city_board.png`: zinc spangle, weathering streaks, rust bleed under the
-mount, a riveted rolled edge) as an extruded outline with its two lower
+Ross's references (2026-09-27; white since 2026-09-30): a slightly dirty
+white board (`city_board.png`: off-white mottle, grime streaks, a grey
+bloom under the mount and in the lower corners, a riveted pale rolled edge) as an extruded outline with its two lower
 corners chamfered 45° over 0.22 m — the sim keeps the rectangle collider,
 the cut sits where a ball is a wide miss — a bare steel gym rim
 (`hoop_rim_steel.png`, add_gym_rim's neck / flange / spring box / hooks),

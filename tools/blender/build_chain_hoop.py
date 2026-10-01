@@ -1,5 +1,5 @@
 """Build the chain-net hoop for the city court, after Ross's references
-(2026-09-27): a weathered GALVANISED STEEL board, the regulation 1.83 x 1.05 m
+(2026-09-27; white board 2026-09-30): a slightly dirty WHITE board, the regulation 1.83 x 1.05 m
 rectangle with its two lower corners chamfered 45 deg over 0.22 m, a riveted
 rolled edge, a bare steel gym rim (add_gym_rim's neck, flange, spring box and
 12 hooks), a net of chain links — a diamond lattice of 12 chains NetSim
@@ -150,7 +150,7 @@ def build():
     root.empty_display_size = 0.15
     bh.link_obj(root, coll)
 
-    body = bh.mat_flat("Chain_Body", (140, 144, 152), roughness=0.55)
+    body = bh.mat_flat("Chain_Body", (214, 214, 210), roughness=0.7)
     face = bh.mat_tex("Chain_Face", TEX("city_board.png"))
     steel = bh.mat_tex("Chain_Steel", TEX("city_steel.png"))
     bolt = bh.mat_flat("Chain_Bolt", (90, 94, 104), roughness=0.5)

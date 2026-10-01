@@ -46,25 +46,27 @@ local function save(spr, name)
   print("wrote " .. name)
 end
 
--- city_board.png 512x294 — 1.83 x 1.05 m (280 px/m). Galvanised steel: zinc
--- spangle at two scales, vertical weathering streaks, rust bleed under the
--- rim mount, a 5 cm rolled-edge frame with rivets every ~10 cm, a faint
--- dark target. The chamfered lower corners are cut by the mesh; here they
--- are frame too so nothing pale shows at the cut.
+-- city_board.png 512x294 — 1.83 x 1.05 m (280 px/m). A WHITE board, slightly
+-- dirty: off-white paint with a soft mottle, faint grime streaks running down,
+-- a little grey-brown bloom under the rim mount and at the lower corners, a
+-- dark target, a riveted rolled-edge frame. The chamfered lower corners are
+-- cut by the mesh; here they are frame too so nothing odd shows at the cut.
 do
   local W, H = 512, 294
   local spr, img = newImage(W, H)
   local px = W / 1.83
   for y = 0, H - 1 do
     for x = 0, W - 1 do
-      local spangle = vnoise(x, y, 9, 401) * 0.5 + vnoise(x, y, 28, 402) * 0.35 + noise(x, y, 403) * 0.15
-      local streak = math.max(0, vnoise(x * 6, y, 40, 404) - 0.55) * 0.6 * (y / H)
-      local v = 112 + spangle * 46 - streak * 55   -- mid-grey zinc: under the floodlights it must not read as paper
-      -- rust bleed spreading down from the rim mount (bottom centre)
-      local dx, dy = (x - W / 2) / (0.22 * px), (H - 1 - y) / (0.30 * px)
-      local rust = math.max(0, 1 - math.sqrt(dx * dx + dy * dy * 0.5)) * (0.6 + 0.4 * vnoise(x, y, 6, 405))
-      local r, g, b = v + 4, v + 4, v + 8
-      r = r + rust * 70; g = g - rust * 20; b = b - rust * 60
+      local mottle = vnoise(x, y, 22, 401) * 0.6 + vnoise(x, y, 60, 402) * 0.4
+      local streak = math.max(0, vnoise(x * 5, y, 36, 404) - 0.6) * 0.5 * (0.3 + 0.7 * y / H)
+      local v = 226 + mottle * 16 - streak * 46
+      -- grime under the rim mount (bottom centre) and in the lower corners
+      local dx, dy = (x - W / 2) / (0.26 * px), (H - 1 - y) / (0.26 * px)
+      local grime = math.max(0, 1 - math.sqrt(dx * dx + dy * dy * 0.6)) * (0.5 + 0.5 * vnoise(x, y, 7, 405))
+      local cx = math.min(x, W - 1 - x) / (0.3 * px)
+      local corner = math.max(0, 1 - math.sqrt(cx * cx + dy * dy)) * 0.5 * vnoise(x, y, 9, 406)
+      local d = grime * 0.55 + corner
+      local r, g, b = v - d * 70, v - d * 66, v - d * 58
       img:drawPixel(x, y, rgb(r, g, b))
     end
   end
@@ -78,24 +80,24 @@ do
     for y = y0, y1 do
       for x = x0, x1 do
         local c = img:getPixel(x, y)
-        img:drawPixel(x, y, rgb(pc.rgbaR(c) * 0.55, pc.rgbaG(c) * 0.55, pc.rgbaB(c) * 0.6))
+        img:drawPixel(x, y, rgb(pc.rgbaR(c) * 0.3, pc.rgbaG(c) * 0.3, pc.rgbaB(c) * 0.32))
       end
     end
   end
   darken(left, top, right, top + 5); darken(left, bottom - 5, right, bottom)
   darken(left, top, left + 5, bottom); darken(right - 5, top, right, bottom)
-  -- rolled-edge frame, 5 cm, a shade darker with a bright inner lip
+  -- rolled-edge frame, 5 cm, pale grey steel with a bright inner lip
   local F = math.floor(0.05 * px + 0.5)
   local function frame(x0, y0, x1, y1)
     for y = y0, y1 do
       for x = x0, x1 do
-        local c = img:getPixel(x, y)
-        img:drawPixel(x, y, rgb(pc.rgbaR(c) * 0.8, pc.rgbaG(c) * 0.8, pc.rgbaB(c) * 0.82))
+        local n = noise(x, y, 407) * 10
+        img:drawPixel(x, y, rgb(176 + n, 180 + n, 186 + n))
       end
     end
   end
   frame(0, 0, W - 1, F - 1); frame(0, H - F, W - 1, H - 1); frame(0, 0, F - 1, H - 1); frame(W - F, 0, W - 1, H - 1)
-  fill(img, F, F, W - F - 1, F, rgb(214, 218, 224)); fill(img, F, F, F, H - F - 1, rgb(214, 218, 224))
+  fill(img, F, F, W - F - 1, F, rgb(236, 238, 242)); fill(img, F, F, F, H - F - 1, rgb(236, 238, 242))
   -- rivets every ~10 cm along the frame's centre line
   local step = math.floor(0.10 * px + 0.5)
   local function rivet(x, y)
