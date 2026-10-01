@@ -127,10 +127,15 @@ def _building(name, index, mat, coll, parent, sim_xz, yaw_deg):
     bm = bmesh.new()
     bm.from_mesh(me)
     uvl = bm.loops.layers.uv.verify()
-    for f in bm.faces:
+    # A second UV channel carries one key per FACE (constant over the face),
+    # so the facade shader can light each copy of an atlas window on its own.
+    uv2 = bm.loops.layers.uv.new("FaceKey")
+    for fi, f in enumerate(bm.faces):
+        key = ((fi * 7919 + index * 131) % 997) / 997.0
         for loop in f.loops:
             u, v = loop[uvl].uv
             loop[uvl].uv = (u, v + 1.0)
+            loop[uv2].uv = (key, 0.0)
     # Origin: footprint centre, ground level (blender z is up after import).
     xs = [v.co.x for v in bm.verts]
     ys = [v.co.y for v in bm.verts]

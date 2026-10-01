@@ -199,29 +199,25 @@ static func _unshade(mi: MeshInstance3D) -> void:
 			(m as BaseMaterial3D).disable_fog = true
 
 
-## The shader's rule in GDScript, over a `cols × rows` field of cells: the
-## share of panes lit at `clock` (tests pin it near LIT_SHARE and moving).
+## The shader's rule in GDScript, over a `cols × rows` field of windows: the
+## share lit at `clock` (tests pin it near LIT_SHARE at any time).
 static func lit_fraction(clock: float, cols := 32, rows := 32) -> float:
 	var lit := 0
 	for y in rows:
 		for x in cols:
-			var cell := Vector2(x, y)
-			var h2 := _hash(cell + Vector2(7.3, 7.3))
-			var h3 := _hash(cell + Vector2(3.7, 3.7))
-			var period := PERIOD_BASE + PERIOD_SPREAD * h2
-			var epoch := floorf((clock + h3 * period) / period)
-			if _hash(cell + Vector2(epoch * 0.37 + 0.1, 0.1)) < LIT_SHARE:
+			if window_lit(Vector2(x, y), clock):
 				lit += 1
 	return float(lit) / float(cols * rows)
 
 
-## One window's state at `clock` (the shader's rule).
+## One window's state at `clock` (the shader's rule, seed 0).
 static func window_lit(cell: Vector2, clock: float) -> bool:
-	var h2 := _hash(cell + Vector2(7.3, 7.3))
-	var h3 := _hash(cell + Vector2(3.7, 3.7))
+	var wid := cell.x + cell.y * 131.0
+	var h2 := hash_f(wid, 1.0)
+	var h3 := hash_f(wid, 2.0)
 	var period := PERIOD_BASE + PERIOD_SPREAD * h2
 	var epoch := floorf((clock + h3 * period) / period)
-	return _hash(cell + Vector2(epoch * 0.37 + 0.1, 0.1)) < LIT_SHARE
+	return hash_f(wid, 100.0 + epoch) < LIT_SHARE
 
 
 ## The share of windows whose state differs between two clocks.
@@ -234,9 +230,21 @@ static func lit_changed(t0: float, t1: float, cols := 32, rows := 32) -> float:
 	return float(n) / float(cols * rows)
 
 
-static func _hash(p: Vector2) -> float:
-	var v := sin(p.x * 12.9898 + p.y * 78.233) * 43758.5453
-	return v - floorf(v)
+## windows.gdshader's integer hash, bit for bit (32-bit wrap by masking):
+## exact on every GPU, where the old sine hash collapsed in half precision.
+static func hash_u(x: int) -> int:
+	x = x & 0xFFFFFFFF
+	x ^= x >> 16
+	x = (x * 0x7feb352d) & 0xFFFFFFFF
+	x ^= x >> 15
+	x = (x * 0x846ca68b) & 0xFFFFFFFF
+	x ^= x >> 16
+	return x
+
+
+static func hash_f(a: float, b: float) -> float:
+	var h := hash_u(((int(a + 7.0) * 0x9E3779B9) & 0xFFFFFFFF) ^ hash_u(int(b + 3.0)))
+	return float(h & 0xFFFFFF) / 16777216.0
 
 
 func window_count() -> int:
