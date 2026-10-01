@@ -710,9 +710,13 @@ court), and a bus shelter (`BusStop`, its back wall the lit 3 × 2 m
 road to the shooter's right; three `ParkHead%d` park lamps just outside
 the shooter's fence light the near half of the court (omnis).
 
-**Windows** are painted, not lit: every `Building*` and `Windows*` mesh
-shares one unshaded `StandardMaterial3D` per texture with `CityFx.DUSK_TINT`
-grading the daylit photos to 7 pm. (The per-window light shader with its
+**Lighting is midday** (2026-10-01; it was 7 pm under floodlights): the
+arena set's high sun and a blue sky do all of it — `CityFx` hangs no spot
+or omni lights (four floodlight spots plus the lamp omnis lagged the
+phone); the flood, lamp and park heads stay as props with their bulb
+glows hidden. **Windows** are painted, not lit: every `Building*` and
+`Windows*` mesh shares one unshaded `StandardMaterial3D` per texture
+(`CityFx.FACADE_TINT`). (The per-window light shader with its
 authored mask and id maps was removed on 2026-10-01: it lagged the phone.)
 
 **Cars** are the hometown pack's glbs under `assets/vehicles/` (GGBot,

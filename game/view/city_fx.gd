@@ -2,14 +2,15 @@ class_name CityFx
 extends Node
 ## Presentation-only city life (docs/HOME.md → Adding an area): cars pass on
 ## the street beyond the back fence, the buildings (Sam Grady's pack on one
-## photo atlas) are dusked by one cheap shared material, the floodlight and
-## lamp heads glow, the street trees face the camera. Never touches the sim.
+## photo atlas) share one cheap material, the street trees face the camera.
+## Midday since 2026-10-01: no floodlight spots, no lamp omnis (they lagged
+## the phone), the sun does the lighting. Never touches the sim.
 ## Seeded (never randomize()) so a QA screenshot or a test replays
 ## identically. (The window-light shader was removed 2026-10-01: it lagged
 ## the phone.)
 
-## The daylit photo atlas graded to 7 pm: one unshaded material per texture.
-const DUSK_TINT := Color(0.9, 0.88, 0.94)
+## The daylit photo atlas as shot (midday): one unshaded material per texture.
+const FACADE_TINT := Color(0.96, 0.96, 0.97)
 ## The traffic pool: the hometown pack's cars (GGBot "PSX Style Cars",
 ## data/credits.json). Forward is Godot +Z, the origin is on the ground.
 const MODELS: Array[String] = [
@@ -52,20 +53,6 @@ const HEADLIGHT_ANGLE := 32.0
 ## The court's floodlights: a spot hung on every FloodHead*, aimed at the key.
 ## Aimed at the floor around the key with a cone tight enough that the pale
 ## steel board only catches its edge (inverse-square falloff from 8 m up).
-const FLOOD_TARGET := Vector3(-0.5, 0.0, 0.0)
-const FLOOD_ENERGY := 8.0
-const FLOOD_RANGE := 40.0
-const FLOOD_ANGLE := 32.0
-## The far sidewalk's street lamps (sodium-warm omnis under `LampHead*`) and
-## the bus shelter's glow (`BusStop`).
-const LAMP_ENERGY := 2.6
-const LAMP_RANGE := 12.0
-const SHELTER_ENERGY := 2.0
-const SHELTER_RANGE := 8.0
-## The park lamps behind the player (`ParkHead*`): warm omnis over the
-## near half of the court.
-const PARK_ENERGY := 4.5
-const PARK_RANGE := 20.0
 
 var _rig: Node3D
 var _street_x := STREET_X
@@ -85,8 +72,6 @@ var _rng := RandomNumberGenerator.new()
 var _tree_rigs: Array[Node3D] = []
 var _facade_mats: Dictionary = {}     # texture path → the one dusk material its faces share
 var _facade_faces := 0
-var _flood_lights: Array[SpotLight3D] = []
-var _lamp_lights: Array[OmniLight3D] = []
 var _t := 0.0
 
 
@@ -104,19 +89,10 @@ func setup(arena: Node) -> bool:
 			_tree_rigs.push_back(n as Node3D)
 		elif n is MeshInstance3D and (n.name.begins_with("Building") or n.name.begins_with("Windows")):
 			_bind_facade(n as MeshInstance3D)
-		elif n is MeshInstance3D and n.name.begins_with("FloodHead"):
+		elif n is MeshInstance3D and (n.name.begins_with("LampGlow") or n.name.begins_with("ParkGlow")):
+			n.visible = false   # bulbs are off at midday
+		elif n is MeshInstance3D and (n.name == "BusPoster" or n.name == "BusSign"):
 			_unshade(n as MeshInstance3D)
-			_hang_flood(n as MeshInstance3D)
-		elif n is MeshInstance3D and n.name.begins_with("LampHead"):
-			_unshade(n as MeshInstance3D)
-			_hang_omni(n as Node3D, Vector3(0, -0.3, 0), Color(1.0, 0.86, 0.6), LAMP_ENERGY, LAMP_RANGE)
-		elif n is MeshInstance3D and n.name.begins_with("ParkHead"):
-			_unshade(n as MeshInstance3D)
-			_hang_omni(n as Node3D, Vector3(0.6, -0.4, 0), Color(1.0, 0.92, 0.78), PARK_ENERGY, PARK_RANGE)
-		elif n is MeshInstance3D and (n.name.begins_with("LampGlow") or n.name.begins_with("ParkGlow") or n.name == "BusPoster" or n.name == "BusSign"):
-			_unshade(n as MeshInstance3D)
-		elif n is Node3D and n.name == "BusStop":
-			_hang_omni(n as Node3D, Vector3.ZERO, Color(1.0, 0.95, 0.85), SHELTER_ENERGY, SHELTER_RANGE)
 	_fx_root = Node3D.new()
 	_fx_root.name = "Traffic"
 	arena.add_child(_fx_root)
@@ -134,53 +110,13 @@ func _bind_facade(mi: MeshInstance3D) -> void:
 		var m := StandardMaterial3D.new()
 		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 		m.disable_fog = true
-		m.albedo_color = DUSK_TINT
+		m.albedo_color = FACADE_TINT
 		if tex != null:
 			m.albedo_texture = tex
 		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS if key.contains("facades") else BaseMaterial3D.TEXTURE_FILTER_NEAREST
 		_facade_mats[key] = m
 	mi.material_override = _facade_mats[key]
 	_facade_faces += 1
-
-
-## A warm spot at the head, aimed at the key, no shadows (the phone's budget).
-func _hang_flood(head: MeshInstance3D) -> void:
-	var lamp := SpotLight3D.new()
-	lamp.name = "Flood"
-	lamp.light_color = Color(1.0, 0.94, 0.82)
-	lamp.light_energy = FLOOD_ENERGY
-	lamp.spot_range = FLOOD_RANGE
-	lamp.spot_angle = FLOOD_ANGLE
-	lamp.spot_attenuation = 1.0
-	lamp.light_specular = 0.25   # the steel board sits in the cone: no hot spot
-	lamp.shadow_enabled = false
-	head.add_child(lamp)
-	# The head quad's local frame is its own; aim in the arena's frame.
-	lamp.global_position = head.global_position
-	lamp.look_at(head.get_parent_node_3d().to_global(FLOOD_TARGET) if head.get_parent_node_3d() != null else FLOOD_TARGET)
-	_flood_lights.push_back(lamp)
-
-
-func flood_count() -> int:
-	return _flood_lights.size()
-
-
-## A warm omni under a lamp head or in the shelter, no shadows.
-func _hang_omni(at: Node3D, offset: Vector3, colour: Color, energy: float, range_m: float) -> void:
-	var lamp := OmniLight3D.new()
-	lamp.name = "Lamp"
-	lamp.light_color = colour
-	lamp.light_energy = energy
-	lamp.omni_range = range_m
-	lamp.light_specular = 0.3
-	lamp.shadow_enabled = false
-	at.add_child(lamp)
-	lamp.global_position = at.global_position + offset
-	_lamp_lights.push_back(lamp)
-
-
-func lamp_count() -> int:
-	return _lamp_lights.size()
 
 
 static func _unshade(mi: MeshInstance3D) -> void:
