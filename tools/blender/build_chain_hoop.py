@@ -96,7 +96,7 @@ def _tube(name, points, radius, mat, coll, parent, sides=12):
     return obj
 
 
-def _board(coll, parent, body, face, steel):
+def _board(coll, parent, body, face, edge):
     """The chamfered steel board: an extruded outline, its front face
     UV-mapped over city_board.png in board space."""
     h = BOARD_TOP - BOARD_BOTTOM
@@ -133,10 +133,10 @@ def _board(coll, parent, body, face, steel):
     bh.link_obj(obj, coll, parent, (0, 0, 0))
     # The rolled edge: thin steel boxes along the top and the two sides.
     t = 0.012
-    bh.add_box("EdgeTop", (BOARD_THICK + 0.02, 2 * w + 0.02, t), (BOARD_OFF + BOARD_THICK / 2, 0, BOARD_TOP), steel, coll, parent)
+    bh.add_box("EdgeTop", (BOARD_THICK + 0.02, 2 * w + 0.02, t), (BOARD_OFF + BOARD_THICK / 2, 0, BOARD_TOP), edge, coll, parent)
     for s in (-1, 1):
         bh.add_box("EdgeSide%d" % (s + 1), (BOARD_THICK + 0.02, t, h - CHAMFER + 0.02),
-                   (BOARD_OFF + BOARD_THICK / 2, s * w, (BOARD_TOP + BOARD_BOTTOM + CHAMFER) / 2), steel, coll, parent)
+                   (BOARD_OFF + BOARD_THICK / 2, s * w, (BOARD_TOP + BOARD_BOTTOM + CHAMFER) / 2), edge, coll, parent)
     return obj
 
 
@@ -150,14 +150,15 @@ def build():
     root.empty_display_size = 0.15
     bh.link_obj(root, coll)
 
-    body = bh.mat_flat("Chain_Body", (214, 214, 210), roughness=0.7)
+    body = bh.mat_flat("Chain_Body", (62, 68, 80), roughness=0.7)   # the board's sides: dark slate like the frame
     face = bh.mat_tex("Chain_Face", TEX("city_board.png"))
     steel = bh.mat_tex("Chain_Steel", TEX("city_steel.png"))
+    edge = bh.mat_tex("Chain_Edge", TEX("city_edge.png"))   # the board's dark slate rolled edge
     bolt = bh.mat_flat("Chain_Bolt", (90, 94, 104), roughness=0.5)
     rim_mat = bh.mat_tex("Rim", TEX("hoop_rim_steel.png"))
     net_mat = bh.mat_tex("Net", TEX("hoop_chain.png"), alpha_clip=True, double_sided=True)
 
-    _board(coll, root, body, face, steel)
+    _board(coll, root, body, face, edge)
 
     # The gooseneck: up from the ground on the pole line, a bend forward, and
     # a short run to a bolted mount plate on the board's back.

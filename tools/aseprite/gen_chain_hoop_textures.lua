@@ -100,19 +100,20 @@ do
   end
   darken(left, top, right, top + 5); darken(left, bottom - 5, right, bottom)
   darken(left, top, left + 5, bottom); darken(right - 5, top, right, bottom)
-  -- rolled-edge frame, 5 cm, pale grey steel with a bright inner lip
+  -- rolled-edge frame, 5 cm, DARK SLATE steel (Ross, 2026-10-01) with a
+  -- slightly lighter inner lip; the rivets keep their pale steel look
   local F = math.floor(0.05 * px + 0.5)
   local function frame(x0, y0, x1, y1)
     for y = y0, y1 do
       for x = x0, x1 do
         local n = noise(x, y, 407) * 10
-        img:drawPixel(x, y, rgb(176 + n, 180 + n, 186 + n))
+        img:drawPixel(x, y, rgb(52 + n, 58 + n, 70 + n))
       end
     end
   end
   frame(0, 0, W - 1, F - 1); frame(0, H - F, W - 1, H - 1); frame(0, 0, F - 1, H - 1); frame(W - F, 0, W - 1, H - 1)
-  fill(img, F, F, W - F - 1, F, rgb(236, 238, 242)); fill(img, F, F, F, H - F - 1, rgb(236, 238, 242))
-  -- rivets every ~10 cm along the frame's centre line
+  fill(img, F, F, W - F - 1, F, rgb(88, 96, 110)); fill(img, F, F, F, H - F - 1, rgb(88, 96, 110))
+  -- rivets every ~10 cm along the frame's centre line (unchanged pale steel)
   local step = math.floor(0.10 * px + 0.5)
   local function rivet(x, y)
     fill(img, x - 2, y - 2, x + 2, y + 2, rgb(120, 124, 132))
@@ -139,6 +140,21 @@ do
     end
   end
   save(spr, "hoop_rim_steel.png")
+end
+
+-- city_edge.png 32x8 — the board's rolled-edge boxes, the same dark slate
+-- as the painted frame.
+do
+  local spr, img = newImage(32, 8)
+  for y = 0, 7 do
+    local t = y / 7
+    local v = 76 - t * 40
+    for x = 0, 31 do
+      local n = vnoise(x, y, 6, 423) * 10
+      img:drawPixel(x, y, rgb(v + n, v + n + 5, v + n + 16))
+    end
+  end
+  save(spr, "city_edge.png")
 end
 
 -- city_steel.png 32x8 — the gooseneck pole's tube wrap.
