@@ -158,7 +158,7 @@ func _city(t) -> void:
 	t.eq(_count(city, "ParkHead"), 3, "three park lamps behind the player")
 	t.eq(_count(city, "Wall"), 0, "no knee wall: the fence runs to the ground")
 	t.eq(_count(city, "FenceFoot"), 4, "a bottom rail on every side")
-	t.eq(_count(city, "FenceBack", false), 1, "the back fence is its own (black) mesh")
+	t.ok(city.find_child("Fence", true, false) is MeshInstance3D and city.find_child("FenceBack", true, false) == null, "one chain-link loop (black, all four sides)")
 	t.eq(cfx.car_count(), 0, "no car yet")
 	cfx.spawn_car()
 	t.eq(cfx.car_count(), 1, "a car spawned")

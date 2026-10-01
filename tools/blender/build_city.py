@@ -175,11 +175,13 @@ def build():
     flood = cage.mat_tex("City_Flood", TEX("city_flood.png"), alpha_clip=True, emissive=True)
     pole_tex = cage.mat_tex("City_Pole", TEX("beach_pole.png"))
     concrete = cage.mat_tex("City_Concrete", TEX("beach_concrete.png"))
-    fence = cage.mat_tex("City_Fence", TEX("cage_mesh.png"), alpha_clip=True, double_sided=True)
-    fence_black = cage.mat_tex("City_FenceBlack", TEX("city_fence_black.png"), alpha_clip=True, double_sided=True)
+    # The whole enclosure fence is black (Ross, 2026-10-01): the lattice over
+    # city_fence_black.png, the rails and posts in near-black.
+    fence = cage.mat_tex("City_Fence", TEX("city_fence_black.png"), alpha_clip=True, double_sided=True)
     curb = cage.mat_flat("City_Curb", (150, 146, 140))
     apron = cage.mat_flat("City_Apron", (40, 52, 52), roughness=1.0)
     dark = cage.mat_flat("City_Dark", (30, 30, 34))
+    fence_dark = cage.mat_flat("City_FenceDark", (14, 14, 16))
     steel = cage.mat_flat("City_Steel", (70, 72, 78), roughness=0.6)
     yellow = cage.mat_flat("City_Yellow", (232, 196, 74), roughness=0.9)
     # Smooth look on the big surfaces (the pixel-crisp fence and windows stay nearest).
@@ -211,24 +213,22 @@ def build():
         cx, cz = (ax + bx) / 2.0, (az + bz) / 2.0
         along_x = abs(bx - ax) > abs(bz - az)
         rail = (length + 0.05, 0.05, 0.05) if along_x else (0.05, 0.05, length + 0.05)
-        cage.add_box("FenceRail%d" % k, rail, (cx, FENCE_TOP, cz), dark, c_court, root)
-        cage.add_box("FenceFoot%d" % k, rail, (cx, 0.06, cz), dark, c_court, root)
+        cage.add_box("FenceRail%d" % k, rail, (cx, FENCE_TOP, cz), fence_dark, c_court, root)
+        cage.add_box("FenceFoot%d" % k, rail, (cx, 0.06, cz), fence_dark, c_court, root)
         n_posts = max(2, int(round(length / 2.6)) + 1)
         for i in range(1, n_posts - 1):
             t = i / (n_posts - 1)
             px, pz = ax + (bx - ax) * t, az + (bz - az) * t
-            cage.add_box("FencePost%d_%d" % (k, i), (0.08, FENCE_TOP - WALL_H + 0.1, 0.08), (px, (WALL_H + FENCE_TOP) / 2.0, pz), dark, c_court, root)
+            cage.add_box("FencePost%d_%d" % (k, i), (0.08, FENCE_TOP - WALL_H + 0.1, 0.08), (px, (WALL_H + FENCE_TOP) / 2.0, pz), fence_dark, c_court, root)
     for k, (px, pz) in enumerate(corners):
-        cage.add_box("FenceCorner%d" % k, (0.10, FENCE_TOP - WALL_H + 0.1, 0.10), (px, (WALL_H + FENCE_TOP) / 2.0, pz), dark, c_court, root)
-    # The chain link: the three sides in the cage's grey, the BACK fence
-    # (behind the hoop, x = ENC_X0, side 3) its own mesh in black.
-    BACK = 3
-    meshes = {"Fence": (bmesh.new(), fence), "FenceBack": (bmesh.new(), fence_black)}
+        cage.add_box("FenceCorner%d" % k, (0.10, FENCE_TOP - WALL_H + 0.1, 0.10), (px, (WALL_H + FENCE_TOP) / 2.0, pz), fence_dark, c_court, root)
+    # The chain link: one loop, all four sides, black.
+    meshes = {"Fence": (bmesh.new(), fence)}
     u = 0.0
     for k in range(4):
         (ax, az), (bx, bz) = corners[k], corners[(k + 1) % 4]
         length = math.hypot(bx - ax, bz - az)
-        bm = meshes["FenceBack" if k == BACK else "Fence"][0]
+        bm = meshes["Fence"][0]
         uvl = bm.loops.layers.uv.verify()
         v0 = bm.verts.new(cage.s2b((ax, WALL_H, az)))
         v1 = bm.verts.new(cage.s2b((bx, WALL_H, bz)))
