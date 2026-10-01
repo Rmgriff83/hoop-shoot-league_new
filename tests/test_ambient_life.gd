@@ -206,6 +206,24 @@ func _city(t) -> void:
 			spots += 1
 	t.ok(spots <= CityFx.HEADLIGHT_SPOTS, "at most %d real headlight spots (%d)" % [CityFx.HEADLIGHT_SPOTS, spots])
 	t.ok(cfx.sent() >= 4, "counted")
+	# An even mix: the deck hands out every model before any repeats, and
+	# never the same model twice running.
+	var f4 := CityFx.new()
+	var seen: Array[int] = []
+	var prev := -1
+	var twice_running := false
+	for i in CityFx.MODELS.size() * 3:
+		var m := f4._draw_model()
+		if m == prev:
+			twice_running = true
+		prev = m
+		seen.push_back(m)
+	t.ok(not twice_running, "no model follows itself")
+	for k in 3:
+		var deck := seen.slice(k * CityFx.MODELS.size(), (k + 1) * CityFx.MODELS.size())
+		deck.sort()
+		t.eq(deck, range(CityFx.MODELS.size()), "deck %d is every model once" % k)
+	f4.free()
 	var clear_before := cfx.lane_clear(1.0)
 	var before_spawn := cfx.car_count()
 	cfx.spawn_car(1.0)

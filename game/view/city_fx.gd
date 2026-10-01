@@ -74,6 +74,8 @@ var _fx_root: Node3D
 var _cars: Array[Dictionary] = []
 var _next_car := 10.0
 var _lane_wait := [0.0, 0.0]               # per lane (index 0: +z travel, 1: −z), s until it may join
+var _deck: Array[int] = []                   # models to draw, shuffled: every model once before any repeats
+var _last_model := -1
 var _lane_phase := [0.0, 2.3]              # the stop-and-go waves, offset per lane
 var _spots := 0
 var _sent := 0
@@ -335,7 +337,7 @@ func spawn_car(dir := 0.0) -> void:
 		dir = 1.0 if _rng.randf() < 0.5 else -1.0
 	if not lane_clear(dir):
 		return
-	var path: String = MODELS[_rng.randi_range(0, MODELS.size() - 1)]
+	var path: String = MODELS[_draw_model()]
 	if not ResourceLoader.exists(path):
 		return
 	var scene: PackedScene = load(path)
@@ -367,6 +369,30 @@ func spawn_car(dir := 0.0) -> void:
 	_fx_root.add_child(car)
 	_cars.push_back({"node": car, "dir": dir, "spot": has_spot, "vel": lane_speed(dir) * 0.5})
 	_sent += 1
+
+
+## The next model from a shuffled deck, so the mix is even: every model
+## appears once before any repeats, and a fresh deck never opens with the
+## model that closed the last one, so two of a kind never follow each other.
+func _draw_model() -> int:
+	if _deck.is_empty():
+		for i in MODELS.size():
+			_deck.push_back(i)
+		for i in range(_deck.size() - 1, 0, -1):
+			var j := _rng.randi_range(0, i)
+			var tmp := _deck[i]
+			_deck[i] = _deck[j]
+			_deck[j] = tmp
+		if _deck.size() > 1 and _deck[_deck.size() - 1] == _last_model:
+			var tmp := _deck[_deck.size() - 1]
+			_deck[_deck.size() - 1] = _deck[0]
+			_deck[0] = tmp
+	_last_model = _deck.pop_back()
+	return _last_model
+
+
+func last_model() -> int:
+	return _last_model
 
 
 ## The pack's lamp materials (`*Glow`) glow on their own at dusk.
