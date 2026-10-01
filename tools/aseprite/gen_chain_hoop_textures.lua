@@ -157,15 +157,16 @@ do
   save(spr, "city_edge.png")
 end
 
--- city_steel.png 32x8 — the gooseneck pole's tube wrap.
+-- city_steel.png 32x8 — the gooseneck pole's tube wrap: BLACK (Ross,
+-- 2026-10-01), a faint lighter edge on top so the tube still reads round.
 do
   local spr, img = newImage(32, 8)
   for y = 0, 7 do
     local t = y / 7
-    local v = 176 - t * 90
+    local v = 46 - t * 34
     for x = 0, 31 do
-      local n = vnoise(x, y, 6, 421) * 14
-      img:drawPixel(x, y, rgb(v + n, v + n + 2, v + n + 8))
+      local n = vnoise(x, y, 6, 421) * 8
+      img:drawPixel(x, y, rgb(v + n, v + n, v + n + 3))
     end
   end
   save(spr, "city_steel.png")
