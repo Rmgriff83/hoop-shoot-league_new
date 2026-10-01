@@ -238,24 +238,31 @@ do
   save(spr, "city_tower.png")
 end
 
--- city_sky.png 512x256 — dusk: deep blue zenith, a violet band, an orange
--- glow at the horizon all round, a little warmer toward u = 0.5 (the west,
--- behind the towers). v = 0 is the horizon.
+-- city_sky.png 512x256 — about 7 pm: a soft orange evening, lighter and
+-- quieter than the beach's dusk — dusty blue-grey overhead, apricot, then a
+-- pale orange glow at the horizon all round, warmest toward u = 0.5 (the
+-- west, behind the towers). v = 0 is the horizon.
 do
   local W, H = 512, 256
   local spr, img = newImage(W, H)
   for y = 0, H - 1 do
     local t = 1 - y / (H - 1)         -- 1 at the horizon (bottom row is v = 0 in Godot)
     for x = 0, W - 1 do
-      local warm = 0.75 + 0.25 * math.cos((x / W - 0.5) * 2 * math.pi)
-      local hz = math.max(0, t - 0.55) / 0.45
-      hz = hz * hz
-      local r = 18 + (230 - 18) * hz * warm
-      local g = 26 + (120 - 26) * hz * warm
-      local b = 70 + (70 - 70) * hz
-      local vi = math.max(0, 1 - math.abs(t - 0.5) / 0.3)   -- violet band
-      r = r + 40 * vi
-      b = b + 30 * vi
+      local warm = 0.85 + 0.15 * math.cos((x / W - 0.5) * 2 * math.pi)
+      -- stops from the zenith (t 0) to the horizon (t 1)
+      local r, g, b
+      if t < 0.45 then
+        local k = t / 0.45
+        r, g, b = 118 + (196 - 118) * k, 138 + (150 - 138) * k, 176 + (150 - 176) * k
+      elseif t < 0.8 then
+        local k = (t - 0.45) / 0.35
+        r, g, b = 196 + (238 - 196) * k, 150 + (160 - 150) * k, 150 + (112 - 150) * k
+      else
+        local k = (t - 0.8) / 0.2
+        r, g, b = 238 + (246 - 238) * k, 160 + (190 - 160) * k, 112 + (132 - 112) * k
+      end
+      r = r * warm + (1 - warm) * 150
+      g = g * warm + (1 - warm) * 140
       local n = noise(x, y, 231) * 4
       img:drawPixel(x, y, rgb(r + n, g + n, b + n))
     end

@@ -25,9 +25,21 @@ const RNG_SEED := 0x0C17_0CA5
 const STREET_X := 11.1
 const LANE_HALF := 1.6            # lane centres at street_x ± LANE_HALF
 const CAR_EDGE := 34.0            # z where a car appears / is freed (corner radius 35.8 < SKY_R 60)
-const CAR_SPEED := Vector2(8.0, 11.0)
-const CAR_GAP := Vector2(8.0, 20.0)
-const MAX_CARS := 2
+## Heavy evening traffic (Ross, 2026-09-30): each car follows the one ahead
+## — it drives at the lane's pace until it closes to its following distance,
+## brakes to a stop a bumper gap behind, and pulls away again only when the
+## car ahead has opened the gap, so stops ripple back down the queue the way
+## real jams do. A slow wave in the lane's pace sets the stop-and-go rhythm.
+const CAR_SPEED := Vector2(0.0, 5.0)        # the lane's pace over a wave: stop to a slow roll
+const CAR_LEN := 4.4
+const STOP_GAP := 1.6                       # m bumper to bumper when stopped
+const FOLLOW_GAP := 3.0                     # m of clear road a car keeps while rolling
+const ACCEL := 1.8                          # m/s² pulling away
+const BRAKE := 3.0                          # m/s² stopping
+const WAVE_PERIOD := 30.0                   # s per stop-and-go wave
+const CAR_GAP := Vector2(3.0, 9.0)          # s between cars joining a lane
+const MAX_CARS := 14
+const HEADLIGHT_SPOTS := 4                  # real spot lights on this many cars (the rest glow)
 const HEADLIGHT_ENERGY := 0.9
 const HEADLIGHT_RANGE := 14.0
 const HEADLIGHT_ANGLE := 32.0
@@ -61,6 +73,9 @@ var _yaw := 0.0
 var _fx_root: Node3D
 var _cars: Array[Dictionary] = []
 var _next_car := 10.0
+var _lane_wait := [0.0, 0.0]               # per lane (index 0: +z travel, 1: −z), s until it may join
+var _lane_phase := [0.0, 2.3]              # the stop-and-go waves, offset per lane
+var _spots := 0
 var _sent := 0
 var _rng := RandomNumberGenerator.new()
 var _tree_rigs: Array[Node3D] = []
@@ -274,19 +289,53 @@ func car_position(i: int) -> Vector3:
 	return (_cars[i]["node"] as Node3D).position
 
 
+## The lane's pace right now (m/s, signed): the speed a car with clear road
+## ahead settles to. A slow wave takes it to a stop and back.
+func lane_speed(dir: float) -> float:
+	var k := 0 if dir > 0.0 else 1
+	var wave := 0.5 + 0.5 * sin(TAU * _t / WAVE_PERIOD + float(_lane_phase[k]))
+	return dir * (CAR_SPEED.x + (CAR_SPEED.y - CAR_SPEED.x) * clampf(wave * 1.5 - 0.25, 0.0, 1.0))
+
+
 func car_velocity(i: int) -> float:
 	return float(_cars[i]["vel"])
+
+
+## Clear road ahead of car `i` in its lane (m, bumper to bumper), INF if none.
+func gap_ahead(i: int) -> float:
+	var c := _cars[i]
+	var dir := float(c["dir"])
+	var z := (c["node"] as Node3D).position.z
+	var best := INF
+	for j in _cars.size():
+		if j == i or float(_cars[j]["dir"]) != dir:
+			continue
+		var d := ((_cars[j]["node"] as Node3D).position.z - z) * dir
+		if d > 0.0:
+			best = minf(best, d - CAR_LEN)
+	return best
+
+
+## Is a lane's joining edge clear (the last car at least a stopped pitch ahead)?
+func lane_clear(dir: float) -> bool:
+	var edge := _street_z0 - dir * CAR_EDGE
+	for c in _cars:
+		if float(c["dir"]) == dir and absf((c["node"] as Node3D).position.z - edge) < CAR_LEN + STOP_GAP:
+			return false
+	return true
 
 
 ## Put a car on the street at one end: +z travel takes the far lane, −z the
 ## near one (right-hand traffic seen from the court). Refused when the street
 ## is full.
-func spawn_car() -> void:
+func spawn_car(dir := 0.0) -> void:
 	if _cars.size() >= MAX_CARS or _fx_root == null:
 		return
-	var dir := 1.0 if _rng.randf() < 0.5 else -1.0
+	if dir == 0.0:
+		dir = 1.0 if _rng.randf() < 0.5 else -1.0
+	if not lane_clear(dir):
+		return
 	var path: String = MODELS[_rng.randi_range(0, MODELS.size() - 1)]
-	var speed := _rng.randf_range(CAR_SPEED.x, CAR_SPEED.y)
 	if not ResourceLoader.exists(path):
 		return
 	var scene: PackedScene = load(path)
@@ -299,20 +348,24 @@ func spawn_car() -> void:
 		b.get_parent().remove_child(b)
 		b.free()
 	_light_lamps(car)
-	var lamp := SpotLight3D.new()
-	lamp.name = "Headlights"
-	lamp.position = Vector3(0, 0.65, 2.0)
-	lamp.rotate_y(PI)            # a spot shines down local −Z; the car's front is +Z
-	lamp.light_energy = HEADLIGHT_ENERGY
-	lamp.spot_range = HEADLIGHT_RANGE
-	lamp.spot_angle = HEADLIGHT_ANGLE
-	lamp.light_color = Color(1.0, 0.93, 0.8)
-	lamp.shadow_enabled = false
-	car.add_child(lamp)
+	var has_spot := false
+	if _spots < HEADLIGHT_SPOTS:
+		var lamp := SpotLight3D.new()
+		lamp.name = "Headlights"
+		lamp.position = Vector3(0, 0.65, 2.0)
+		lamp.rotate_y(PI)            # a spot shines down local −Z; the car's front is +Z
+		lamp.light_energy = HEADLIGHT_ENERGY
+		lamp.spot_range = HEADLIGHT_RANGE
+		lamp.spot_angle = HEADLIGHT_ANGLE
+		lamp.light_color = Color(1.0, 0.93, 0.8)
+		lamp.shadow_enabled = false
+		car.add_child(lamp)
+		_spots += 1
+		has_spot = true
 	car.position = Vector3(_street_x + dir * LANE_HALF, 0.0, _street_z0 - dir * CAR_EDGE)
 	car.rotation.y = (0.0 if dir > 0.0 else PI) + _yaw
 	_fx_root.add_child(car)
-	_cars.push_back({"node": car, "vel": dir * speed})
+	_cars.push_back({"node": car, "dir": dir, "spot": has_spot, "vel": lane_speed(dir) * 0.5})
 	_sent += 1
 
 
@@ -339,19 +392,39 @@ func _process(dt: float) -> void:
 	if cam != null:
 		for rig in _tree_rigs:
 			rig.rotation.y = CourtGeometry.yaw_toward(rig.global_position, cam.global_position)
+	# Each car follows the one ahead: a target speed from the clear road in
+	# front (the lane's pace with room, a stop at the bumper gap, a proportional
+	# crawl between), reached at the car's own acceleration or braking.
+	for i in _cars.size():
+		var c := _cars[i]
+		var dir := float(c["dir"])
+		var pace := absf(lane_speed(dir))
+		var room := gap_ahead(i)
+		var want := pace
+		if room < INF:
+			want = minf(pace, clampf((room - STOP_GAP) / FOLLOW_GAP, 0.0, 1.0) * CAR_SPEED.y)
+		var v := absf(float(c["vel"]))
+		if want > v:
+			v = minf(v + ACCEL * dt, want)
+		else:
+			v = maxf(v - BRAKE * dt, want)
+		c["vel"] = v * dir
 	var keep: Array[Dictionary] = []
 	for c in _cars:
 		var node := c["node"] as Node3D
 		node.position.z += float(c["vel"]) * dt
 		if absf(node.position.z - _street_z0) > CAR_EDGE + 1.0:
+			if bool(c["spot"]):
+				_spots -= 1
 			node.queue_free()
 		else:
 			keep.push_back(c)
 	_cars = keep
-	_next_car -= dt
-	if _next_car <= 0.0:
-		if _cars.size() < MAX_CARS:
-			spawn_car()
-			_next_car = _rng.randf_range(CAR_GAP.x, CAR_GAP.y)
-		else:
-			_next_car = CAR_GAP.x
+	# Each lane fills from its edge: the next car joins once the last has
+	# pulled a pitch ahead, after a moment's hesitation.
+	for k in 2:
+		var dir := 1.0 if k == 0 else -1.0
+		_lane_wait[k] = float(_lane_wait[k]) - dt
+		if float(_lane_wait[k]) <= 0.0 and lane_clear(dir) and _cars.size() < MAX_CARS:
+			spawn_car(dir)
+			_lane_wait[k] = _rng.randf_range(CAR_GAP.x, CAR_GAP.y)

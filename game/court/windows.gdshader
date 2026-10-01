@@ -26,7 +26,7 @@ uniform float period_spread = 600.0;
 uniform vec3 lit_color : source_color = vec3(1.0, 0.82, 0.55);
 uniform vec3 dark_color : source_color = vec3(0.09, 0.12, 0.2);
 uniform float emission_energy = 1.4;
-uniform vec3 dusk_tint : source_color = vec3(0.72, 0.68, 0.84);
+uniform vec3 dusk_tint : source_color = vec3(0.9, 0.88, 0.94);
 uniform float face_light = 0.25;
 instance uniform float seed = 0.0;
 

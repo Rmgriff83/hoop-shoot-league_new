@@ -721,8 +721,15 @@ instance `seed` so the buildings sharing the atlas light differently. The
 (`CityFx.lit_fraction`).
 
 **Cars** are the hometown pack's glbs under `assets/vehicles/` (GGBot,
-credited): `CityFx.spawn_car()` instances one, strips its `StaticBody3D`,
-adds a headlight spot, and slides it along z on one lane at 8–11 m/s.
+credited): heavy evening traffic — every car follows the one ahead
+(`CityFx.gap_ahead`: the lane's pace with clear road, a stop 1.6 m behind
+a bumper, a proportional crawl between, at its own 1.8 m/s² pull-away and
+3 m/s² braking), so stops ripple back down the queue; a 30 s wave in the
+lane's pace (`lane_speed`, 0–5 m/s) sets the rhythm, lanes fill from the
+edge every 3–9 s up to 14 cars. `spawn_car(dir)` strips the `StaticBody3D`,
+lights the lamp glow, and hangs a real headlight spot on at most four
+cars. The sky and manifest are about 7 pm: a soft orange evening, lighter
+and quieter than the beach's dusk.
 
 **The chain hoop** (`build_chain_hoop.py` → `assets/hoops/chain/`), after
 Ross's references (2026-09-27; white since 2026-09-30): a slightly dirty

@@ -168,20 +168,48 @@ func _city(t) -> void:
 	t.ok(Vector2(p0.x, p0.z).length() < 58.0, "inside the sky cylinder")
 	t.ok(absf(sin(car.rotation.y)) < 1e-6, "aligned with the street")
 	var v0 := absf(cfx.car_velocity(0))
-	t.ok(v0 >= CityFx.CAR_SPEED.x and v0 <= CityFx.CAR_SPEED.y, "city speed (%.1f m/s)" % v0)
-	for i in 120:
+	t.ok(v0 >= CityFx.CAR_SPEED.x and v0 <= CityFx.CAR_SPEED.y, "a roll (%.1f m/s)" % v0)
+	for i in 600:
 		cfx._process(1.0 / 60.0)
-	t.ok(absf(cfx.car_position(0).z) < absf(p0.z), "it drives inward")
-	for i in int(20.0 * 60):
+	t.ok(absf(cfx.car_position(0).z) < absf(p0.z), "it rolls inward")
+	# Heavy traffic: the lanes fill in behind, every car keeping its distance.
+	for i in int(CityFx.WAVE_PERIOD * 60):
 		cfx._process(1.0 / 60.0)
-		if cfx.car_count() == 0:
-			break
-	t.eq(cfx.car_count(), 0, "it crosses and is freed")
-	t.ok(cfx.sent() >= 1, "counted")
-	cfx.spawn_car()
-	cfx.spawn_car()
-	cfx.spawn_car()
-	t.eq(cfx.car_count(), CityFx.MAX_CARS, "the street holds %d cars at most" % CityFx.MAX_CARS)
+	t.ok(cfx.car_count() >= 4, "the queue fills in behind (%d cars after a wave)" % cfx.car_count())
+	var min_gap := INF
+	for a in cfx.car_count():
+		min_gap = minf(min_gap, cfx.gap_ahead(a))
+	t.ok(min_gap >= CityFx.STOP_GAP - 0.6, "never closer than the stop gap, bumper to bumper (%.1f m)" % min_gap)
+	var stopped := false
+	var moving := false
+	var speeds_differ := false
+	for i in int(CityFx.WAVE_PERIOD * 60):
+		cfx._process(1.0 / 60.0)
+		var lo := INF
+		var hi := 0.0
+		for a in cfx.car_count():
+			var sp := absf(cfx.car_velocity(a))
+			lo = minf(lo, sp)
+			hi = maxf(hi, sp)
+		if lo < 0.05:
+			stopped = true
+		if hi > 2.0:
+			moving = true
+		if hi - lo > 1.0:
+			speeds_differ = true
+	t.ok(stopped and moving, "stop-and-go: cars halt and pull away within one wave")
+	t.ok(speeds_differ, "and not as one block: cars ahead roll while cars behind still wait")
+	t.ok(cfx.car_count() <= CityFx.MAX_CARS, "under the cap (%d)" % cfx.car_count())
+	var spots := 0
+	for c in cfx._cars:
+		if c["spot"]:
+			spots += 1
+	t.ok(spots <= CityFx.HEADLIGHT_SPOTS, "at most %d real headlight spots (%d)" % [CityFx.HEADLIGHT_SPOTS, spots])
+	t.ok(cfx.sent() >= 4, "counted")
+	var clear_before := cfx.lane_clear(1.0)
+	var before_spawn := cfx.car_count()
+	cfx.spawn_car(1.0)
+	t.ok(cfx.car_count() == before_spawn + (1 if clear_before and before_spawn < CityFx.MAX_CARS else 0), "a car joins only when its lane's edge is clear")
 	# Determinism: two fresh cities spawn the same first car.
 	var c2: Node = load("res://assets/arena/city/city.glb").instantiate()
 	var f2 := CityFx.new()
