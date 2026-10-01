@@ -46,27 +46,41 @@ local function save(spr, name)
   print("wrote " .. name)
 end
 
--- city_board.png 512x294 — 1.83 x 1.05 m (280 px/m). A WHITE board, slightly
--- dirty: off-white paint with a soft mottle, faint grime streaks running down,
--- a little grey-brown bloom under the rim mount and at the lower corners, a
--- dark target, a riveted rolled-edge frame. The chamfered lower corners are
--- cut by the mesh; here they are frame too so nothing odd shows at the cut.
+-- city_board.png 512x294 — 1.83 x 1.05 m (280 px/m). A WHITE board gone
+-- DINGY (Ross, 2026-10-01): greyed paint under a heavy mottle, grime
+-- streaks running down, and the dirt where the ball actually hits — a
+-- broad smudge centred on the target square (heaviest at its middle and
+-- along its top edge, the bank-shot spot), a bloom under the rim mount,
+-- and the lower corners. The chamfered lower corners are cut by the mesh;
+-- here they are frame too so nothing odd shows at the cut.
 do
   local W, H = 512, 294
   local spr, img = newImage(W, H)
   local px = W / 1.83
+  -- the target square (also drawn below), so the dirt can find it
+  local sq_w0, sq_h0 = math.floor(0.59 * px + 0.5), math.floor(0.45 * px + 0.5)
+  local sq_bottom = H - 1 - math.floor(0.15 * px + 0.5)
+  local sq_top = sq_bottom - sq_h0 + 1
+  local sq_cx, sq_cy = W / 2, (sq_top + sq_bottom) / 2
   for y = 0, H - 1 do
     for x = 0, W - 1 do
       local mottle = vnoise(x, y, 22, 401) * 0.6 + vnoise(x, y, 60, 402) * 0.4
-      local streak = math.max(0, vnoise(x * 5, y, 36, 404) - 0.6) * 0.5 * (0.3 + 0.7 * y / H)
-      local v = 226 + mottle * 16 - streak * 46
+      local streak = math.max(0, vnoise(x * 5, y, 36, 404) - 0.5) * 0.8 * (0.3 + 0.7 * y / H)
+      local v = 196 + mottle * 22 - streak * 60
       -- grime under the rim mount (bottom centre) and in the lower corners
       local dx, dy = (x - W / 2) / (0.26 * px), (H - 1 - y) / (0.26 * px)
       local grime = math.max(0, 1 - math.sqrt(dx * dx + dy * dy * 0.6)) * (0.5 + 0.5 * vnoise(x, y, 7, 405))
       local cx = math.min(x, W - 1 - x) / (0.3 * px)
       local corner = math.max(0, 1 - math.sqrt(cx * cx + dy * dy)) * 0.5 * vnoise(x, y, 9, 406)
-      local d = grime * 0.55 + corner
-      local r, g, b = v - d * 70, v - d * 66, v - d * 58
+      -- the ball's dirt: a wide smudge on the square, heaviest at its centre
+      -- and along its top edge, smeared a little above it
+      local tx, ty = (x - sq_cx) / (0.42 * px), (y - sq_cy) / (0.30 * px)
+      local hit = math.max(0, 1 - math.sqrt(tx * tx + ty * ty))
+      local ex, ey = (x - sq_cx) / (0.36 * px), (y - sq_top) / (0.10 * px)
+      local edge = math.max(0, 1 - math.sqrt(ex * ex + ey * ey))
+      local smudge = (hit * hit * 0.9 + edge * 0.7) * (0.55 + 0.45 * vnoise(x, y, 11, 408))
+      local d = grime * 0.6 + corner + smudge
+      local r, g, b = v - d * 78, v - d * 74, v - d * 66
       img:drawPixel(x, y, rgb(r, g, b))
     end
   end
@@ -110,14 +124,15 @@ do
   save(spr, "city_board.png")
 end
 
--- hoop_rim_steel.png 32x8 — the ring tube in bare galvanised grey.
+-- hoop_rim_steel.png 32x8 — the ring tube, painted a dark orange-red
+-- (Ross, 2026-10-01), worn lighter on top and near-black underneath.
 do
   local spr, img = newImage(32, 8)
   for y = 0, 7 do
     local c
-    if y < 2 then c = rgb(214, 220, 228)
-    elseif y < 6 then c = rgb(150, 156, 166)
-    else c = rgb(78, 82, 92) end
+    if y < 2 then c = rgb(198, 84, 46)
+    elseif y < 6 then c = rgb(150, 50, 28)
+    else c = rgb(78, 24, 14) end
     for x = 0, 31 do
       local n = noise(x, y, 411) * 10
       img:drawPixel(x, y, rgb(pc.rgbaR(c) + n, pc.rgbaG(c) + n, pc.rgbaB(c) + n))
@@ -153,7 +168,8 @@ do
   fill(img, 0, 0, W - 1, H - 1, none)
   local CELL = 64
   local LINK, GAP = 14, 2
-  local hi, mid, lo = rgb(244, 246, 250), rgb(190, 196, 206), rgb(96, 100, 110)
+  -- slate links (Ross, 2026-10-01): a cool dark grey, not bright steel
+  local hi, mid, lo = rgb(176, 184, 198), rgb(104, 112, 126), rgb(44, 50, 60)
   local function paint(x, y, c)
     if x >= 0 and x < W and y >= 0 and y < H then img:drawPixel(x, y, c) end
   end
