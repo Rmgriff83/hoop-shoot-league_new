@@ -680,7 +680,12 @@ or File > Export with the §8 settings.
 
 `tools/blender/build_city.py` (`-- --force`) forks the beach: the same sim
 frame, the beach's fence loop (`ENC_X0..X1 -11.2..5.7`, `±8.6`, every side
-3.6 m — `SimGeometry.city()` mirrors it), a 14.6 × 15.2 m slab whose lines
+3.6 m and down to the ground, no knee wall — `SimGeometry.city()` mirrors
+it), the reader board a taller cabinet strapped to the back fence left of
+the hoop (`ReaderRig` + `LedFace`; not a `ScoreboardRig`, so it never
+turns), two floor speakers left of the hoop's base as the city's radio
+(`Speakers`, `SpeakerLed`, `ArenaSet.interactables`; the lo-fi playlist is
+Ross's to fill — `assets/music/` placeholders for now), a 14.6 × 15.2 m slab whose lines
 `gen_city_textures.lua` paints with the rim at x 3.625 and the baseline at
 4.6, then, behind the back fence, kerb → sidewalk → a two-lane road
 (`STREET_X 11.1`, an empty `StreetRig` on its centre line for

@@ -38,6 +38,13 @@ func run(t) -> void:
 	t.eq(InteractableKinds.make("nope"), null, "unknown kind → null")
 	var cage: ArenaSet = CosmeticLibrary.get_arena("cage")
 	t.eq(cage.interactables.size(), 0, "cage has none yet")
+	var city: ArenaSet = CosmeticLibrary.get_arena("city")
+	t.eq(city.interactables.size(), 1, "the city has one interactable")
+	t.ok(str(city.interactables[0]["kind"]) == "radio" and str(city.interactables[0]["node"]) == "Speakers", "the floor speakers are its radio")
+	var cglb: Node = load(city.model_path).instantiate()
+	t.ok(cglb.find_child("Speakers", true, false) is Node3D and cglb.find_child("SpeakerLed", true, false) is MeshInstance3D, "Speakers + SpeakerLed in the city glb")
+	t.ok(cglb.find_child("ScoreboardRig", true, false) == null and cglb.find_child("LedFace", true, false) is MeshInstance3D, "the city's reader board hangs on the fence (no turning rig)")
+	cglb.free()
 	# The glb has the boombox and its LED.
 	var glb: Node = load(str(beach.model_path)).instantiate()
 	var bb := glb.find_child("Boombox", true, false)

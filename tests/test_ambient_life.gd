@@ -148,6 +148,8 @@ func _city(t) -> void:
 	t.eq(_count(city, "BusSign"), 1, "the shelter's roof sign")
 	t.ok(_count(city, "BusStop", false) == 1 and _count(city, "BusPoster") == 1, "a bus shelter with a lit poster")
 	t.eq(_count(city, "ParkHead"), 3, "three park lamps behind the player")
+	t.eq(_count(city, "Wall"), 0, "no knee wall: the fence runs to the ground")
+	t.eq(_count(city, "FenceFoot"), 4, "a bottom rail on every side")
 	t.eq(cfx.lamp_count(), _count(city, "LampHead") + _count(city, "ParkHead") + 1, "an omni under every lamp and park head and one in the shelter")
 	var lit0 := CityFx.lit_fraction(0.0)
 	t.ok(lit0 > 0.2 and lit0 < 0.5, "about a third of the windows are lit (%.2f)" % lit0)

@@ -22,7 +22,8 @@ chain hoop brings its own gooseneck pole (no arena `Pole`); `StreetRig` (an empt
 the street's centre line) gives CityFx the lane line; every `Building*` mesh
 gets the facade shader (dusk + lit panes switching on and off); `FloodHead*` quads
 are unshaded; `TreeRig*` billboards turn to the camera; `ScoreboardRig` /
-`LedFace` host the ground LED board. `City` is the static root / shake handle.
+`LedFace` is the reader board hung on the back fence; `Speakers` + `SpeakerLed`
+the floor speakers' radio. `City` is the static root / shake handle.
 
 CREATOR script: refuses to overwrite an existing city.blend unless run with
 `-- --force`. Never touches the other arenas.
@@ -48,10 +49,10 @@ POLE_X = BOARD_X + 0.3                    # CourtGeometry.CROSSBAR_X_OFF
 # The lined slab: 14.6 x 15.2 m, authored in city_court.png with the rim at
 # x 3.625 and the baseline at 4.6 (so it stays behind the pole at 4.30).
 COURT_X0, COURT_X1, COURT_HALF_W = -9.9, 4.7, 7.6
-# Knee-high wall + chain-link fence, the beach's loop: SimGeometry.city()'s
-# walls MUST match these.
+# Chain-link fence all the way to the ground (no knee wall: Ross, 2026-09-30),
+# the beach's loop: SimGeometry.city()'s walls MUST match these.
 WALL_T = 0.25
-WALL_H = 0.45
+WALL_H = 0.0
 FENCE_TOP = 3.6
 ENC_X0, ENC_X1, ENC_HALF_W = -11.2, 5.7, 8.6
 # The street behind the back fence: kerb, sidewalk, two lanes, far sidewalk.
@@ -200,18 +201,17 @@ def build():
     cage.add_quad("Ground", [(-GROUND, -0.01, -GROUND), (GROUND, -0.01, -GROUND), (GROUND, -0.01, GROUND), (-GROUND, -0.01, GROUND)],
                   (0, 1, 0), asphalt, c_street, root, (GROUND, GROUND))
 
-    # Knee-high wall + chain-link fence: one loop, all four sides full height.
+    # Chain-link fence to the ground: one loop, all four sides full height, a
+    # top rail and a bottom rail at ankle height, posts every ~2.6 m.
     corners = [(ENC_X0, -ENC_HALF_W), (ENC_X1, -ENC_HALF_W), (ENC_X1, ENC_HALF_W), (ENC_X0, ENC_HALF_W)]
     for k in range(4):
         (ax, az), (bx, bz) = corners[k], corners[(k + 1) % 4]
         length = math.hypot(bx - ax, bz - az)
         cx, cz = (ax + bx) / 2.0, (az + bz) / 2.0
         along_x = abs(bx - ax) > abs(bz - az)
-        size = (length + WALL_T, WALL_H, WALL_T) if along_x else (WALL_T, WALL_H, length + WALL_T)
-        cage.add_box("Wall%d" % k, size, (cx, WALL_H / 2.0, cz), concrete, c_court, root)
-        cage.add_box("WallCap%d" % k, (size[0] + 0.06, 0.06, size[2] + 0.06), (cx, WALL_H + 0.03, cz), curb, c_court, root)
         rail = (length + 0.05, 0.05, 0.05) if along_x else (0.05, 0.05, length + 0.05)
         cage.add_box("FenceRail%d" % k, rail, (cx, FENCE_TOP, cz), dark, c_court, root)
+        cage.add_box("FenceFoot%d" % k, rail, (cx, 0.06, cz), dark, c_court, root)
         n_posts = max(2, int(round(length / 2.6)) + 1)
         for i in range(1, n_posts - 1):
             t = i / (n_posts - 1)
@@ -375,15 +375,50 @@ def build():
     skyobj.data.materials.append(sky)
     cage.link_obj(skyobj, c_sky, root, (0, 0, (SKY_Y0 + SKY_Y1) / 2))
 
-    # ---- The ground LED board on the wall's ledge (the beach's, no boombox).
+    # ---- The reader board: a taller cabinet hung ON the back fence to the
+    # shooter's left of the hoop, strapped to the mesh with brackets. Not
+    # named ScoreboardRig on purpose: it is bolted on, so it never turns to
+    # face the shooter; `LedFace` is what CourtGeometry binds.
     led_off = cage.mat_tex("City_LedOff", TEX("hoop_led_off.png"))
-    sb_x, sb_y, sb_z = ENC_X1 - 0.115, WALL_H + 0.06, -0.72
-    rig = cage.add_empty("ScoreboardRig", c_props, root, (sb_x, sb_y, sb_z))
-    cage.add_box("ScoreboardBase", (0.16, 0.06, 0.70), (0.0, 0.03, 0.0), steel, c_props, rig)
-    cage.add_box("ScoreboardBody", (0.14, 0.30, 0.66), (0.0, 0.21, 0.0), dark, c_props, rig)
-    cage.add_quad("LedFace", [(-0.072, 0.165, -0.30), (-0.072, 0.165, 0.30), (-0.072, 0.265, 0.30), (-0.072, 0.265, -0.30)],
+    sb_x, sb_y, sb_z = ENC_X1 - 0.10, 1.35, -1.75
+    rig = cage.add_empty("ReaderRig", c_props, root, (sb_x, sb_y, sb_z))
+    cage.add_box("ReaderBody", (0.14, 0.56, 0.96), (0.0, 0.28, 0.0), dark, c_props, rig)
+    cage.add_box("ReaderTrim", (0.15, 0.03, 0.98), (0.0, 0.575, 0.0), curb, c_props, rig)
+    cage.add_box("ReaderSill", (0.15, 0.03, 0.98), (0.0, -0.015, 0.0), curb, c_props, rig)
+    cage.add_quad("LedFace", [(-0.072, 0.21, -0.45), (-0.072, 0.21, 0.45), (-0.072, 0.36, 0.45), (-0.072, 0.36, -0.45)],
                   (-1, 0, 0), led_off, c_props, rig, (1.0, 1.0), origin=(0, 0, 0))
-    cage.add_box("ScoreboardTrim", (0.15, 0.02, 0.68), (0.0, 0.365, 0.0), curb, c_props, rig)
+    for i, bz in enumerate((-0.38, 0.38)):
+        cage.add_box("ReaderBracket%d" % i, (0.12, 0.08, 0.06), (0.10, 0.5, bz), steel, c_props, rig)
+        cage.add_box("ReaderBracketLo%d" % i, (0.12, 0.08, 0.06), (0.10, 0.06, bz), steel, c_props, rig)
+
+    # ---- Two big floor speakers to the shooter's left of the hoop's base, the
+    # city's radio (ArenaSet.interactables kind "radio" on `Speakers`, its LED
+    # `SpeakerLed`): a lo-fi beats playlist Ross will pick.
+    spk_body = cage.mat_flat("Speaker_Body", (36, 36, 40), roughness=0.85)
+    spk_grille = cage.mat_flat("Speaker_Grille", (18, 18, 20), roughness=1.0)
+    spk_cone = cage.mat_flat("Speaker_Cone", (70, 70, 76), roughness=0.9)
+    spk_ring = cage.mat_flat("Speaker_Ring", (160, 160, 168), roughness=0.5)
+    spk_red = cage.mat_flat("Speaker_Red", (220, 60, 50), roughness=0.6)
+    speakers = cage.add_empty("Speakers", c_props, root, (ENC_X1 - 1.15, 0.0, -1.75))
+    for i, dz in enumerate((-0.42, 0.42)):
+        w, h, d = 0.52, 0.92, 0.46
+        cage.add_box("SpeakerBox%d" % i, (d, h, w), (0.0, h / 2.0, dz), spk_body, c_props, speakers)
+        cage.add_box("SpeakerGrille%d" % i, (0.02, h - 0.1, w - 0.1), (-d / 2.0 - 0.005, h / 2.0, dz), spk_grille, c_props, speakers)
+        for j, (cy, cr) in enumerate(((0.32, 0.17), (0.70, 0.09))):
+            bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=cr, depth=0.03, location=(0, 0, 0))
+            cone = bpy.context.active_object
+            cone.name = cone.data.name = "SpeakerCone%d_%d" % (i, j)
+            cone.rotation_euler = (0.0, math.pi / 2, 0.0)
+            cone.data.materials.append(spk_cone)
+            cage.link_obj(cone, c_props, speakers, cage.s2b((-d / 2.0 - 0.02, cy, dz)))
+            bpy.ops.mesh.primitive_torus_add(major_radius=cr, minor_radius=0.012, major_segments=16, minor_segments=4, location=(0, 0, 0))
+            ring = bpy.context.active_object
+            ring.name = ring.data.name = "SpeakerRing%d_%d" % (i, j)
+            ring.rotation_euler = (0.0, math.pi / 2, 0.0)
+            ring.data.materials.append(spk_ring)
+            cage.link_obj(ring, c_props, speakers, cage.s2b((-d / 2.0 - 0.03, cy, dz)))
+    cage.add_box("SpeakerLed", (0.02, 0.03, 0.03), (-0.245, 0.86, -0.24), spk_red, c_props, speakers)
+    cage.add_box("SpeakerCable", (0.02, 0.02, 0.5), (0.1, 0.02, 0.0), spk_grille, c_props, speakers)
 
     # No arena pole: the chain hoop (build_chain_hoop.py) brings its own
     # gooseneck on the same pole line.
