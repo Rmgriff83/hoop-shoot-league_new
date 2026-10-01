@@ -726,12 +726,14 @@ instance `seed` so the buildings sharing the atlas light differently. The
 (`CityFx.lit_fraction`).
 
 **Cars** are the hometown pack's glbs under `assets/vehicles/` (GGBot,
-credited): heavy evening traffic — every car follows the one ahead
-(`CityFx.gap_ahead`: the lane's pace with clear road, a stop 1.6 m behind
+credited): heavy evening traffic — every car follows what is ahead
+(`CityFx.gap_ahead`: open-road pace with clear road, a stop 1.6 m behind
 a bumper, a proportional crawl between, at its own 1.8 m/s² pull-away and
-3 m/s² braking), so stops ripple back down the queue; a 30 s wave in the
-lane's pace (`lane_speed`, 0–5 m/s) sets the rhythm, lanes fill from the
-edge every 3–9 s up to 14 cars. `spawn_car(dir)` strips the `StaticBody3D`,
+3 m/s² braking), and nothing else ever slows one: the front of each queue
+stops for a signal at the lane's exit, just past where cars leave view,
+that holds red 10–22 s between 14–30 s greens, so the pile-up behind it
+is the jam and every stop has a car or a red light in front of it; lanes
+fill from the edge every 3–9 s up to 14 cars. `spawn_car(dir)` strips the `StaticBody3D`,
 lights the lamp glow, and hangs a real headlight spot on at most four
 cars. The sky and manifest are about 7 pm: a soft orange evening, lighter
 and quieter than the beach's dusk.

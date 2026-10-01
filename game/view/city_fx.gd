@@ -29,14 +29,19 @@ const CAR_EDGE := 34.0            # z where a car appears / is freed (corner rad
 ## — it drives at the lane's pace until it closes to its following distance,
 ## brakes to a stop a bumper gap behind, and pulls away again only when the
 ## car ahead has opened the gap, so stops ripple back down the queue the way
-## real jams do. A slow wave in the lane's pace sets the stop-and-go rhythm.
-const CAR_SPEED := Vector2(0.0, 5.0)        # the lane's pace over a wave: stop to a slow roll
+## real jams do. A car never stops for nothing: every stop has a car in
+## front of it, and the FRONT of each queue stops for a SIGNAL at the lane's
+## exit (just past where the cars leave view) that goes red now and then —
+## the pile-up behind it is the jam.
+const CAR_SPEED := Vector2(0.0, 5.0)        # a car's pace: stop to a slow roll
+const SIGNAL_GREEN := Vector2(14.0, 30.0)   # s a lane's exit signal stays green
+const SIGNAL_RED := Vector2(10.0, 22.0)     # s it holds red (the queue builds)
+const SIGNAL_X := 2.0                       # m past the exit edge where the lead car stops
 const CAR_LEN := 4.4
 const STOP_GAP := 1.6                       # m bumper to bumper when stopped
 const FOLLOW_GAP := 3.0                     # m of clear road a car keeps while rolling
 const ACCEL := 1.8                          # m/s² pulling away
 const BRAKE := 3.0                          # m/s² stopping
-const WAVE_PERIOD := 30.0                   # s per stop-and-go wave
 const CAR_GAP := Vector2(3.0, 9.0)          # s between cars joining a lane
 const MAX_CARS := 14
 const HEADLIGHT_SPOTS := 4                  # real spot lights on this many cars (the rest glow)
@@ -76,7 +81,8 @@ var _next_car := 10.0
 var _lane_wait := [0.0, 0.0]               # per lane (index 0: +z travel, 1: −z), s until it may join
 var _deck: Array[int] = []                   # models to draw, shuffled: every model once before any repeats
 var _last_model := -1
-var _lane_phase := [0.0, 2.3]              # the stop-and-go waves, offset per lane
+var _signal_red := [false, false]          # per lane: the exit signal's state
+var _signal_t := [12.0, 20.0]              # s until it changes
 var _spots := 0
 var _sent := 0
 var _rng := RandomNumberGenerator.new()
@@ -291,19 +297,27 @@ func car_position(i: int) -> Vector3:
 	return (_cars[i]["node"] as Node3D).position
 
 
-## The lane's pace right now (m/s, signed): the speed a car with clear road
-## ahead settles to. A slow wave takes it to a stop and back.
+## A lane's open-road pace (m/s, signed): what a car with nothing ahead does.
 func lane_speed(dir: float) -> float:
-	var k := 0 if dir > 0.0 else 1
-	var wave := 0.5 + 0.5 * sin(TAU * _t / WAVE_PERIOD + float(_lane_phase[k]))
-	return dir * (CAR_SPEED.x + (CAR_SPEED.y - CAR_SPEED.x) * clampf(wave * 1.5 - 0.25, 0.0, 1.0))
+	return dir * CAR_SPEED.y
+
+
+## Is a lane's exit signal red?
+func signal_red(dir: float) -> bool:
+	return bool(_signal_red[0 if dir > 0.0 else 1])
+
+
+## The lane's exit signal stop line, in z (past the edge where cars leave view).
+func signal_z(dir: float) -> float:
+	return _street_z0 + dir * (CAR_EDGE + SIGNAL_X)
 
 
 func car_velocity(i: int) -> float:
 	return float(_cars[i]["vel"])
 
 
-## Clear road ahead of car `i` in its lane (m, bumper to bumper), INF if none.
+## Clear road ahead of car `i` in its lane (m, bumper to bumper): to the car
+## in front, or to the exit signal's stop line when it is red; INF if none.
 func gap_ahead(i: int) -> float:
 	var c := _cars[i]
 	var dir := float(c["dir"])
@@ -315,6 +329,10 @@ func gap_ahead(i: int) -> float:
 		var d := ((_cars[j]["node"] as Node3D).position.z - z) * dir
 		if d > 0.0:
 			best = minf(best, d - CAR_LEN)
+	if signal_red(dir):
+		var d := (signal_z(dir) - z) * dir - CAR_LEN * 0.5
+		if d > 0.0:
+			best = minf(best, d)
 	return best
 
 
@@ -418,9 +436,17 @@ func _process(dt: float) -> void:
 	if cam != null:
 		for rig in _tree_rigs:
 			rig.rotation.y = CourtGeometry.yaw_toward(rig.global_position, cam.global_position)
-	# Each car follows the one ahead: a target speed from the clear road in
-	# front (the lane's pace with room, a stop at the bumper gap, a proportional
-	# crawl between), reached at the car's own acceleration or braking.
+	# The exit signals: green for a while, then red, and the queue backs up.
+	for k in 2:
+		_signal_t[k] = float(_signal_t[k]) - dt
+		if float(_signal_t[k]) <= 0.0:
+			_signal_red[k] = not bool(_signal_red[k])
+			var span := SIGNAL_RED if bool(_signal_red[k]) else SIGNAL_GREEN
+			_signal_t[k] = _rng.randf_range(span.x, span.y)
+	# Each car follows what is ahead — the next car, or a red signal: a target
+	# speed from the clear road (open-road pace with room, a stop at the bumper
+	# gap, a proportional crawl between), reached at its own acceleration or
+	# braking. Nothing else ever slows a car.
 	for i in _cars.size():
 		var c := _cars[i]
 		var dir := float(c["dir"])
@@ -439,7 +465,7 @@ func _process(dt: float) -> void:
 	for c in _cars:
 		var node := c["node"] as Node3D
 		node.position.z += float(c["vel"]) * dt
-		if absf(node.position.z - _street_z0) > CAR_EDGE + 1.0:
+		if absf(node.position.z - _street_z0) > CAR_EDGE + SIGNAL_X + 2.0:
 			if bool(c["spot"]):
 				_spots -= 1
 			node.queue_free()

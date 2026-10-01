@@ -175,17 +175,25 @@ func _city(t) -> void:
 		cfx._process(1.0 / 60.0)
 	t.ok(absf(cfx.car_position(0).z) < absf(p0.z), "it rolls inward")
 	# Heavy traffic: the lanes fill in behind, every car keeping its distance.
-	for i in int(CityFx.WAVE_PERIOD * 60):
+	for i in int(30.0 * 60):
 		cfx._process(1.0 / 60.0)
 	t.ok(cfx.car_count() >= 4, "the queue fills in behind (%d cars after a wave)" % cfx.car_count())
 	var min_gap := INF
 	for a in cfx.car_count():
 		min_gap = minf(min_gap, cfx.gap_ahead(a))
 	t.ok(min_gap >= CityFx.STOP_GAP - 0.6, "never closer than the stop gap, bumper to bumper (%.1f m)" % min_gap)
+	# Every stop has a reason: a car stopped mid-road always has something
+	# within its stop gap ahead — the car in front, or the lane's red signal.
 	var stopped := false
 	var moving := false
 	var speeds_differ := false
-	for i in int(CityFx.WAVE_PERIOD * 60):
+	# (A car whose obstacle just vanished — the light went green, the car ahead
+	# left view — needs a few frames to get rolling: only a stop that STAYS
+	# unexplained for over 0.1 s counts.)
+	var unexplained := 0
+	var saw_red := false
+	var idle_frames := {}
+	for i in int(60.0 * 60):
 		cfx._process(1.0 / 60.0)
 		var lo := INF
 		var hi := 0.0
@@ -193,14 +201,25 @@ func _city(t) -> void:
 			var sp := absf(cfx.car_velocity(a))
 			lo = minf(lo, sp)
 			hi = maxf(hi, sp)
+			var node: Node = cfx._cars[a]["node"]
+			if sp < 0.05 and cfx.gap_ahead(a) > CityFx.STOP_GAP + CityFx.FOLLOW_GAP + 0.5:
+				idle_frames[node] = int(idle_frames.get(node, 0)) + 1
+				if int(idle_frames[node]) > 6:
+					unexplained += 1
+			else:
+				idle_frames[node] = 0
+		if cfx.signal_red(1.0) or cfx.signal_red(-1.0):
+			saw_red = true
 		if lo < 0.05:
 			stopped = true
 		if hi > 2.0:
 			moving = true
 		if hi - lo > 1.0:
 			speeds_differ = true
-	t.ok(stopped and moving, "stop-and-go: cars halt and pull away within one wave")
+	t.ok(saw_red, "a lane's exit signal went red")
+	t.ok(stopped and moving, "stop-and-go: cars halt at the signal and pull away")
 	t.ok(speeds_differ, "and not as one block: cars ahead roll while cars behind still wait")
+	t.eq(unexplained, 0, "no car ever stopped with open road ahead")
 	t.ok(cfx.car_count() <= CityFx.MAX_CARS, "under the cap (%d)" % cfx.car_count())
 	var spots := 0
 	for c in cfx._cars:
