@@ -15,7 +15,10 @@ const TITLE_MUSIC := {"id": "title", "clip": "res://assets/music/title_moog.ogg"
 
 ## Level gating for leagues and areas (docs/PROGRESSION.md: a league's
 ## `unlock` level, reached by playing the league before it). On.
-const LEAGUE_GATING := true
+## Level gates on areas and leagues (docs/PROGRESSION.md). OFF in debug builds
+## — the editor and the phone dev APK (tools/android_deploy.sh exports debug)
+## can reach every area; a release build gates as designed.
+var league_gating: bool = not OS.is_debug_build()
 ## The league whose dashboard / heat is active ("" outside leagues).
 var current_league := ""
 ## The home screen's last card (page index), so leaving an area returns to it.
@@ -208,7 +211,7 @@ func level() -> int:
 
 
 func area_unlocked(area: String) -> bool:
-	return not LEAGUE_GATING or Progression.area_unlocked(level(), area)
+	return not league_gating or Progression.area_unlocked(level(), area)
 
 
 # ---- tickets (global, the locker money) + cosmetics ----------------------------
@@ -552,7 +555,7 @@ func league_states() -> Array:
 	var out := []
 	for l in LeagueData.leagues():
 		var ok := Progression.league_unlocked(lvl, l)
-		out.push_back({"league": l, "unlocked": ok or not LEAGUE_GATING, "rule_met": ok,
+		out.push_back({"league": l, "unlocked": ok or not league_gating, "rule_met": ok,
 			"doc": campaigns.get(l["id"], {})})
 	return out
 
@@ -569,7 +572,7 @@ func save_league_doc(doc: Dictionary, id := "") -> void:
 ## change: the home page opens the league in place (LeagueContext).
 func enter_league(id: String) -> bool:
 	var cfg := LeagueData.league(id)
-	if cfg.is_empty() or not (Progression.league_unlocked(level(), cfg) or not LEAGUE_GATING):
+	if cfg.is_empty() or not (Progression.league_unlocked(level(), cfg) or not league_gating):
 		return false
 	current_league = id
 	if league_doc(id).is_empty():

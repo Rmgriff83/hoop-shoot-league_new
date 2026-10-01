@@ -88,7 +88,7 @@ dashboard is the home page's league context, `docs/HOME.md`); `start_league(id)`
 from season seed + game) and `finish_heat` applies the result (season, career, live games,
 the league's coins and tickets from its `rewards`, docs/ECONOMY.md) before the post-match page
 (`heat_result_screen.gd`, design "League Post-Match", docs/HOME.md → Results), whose CONTINUE
-SEASON returns to the dashboard. `LEAGUE_GATING` is on: a league (and its whole area) opens at its
+SEASON returns to the dashboard. `App.league_gating` is on in release builds (off in debug builds, so the editor and the phone dev APK reach every area): a league (and its whole area) opens at its
 `unlock` level, reached by playing the league before it (docs/PROGRESSION.md).
 
 **Dashboard** — `game/ui/league_context.gd` on the home page (2026-09-26, design "Home
