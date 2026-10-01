@@ -110,14 +110,16 @@ def build():
     ink = mat_flat("Peggy_Ink", (26, 22, 24))
     steel = mat_flat("Peggy_Steel", (196, 200, 208), roughness=0.4)
     gold = mat_flat("Peggy_Gold", (240, 184, 74), roughness=0.5)
-    navy = mat_tex("Peggy_Board", TEX("peggy_board.png"))
+    # The board back is a SOLID colour (Ross, 2026-10-01): a see-through look
+    # there read as a second pane of glass.
+    navy = mat_flat("Peggy_Board", (30, 38, 66), roughness=0.9)
     marquee = mat_tex("Peggy_Marquee", TEX("peggy_marquee.png"), emissive=True)
     bulb = mat_flat("Peggy_Bulb", (255, 232, 170))
     btn_up = mat_tex("Peggy_BtnUp", TEX("peggy_button_up.png"))
     ticket = mat_tex("Peggy_Ticket", TEX("peggy_ticket.png"))
     plate = mat_tex("Peggy_Plate", TEX("peggy_plate_common.png"))
     light = mat_tex("Peggy_Light", TEX("peggy_light.png"), emissive=True)
-    glass = mat_alpha("Peggy_Glass", (190, 230, 255), 0.16)
+    glass = mat_alpha("Peggy_Glass", (236, 240, 246), 0.07)
     frost = mat_alpha("Peggy_Frost", (236, 240, 246), 0.55)
     dark = mat_flat("Peggy_Hall", (18, 16, 22))
     floor = mat_flat("Peggy_Floor", (40, 38, 46))

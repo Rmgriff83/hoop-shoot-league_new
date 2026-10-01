@@ -105,8 +105,15 @@ up/down, ticket, the rarity plates, the light strip, and the UI's
 ball's skin, scaled 0.29, behind a frosted pane.
 
 The machine lives in a `SubViewportContainer` with its own world
-(600×840, camera fov 40 at (0, 1.42, 2.62)); drag in the top 150 px to aim,
-press in the button rect to feed. Sounds (`tools/gen_sfx.gd`): `peggy_press`,
+(600×780, camera fov 40 at (0, 1.42, 2.78)); the **joystick** under it
+(`game/ui/peggy_stick.gd`, 3 u/s at full deflection, springs back to
+centre) drives the carriage — dragging in the view's top 150 px also aims —
+and pressing in the button rect feeds. Under the level line a **rarity
+meter** shows the XP from the last rarity gate to the next (epic at 3,
+legend at 5; "EVERY RARITY OPEN" past that). The board back is a solid
+navy and the glass is near-clear (Ross: a tinted back read as glass).
+Buttons on panel/bg faces take the theme's text colour so dark mode stays
+readable (`LockerPanel._face`). Sounds (`tools/gen_sfx.gd`): `peggy_press`,
 `peggy_servo` (a flat loop while the carriage moves), `peggy_ticket`,
 `peggy_peg_0..2` (pitched up with each hit), `peggy_win`, `peggy_jackpot`.
 

@@ -480,6 +480,26 @@ func _run_peggy() -> void:
 	await _snap("peggy_balls")
 	await _click_button_named("CLOSE")
 	await _sleep(0.3)
+	# Dark mode: both tabs must stay readable.
+	var was_dark: bool = App.dark_mode
+	App.set_dark_mode(true)
+	await _sleep(0.6)
+	locker = get_tree().root.find_child("Locker", true, false)
+	if locker != null:
+		lc = (locker.global_position + locker.size / 2.0) * 0.5
+		_mouse_button(lc, true)
+		await _sleep(0.08)
+		_mouse_button(lc, false)
+		await _sleep(0.6)
+		await _snap("peggy_dark")
+		panel = get_tree().root.find_child("LockerPanel", true, false)
+		if panel != null:
+			panel.show_tab("BALLS")
+		await _sleep(0.4)
+		await _snap("peggy_dark_balls")
+		await _click_button_named("CLOSE")
+		await _sleep(0.3)
+	App.set_dark_mode(was_dark)
 	SaveService.put_cosmetics(cos_before)
 	SaveService.put_settings(set_before)
 	get_tree().quit()

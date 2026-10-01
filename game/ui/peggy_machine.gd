@@ -15,16 +15,16 @@ signal feeding(frac: float)
 
 const GLB := "res://assets/locker/peggy.glb"
 const BULB_SHADER := preload("res://game/court/bulb.gdshader")
-const VIEW := Vector2i(600, 840)
+const VIEW := Vector2i(600, 780)
 const FEED_S := 0.6
 const PLAY_RATE := 0.75
 const U := 0.1
 const BOARD_Y0 := 0.52
 const PEG_Z := 0.185
 const RAIL_BAND := 150.0            # px from the top of the view that aim the carriage
-const BUTTON_RECT := Rect2(140.0, 660.0, 320.0, 180.0)
+const BUTTON_RECT := Rect2(140.0, 600.0, 320.0, 180.0)
 const AIM_LERP := 12.0
-const CAM_POS := Vector3(0.0, 1.42, 2.62)
+const CAM_POS := Vector3(0.0, 1.42, 2.78)
 const CAM_LOOK := Vector3(0.0, 1.17, 0.1)
 const PRIZE_SCALE := 0.29
 const TIER_COLOR := {

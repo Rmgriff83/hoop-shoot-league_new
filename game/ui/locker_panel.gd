@@ -23,6 +23,8 @@ var _content: Control
 var _tab := "PEGGY"
 var _machine: PeggyMachine
 var _level_line: Label
+var _meter: Meter
+var _stick: PeggyStick
 var _hint: Label
 var _list: VBoxContainer
 var _card: Control
@@ -48,8 +50,8 @@ func _ready() -> void:
 	_sheet = PanelContainer.new()
 	_sheet.name = "Sheet"
 	_sheet.set_anchors_preset(Control.PRESET_CENTER)
-	_sheet.position = Vector2(-330, -600)
-	_sheet.size = Vector2(660, 1200)
+	_sheet.position = Vector2(-330, -620)
+	_sheet.size = Vector2(660, 1240)
 	_sheet.add_theme_stylebox_override("panel", RetroTheme.face(RetroTheme.c("bg"), RetroTheme.RADIUS, 20.0))
 	_sheet.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_sheet)
@@ -90,12 +92,26 @@ func _ready() -> void:
 	_fill()
 
 
-## Rebuild the tabs and the current tab's content.
+## A card button whose words stay readable on BOTH palettes: card_button's
+## ink is for the gold/orange faces; on a panel/bg face in dark mode that ink
+## is dark on dark, so those take the theme's text colour instead.
+static func _face(b: Button, fill: Color, margin: float) -> Button:
+	RetroTheme.card_button(b, fill, RetroTheme.RADIUS, margin)
+	if fill == RetroTheme.c("panel") or fill == RetroTheme.c("bg"):
+		for k in ["font_color", "font_hover_color", "font_pressed_color"]:
+			b.add_theme_color_override(k, RetroTheme.c("text"))
+		b.add_theme_color_override("font_disabled_color", RetroTheme.c("muted"))
+	return b
+
+
+## Rebuild the tabs and the current tab's content. Old nodes are removed at
+## once and freed later: _fill runs from the tabs' own pressed signals, and
+## freeing the emitter mid-signal left the sheet half built.
 func _fill() -> void:
 	_balance.set_coins(App.tickets())
 	for c in _tabs.get_children():
 		_tabs.remove_child(c)
-		c.free()
+		c.queue_free()
 	for tab in TABS:
 		var label: String = tab
 		if tab == "BALLS":
@@ -105,15 +121,17 @@ func _fill() -> void:
 		b.text = label
 		b.custom_minimum_size = Vector2(0, 54)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		RetroTheme.card_button(b, RetroTheme.c("gold") if tab == _tab else RetroTheme.c("panel"), RetroTheme.RADIUS, 10.0)
+		_face(b, RetroTheme.c("gold") if tab == _tab else RetroTheme.c("panel"), 10.0)
 		b.add_theme_font_size_override("font_size", UiFont.snap(16))
 		var t: String = tab
-		b.pressed.connect(func() -> void: show_tab(t))
+		b.pressed.connect(func() -> void: show_tab.call_deferred(t))
 		_tabs.add_child(b)
 	for c in _content.get_children():
 		_content.remove_child(c)
-		c.free()
+		c.queue_free()
 	_machine = null
+	_stick = null
+	_meter = null
 	_list = null
 	if _tab == "PEGGY":
 		_build_peggy()
@@ -154,30 +172,17 @@ func _build_peggy() -> void:
 	_level_line.name = "LevelLine"
 	_level_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(_level_line)
-	var deck := HBoxContainer.new()
-	deck.name = "Deck"
-	deck.add_theme_constant_override("separation", 10)
-	col.add_child(deck)
-	var left := Button.new()
-	left.name = "NudgeLeft"
-	left.text = "<"
-	left.custom_minimum_size = Vector2(72, 56)
-	RetroTheme.card_button(left, RetroTheme.c("panel"), RetroTheme.RADIUS, 8.0)
-	left.pressed.connect(func() -> void: _machine.nudge(-0.25))
-	deck.add_child(left)
+	_meter = Meter.new()
+	col.add_child(_meter)
 	_hint = RetroTheme.caps("", 16, RetroTheme.c("text"))
 	_hint.name = "Hint"
-	_hint.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	deck.add_child(_hint)
-	var right := Button.new()
-	right.name = "NudgeRight"
-	right.text = ">"
-	right.custom_minimum_size = Vector2(72, 56)
-	RetroTheme.card_button(right, RetroTheme.c("panel"), RetroTheme.RADIUS, 8.0)
-	right.pressed.connect(func() -> void: _machine.nudge(0.25))
-	deck.add_child(right)
+	col.add_child(_hint)
+	var deck := CenterContainer.new()
+	deck.name = "Deck"
+	col.add_child(deck)
+	_stick = PeggyStick.new()
+	deck.add_child(_stick)
 	_refresh_machine()
 
 
@@ -193,6 +198,7 @@ func _refresh_machine() -> void:
 	elif level < PeggyPrizes.LEGEND_LEVEL:
 		line += " · LEGEND AT LVL %d" % PeggyPrizes.LEGEND_LEVEL
 	_level_line.text = line
+	_meter.set_progress(App.xp(), level)
 	var short := PeggyPrizes.DROP_COST - App.tickets()
 	_machine.can_drop = short <= 0
 	if short > 0:
@@ -202,6 +208,69 @@ func _refresh_machine() -> void:
 		_hint.text = "HOLD TO DROP · %d" % PeggyPrizes.DROP_COST
 		_hint.add_theme_color_override("font_color", RetroTheme.c("text"))
 	_balance.set_coins(App.tickets())
+
+
+const STICK_RATE := 3.0   # board units a second at full deflection
+
+
+func _process(delta: float) -> void:
+	if _stick != null and _machine != null and _stick.deflection() != 0.0 and not _machine.playing():
+		_machine.nudge(_stick.deflection() * STICK_RATE * delta)
+
+
+func stick() -> PeggyStick:
+	return _stick
+
+
+func meter() -> Meter:
+	return _meter
+
+
+## The level meter under the machine: how far to the next rarity's plates.
+class Meter extends Control:
+	const H := 18.0
+	var frac := 0.0
+	var label := ""
+	var fill := Color.WHITE
+
+	func _init() -> void:
+		name = "RarityMeter"
+		custom_minimum_size = Vector2(0, H + 24)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	## XP and level → the bar from the last rarity gate to the next.
+	func set_progress(xp: int, level: int) -> void:
+		var per := Progression.xp_per_level()
+		var next := 0
+		var prev := 1
+		for gate in [PeggyPrizes.EPIC_LEVEL, PeggyPrizes.LEGEND_LEVEL]:
+			if level >= gate:
+				prev = gate
+			elif next == 0:
+				next = gate
+		if next == 0:
+			frac = 1.0
+			label = "EVERY RARITY OPEN"
+			fill = PeggyMachine.TIER_COLOR["legend"]
+		else:
+			var start := (prev - 1) * per
+			var end := (next - 1) * per
+			frac = clampf(float(xp - start) / float(maxi(end - start, 1)), 0.0, 1.0)
+			var rarity := "epic" if next == PeggyPrizes.EPIC_LEVEL else "legend"
+			label = "%d/%d XP TO %s PLATES" % [xp - start, end - start, rarity.to_upper()]
+			fill = PeggyMachine.TIER_COLOR[rarity]
+		queue_redraw()
+
+	func _draw() -> void:
+		var w := size.x
+		var y := 0.0
+		draw_rect(Rect2(Vector2(3, y + 3), Vector2(w - 3, H)), RetroTheme.c("shadow"))
+		draw_rect(Rect2(Vector2(0, y), Vector2(w - 3, H)), RetroTheme.c("ink"))
+		draw_rect(Rect2(Vector2(3, y + 3), Vector2(maxf((w - 9) * frac, 0.0), H - 6)), fill)
+		var font := UiFont.body_bold()
+		var fs := UiFont.snap(12)
+		var tw := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
+		draw_string(font, Vector2((w - tw) * 0.5, y + H + 16), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, RetroTheme.c("muted"))
 
 
 func _on_feeding(frac: float) -> void:
@@ -308,7 +377,7 @@ func _card_button(text: String, fill: Color) -> Button:
 	var b := Button.new()
 	b.text = text
 	b.custom_minimum_size = Vector2(140, 56)
-	RetroTheme.card_button(b, fill, RetroTheme.RADIUS, 10.0)
+	_face(b, fill, 10.0)
 	b.add_theme_font_size_override("font_size", UiFont.snap(16))
 	return b
 
@@ -381,7 +450,7 @@ func _build_balls() -> void:
 		tile.custom_minimum_size = Vector2(148, 176)
 		tile.text = ""
 		var fill := RetroTheme.c("gold") if in_use else (RetroTheme.c("panel") if owned else RetroTheme.c("bg"))
-		RetroTheme.card_button(tile, fill, RetroTheme.RADIUS, 6.0)
+		_face(tile, fill, 6.0)
 		var vb := VBoxContainer.new()
 		vb.set_anchors_preset(Control.PRESET_FULL_RECT)
 		vb.offset_right = -ShadowStyle.OFFSET
@@ -396,13 +465,15 @@ func _build_balls() -> void:
 		if not owned:
 			skin.modulate = Color(0.25, 0.25, 0.28, 1.0)
 		vb.add_child(skin)
-		var nm := RetroTheme.caps(str(ball.display_name).to_upper(), 11, RetroTheme.c("text") if owned else RetroTheme.c("muted"))
+		var nm := RetroTheme.caps(str(ball.display_name).to_upper(), 11,
+			RetroTheme.c("card_text") if in_use else (RetroTheme.c("text") if owned else RetroTheme.c("muted")))
 		nm.name = "Name"
 		nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		nm.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		vb.add_child(nm)
 		var tag_text := "IN USE" if in_use else ("EQUIP" if owned else ball.rarity.to_upper())
-		var tag := RetroTheme.caps(tag_text, 11, TIER_COLOR.get(ball.rarity, RetroTheme.c("muted")) if not owned else RetroTheme.c("muted"))
+		var tag := RetroTheme.caps(tag_text, 11,
+			TIER_COLOR.get(ball.rarity, RetroTheme.c("muted")) if not owned else (RetroTheme.c("card_text") if in_use else RetroTheme.c("muted")))
 		tag.name = "Tag"
 		tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -431,7 +502,7 @@ func _build_balls() -> void:
 		row.text = label
 		row.custom_minimum_size = Vector2(0, 60)
 		var fill := RetroTheme.c("gold") if in_use else (RetroTheme.c("panel") if owned else RetroTheme.c("bg"))
-		RetroTheme.card_button(row, fill, RetroTheme.RADIUS, 12.0)
+		_face(row, fill, 12.0)
 		row.add_theme_font_size_override("font_size", UiFont.snap(16))
 		row.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		if not owned and App.tickets() < int(cs.price_coins):
