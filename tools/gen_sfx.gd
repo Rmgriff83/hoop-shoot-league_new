@@ -36,6 +36,14 @@ func _initialize() -> void:
 		_save("chain_swish_%d" % i, _chain_swish(i))
 	for i in 2:
 		_save("chain_rattle_%d" % i, _chain_rattle(i))
+	# PEGGY, the locker's drop machine (docs/LOCKER.md).
+	_save("peggy_press", _peggy_press())
+	_save("peggy_servo", _peggy_servo())
+	_save("peggy_ticket", _peggy_ticket())
+	for i in 3:
+		_save("peggy_peg_%d" % i, _peggy_peg(i))
+	_save("peggy_win", _peggy_win())
+	_save("peggy_jackpot", _peggy_jackpot())
 	print("sfx done")
 	quit(0)
 
@@ -213,6 +221,104 @@ func _buzzer() -> PackedFloat64Array:
 		var tone := _osc("sawtooth", freq, freq, 0.0, 0.55)
 		_apply_env(tone, 0.3, 0.01, 0.5)
 		_mix(buf, tone, 0.0)
+	return buf
+
+
+# ---- PEGGY ---------------------------------------------------------------------
+
+
+## The big red button going in: a chunky low thud under a short click.
+func _peggy_press() -> PackedFloat64Array:
+	var buf := _silence(0.22)
+	var thud := _osc("sine", 90.0, 55.0, 0.12, 0.18)
+	_apply_env(thud, 0.85, 0.004, 0.14)
+	var click := _biquad_bandpass(_noise(0.03, 7701), 2600.0, 1800.0, 0.03, 2.0)
+	_apply_env(click, 0.5, 0.001, 0.02)
+	var body := _biquad_lowpass(_noise(0.08, 7702), 400.0, 0.7)
+	_apply_env(body, 0.25, 0.002, 0.06)
+	_mix(buf, click, 0.0)
+	_mix(buf, thud, 0.004)
+	_mix(buf, body, 0.004)
+	return buf
+
+
+## The carriage's servo: a 0.4 s FLAT loop (no envelope) — a low saw with a
+## 9 Hz wobble, a faint whistle and a noise bed, 5 ms end fades for a clean
+## loop point. Sfx loops it while the finger moves the aim.
+func _peggy_servo() -> PackedFloat64Array:
+	var dur := 0.4
+	var saw := _osc("sawtooth", 140.0, 140.0, 0.0, dur)
+	for i in saw.size():
+		saw[i] *= 0.85 + 0.15 * sin(TAU * 9.0 * float(i) / SR)
+	saw = _biquad_lowpass(saw, 1400.0, 0.9)
+	var whistle := _osc("sine", 2200.0, 2240.0, dur, dur)
+	var bed := _biquad_bandpass(_noise(dur, 7703), 900.0, 900.0, 0.0, 1.0)
+	var buf := _silence(dur)
+	for i in buf.size():
+		buf[i] = saw[i] * 0.22 + whistle[i] * 0.06 + bed[i] * 0.08
+	var fade := int(0.005 * SR)
+	for i in fade:
+		var g := float(i) / float(fade)
+		buf[i] *= g
+		buf[buf.size() - 1 - i] *= g
+	return buf
+
+
+## A ticket sliding into the slot: a falling noise swish, then the stub seats.
+func _peggy_ticket() -> PackedFloat64Array:
+	var buf := _silence(0.55)
+	var sw := _biquad_bandpass(_noise(0.5, 7704), 1400.0, 500.0, 0.45, 0.8)
+	_apply_env(sw, 0.5, 0.05, 0.4)
+	var tick := _biquad_bandpass(_noise(0.02, 7705), 3200.0, 3200.0, 0.0, 3.0)
+	_apply_env(tick, 0.3, 0.001, 0.015)
+	_mix(buf, sw, 0.0)
+	_mix(buf, tick, 0.42)
+	return buf
+
+
+## A peg hit: a 40 ms bright tick (three pitches) with a tiny click.
+func _peggy_peg(variant: int) -> PackedFloat64Array:
+	var f: float = [1800.0, 2200.0, 2600.0][variant % 3]
+	var buf := _silence(0.06)
+	var tone := _osc("triangle", f, f * 0.9, 0.04, 0.05)
+	_apply_env(tone, 0.6, 0.001, 0.035)
+	var click := _biquad_bandpass(_noise(0.004, 7710 + variant), 4000.0, 4000.0, 0.0, 2.0)
+	_apply_env(click, 0.3, 0.0005, 0.003)
+	_mix(buf, tone, 0.0)
+	_mix(buf, click, 0.0)
+	return buf
+
+
+## A ball won: a rising three-note square arpeggio with a sine tail.
+func _peggy_win() -> PackedFloat64Array:
+	var buf := _silence(0.7)
+	var notes := [659.25, 783.99, 1046.5]
+	for i in 3:
+		var tone := _osc("square", notes[i], notes[i], 0.0, 0.12)
+		_apply_env(tone, 0.25, 0.005, 0.11)
+		_mix(buf, tone, i * 0.10)
+	var tail := _osc("sine", 1046.5, 1046.5, 0.0, 0.35)
+	_apply_env(tail, 0.2, 0.01, 0.3)
+	_mix(buf, tail, 0.30)
+	return buf
+
+
+## An epic or legend pull: a six-note run, a detuned saw chord and a sparkle.
+func _peggy_jackpot() -> PackedFloat64Array:
+	var buf := _silence(1.6)
+	var run := [523.25, 659.25, 783.99, 1046.5, 1318.5, 1568.0]
+	for i in run.size():
+		var tone := _osc("square", run[i], run[i], 0.0, 0.11)
+		_apply_env(tone, 0.22, 0.004, 0.1)
+		_mix(buf, tone, i * 0.09)
+	for detune in [1.0, 1.004]:
+		for f in [1046.5, 1318.5, 1568.0]:
+			var tone := _osc("sawtooth", f * detune, f * detune, 0.0, 0.65)
+			_apply_env(tone, 0.14 if detune == 1.0 else 0.08, 0.02, 0.55)
+			_mix(buf, tone, 0.55 if detune == 1.0 else 0.57)
+	var sparkle := _biquad_bandpass(_noise(0.5, 7720), 6000.0, 7000.0, 0.5, 3.0)
+	_apply_env(sparkle, 0.15, 0.05, 0.45)
+	_mix(buf, sparkle, 0.6)
 	return buf
 
 

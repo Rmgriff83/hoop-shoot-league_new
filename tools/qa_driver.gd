@@ -14,7 +14,7 @@ var _outcomes: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
-	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city")):
+	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	if args.has("--qa-title"):
@@ -33,6 +33,8 @@ func _ready() -> void:
 		_run_beach.call_deferred()
 	elif args.has("--qa-city"):
 		_run_city.call_deferred()
+	elif args.has("--qa-peggy"):
+		_run_peggy.call_deferred()
 	elif args.has("--qa-aim"):
 		_run_aim.call_deferred()
 	else:
@@ -401,6 +403,88 @@ func _run_city() -> void:
 ## Home QA: the cage card over its slow pan (frames at 0 / 5 / 10 / 14 s of a
 ## 28 s truck), then a page turn to the beach card.
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-title
+## PEGGY (docs/LOCKER.md): open the locker from the title, aim, hold the
+## button through a drop, the prize card, the BALLS tab, the badge. Grants
+## tickets first and restores the save's cosmetics/settings after.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-peggy
+func _run_peggy() -> void:
+	await _sleep(1.0)
+	var cos_before: Dictionary = SaveService.get_cosmetics()
+	var set_before: Dictionary = SaveService.get_settings()
+	App.grant_tickets(1200)
+	var locker: Button = get_tree().root.find_child("Locker", true, false)
+	if locker == null:
+		print("QA: no Locker button")
+		return
+	var lc := (locker.global_position + locker.size / 2.0) * 0.5
+	_mouse_button(lc, true)
+	await _sleep(0.08)
+	_mouse_button(lc, false)
+	await _sleep(0.8)
+	await _snap("peggy_open")
+	var panel: LockerPanel = get_tree().root.find_child("LockerPanel", true, false)
+	var m: PeggyMachine = panel.machine() if panel != null else null
+	if m == null:
+		print("QA: no machine")
+		return
+	m.set_aim(-0.8)
+	await _sleep(0.6)
+	await _snap("peggy_aim")
+	m.press()
+	await _sleep(0.35)
+	await _snap("peggy_hold")
+	await _sleep(0.5)
+	await _snap("peggy_drop_a")
+	await _sleep(0.9)
+	await _snap("peggy_drop_b")
+	var waited := 0.0
+	while panel.prize_card() == null and waited < 8.0:
+		await _sleep(0.2)
+		waited += 0.2
+	await _sleep(0.3)
+	await _snap("peggy_card")
+	var again: Button = get_tree().root.find_child("Again", true, false)
+	if again != null:
+		again.pressed.emit()
+	await _sleep(0.4)
+	# A second drop from the centre, then the BALLS tab and the title badge.
+	m.set_aim(0.0)
+	m.press()
+	waited = 0.0
+	while panel.prize_card() == null and waited < 8.0:
+		await _sleep(0.2)
+		waited += 0.2
+	await _snap("peggy_card_2")
+	var keep: Button = get_tree().root.find_child("Keep", true, false)
+	if keep != null:
+		keep.pressed.emit()
+	await _sleep(0.3)
+	# The epic page, staged (a real epic needs level 3 and luck).
+	panel._show_card({"slot": 0, "base": "epic", "rarity": "epic", "ball_id": "tiger", "refund": 0,
+		"owned_after": 4, "result": {}})
+	await _sleep(0.6)
+	await _snap("peggy_epic")
+	panel._dismiss_card()
+	await _sleep(0.2)
+	await _click_button_named("CLOSE")
+	await _sleep(0.5)
+	await _snap("peggy_badge")
+	_mouse_button(lc, true)
+	await _sleep(0.08)
+	_mouse_button(lc, false)
+	await _sleep(0.6)
+	panel = get_tree().root.find_child("LockerPanel", true, false)
+	if panel != null:
+		panel.show_tab("BALLS")
+	await _sleep(0.5)
+	await _snap("peggy_balls")
+	await _click_button_named("CLOSE")
+	await _sleep(0.3)
+	SaveService.put_cosmetics(cos_before)
+	SaveService.put_settings(set_before)
+	get_tree().quit()
+
+
 func _run_title() -> void:
 	await _sleep(1.0)
 	for i in 4:

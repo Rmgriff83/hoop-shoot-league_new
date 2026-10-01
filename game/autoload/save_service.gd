@@ -186,6 +186,7 @@ static func default_cosmetics() -> Dictionary:
 		"tickets": 0,
 		"hoop": {"selected": "classic", "owned": ["classic"]},
 		"ball": {"selected": "classic", "owned": ["classic"]},
+		"peggy": {"drops": 0},
 	}
 
 
@@ -204,7 +205,7 @@ func put_cosmetics(doc: Dictionary) -> void:
 ## Player preference toggles. New keys need no migration: every read site
 ## defaults with .get(), so an older save simply falls back.
 static func default_settings() -> Dictionary:
-	return {"updatedAt": 0, "shotHelp": 0}
+	return {"updatedAt": 0, "shotHelp": 0, "newBalls": []}
 
 
 func get_settings() -> Dictionary:
@@ -242,7 +243,7 @@ func put_tuning_undo(fields: Dictionary) -> void:
 
 
 func get_client_id() -> String:
-	return _meta["clientId"]
+	return str(_meta.get("clientId", ""))
 
 
 ## Record a finished time-trial run. Stamps id/updatedAt, persists, marks dirty.

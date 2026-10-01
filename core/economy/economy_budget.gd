@@ -63,7 +63,8 @@ static func tier_of(price: int) -> String:
 	return ""
 
 
-## Every priced locker item: [{kind, id, name, price, minutes, tier}].
+## Every priced locker item (the hoops; balls are PEGGY prizes and priced 0):
+## [{kind, id, name, price, minutes, tier}].
 static func catalog() -> Array:
 	var out := []
 	for kind in ["hoop", "ball"]:
@@ -76,11 +77,53 @@ static func catalog() -> Array:
 	return out
 
 
+## Hours to own everything: the priced items plus PEGGY's expected cost of
+## winning every ball.
 static func catalog_hours() -> float:
 	var total := 0
 	for item in catalog():
 		total += int(item["price"])
-	return minutes_to_afford(total) / 60.0
+	return minutes_to_afford(total + int(peggy_tickets())) / 60.0
+
+
+# ---- PEGGY (docs/LOCKER.md) --------------------------------------------------------
+
+static var _peggy_odds := PackedFloat64Array()
+static var _peggy_tickets := -2.0
+
+
+## The roster as PeggyPrizes sees it: [{id, rarity}] in registry order.
+static func peggy_roster() -> Array:
+	var out := []
+	for b in CosmeticLibrary.balls():
+		out.push_back({"id": b.id, "rarity": b.rarity})
+	return out
+
+
+## Slot odds the ledger assumes: the rail's centre.
+static func peggy_odds() -> PackedFloat64Array:
+	if _peggy_odds.is_empty():
+		_peggy_odds = PeggyBoard.odds(0.0, 300)
+	return _peggy_odds
+
+
+## Expected tickets to win every ball from a fresh save (level gates lifted).
+static func peggy_tickets() -> float:
+	if _peggy_tickets < -1.0:
+		var starter := CosmeticLibrary.starter_ball()
+		var owned := [starter.id] if starter != null else []
+		_peggy_tickets = PeggyPrizes.expected_tickets_to_complete(peggy_odds(), peggy_roster(), owned, 99, 60)
+	return _peggy_tickets
+
+
+static func peggy_hours() -> float:
+	return minutes_to_afford(int(peggy_tickets())) / 60.0
+
+
+## Expected tickets per ball won.
+static func peggy_per_ball() -> float:
+	var n := peggy_roster().size() - 1
+	return peggy_tickets() / float(maxi(n, 1))
 
 
 static func heats_to_afford(league: Dictionary, price: int) -> float:
@@ -108,6 +151,18 @@ static func problems() -> PackedStringArray:
 	var h := catalog_hours()
 	if h < float(hours[0]) or h > float(hours[1]):
 		out.push_back("the whole catalog takes %.1f hours, outside %s-%s" % [h, hours[0], hours[1]])
+	if tier_of(PeggyPrizes.DROP_COST) != "entry":
+		out.push_back("a PEGGY drop at %d tickets is not an entry purchase (%.0f min)" % [PeggyPrizes.DROP_COST, minutes_to_afford(PeggyPrizes.DROP_COST)])
+	if peggy_tickets() < 0.0:
+		out.push_back("PEGGY cannot pay out the whole roster")
+	var per := peggy_per_ball()
+	if per > PeggyPrizes.DROP_COST * 1.35:
+		out.push_back("PEGGY wastes drops: %.0f tickets a ball against %d a drop" % [per, PeggyPrizes.DROP_COST])
+	for b in CosmeticLibrary.balls():
+		if not PeggyPrizes.RARITIES.has(b.rarity):
+			out.push_back("ball %s has no PEGGY rarity (%s)" % [b.id, b.rarity])
+		if b.price_coins > 0:
+			out.push_back("ball %s is priced %d; balls are won, not bought" % [b.id, b.price_coins])
 	var bands: Dictionary = Economy.coins_cfg().get("heats_to_afford", {})
 	for l in LeagueData.leagues():
 		for c in CardDefs.all():

@@ -57,12 +57,19 @@ func _envelope(t) -> void:
 		t.ok(float(r["rate"]) >= float(band[0]) and float(r["rate"]) <= float(band[1]), "%s pays inside the band (%.1f/min)" % [r["mode"], r["rate"]])
 	t.ok(EconomyBudget.trial_rate("cage") > EconomyBudget.heat_rate(LeagueData.league("cage")), "a trial out-earns a heat in tickets (heats also pay coins)")
 	var catalog := EconomyBudget.catalog()
-	t.ok(catalog.size() >= 21, "every priced ball and hoop is in the catalog (%d)" % catalog.size())
-	var tiers_seen := {}
+	t.ok(catalog.size() >= 2, "every priced hoop is in the catalog (%d)" % catalog.size())
 	for item in catalog:
+		t.eq(item["kind"], "hoop", "%s is a hoop: balls are PEGGY prizes, never priced" % item["id"])
 		t.ok(str(item["tier"]) != "", "%s %s (%d) sits in a tier (%.0f min)" % [item["kind"], item["id"], item["price"], item["minutes"]])
-		tiers_seen[item["tier"]] = true
-	t.ok(tiers_seen.has("entry") and tiers_seen.has("grail"), "the catalog spans entry to grail (%s)" % str(tiers_seen.keys()))
+	# PEGGY (docs/LOCKER.md): a drop is an entry purchase, the machine pays
+	# the whole roster out, barely wastes a drop, and the roster's hours are
+	# the bulk of the catalog.
+	t.eq(EconomyBudget.tier_of(PeggyPrizes.DROP_COST), "entry", "a drop is an entry purchase")
+	var pt := EconomyBudget.peggy_tickets()
+	var to_win := EconomyBudget.peggy_roster().size() - 1
+	t.ok(pt >= to_win * PeggyPrizes.DROP_COST, "winning %d balls costs at least %d drops (%.0f tickets)" % [to_win, to_win, pt])
+	t.ok(EconomyBudget.peggy_per_ball() <= PeggyPrizes.DROP_COST * 1.35, "a ball costs about a drop (%.0f tickets)" % EconomyBudget.peggy_per_ball())
+	t.ok(EconomyBudget.peggy_hours() > EconomyBudget.catalog_hours() * 0.5, "the roster is most of the catalog (%.1f of %.1f h)" % [EconomyBudget.peggy_hours(), EconomyBudget.catalog_hours()])
 	var hours: Array = Economy.tickets_cfg().get("catalog_hours", [15, 35])
 	var h := EconomyBudget.catalog_hours()
 	t.ok(h >= float(hours[0]) and h <= float(hours[1]), "the whole catalog takes %.1f hours, inside %s-%s" % [h, hours[0], hours[1]])

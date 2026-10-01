@@ -844,14 +844,23 @@ comes from its mesh bounds. Keep the little `BoomboxLed` — it is the radio's o
 `tools/aseprite/gen_ball_wrap.lua` no longer makes one skin — it holds a
 **`STYLES` table** and writes `assets/textures/balls/<id>.png` for every entry,
 plus `assets/balls/ball_manifest.json`. That table is the single source of truth
-for the whole roster, ids and names and prices included, so nothing is typed out
-twice. Two tools read the manifest:
+for the whole roster, ids and names and **rarities** included (balls are PEGGY
+prizes, never priced — docs/LOCKER.md), so nothing is typed out twice. The
+roster (2026-10-01) is 47 balls in four looks: common = one colour with the
+classic seams, rare = coloured panels (`stars_on` puts stars on chosen
+panels), epic = patterns under the seams (`blotch` camos, `stripes`, `dots`
+with an optional rosette ring, `check`, gradients), legend = seamless wraps
+(`face` stamps a pixel glyph on ±y, `ridges` shades pumpkin lobes, `soccer`
+blackens the icosahedron's vertices, `land`, `craters`, `donut`, and `curve`
+draws the tennis/baseball seam). Two tools read the manifest:
 
 - `tools/gen_ball_sets.py` writes each `assets/balls/<id>/ball_set.tres` and
   prints the lines for `CosmeticLibrary.BALLS`.
 - `tools/blender/build_ball_lineup.py` builds `art/blender/ball_lineup.blend`
-  and a labelled contact render at `art/renders/balls/lineup.png` — the thing to
-  look at when judging a new design.
+  and a labelled contact render at `art/renders/balls/lineup.png` (`--render`,
+  a row per rarity) — the thing to look at when judging a new design — and
+  with `--thumbs` the 96 px RGBA thumbnails in `assets/textures/balls/thumbs/`
+  that the locker's BALLS tab and prize card show.
 
 Adding a ball: one row in `STYLES`, re-run the Aseprite script, re-run
 `gen_ball_sets.py`, paste the registry line. No Blender rebuild — **every ball
@@ -880,3 +889,17 @@ Two rules the generator enforces, both learned the hard way:
   `if s is BallSet`, so a resource that fails to load yields null and is dropped
   with no error. `tests/test_cosmetics.gd` now asserts the loaded count matches
   `BALLS.size()`, which is the only thing that catches it.
+
+## 20. PEGGY, the locker's drop machine (2026-10-01)
+
+`tools/blender/build_peggy.py -- --force` → `assets/locker/peggy.glb`: the
+red cabinet with its bulb marquee, the navy peg board behind a glass pane,
+seven prize bays with frosted panes, the rail, carriage and puck, and the
+deck with the button and the ticket slot. Nothing is keyed — Godot drives
+every moving part by NAME (`game/ui/peggy_machine.gd`), and the pegs are
+placed from the same table as the headless physics (`PEGS` mirrors
+`core/locker/peggy_board.gd`; `tests/test_peggy.gd` checks every mesh
+against the core within 1 mm). Skins: `tools/aseprite/gen_peggy_textures.lua`.
+See-through parts (`Glass`, `Frost%d`) are flat materials with an Alpha
+below 1 and `blend_method` BLEND, which the glTF exporter writes as
+`alphaMode: BLEND`. Full write-up: docs/LOCKER.md.

@@ -177,6 +177,7 @@ func rebuild_chrome() -> void:
 	var locker := IconButton.new("locker")
 	locker.name = "Locker"
 	locker.position = Vector2(230, 32)
+	locker.badge = not App.unseen_balls().is_empty()
 	locker.pressed.connect(_open_locker)
 	_chrome.add_child(locker)
 	var menu := HamburgerButton.new()
@@ -736,7 +737,12 @@ func _open_locker() -> void:
 		return
 	_locker = LockerPanel.new()
 	_locker.name = "LockerPanel"
-	_locker.closed.connect(func() -> void: _locker = null)
+	_locker.closed.connect(func() -> void:
+		_locker = null
+		var icon: IconButton = _chrome.find_child("Locker", true, false) if _chrome != null else null
+		if icon != null:
+			icon.badge = not App.unseen_balls().is_empty()
+	)
 	add_child(_locker)
 
 

@@ -27,17 +27,23 @@ func run(t) -> void:
 	t.eq(loaded.size(), registered,
 		"every registered ball loads as a BallSet (%d of %d)" % [loaded.size(), registered])
 	var ids := {}
-	var free_ids: Array[String] = []
+	var per_rarity := {}
 	for b in loaded:
 		t.eq(b.validate(), PackedStringArray(), "%s references only existing files" % b.id)
 		t.ok(b.skin_path != "", "%s has a skin" % b.id)
 		t.ok(not ids.has(b.id), "ball id %s is unique" % b.id)
 		ids[b.id] = true
-		if b.price_coins == 0:
-			free_ids.push_back(b.id)
-	# starter_ball() returns the FIRST set priced 0, so a second free ball would
-	# silently steal the starter slot out from under classic.
-	t.eq(free_ids, ["classic"] as Array[String], "classic is the only free ball")
+		# Balls are PEGGY prizes (docs/LOCKER.md): never priced, always rated.
+		t.eq(b.price_coins, 0, "%s is unpriced" % b.id)
+		t.ok(PeggyPrizes.RARITIES.has(b.rarity), "%s has a PEGGY rarity (%s)" % [b.id, b.rarity])
+		per_rarity[b.rarity] = int(per_rarity.get(b.rarity, 0)) + 1
+	# starter_ball() returns the FIRST set priced 0: classic must stay first.
+	t.eq(loaded[0].id, "classic", "classic is the first ball, so it is the starter")
+	t.eq(loaded.size(), 47, "the four-tier roster (%d)" % loaded.size())
+	for r in PeggyPrizes.RARITIES:
+		t.ok(int(per_rarity.get(r, 0)) >= 8, "a bunch of %s balls (%d)" % [r, int(per_rarity.get(r, 0))])
+	t.eq(CosmeticLibrary.get_ball("classic").rarity, "common", "classic is common")
+	t.eq(CosmeticLibrary.get_ball("pumpkin").rarity, "legend", "the pumpkin is a legend")
 	var broken := HoopSet.new()
 	broken.id = "x"
 	broken.model_path = "res://assets/hoops/x/missing.glb"

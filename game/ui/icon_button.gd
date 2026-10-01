@@ -10,6 +10,12 @@ const SIZE := 56.0
 const COLOR := RetroTheme.SCENE_TEXT
 
 var kind := "locker"
+## A small gold dot at the face's top-right: "something new in here" (the
+## locker shows it while a PEGGY prize has not been looked at, docs/LOCKER.md).
+var badge := false:
+	set(v):
+		badge = v
+		queue_redraw()
 
 
 func _init(p_kind := "locker") -> void:
@@ -49,6 +55,10 @@ func _draw() -> void:
 				draw_rect(Rect2(at, Vector2(6, 20)), COLOR)
 		_:
 			_icon("icon_ball", c, Vector2(22, 22), 0.0)
+	if badge:
+		var at := c + Vector2(15, -15)
+		draw_circle(at, 8.0, RetroTheme.SCENE_OUTLINE)
+		draw_circle(at, 6.0, RetroTheme.LIGHT["gold"])
 
 
 func _icon(name_: String, c: Vector2, px: Vector2, shadow: float) -> void:

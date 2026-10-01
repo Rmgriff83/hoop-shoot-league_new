@@ -255,6 +255,8 @@ func select_ball(id: String) -> bool:
 
 ## Spend tickets on a set. False if unknown, already owned, or unaffordable.
 func try_buy(kind: String, id: String) -> bool:
+	if kind == "ball":
+		return false   # balls are PEGGY prizes (docs/LOCKER.md), never bought
 	var set: CosmeticSet = CosmeticLibrary.get_hoop(id) if kind == "hoop" else CosmeticLibrary.get_ball(id)
 	if set == null or owns(kind, id):
 		return false
@@ -265,6 +267,120 @@ func try_buy(kind: String, id: String) -> bool:
 	c[kind]["owned"].push_back(id)
 	SaveService.put_cosmetics(c)
 	return true
+
+
+# ---- PEGGY (docs/LOCKER.md) --------------------------------------------------------
+## The locker's drop machine. Tickets buy drops; a drop wins a ball the player
+## does not own yet. The plates shown come from the drop index, so what is on
+## the board is what can be won; the index only moves on a completed drop.
+
+var last_prize: Dictionary = {}
+
+
+func drop_count() -> int:
+	return int(Dictionary(SaveService.get_cosmetics().get("peggy", {})).get("drops", 0))
+
+
+func spend_tickets(n: int) -> bool:
+	if n <= 0:
+		return false
+	var c := SaveService.get_cosmetics()
+	if int(c.get("tickets", 0)) < n:
+		return false
+	c["tickets"] = int(c.get("tickets", 0)) - n
+	SaveService.put_cosmetics(c)
+	return true
+
+
+func owned_ids(kind: String) -> Array:
+	var c := SaveService.get_cosmetics()
+	var out: Array = Array(Dictionary(c.get(kind, {})).get("owned", [])).duplicate()
+	var starter: CosmeticSet = CosmeticLibrary.starter_ball() if kind == "ball" else CosmeticLibrary.starter_hoop()
+	if starter != null and not out.has(starter.id):
+		out.push_back(starter.id)
+	return out
+
+
+func owned_count(kind: String) -> int:
+	return owned_ids(kind).size()
+
+
+## Hand the player a set without charging (a PEGGY prize). A new ball is
+## flagged unseen until the BALLS tab is opened.
+func grant_cosmetic(kind: String, id: String) -> bool:
+	var set: CosmeticSet = CosmeticLibrary.get_hoop(id) if kind == "hoop" else CosmeticLibrary.get_ball(id)
+	if set == null or owns(kind, id):
+		return false
+	var c := SaveService.get_cosmetics()
+	if not c.has(kind):
+		c[kind] = {"selected": id, "owned": []}
+	c[kind]["owned"].push_back(id)
+	SaveService.put_cosmetics(c)
+	if kind == "ball":
+		var st := SaveService.get_settings()
+		var fresh: Array = Array(st.get("newBalls", [])).duplicate()
+		if not fresh.has(id):
+			fresh.push_back(id)
+		st["newBalls"] = fresh
+		SaveService.put_settings(st)
+	return true
+
+
+## Balls won but not yet looked at on the BALLS tab (the locker icon's dot).
+func unseen_balls() -> Array:
+	var out := []
+	for id in Array(SaveService.get_settings().get("newBalls", [])):
+		if owns("ball", str(id)) and not out.has(id):
+			out.push_back(id)
+	return out
+
+
+func mark_balls_seen() -> void:
+	var st := SaveService.get_settings()
+	if Array(st.get("newBalls", [])).is_empty():
+		return
+	st["newBalls"] = []
+	SaveService.put_settings(st)
+
+
+func peggy_seed(drop_index: int) -> int:
+	return DetRng.hash_seed("%s:peggy:%d" % [SaveService.get_client_id(), drop_index])
+
+
+func peggy_roster() -> Array:
+	return EconomyBudget.peggy_roster()
+
+
+## The seven plates for the NEXT drop: [{base, rarity, ball_id}].
+func peggy_slots() -> Array:
+	var rng := DetRng.new(peggy_seed(drop_count())).fork("slots")
+	return PeggyPrizes.slots(level(), owned_ids("ball"), peggy_roster(), rng)
+
+
+## One drop at this aim. {} when the tickets are short; else the prize record
+## {slot, base, rarity, ball_id, refund, drop_index, aim, result, owned_after}.
+func peggy_drop(aim_x: float) -> Dictionary:
+	var plates := peggy_slots()
+	if not spend_tickets(PeggyPrizes.DROP_COST):
+		return {}
+	var index := drop_count()
+	var result := PeggyBoard.simulate(aim_x, DetRng.new(peggy_seed(index)).fork("drop").state)
+	var plate: Dictionary = plates[int(result["slot"])]
+	var refund := PeggyPrizes.refund(plate)
+	var id := str(plate.get("ball_id", ""))
+	if id != "":
+		grant_cosmetic("ball", id)
+	elif refund > 0:
+		grant_tickets(refund)
+	var c := SaveService.get_cosmetics()
+	var pg: Dictionary = c.get("peggy", {})
+	pg["drops"] = index + 1
+	c["peggy"] = pg
+	SaveService.put_cosmetics(c)
+	last_prize = {"slot": int(result["slot"]), "base": plate.get("base", ""), "rarity": plate.get("rarity", ""),
+		"ball_id": id, "refund": refund, "drop_index": index, "aim": aim_x, "result": result,
+		"owned_after": owned_count("ball"), "plates": plates}
+	return last_prize
 
 
 # ---- routing -------------------------------------------------------------------

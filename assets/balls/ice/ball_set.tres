@@ -6,7 +6,8 @@
 script = ExtResource("1")
 id = "ice"
 display_name = "Ice"
-price_coins = 700
+price_coins = 0
+rarity = "epic"
 model_path = "res://assets/balls/classic/basketball.glb"
 skin_path = "res://assets/textures/balls/ice.png"
 bounce_clips = PackedStringArray("res://assets/balls/classic/sfx/bounce_01.wav", "res://assets/balls/classic/sfx/bounce_02.wav", "res://assets/balls/classic/sfx/bounce_03.wav", "res://assets/balls/classic/sfx/bounce_04.wav", "res://assets/balls/classic/sfx/bounce_05.wav", "res://assets/balls/classic/sfx/bounce_06.wav", "res://assets/balls/classic/sfx/bounce_07.wav", "res://assets/balls/classic/sfx/bounce_08.wav", "res://assets/balls/classic/sfx/bounce_09.wav", "res://assets/balls/classic/sfx/bounce_10.wav", "res://assets/balls/classic/sfx/bounce_11.wav", "res://assets/balls/classic/sfx/bounce_12.wav", "res://assets/balls/classic/sfx/bounce_13.wav", "res://assets/balls/classic/sfx/bounce_14.wav", "res://assets/balls/classic/sfx/bounce_15.wav")

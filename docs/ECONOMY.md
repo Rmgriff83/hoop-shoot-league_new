@@ -8,9 +8,9 @@ reward. Cards' own balance (power, rarity, AI parity) is `docs/CARDS.md`.
 |---|---|---|
 | Scope | global | **one wallet per league** |
 | Earned by | time trials (never practice), league heats, a league title | that league's heats and title |
-| Spent on | balls and hoops at the **locker** (home page) | that league's power-up cards in its **shop** (league hub) |
+| Spent on | PEGGY drops (the locker's drop machine wins balls, docs/LOCKER.md) and hoops at the **locker** (home page) | that league's power-up cards in its **shop** (league hub) |
 | Lives in | save part `cosmetics` → `tickets` | save part `cards` v3 → `leagues[id].coins`, beside that league's `inventory` / `loadout` |
-| Code | `App.tickets()`, `grant_tickets`, `try_buy(kind, id)` | `App.league_coins(id)`, `grant_league_coins(n, id)`, `try_buy_card(card, id)` |
+| Code | `App.tickets()`, `grant_tickets`, `spend_tickets`, `peggy_drop(aim)`, `try_buy("hoop", id)` | `App.league_coins(id)`, `grant_league_coins(n, id)`, `try_buy_card(card, id)` |
 
 **Why segmented:** coins earned in the easy league can never buy cards for
 the hard league, and cards dropped or bought in a league play only there.
@@ -49,7 +49,8 @@ coin-flip win rate. From that:
   against;
 - **minutes to afford** = price ÷ grind rate, and the **tier** whose minutes
   band holds it (`entry`, `mid`, `premium`, `grail`);
-- the **catalog hours**: every priced locker item, summed;
+- the **catalog hours**: every priced locker item (the hoops) plus
+  PEGGY's expected tickets to win every ball (`peggy_tickets()`);
 - **heats to afford** each card in each league = price ÷ expected coins per
   heat.
 
@@ -60,6 +61,8 @@ Rules the suite enforces (`EconomyBudget.problems()`, `tests/test_economy.gd`):
 2. every priced item's minutes fall inside some tier band, and none passes
    the grail ceiling;
 3. the whole catalog's hours sit inside `catalog_hours`;
+3b. PEGGY: a drop is an *entry* purchase, the roster is payable, a ball
+   costs at most 1.35 drops, every ball is rated and priced 0 (docs/LOCKER.md);
 4. each card rarity's heats-to-afford is inside its band, in every league;
 5. every league row carries all six reward keys (`LeagueData.validate`);
 6. (cards' own power / price curve: `CardBudget`, `docs/CARDS.md`).
@@ -78,21 +81,23 @@ The ledger prints all of it and exits non-zero on a break:
 | heat, beach | 60 / 25 / 400 coins · 35 / 14 / 100 tickets | ~10 tickets/min + 42 coins/heat |
 
 Rate band 6–14/min. Tiers in minutes of trials: entry 15–40, mid 40–70,
-premium 70–115, grail 115–170. At the ~12/min grind rate the 21 balls and
-the street hoop (250–1500 tickets) span entry to grail and the whole catalog
-is ~22 hours — something new every few sessions, the top shelf a real chase.
+premium 70–115, grail 115–170. At the ~12/min grind rate a PEGGY drop
+(300 tickets) is an entry purchase, the 46 winnable balls cost ~13,800
+tickets (~19 h, no drop wasted) and the whole catalog with the hoops is
+~20 hours — something new every few sessions, the legends behind level 5.
 Cards: a common (100 coins) every ~3 cage heats, a rare (150) every ~4.5,
 plus the drops.
 
-## Adding an item (a ball or a hoop)
+## Adding an item (a hoop)
 
 1. Author its `.tres` with `price_coins` (the field name is historical; it
    is tickets).
 2. Run the ledger: it must land in a tier and keep the catalog inside its
    hours. Too cheap or too dear → move the price, not the tiers.
 3. The suite (`test_economy.gd` covers every registered set automatically;
-   `test_cosmetics.gd` checks the set loads and that `classic` stays the only
-   free ball).
+   `test_cosmetics.gd` checks the set loads).
+
+A ball is a PEGGY prize, not a priced item: docs/LOCKER.md → Adding a ball.
 
 ## Adding a mode
 

@@ -30,7 +30,7 @@ One local JSON file = one wire part, always:
 | `meta` | `user://save/meta.json` | M1 (implemented) |
 | `time_trial_scores` | `user://save/time_trial_scores.json` | M1 (implemented) |
 | `tuning` | `user://save/tuning.json` | M1 (implemented) — **device-local dev scratchpad, never synced** (tuning-mode flag + flick tunable overrides) |
-| `cosmetics` | `user://save/cosmetics.json` | M1 (implemented) — tickets (the locker money, docs/ECONOMY.md) + per-kind (hoop/ball) selected & owned cosmetic set ids |
+| `cosmetics` | `user://save/cosmetics.json` | M1 (implemented) — tickets (the locker money, docs/ECONOMY.md) + per-kind (hoop/ball) selected & owned cosmetic set ids + `peggy.drops` (completed drops on the locker's machine, docs/LOCKER.md) |
 | `cards` | `user://save/cards.json` | M3 (implemented) — v3: one bucket per league `{coins, inventory, loadout}`; older docs are wiped on load |
 | `progress` | `user://save/progress.json` | M3 (implemented) — the player's level: `{xp, seasonXp, seasonKey}` (docs/PROGRESSION.md) |
 | `campaign` | `user://save/campaign.json` | M2 |

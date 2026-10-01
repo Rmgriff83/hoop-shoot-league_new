@@ -49,82 +49,185 @@ local PX_PER_LON = W / 360.0
 local PX_PER_LAT = H / 180.0
 
 -- ---------------------------------------------------------------------------
--- The roster. `panels` cycles over the 8 panels; `kind` picks a decorator.
--- Prices must all be > 0: CosmeticLibrary.starter_ball() returns the first set
--- priced 0, and a test asserts that is still `classic`.
+-- The roster, in four rarities PEGGY pays out (docs/LOCKER.md). Balls are
+-- never bought, so `price` is 0 for all of them; `rarity` is what matters:
+--   common  one colour, the classic seams
+--   rare    coloured panels, the classic seams (the USA ball)
+--   epic    patterns under the seams: camo, stripes, spots, checks, gradients
+--   legend  seamless wrapped designs: a pumpkin, a smiley, a beach ball ...
+-- `panels` cycles over the 8 panels; `kind` picks a decorator (shade_for).
+-- `classic` must stay first and is the starter everyone owns.
 -- ---------------------------------------------------------------------------
 local LEATHER = {226, 118, 47}
 local DARK = {36, 22, 15}
+local INK = {24, 20, 22}
+
+-- Pixel glyphs stamped on the LEGEND faces (kind "face"): '#' is ink.
+local SMILEY = {
+  "................",
+  "................",
+  "....##....##....",
+  "....##....##....",
+  "....##....##....",
+  "................",
+  "................",
+  "................",
+  "..#..........#..",
+  "..##........##..",
+  "...##......##...",
+  "....########....",
+  "......####......",
+  "................",
+  "................",
+  "................",
+}
+local JACK = {
+  "................",
+  "....#......#....",
+  "...###....###...",
+  "..#####..#####..",
+  "................",
+  ".......##.......",
+  "......####......",
+  "................",
+  ".##..........##.",
+  ".###.##..##.###.",
+  "..############..",
+  "...##..##..##...",
+  "....########....",
+  "................",
+  "................",
+  "................",
+}
 
 local STYLES = {
-  {id="classic", name="Classic", price=0, panels={LEATHER}, seam=DARK},
-
-  {id="globetrotters", name="Globetrotters", price=900, kind="panel",
-   panels={{206, 32, 48}, {245, 245, 245}, {28, 58, 140}, {245, 245, 245}},
-   seam={30, 30, 38}, stars=true},
-
-  {id="aba", name="ABA Tri-Color", price=750, kind="panel",
-   panels={{214, 48, 52}, {242, 240, 232}, {32, 66, 150}},
-   seam={40, 34, 30}},
-
-  {id="blacktop", name="Blacktop", price=250, kind="panel",
+  -- ---- COMMON: one colour, classic seams -----------------------------------
+  {id="classic", name="Classic", rarity="common", panels={LEATHER}, seam=DARK},
+  {id="cherry", name="Cherry", rarity="common", kind="panel",
+   panels={{206, 44, 48}}, seam={54, 16, 18}},
+  {id="royal", name="Royal", rarity="common", kind="panel",
+   panels={{40, 76, 190}}, seam={14, 24, 62}},
+  {id="forest", name="Forest", rarity="common", kind="panel",
+   panels={{44, 128, 70}}, seam={14, 44, 26}},
+  {id="grape", name="Grape", rarity="common", kind="panel",
+   panels={{118, 58, 168}}, seam={40, 18, 60}},
+  {id="lemon", name="Lemon", rarity="common", kind="panel",
+   panels={{244, 214, 56}}, seam={92, 76, 18}},
+  {id="snow", name="Snow", rarity="common", kind="panel",
+   panels={{242, 240, 236}}, seam={48, 46, 50}},
+  {id="lagoon", name="Lagoon", rarity="common", kind="panel",
+   panels={{36, 170, 168}}, seam={12, 58, 58}},
+  {id="lime", name="Lime", rarity="common", kind="panel",
+   panels={{150, 214, 48}}, seam={46, 62, 22}},
+  {id="blacktop", name="Blacktop", rarity="common", kind="panel",
    panels={{112, 110, 106}, {96, 94, 90}}, seam={44, 44, 46}, grain=0.22},
-
-  {id="midnight", name="Midnight", price=600, kind="panel",
+  {id="midnight", name="Midnight", rarity="common", kind="panel",
    panels={{34, 38, 58}, {26, 29, 46}}, seam={12, 13, 22}},
 
-  {id="neon", name="Neon", price=800, kind="panel",
+  -- ---- RARE: coloured panels, classic seams ---------------------------------
+  {id="usa", name="USA", rarity="rare", kind="panel",
+   panels={{28, 58, 140}, {206, 32, 48}, {245, 245, 245}, {206, 32, 48},
+           {28, 58, 140}, {245, 245, 245}, {206, 32, 48}, {245, 245, 245}},
+   stars_on={[1]=true, [5]=true}, seam={30, 30, 38}},
+  {id="italia", name="Italia", rarity="rare", kind="panel",
+   panels={{20, 140, 70}, {245, 245, 245}, {206, 36, 44}},
+   seam={34, 34, 36}},
+  {id="brasil", name="Brasil", rarity="rare", kind="panel",
+   panels={{22, 150, 72}, {250, 212, 40}, {30, 60, 160}, {250, 212, 40}},
+   seam={26, 48, 30}},
+  {id="jamaica", name="Jamaica", rarity="rare", kind="panel",
+   panels={{20, 20, 24}, {30, 150, 60}, {244, 196, 36}, {30, 150, 60}},
+   seam={42, 36, 20}},
+  {id="globetrotters", name="Globetrotters", rarity="rare", kind="panel",
+   panels={{206, 32, 48}, {245, 245, 245}, {28, 58, 140}, {245, 245, 245}},
+   seam={30, 30, 38}, stars=true},
+  {id="aba", name="ABA Tri-Color", rarity="rare", kind="panel",
+   panels={{214, 48, 52}, {242, 240, 232}, {32, 66, 150}},
+   seam={40, 34, 30}},
+  {id="neon", name="Neon", rarity="rare", kind="panel",
    panels={{240, 42, 150}, {26, 226, 224}}, seam={22, 18, 40}},
-
-  {id="sunset", name="Sunset", price=700, kind="gradient",
-   ramp={{250, 186, 60}, {236, 96, 52}, {96, 40, 128}}, seam={52, 26, 48}},
-
-  {id="lime", name="Lime", price=400, kind="panel",
-   panels={{150, 214, 48}}, seam={46, 62, 22}},
-
-  {id="bubblegum", name="Bubblegum", price=500, kind="panel",
+  {id="bubblegum", name="Bubblegum", rarity="rare", kind="panel",
    panels={{244, 140, 190}, {250, 240, 244}}, seam={120, 60, 96}},
-
-  {id="gold", name="Gold", price=1500, kind="gradient",
-   ramp={{246, 216, 120}, {206, 158, 48}, {150, 104, 24}}, seam={64, 44, 12}},
-
-  {id="chrome", name="Chrome", price=1400, kind="gradient",
-   ramp={{238, 242, 248}, {168, 178, 194}, {96, 108, 126}}, seam={48, 54, 64}},
-
-  {id="camo", name="Camo", price=650, kind="blotch",
-   palette={{86, 96, 58}, {62, 70, 42}, {112, 108, 74}, {44, 50, 34}},
-   seam={34, 38, 26}},
-
-  {id="beach", name="Beach Ball", price=350, kind="wedges",
-   palette={{240, 60, 60}, {250, 250, 245}, {245, 200, 50}, {60, 140, 220}},
-   wedges=8, seams=false, pebble=0.0, grain=0.0},
-
-  {id="eightball", name="Eight Ball", price=1000, kind="disc",
-   base={22, 22, 26}, disc={245, 245, 245}, disc_deg=26, seams=false,
-   pebble=0.02, grain=0.0},
-
-  {id="watermelon", name="Watermelon", price=450, kind="stripes",
-   base={86, 168, 66}, stripe={34, 88, 40}, stripes=14, seam={46, 92, 44}},
-
-  {id="ice", name="Ice", price=700, kind="gradient",
-   ramp={{238, 250, 255}, {168, 212, 240}, {104, 158, 206}}, seam={70, 106, 140}},
-
-  {id="fire", name="Fire", price=900, kind="gradient",
-   ramp={{252, 232, 120}, {242, 120, 36}, {176, 32, 28}}, seam={54, 20, 14}},
-
-  {id="galaxy", name="Galaxy", price=1200, kind="blotch",
-   palette={{38, 24, 66}, {58, 32, 98}, {26, 18, 48}, {86, 48, 132}},
-   seam={16, 12, 30}, sparkle=true},
-
-  {id="retro", name="Retro 70s", price=550, kind="panel",
+  {id="retro", name="Retro 70s", rarity="rare", kind="panel",
    panels={{214, 156, 52}, {142, 84, 40}}, seam={72, 44, 24}},
-
-  {id="varsity", name="Varsity", price=600, kind="panel",
+  {id="varsity", name="Varsity", rarity="rare", kind="panel",
    panels={{26, 44, 96}, {240, 240, 244}}, seam={18, 26, 54}},
 
-  {id="tiger", name="Tiger", price=850, kind="stripes",
+  -- ---- EPIC: patterns under the seams --------------------------------------
+  {id="camo", name="Woodland Camo", rarity="epic", kind="blotch",
+   palette={{86, 96, 58}, {62, 70, 42}, {112, 108, 74}, {44, 50, 34}},
+   seam={34, 38, 26}},
+  {id="desert", name="Desert Camo", rarity="epic", kind="blotch",
+   palette={{214, 184, 128}, {176, 140, 92}, {232, 212, 164}, {132, 104, 68}},
+   seam={70, 52, 32}},
+  {id="urban", name="Urban Camo", rarity="epic", kind="blotch",
+   palette={{150, 152, 158}, {92, 94, 100}, {208, 208, 212}, {46, 48, 54}},
+   seam={30, 30, 34}},
+  {id="pinkcamo", name="Pink Camo", rarity="epic", kind="blotch",
+   palette={{244, 130, 180}, {196, 70, 130}, {250, 196, 220}, {120, 36, 84}},
+   seam={70, 20, 46}},
+  {id="tiger", name="Tiger", rarity="epic", kind="stripes",
    base={236, 150, 40}, stripe={38, 28, 22}, stripes=18, wobble=true,
    seam={40, 28, 18}},
+  {id="zebra", name="Zebra", rarity="epic", kind="stripes",
+   base={242, 240, 236}, stripe={30, 28, 30}, stripes=16, wobble=true,
+   seam={40, 38, 40}},
+  {id="leopard", name="Leopard", rarity="epic", kind="dots",
+   base={222, 176, 92}, dot={198, 150, 70}, ring={52, 36, 22}, ring_w=2.6,
+   dot_deg=6.5, dot_step=19, jitter=true, seam={48, 32, 18}},
+  {id="checker", name="Checker", rarity="epic", kind="check",
+   palette={{244, 240, 232}, {28, 26, 30}}, cells=12, seam={120, 40, 40}},
+  {id="polka", name="Polka", rarity="epic", kind="dots",
+   base={226, 48, 60}, dot={250, 246, 240}, dot_deg=6, dot_step=22,
+   seam={60, 14, 20}},
+  {id="watermelon", name="Watermelon", rarity="epic", kind="stripes",
+   base={86, 168, 66}, stripe={34, 88, 40}, stripes=14, seam={46, 92, 44}},
+  {id="galaxy", name="Galaxy", rarity="epic", kind="blotch",
+   palette={{38, 24, 66}, {58, 32, 98}, {26, 18, 48}, {86, 48, 132}},
+   seam={16, 12, 30}, sparkle=true},
+  {id="sunset", name="Sunset", rarity="epic", kind="gradient",
+   ramp={{250, 186, 60}, {236, 96, 52}, {96, 40, 128}}, seam={52, 26, 48}},
+  {id="ice", name="Ice", rarity="epic", kind="gradient",
+   ramp={{238, 250, 255}, {168, 212, 240}, {104, 158, 206}}, seam={70, 106, 140}},
+  {id="fire", name="Fire", rarity="epic", kind="gradient",
+   ramp={{252, 232, 120}, {242, 120, 36}, {176, 32, 28}}, seam={54, 20, 14}},
+  {id="gold", name="Gold", rarity="epic", kind="gradient",
+   ramp={{246, 216, 120}, {206, 158, 48}, {150, 104, 24}}, seam={64, 44, 12}},
+  {id="chrome", name="Chrome", rarity="epic", kind="gradient",
+   ramp={{238, 242, 248}, {168, 178, 194}, {96, 108, 126}}, seam={48, 54, 64}},
+
+  -- ---- LEGEND: seamless wrapped designs ------------------------------------
+  {id="beach", name="Beach Ball", rarity="legend", kind="wedges",
+   palette={{240, 60, 60}, {250, 250, 245}, {245, 200, 50}, {60, 140, 220}},
+   wedges=8, seams=false, pebble=0.0, grain=0.0},
+  {id="eightball", name="Eight Ball", rarity="legend", kind="disc",
+   base={22, 22, 26}, disc={245, 245, 245}, disc_deg=26, seams=false,
+   pebble=0.02, grain=0.0},
+  {id="pumpkin", name="Pumpkin", rarity="legend", kind="face",
+   base={236, 128, 32}, glyph=JACK, ink={250, 214, 70}, face_deg=40,
+   ridges=10, ridge_depth=0.28, seams=false, pebble=0.03, grain=0.04},
+  {id="smiley", name="Smiley", rarity="legend", kind="face",
+   base={250, 212, 40}, glyph=SMILEY, ink=INK, face_deg=40,
+   seams=false, pebble=0.0, grain=0.0},
+  {id="soccer", name="Soccer", rarity="legend", kind="soccer",
+   base={246, 246, 244}, pent={26, 26, 30}, pent_deg=16, edge={150, 150, 156},
+   seams=false, pebble=0.0, grain=0.0},
+  {id="globe", name="Globe", rarity="legend", kind="land",
+   ocean={44, 96, 190}, deep={30, 66, 150}, land={88, 156, 70}, dry={160, 136, 80},
+   ice={236, 240, 246}, seams=false, pebble=0.0, grain=0.0},
+  {id="tennis", name="Tennis", rarity="legend", kind="panel",
+   panels={{214, 232, 64}}, curve=true, seam={248, 248, 244},
+   seams=false, pebble=0.0, grain=0.30},
+  {id="baseball", name="Baseball", rarity="legend", kind="panel",
+   panels={{244, 240, 230}}, curve=true, stitches=true, seam={204, 40, 48},
+   seams=false, pebble=0.0, grain=0.03},
+  {id="moon", name="Moon", rarity="legend", kind="craters",
+   base={178, 178, 182}, floor={146, 146, 152}, rim={214, 214, 218},
+   craters=26, seams=false, pebble=0.0, grain=0.12},
+  {id="donut", name="Donut", rarity="legend", kind="donut",
+   dough={222, 170, 96}, glaze={246, 128, 178},
+   sprinkles={{250, 236, 80}, {90, 200, 120}, {80, 150, 240}, {250, 250, 250}},
+   seams=false, pebble=0.0, grain=0.0},
 }
 
 -- ---------------------------------------------------------------------------
@@ -178,6 +281,29 @@ local function panel_of(px, py, pz)
   return (north and 4 or 0) + (east and 2 or 0) + (inside and 1 or 0)
 end
 
+-- The 12 icosahedron vertex directions (the soccer ball's pentagon centres).
+local ICO = {}
+do
+  local phi = (1 + math.sqrt(5)) / 2
+  local n = math.sqrt(1 + phi * phi)
+  for _, s in ipairs({1, -1}) do
+    for _, t in ipairs({1, -1}) do
+      ICO[#ICO + 1] = {0, s / n, t * phi / n}
+      ICO[#ICO + 1] = {s / n, t * phi / n, 0}
+      ICO[#ICO + 1] = {t * phi / n, 0, s / n}
+    end
+  end
+end
+
+-- Deterministic crater field for kind "craters": {lon, lat, radius_deg}.
+local function seed_craters(st)
+  st._craters = {}
+  for i = 1, (st.craters or 20) do
+    st._craters[i] = {noise(i, 1, 91) * 360.0 - 180.0, (noise(i, 2, 93) * 2.0 - 1.0) * 72.0,
+                      3.0 + noise(i, 3, 97) * 7.0}
+  end
+end
+
 local function shade_for(st, px, py, pz, lat, lon, x, y)
   local kind = st.kind or "panel"
   if kind == "gradient" then
@@ -207,6 +333,104 @@ local function shade_for(st, px, py, pz, lat, lon, x, y)
     local b = vnoise(x, y, 13, 11) * 0.45
     local v = math.max(0.0, math.min(0.999, a * 0.75 + b))
     return st.palette[math.floor(v * #st.palette) + 1]
+  elseif kind == "check" then
+    -- A lat/lon checkerboard: `cells` around the equator, half as many rows.
+    local n = st.cells or 12
+    local cu = math.floor((lon + 180.0) / 360.0 * n)
+    local cv = math.floor((lat + 90.0) / 180.0 * (n / 2))
+    return st.palette[(cu + cv) % 2 + 1]
+  elseif kind == "dots" then
+    -- Rows of dots laid on the SPHERE (fewer per row toward the poles), each
+    -- `dot_deg` of arc across, `dot_step` apart; optional jitter and a ring.
+    local step = st.dot_step or 22
+    local rad = st.dot_deg or 6
+    local row = math.floor((lat + 90.0) / step)
+    local rlat = -90.0 + (row + 0.5) * step
+    local clat = math.max(math.cos(math.rad(rlat)), 0.05)
+    local per = math.max(3, math.floor(360.0 * clat / step + 0.5))
+    local off = (row % 2) * 0.5
+    local k = math.floor((lon + 180.0) / 360.0 * per - off + 0.5)
+    local lon_c = ((k + off) / per) * 360.0 - 180.0
+    local lat_c = rlat
+    if st.jitter then
+      lon_c = lon_c + (noise(k, row, 41) - 0.5) * step * 0.5
+      lat_c = lat_c + (noise(k, row, 43) - 0.5) * step * 0.4
+      rad = rad * (0.75 + noise(k, row, 47) * 0.5)
+    end
+    local dlon = (lon - lon_c + 540.0) % 360.0 - 180.0
+    local dx = dlon * math.cos(math.rad(lat))
+    local dy = lat - lat_c
+    local d = math.sqrt(dx * dx + dy * dy)
+    if d < rad then
+      if st.ring and d > rad - (st.ring_w or 2.0) then return st.ring end
+      return st.dot
+    end
+    return st.base
+  elseif kind == "face" then
+    -- A pixel glyph on the -y equatorial point (and mirrored on +y, so one
+    -- face is always toward the camera as the ball tumbles).
+    local fr = math.rad(st.face_deg or 40)
+    local ay = math.abs(py)
+    if ay > math.cos(fr) then
+      local sx = px
+      if py > 0 then sx = -px end
+      local gw, gh = #st.glyph[1], #st.glyph
+      local gx = math.floor((sx / math.sin(fr) + 1.0) * 0.5 * gw)
+      local gy = math.floor((1.0 - pz / math.sin(fr)) * 0.5 * gh)
+      if gx >= 0 and gx < gw and gy >= 0 and gy < gh then
+        if st.glyph[gy + 1]:sub(gx + 1, gx + 1) == "#" then return st.ink end
+      end
+    end
+    return st.base
+  elseif kind == "soccer" then
+    -- Black pentagons around the 12 icosahedron vertices, a thin grey edge.
+    local best = 10.0
+    for _, v in ipairs(ICO) do
+      local d = math.acos(math.max(-1.0, math.min(1.0, px * v[1] + py * v[2] + pz * v[3])))
+      if d < best then best = d end
+    end
+    local deg = math.deg(best)
+    if deg < (st.pent_deg or 20) then return st.pent end
+    if deg < (st.pent_deg or 20) + 1.4 then return st.edge end
+    return st.base
+  elseif kind == "land" then
+    -- Continents from low-frequency noise, ice at the poles.
+    if math.abs(lat) > 74 then return st.ice end
+    local a = vnoise(x, y, 70, 51) * 0.65 + vnoise(x, y, 24, 53) * 0.35
+    if a > 0.54 then
+      if vnoise(x, y, 40, 57) > 0.55 then return st.dry end
+      return st.land
+    end
+    if a < 0.36 then return st.deep end
+    return st.ocean
+  elseif kind == "craters" then
+    local best, kind_c = 10.0, nil
+    for _, c in ipairs(st._craters) do
+      local dlon = (lon - c[1] + 540.0) % 360.0 - 180.0
+      local dx = dlon * math.cos(math.rad(lat))
+      local dy = lat - c[2]
+      local d = math.sqrt(dx * dx + dy * dy)
+      if d < c[3] then
+        if d > c[3] * 0.72 then return st.rim end
+        return st.floor
+      end
+    end
+    local v = vnoise(x, y, 28, 61)
+    if v > 0.62 then return {st.base[1] - 14, st.base[2] - 14, st.base[3] - 12} end
+    return st.base
+  elseif kind == "donut" then
+    local edge = 52 + (vnoise(x, y, 30, 77) - 0.5) * 16
+    if math.abs(lat) < edge then
+      local cx, cy = math.floor(x / 12), math.floor(y / 7)
+      if noise(cx, cy, 81) > 0.86 then
+        local ox, oy = x % 12, y % 7
+        if ox >= 2 and ox <= 8 and oy >= 2 and oy <= 3 then
+          return st.sprinkles[math.floor(noise(cx, cy, 83) * #st.sprinkles) + 1]
+        end
+      end
+      return st.glaze
+    end
+    return st.dough
   end
   local cols = st.panels or {LEATHER}
   return cols[panel_of(px, py, pz) % #cols + 1]
@@ -220,6 +444,7 @@ local function render(st)
   local grain = st.grain
   if grain == nil then grain = 0.10 end
   local draw_seams = st.seams ~= false
+  if st.kind == "craters" then seed_craters(st) end
 
   local height, seam_cov = {}, {}
   for i = 0, W * H - 1 do height[i] = 0.0 end
@@ -304,6 +529,19 @@ local function render(st)
     end
   end
 
+  if st.curve then
+    -- The tennis/baseball seam: one closed curve, normalised from
+    -- (a cos t + b cos 3t, a sin t - b sin 3t, c sin 2t).
+    local a, b, c = 0.75, 0.25, 0.66
+    for i = 0, 7999 do
+      local t = i / 8000 * 2 * math.pi
+      local qx = a * math.cos(t) + b * math.cos(3 * t)
+      local qy = a * math.sin(t) - b * math.sin(3 * t)
+      local qz = c * math.sin(2 * t)
+      local n = math.sqrt(qx * qx + qy * qy + qz * qz)
+      plot(qx / n, qy / n, qz / n)
+    end
+  end
   if draw_seams then
     local step = math.max(1, math.floor(SEAM_R * 0.5))
     for x = 0, W - 1, step do dot(x + 0.5, H / 2) end
@@ -357,6 +595,17 @@ local function render(st)
       if st.stars and noise(math.floor(x / 9), math.floor(y / 9), 17) > 0.972 then
         r, g, b = 250, 248, 240
       end
+      if st.stars_on and noise(math.floor(x / 9), math.floor(y / 9), 17) > 0.962 then
+        local cols = st.panels
+        local pi = panel_of(clat * math.cos(rlon), clat * math.sin(rlon), slat) % #cols + 1
+        if st.stars_on[pi] then r, g, b = 250, 248, 240 end
+      end
+      if st.ridges then
+        local depth = st.ridge_depth or 0.25
+        r, g, b = r * (1 - depth * (0.5 - 0.5 * math.cos(st.ridges * rlon))),
+                  g * (1 - depth * (0.5 - 0.5 * math.cos(st.ridges * rlon))),
+                  b * (1 - depth * (0.5 - 0.5 * math.cos(st.ridges * rlon)))
+      end
       local cov = seam_cov[i]
       if cov then
         r = r + (seam_rgb[1] - r) * cov
@@ -377,8 +626,8 @@ for _, st in ipairs(STYLES) do
   if st.id == "classic" then sp:saveCopyAs(LEGACY) end
   sp:close()
   rows[#rows + 1] = string.format(
-    '  {"id": "%s", "name": "%s", "price": %d, "skin": "res://assets/textures/balls/%s.png"}',
-    st.id, st.name, st.price or 0, st.id)
+    '  {"id": "%s", "name": "%s", "rarity": "%s", "price": %d, "skin": "res://assets/textures/balls/%s.png"}',
+    st.id, st.name, st.rarity or "common", st.price or 0, st.id)
   print("  " .. st.id)
 end
 

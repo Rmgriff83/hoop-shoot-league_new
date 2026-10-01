@@ -47,6 +47,8 @@ func _ready() -> void:
 		"bounce_0", "bounce_1", "bounce_2",
 		"swish", "net", "chain_rattle_0", "chain_rattle_1", "score_pop", "score_pop_swish", "buzzer",
 		"ice_freeze", "ice_crack_0", "ice_crack_1", "ice_shatter",
+		"peggy_press", "peggy_servo", "peggy_ticket", "peggy_peg_0", "peggy_peg_1", "peggy_peg_2",
+		"peggy_win", "peggy_jackpot",
 		"fx/fire_burst", "fx/ice_form", "fx/ice_break", "fx/ice_swish", "fx/fire_out",
 	]:
 		_streams[name_] = load("res://assets/audio/%s.wav" % name_)
@@ -347,6 +349,67 @@ func _play_stream(stream: AudioStream, volume_db := 0.0, pitch := 1.0) -> void:
 
 func _play(name_: String, volume_db := 0.0, pitch := 1.0) -> void:
 	_play_stream(_streams.get(name_), volume_db, pitch)
+
+
+# ---- PEGGY (docs/LOCKER.md) --------------------------------------------------------
+
+var _servo: AudioStreamPlayer
+var _servo_tween: Tween
+
+
+func peggy_press() -> void:
+	_play("peggy_press", -2.0)
+
+
+func peggy_ticket() -> void:
+	_play("peggy_ticket", -4.0)
+
+
+func peggy_peg(variant: int, pitch := 1.0) -> void:
+	_play("peggy_peg_%d" % (variant % 3), -6.0, pitch)
+
+
+func peggy_win() -> void:
+	_play("peggy_win", -3.0)
+
+
+func peggy_jackpot() -> void:
+	_play("peggy_jackpot", -1.0)
+
+
+## The carriage's servo whine, looped while the aim moves.
+func peggy_servo_start() -> void:
+	var stream: AudioStreamWAV = _streams.get("peggy_servo")
+	if stream == null:
+		return
+	if _servo == null:
+		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+		stream.loop_begin = 0
+		stream.loop_end = int(stream.get_length() * stream.mix_rate)
+		_servo = AudioStreamPlayer.new()
+		_servo.name = "PeggyServo"
+		_servo.stream = stream
+		add_child(_servo)
+	if _servo_tween != null:
+		_servo_tween.kill()
+		_servo_tween = null
+	_servo.volume_db = -10.0 + gain_db
+	if not _servo.playing:
+		_servo.play()
+
+
+func peggy_servo_stop(fade := 0.08) -> void:
+	if _servo == null or not _servo.playing:
+		return
+	if _servo_tween != null:
+		_servo_tween.kill()
+	_servo_tween = create_tween()
+	_servo_tween.tween_property(_servo, "volume_db", -40.0, fade)
+	_servo_tween.tween_callback(_servo.stop)
+
+
+func peggy_servo_playing() -> bool:
+	return _servo != null and _servo.playing
 
 
 ## Random index in [0, count) that differs from `last` (when count > 1).

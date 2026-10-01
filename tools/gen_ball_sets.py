@@ -23,6 +23,7 @@ import os
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 MANIFEST = os.path.join(ROOT, "assets", "balls", "ball_manifest.json")
 MODEL = "res://assets/balls/classic/basketball.glb"
+RARITIES = ("common", "rare", "epic", "legend")
 BOUNCE = ", ".join(
     '"res://assets/balls/classic/sfx/bounce_%02d.wav"' % i for i in range(1, 16))
 
@@ -35,6 +36,7 @@ script = ExtResource("1")
 id = "{id}"
 display_name = "{name}"
 price_coins = {price}
+rarity = "{rarity}"
 model_path = "{model}"
 skin_path = "{skin}"
 bounce_clips = PackedStringArray({bounce})
@@ -50,17 +52,20 @@ def main() -> None:
         if b["id"] in seen:
             raise SystemExit("duplicate ball id: %s" % b["id"])
         seen.add(b["id"])
-        # starter_ball() returns the FIRST set priced 0, and a test asserts that
-        # is classic. A second free ball would silently steal it.
-        if b["price"] == 0 and b["id"] != "classic":
-            raise SystemExit("%s is priced 0; only classic may be" % b["id"])
+        # Balls are PEGGY prizes (docs/LOCKER.md), never bought: every one is
+        # priced 0 and carries a rarity instead. starter_ball() returns the
+        # FIRST set priced 0, so classic must stay first in the manifest.
+        if b["price"] != 0:
+            raise SystemExit("%s is priced %d; balls are won, not bought" % (b["id"], b["price"]))
+        if b.get("rarity") not in RARITIES:
+            raise SystemExit("%s has no rarity (want one of %s)" % (b["id"], ", ".join(RARITIES)))
         skin = os.path.join(ROOT, b["skin"][len("res://"):])
         if not os.path.exists(skin):
             raise SystemExit("%s: missing skin %s" % (b["id"], b["skin"]))
         folder = os.path.join(ROOT, "assets", "balls", b["id"])
         os.makedirs(folder, exist_ok=True)
         with open(os.path.join(folder, "ball_set.tres"), "w") as f:
-            f.write(TEMPLATE.format(id=b["id"], name=b["name"], price=b["price"],
+            f.write(TEMPLATE.format(id=b["id"], name=b["name"], price=b["price"], rarity=b["rarity"],
                                     model=MODEL, skin=b["skin"], bounce=BOUNCE))
         lines.append('\t"res://assets/balls/%s/ball_set.tres",' % b["id"])
     print("wrote %d ball sets" % len(balls))

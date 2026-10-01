@@ -20,9 +20,11 @@ CardArea    a fixed box (y 781 → 1206) holding the home block or the league in
 Ticker      flat strip at the very bottom, scrolling copy from the save
 ```
 No bottom nav: the phone's safe area would push one up, and the space goes to
-the cards. **Locker** (`game/ui/locker_panel.gd`): the prize counter — every ball and
-hoop, owned ones equip (`App.select`), the rest buy for tickets
-(`App.try_buy`). **Ranks** is an icon beside the area name (SOON for now).
+the cards. **Locker** (`game/ui/locker_panel.gd`, docs/LOCKER.md): two tabs —
+PEGGY, the ticket-fed drop machine that wins balls, and BALLS, the collection
+(owned equip via `App.select`, the rest show their rarity) with the hoops
+under it (unowned buy via `App.try_buy`). The locker icon carries a gold dot
+while a won ball has not been looked at. **Ranks** is an icon beside the area name (SOON for now).
 **Shop is not on the home page**: it will live inside each league, selling
 cards usable only in that league (so the easy league can't farm cards for the
 hard one); the pill shows TICKETS, the locker money.

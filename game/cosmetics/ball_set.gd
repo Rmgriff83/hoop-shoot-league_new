@@ -11,6 +11,11 @@ extends CosmeticSet
 ## copy of the same 800-face sphere.
 @export var skin_path := ""
 
+## PEGGY rarity ("common" | "rare" | "epic" | "legend", docs/LOCKER.md): which
+## plate of the drop machine can pay this ball. Balls are never bought, so
+## price_coins is 0 on every one of them.
+@export var rarity := "common"
+
 ## Bounce clips played on floor contacts; empty → generic synthetic bounces.
 @export var bounce_clips := PackedStringArray()
 @export var pickup_clips := PackedStringArray()

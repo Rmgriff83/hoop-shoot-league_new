@@ -3,6 +3,8 @@
 Run headless:
   /Applications/Blender.app/Contents/MacOS/Blender -b --python tools/blender/build_ball_lineup.py
   ...add --render to also write art/renders/balls/lineup.png
+  ...add --thumbs to write assets/textures/balls/thumbs/<id>.png (96 px, RGBA):
+     the shaded thumbnails the locker's BALLS tab and prize card show
 
 Produces  art/blender/ball_lineup.blend   (source, hand-editable, ignored by Godot)
 
@@ -13,8 +15,9 @@ exported.
 
 The roster comes from assets/balls/ball_manifest.json, which
 tools/aseprite/gen_ball_wrap.lua writes from its STYLE table. That table is the
-single source of truth -- ids, names and prices included -- so this script never
-needs editing when a ball is added.
+single source of truth -- ids, names and rarities included -- so this script never
+needs editing when a ball is added. The grid runs rarity by rarity (common,
+rare, epic, legend) so the tiers read as rows.
 """
 import json
 import math
@@ -28,6 +31,9 @@ ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), 
     if "__file__" in globals() else "/Users/rossgriffus/Documents/projects/godot/hoop_shoot"
 BLEND_PATH = os.path.join(ROOT, "art", "blender", "ball_lineup.blend")
 RENDER_DIR = os.path.join(ROOT, "art", "renders", "balls")
+THUMB_DIR = os.path.join(ROOT, "assets", "textures", "balls", "thumbs")
+THUMB_PX = 96
+RARITIES = ("common", "rare", "epic", "legend")
 MANIFEST = os.path.join(ROOT, "assets", "balls", "ball_manifest.json")
 
 R_BALL = 0.121          # core/physics/sim_constants.gd
@@ -93,6 +99,7 @@ def build(balls):
     coll = bpy.data.collections.new("Lineup")
     scene.collection.children.link(coll)
 
+    balls = sorted(balls, key=lambda b: RARITIES.index(b.get("rarity", "common")))
     rows = (len(balls) + COLS - 1) // COLS
     for i, b in enumerate(balls):
         cx = (i % COLS - (COLS - 1) / 2.0) * GAP
@@ -112,8 +119,9 @@ def build(balls):
         coll.objects.link(o)
         # Two lines: a long name plus a price on one line overruns the cell and
         # collides with the neighbour.
-        label("%s\n%d" % (b["name"], b["price"]),
+        label("%s\n%s" % (b["name"], b.get("rarity", "").upper()),
               (cx, -0.02, cz - GAP * 0.46), coll)
+        o["cell"] = (cx, cz)
 
     sun_data = bpy.data.lights.new("Sun", type="SUN")
     sun_data.energy = 3.4
@@ -158,9 +166,39 @@ def save_and_render(scene, do_render):
     print("RENDERED", scene.render.filepath)
 
 
+def render_thumbs(scene):
+    """One 96 px RGBA render per ball, the camera parked over each cell."""
+    os.makedirs(THUMB_DIR, exist_ok=True)
+    try:
+        scene.render.engine = "BLENDER_EEVEE_NEXT"
+    except TypeError:
+        pass
+    scene.view_settings.view_transform = "Standard"
+    scene.render.film_transparent = True
+    scene.render.image_settings.file_format = "PNG"
+    scene.render.image_settings.color_mode = "RGBA"
+    scene.render.resolution_x = scene.render.resolution_y = THUMB_PX
+    scene.render.resolution_percentage = 100
+    cam = scene.camera
+    cam.data.ortho_scale = R_BALL * 2.0 * 1.08
+    for o in scene.objects:
+        if o.type == "FONT":
+            o.hide_render = True
+    for o in scene.objects:
+        if not o.name.startswith("Ball_"):
+            continue
+        cx, cz = o["cell"]
+        cam.location = Vector((cx, -2.0, cz))
+        scene.render.filepath = os.path.join(THUMB_DIR, o.name[len("Ball_"):] + ".png")
+        bpy.ops.render.render(write_still=True)
+    print("THUMBS", THUMB_DIR)
+
+
 if __name__ == "__main__" and bpy.app.background:
     with open(MANIFEST) as f:
         balls = json.load(f)
     sc = build(balls)
     save_and_render(sc, "--render" in sys.argv)
+    if "--thumbs" in sys.argv:
+        render_thumbs(sc)
     print("LINEUP %d balls" % len(balls))
