@@ -13,6 +13,8 @@ render_mode unshaded, cull_back;
 
 uniform sampler2D albedo : source_color, filter_linear_mipmap;
 uniform sampler2D mask : hint_default_black, filter_nearest;
+// R + 256 G = the window's id (conform_buildings.lua): one state per window.
+uniform sampler2D window_id : hint_default_black, filter_nearest;
 uniform bool use_mask = true;
 uniform vec2 cells = vec2(32.0, 32.0);
 uniform vec2 pane_min = vec2(0.25, 0.19);
@@ -35,6 +37,11 @@ float hash2(vec2 p) {
 void fragment() {
 	vec2 uv = UV;
 	vec2 cell = floor(uv * cells) + vec2(seed * 17.0, seed * 5.0);
+	if (use_mask) {
+		vec2 idt = texture(window_id, uv).rg;
+		float id = floor(idt.r * 255.0 + 0.5) + 256.0 * floor(idt.g * 255.0 + 0.5);
+		cell = vec2(id, 3.0) + vec2(seed * 17.0, seed * 5.0);
+	}
 	vec2 f = fract(uv * cells);
 	// Dusk grade, and a little form: faces toward the sky and the court's
 	// floodlights (+y, -x) read brighter than those turned away.
@@ -55,7 +62,8 @@ void fragment() {
 	if (use_mask) {
 		float pane = texture(mask, uv).r;
 		vec3 glow = lit_color * warm * emission_energy;
-		ALBEDO = lit ? mix(tex, glow, pane) : mix(tex, dark_color, 0.6 * pane);
+		// A lit pane keeps a little of the glass and frame under the glow.
+		ALBEDO = lit ? mix(tex, glow, 0.8 * pane) : mix(tex, dark_color, 0.6 * pane);
 	} else {
 		bool in_pane = all(greaterThan(f, pane_min)) && all(lessThan(f, pane_max));
 		ALBEDO = tex;

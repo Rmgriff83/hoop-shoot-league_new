@@ -9,6 +9,7 @@ extends Node
 
 const WINDOW_SHADER := preload("res://game/court/windows.gdshader")
 const FACADE_MASK := "res://assets/textures/city_facades_lit.png"
+const FACADE_IDS := "res://assets/textures/city_facades_id.png"
 const FACADE_CELLS := Vector2(32, 32)
 ## The traffic pool: the hometown pack's cars (GGBot "PSX Style Cars",
 ## data/credits.json). Forward is Godot +Z, the origin is on the ground.
@@ -112,6 +113,8 @@ func _bind_facade(mi: MeshInstance3D) -> void:
 			m.set_shader_parameter("albedo", tex)
 		if ResourceLoader.exists(FACADE_MASK):
 			m.set_shader_parameter("mask", load(FACADE_MASK))
+		if ResourceLoader.exists(FACADE_IDS):
+			m.set_shader_parameter("window_id", load(FACADE_IDS))
 		m.set_shader_parameter("use_mask", true)
 		m.set_shader_parameter("cells", FACADE_CELLS)
 		m.set_shader_parameter("lit_share", LIT_SHARE)

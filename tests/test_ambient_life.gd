@@ -134,7 +134,7 @@ func _city(t) -> void:
 	var city: Node = load("res://assets/arena/city/city.glb").instantiate()
 	t.eq(_count(city, "StreetRig", false), 1, "one street line")
 	t.ok(_count(city, "Building") >= 10, "the pack's buildings stand around the court (%d)" % _count(city, "Building"))
-	for f in ["city_facades", "city_facades_lit"]:
+	for f in ["city_facades", "city_facades_lit", "city_facades_id"]:
 		t.ok(FileAccess.file_exists("res://assets/textures/%s.png" % f), "%s conformed" % f)
 	t.eq(_count(city, "TreeRig", false), 4, "4 street trees")
 	t.ok(_count(city, "FloodHead") >= 4, "floodlight heads at the court's corners")

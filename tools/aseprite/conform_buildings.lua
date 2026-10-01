@@ -1,10 +1,9 @@
 -- Conform Sam Grady's Low Poly Buildings Pack atlas (art/third_party/buildings,
 -- CC BY 4.0) for the city court: assets/textures/city_facades.png (the atlas
 -- as PNG, the pure-blue padding filled with a neutral wall grey so a stray UV
--- never shows blue) and city_facades_lit.png (a WINDOW MASK derived from it:
--- facade pixels darker than their 8x8 block's mean, outside the railing and
--- padding regions, cleaned to whole 4x4 cells — white = a pane the
--- windows.gdshader may light at dusk). Deterministic, no math.random.
+-- never shows blue), city_facades_lit.png (a WINDOW MASK: white = a pane the
+-- windows.gdshader may light at dusk) and city_facades_id.png (one id per
+-- window, R + 256 G), both from the authored WINDOWS table. Deterministic.
 -- Run: /Applications/Aseprite.app/Contents/MacOS/aseprite -b --script tools/aseprite/conform_buildings.lua
 
 local ROOT = app.fs.filePath(app.fs.filePath(app.fs.filePath(debug.getinfo(1).source:sub(2))))
@@ -46,47 +45,53 @@ for y = 0, H - 1 do
 end
 save(out, "city_facades.png")
 
--- city_facades_lit.png: the window mask.
-local BLOCK, CELL = 8, 4
+-- city_facades_lit.png + city_facades_id.png: the windows, AUTHORED. The
+-- atlas is an 8 x 8 grid of 32 px tiles and its windows are 5-25 px wide:
+-- too small for a darkness test to tell glass from a lintel's shadow, so
+-- every pane is a rectangle in this table (atlas px: x, y, w, h), read off
+-- the atlas at 4x. One rectangle = one window = one id in the shader.
+local WINDOWS = {
+  -- col 0: the ornate stone facade (arched windows down the column), a shop at the foot
+  {8, 5, 17, 25}, {8, 41, 17, 20}, {8, 72, 17, 21}, {8, 100, 17, 25}, {10, 130, 15, 30}, {8, 165, 17, 25}, {5, 230, 25, 20},
+  -- col 1: a plain window, a curtained one, the tall black one
+  {42, 10, 12, 18}, {40, 100, 14, 15}, {41, 132, 13, 43},
+  -- col 2: the tall arched window, a small one, the industrial row, a small one
+  {72, 8, 14, 52}, {75, 104, 11, 13}, {69, 163, 18, 15}, {75, 229, 12, 11},
+  -- col 3 / 4: windows, the industrial row's other two panes
+  {104, 10, 13, 18}, {108, 104, 9, 13}, {140, 104, 10, 13}, {100, 163, 25, 15}, {132, 163, 23, 15},
+  -- col 4 / 5: the stained glass at the foot
+  {130, 228, 27, 24}, {162, 228, 28, 24},
+  -- col 5: the arched window, the tall blue strip, the teal shop front
+  {165, 70, 25, 22}, {172, 98, 8, 50}, {165, 163, 25, 17}, {165, 195, 25, 25},
+  -- col 6 / 7: a small square window, the blue strip, the shop fronts
+  {200, 75, 15, 8}, {202, 105, 8, 20}, {197, 135, 13, 15}, {212, 135, 38, 15}, {197, 165, 58, 25}, {193, 198, 62, 24},
+}
+local label = {}
+for i, r in ipairs(WINDOWS) do
+  for y = r[2], r[2] + r[4] - 1 do
+    for x = r[1], r[1] + r[3] - 1 do
+      if x >= 0 and x < W and y >= 0 and y < H then label[y * W + x] = i end
+    end
+  end
+end
 local mask = Sprite(W, H, ColorMode.RGB)
 local mimg = mask.cels[1].image
-local dark = {}
-for by = 0, H / BLOCK - 1 do
-  for bx = 0, W / BLOCK - 1 do
-    local sum, n = 0, 0
-    for y = by * BLOCK, by * BLOCK + BLOCK - 1 do
-      for x = bx * BLOCK, bx * BLOCK + BLOCK - 1 do
-        local c = img:getPixel(x, y)
-        if not is_pad(c) then sum = sum + lum(c); n = n + 1 end
-      end
-    end
-    local mean = n > 0 and sum / n or 0
-    for y = by * BLOCK, by * BLOCK + BLOCK - 1 do
-      for x = bx * BLOCK, bx * BLOCK + BLOCK - 1 do
-        local c = img:getPixel(x, y)
-        local l = lum(c)
-        dark[y * W + x] = (not is_pad(c)) and (not is_railing(x, y)) and l < mean * 0.72 and l < 105
-      end
-    end
-  end
-end
 local panes = 0
-for cy = 0, H / CELL - 1 do
-  for cx = 0, W / CELL - 1 do
-    local n = 0
-    for y = cy * CELL, cy * CELL + CELL - 1 do
-      for x = cx * CELL, cx * CELL + CELL - 1 do
-        if dark[y * W + x] then n = n + 1 end
-      end
-    end
-    local on = n >= CELL * CELL / 2
-    if on then panes = panes + 1 end
-    for y = cy * CELL, cy * CELL + CELL - 1 do
-      for x = cx * CELL, cx * CELL + CELL - 1 do
-        mimg:drawPixel(x, y, on and pc.rgba(255, 255, 255, 255) or pc.rgba(0, 0, 0, 255))
-      end
-    end
+for y = 0, H - 1 do
+  for x = 0, W - 1 do
+    local id = label[y * W + x] or 0
+    if id > 0 then panes = panes + 1 end
+    mimg:drawPixel(x, y, id > 0 and pc.rgba(255, 255, 255, 255) or pc.rgba(0, 0, 0, 255))
   end
 end
-print(string.format("window cells: %d of %d", panes, (W / CELL) * (H / CELL)))
+print(string.format("windows: %d authored, pane pixels %d", #WINDOWS, panes))
 save(mask, "city_facades_lit.png")
+local ids = Sprite(W, H, ColorMode.RGB)
+local iimg = ids.cels[1].image
+for y = 0, H - 1 do
+  for x = 0, W - 1 do
+    local id = label[y * W + x] or 0
+    iimg:drawPixel(x, y, pc.rgba(id % 256, id // 256, 0, 255))
+  end
+end
+save(ids, "city_facades_id.png")

@@ -708,8 +708,11 @@ road to the shooter's right.
 material for `game/court/windows.gdshader`, a shaded facade shader (the
 arena's low sun and cool ambient dusk the daylit photos) that reads
 `city_facades_lit.png` — a window mask `conform_buildings.lua` derives from
-the atlas (facade pixels darker than their block, cleaned to 4 px cells) —
-and lights each 32 × 32 atlas cell by a per-cell hash, about six in ten
+the atlas — AUTHORED: a table of window rectangles in
+`conform_buildings.lua` read off the atlas at 4× (its windows are 5–25 px,
+too small for a darkness test to tell glass from a lintel's shadow), each
+one id in `city_facades_id.png` (R + 256 G) — and
+lights each WINDOW by a per-id hash, about six in ten
 lit, every cell on its own multi-minute switching period, offset by an
 instance `seed` so the buildings sharing the atlas light differently. The
 `clock` uniform is the FX node's own time, so tests step it
