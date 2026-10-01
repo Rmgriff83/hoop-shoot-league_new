@@ -176,6 +176,7 @@ def build():
     pole_tex = cage.mat_tex("City_Pole", TEX("beach_pole.png"))
     concrete = cage.mat_tex("City_Concrete", TEX("beach_concrete.png"))
     fence = cage.mat_tex("City_Fence", TEX("cage_mesh.png"), alpha_clip=True, double_sided=True)
+    fence_black = cage.mat_tex("City_FenceBlack", TEX("city_fence_black.png"), alpha_clip=True, double_sided=True)
     curb = cage.mat_flat("City_Curb", (150, 146, 140))
     apron = cage.mat_flat("City_Apron", (40, 52, 52), roughness=1.0)
     dark = cage.mat_flat("City_Dark", (30, 30, 34))
@@ -219,12 +220,16 @@ def build():
             cage.add_box("FencePost%d_%d" % (k, i), (0.08, FENCE_TOP - WALL_H + 0.1, 0.08), (px, (WALL_H + FENCE_TOP) / 2.0, pz), dark, c_court, root)
     for k, (px, pz) in enumerate(corners):
         cage.add_box("FenceCorner%d" % k, (0.10, FENCE_TOP - WALL_H + 0.1, 0.10), (px, (WALL_H + FENCE_TOP) / 2.0, pz), dark, c_court, root)
-    bm = bmesh.new()
-    uvl = bm.loops.layers.uv.verify()
+    # The chain link: the three sides in the cage's grey, the BACK fence
+    # (behind the hoop, x = ENC_X0, side 3) its own mesh in black.
+    BACK = 3
+    meshes = {"Fence": (bmesh.new(), fence), "FenceBack": (bmesh.new(), fence_black)}
     u = 0.0
     for k in range(4):
         (ax, az), (bx, bz) = corners[k], corners[(k + 1) % 4]
         length = math.hypot(bx - ax, bz - az)
+        bm = meshes["FenceBack" if k == BACK else "Fence"][0]
+        uvl = bm.loops.layers.uv.verify()
         v0 = bm.verts.new(cage.s2b((ax, WALL_H, az)))
         v1 = bm.verts.new(cage.s2b((bx, WALL_H, bz)))
         v2 = bm.verts.new(cage.s2b((bx, FENCE_TOP, bz)))
@@ -235,12 +240,13 @@ def build():
         for loop, uvc in zip(f.loops, ((u0, 0.0), (u1, 0.0), (u1, vv), (u0, vv))):
             loop[uvl].uv = uvc
         u += length
-    me = bpy.data.meshes.new("Fence")
-    bm.to_mesh(me)
-    bm.free()
-    me.materials.append(fence)
-    fence_obj = bpy.data.objects.new("Fence", me)
-    cage.link_obj(fence_obj, c_court, root, (0, 0, 0))
+    for name, (bm, mat) in meshes.items():
+        me = bpy.data.meshes.new(name)
+        bm.to_mesh(me)
+        bm.free()
+        me.materials.append(mat)
+        obj = bpy.data.objects.new(name, me)
+        cage.link_obj(obj, c_court, root, (0, 0, 0))
 
     # ---- The street behind the hoop: kerb, sidewalk, road with a dashed
     # centre line, the far sidewalk and kerb. StreetRig marks the lane line.

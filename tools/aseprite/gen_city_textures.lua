@@ -399,3 +399,29 @@ do
   for i = 0, 2 do fill(img, 46 + i * 5, 10, 49 + i * 5, 21, rgb(236, 238, 242)) end
   save(spr, "city_sign.png")
 end
+
+-- city_fence_black.png 64x64 RGBA — the back fence's chain link (Ross,
+-- 2026-10-01: black): cage_mesh.png's lattice with every cord pixel
+-- re-coloured near-black, a touch lighter on the cord's upper edge.
+do
+  local src = Sprite{ fromFile = app.fs.joinPath(OUT, "cage_mesh.png") }
+  local simg = Image(src.cels[1].image)
+  local W, H = simg.width, simg.height
+  local spr = Sprite(W, H, ColorMode.RGBA)
+  local img = spr.cels[1].image
+  for y = 0, H - 1 do
+    for x = 0, W - 1 do
+      local c = simg:getPixel(x, y)
+      local a = pc.rgbaA(c)
+      if a == 0 then
+        img:drawPixel(x, y, pc.rgba(0, 0, 0, 0))
+      else
+        local lum = 0.299 * pc.rgbaR(c) + 0.587 * pc.rgbaG(c) + 0.114 * pc.rgbaB(c)
+        local v = 14 + (lum / 255) * 30
+        img:drawPixel(x, y, pc.rgba(math.floor(v), math.floor(v), math.floor(v + 3), a))
+      end
+    end
+  end
+  src:close()
+  save(spr, "city_fence_black.png")
+end
