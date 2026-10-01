@@ -710,20 +710,10 @@ court), and a bus shelter (`BusStop`, its back wall the lit 3 × 2 m
 road to the shooter's right; three `ParkHead%d` park lamps just outside
 the shooter's fence light the near half of the court (omnis).
 
-**Windows** are not painted on: `CityFx` swaps every `Building*` mesh's
-material for `game/court/windows.gdshader`, a shaded facade shader (the
-arena's low sun and cool ambient dusk the daylit photos) that reads
-`city_facades_lit.png` — a window mask `conform_buildings.lua` derives from
-the atlas — AUTHORED: a table of window rectangles in
-`conform_buildings.lua` read off the atlas at 4× (its windows are 5–25 px,
-too small for a darkness test to tell glass from a lintel's shadow;
-rectangular windows only, the arched ones stay dark), each one id in
-`city_facades_id.png` (R + 256 G) — and
-lights each WINDOW by a per-id hash, sparingly — about a third
-lit, every cell on its own multi-minute switching period, offset by an
-instance `seed` so the buildings sharing the atlas light differently. The
-`clock` uniform is the FX node's own time, so tests step it
-(`CityFx.lit_fraction`).
+**Windows** are painted, not lit: every `Building*` and `Windows*` mesh
+shares one unshaded `StandardMaterial3D` per texture with `CityFx.DUSK_TINT`
+grading the daylit photos to 7 pm. (The per-window light shader with its
+authored mask and id maps was removed on 2026-10-01: it lagged the phone.)
 
 **Cars** are the hometown pack's glbs under `assets/vehicles/` (GGBot,
 credited): light traffic since 2026-10-01 (a car every 14–34 s a lane, at

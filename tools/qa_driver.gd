@@ -395,7 +395,7 @@ func _run_city() -> void:
 	await _snap("city_last")
 	var fx: Node = get_tree().root.find_child("CityFx", true, false)
 	if fx != null:
-		print("QA city: cars sent %d, on the road %d, windows %d" % [fx.sent(), fx.car_count(), fx.window_count()])
+		print("QA city: cars sent %d, on the road %d, facades %d" % [fx.sent(), fx.car_count(), fx.facade_count()])
 	print("QA city: done")
 	get_tree().quit(0)
 

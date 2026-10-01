@@ -1,6 +1,6 @@
 -- Skins for the city court (tools/blender/build_city.py): a dusk inner-city
 -- cage court — teal blacktop with yellow lines, a wet asphalt street, brick
--- tenements whose windows the windows.gdshader switches on and off, glass
+-- tenements with painted dark-glass windows (no window-light shader since 2026-10-01), glass
 -- towers, a dusk sky, billboard trees, a painted wall and the floodlight heads.
 -- Run: /Applications/Aseprite.app/Contents/MacOS/aseprite -b --script tools/aseprite/gen_city_textures.lua
 -- Deterministic hash noise (no math.random) so rebuilds are byte-identical.
@@ -176,7 +176,7 @@ do
 end
 
 -- city_windows.png 128x128 — the same brick with a 4 x 4 grid of window
--- holes (dark glass, a pale sill). The windows.gdshader lights each cell by
+-- holes (dark glass, a pale sill). Painted only; a tile = 4 x 4 windows, read by
 -- its UV cell index, so a tile = 4 x 4 windows.
 do
   local W, H = 128, 128
@@ -217,7 +217,7 @@ do
 end
 
 -- city_tower.png 64x128 — a glass tower: 4 x 8 panes per tile in dark steel
--- mullions. Lit by the same windows.gdshader (one pane = one cell).
+-- mullions. Painted only (one pane = one cell).
 do
   local W, H = 64, 128
   local spr, img = newImage(W, H)

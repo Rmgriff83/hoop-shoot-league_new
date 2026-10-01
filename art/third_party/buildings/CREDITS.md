@@ -20,4 +20,4 @@
 
 These are **source** files, not shipped assets. `tools/aseprite/conform_buildings.lua`
 turns the atlas into `assets/textures/city_facades.png` (+ the derived window mask
-`city_facades_lit.png`); nothing under `assets/` is edited by hand.
+the window maps were retired 2026-10-01); nothing under `assets/` is edited by hand.

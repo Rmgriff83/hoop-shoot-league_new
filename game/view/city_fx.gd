@@ -2,15 +2,14 @@ class_name CityFx
 extends Node
 ## Presentation-only city life (docs/HOME.md → Adding an area): cars pass on
 ## the street beyond the back fence, the buildings (Sam Grady's pack on one
-## photo atlas) are dusked by the facade shader with their windows switching
-## on and off a pane at a time, the floodlight and lamp heads glow, the
-## street trees face the camera. Never touches the sim. Seeded (never
-## randomize()) so a QA screenshot or a test replays identically.
+## photo atlas) are dusked by one cheap shared material, the floodlight and
+## lamp heads glow, the street trees face the camera. Never touches the sim.
+## Seeded (never randomize()) so a QA screenshot or a test replays
+## identically. (The window-light shader was removed 2026-10-01: it lagged
+## the phone.)
 
-const WINDOW_SHADER := preload("res://game/court/windows.gdshader")
-const FACADE_MASK := "res://assets/textures/city_facades_lit.png"
-const FACADE_IDS := "res://assets/textures/city_facades_id.png"
-const FACADE_CELLS := Vector2(32, 32)
+## The daylit photo atlas graded to 7 pm: one unshaded material per texture.
+const DUSK_TINT := Color(0.9, 0.88, 0.94)
 ## The traffic pool: the hometown pack's cars (GGBot "PSX Style Cars",
 ## data/credits.json). Forward is Godot +Z, the origin is on the ground.
 const MODELS: Array[String] = [
@@ -67,11 +66,6 @@ const SHELTER_RANGE := 8.0
 ## near half of the court.
 const PARK_ENERGY := 4.5
 const PARK_RANGE := 20.0
-## Window lights, SPARING: about a third of the windows lit, each on its
-## own 4-14 minute switching period, mirrored by windows.gdshader.
-const LIT_SHARE := 0.34
-const PERIOD_BASE := 240.0
-const PERIOD_SPREAD := 600.0
 
 var _rig: Node3D
 var _street_x := STREET_X
@@ -89,14 +83,14 @@ var _spots := 0
 var _sent := 0
 var _rng := RandomNumberGenerator.new()
 var _tree_rigs: Array[Node3D] = []
-var _window_mats: Dictionary = {}     # texture path → the one ShaderMaterial its faces share
-var _window_faces := 0
+var _facade_mats: Dictionary = {}     # texture path → the one dusk material its faces share
+var _facade_faces := 0
 var _flood_lights: Array[SpotLight3D] = []
 var _lamp_lights: Array[OmniLight3D] = []
 var _t := 0.0
 
 
-## Bind the city glb: the street line, the trees, the windows, the lamp heads.
+## Bind the city glb: the street line, the trees, the facades, the lamp heads.
 ## False when the arena has no street (nothing to animate).
 func setup(arena: Node) -> bool:
 	_rig = arena.find_child("StreetRig", true, false) as Node3D
@@ -108,10 +102,8 @@ func setup(arena: Node) -> bool:
 	for n in BeachFx._descendants(arena):
 		if n is Node3D and n.name.begins_with("TreeRig"):
 			_tree_rigs.push_back(n as Node3D)
-		elif n is MeshInstance3D and n.name.begins_with("Building"):
+		elif n is MeshInstance3D and (n.name.begins_with("Building") or n.name.begins_with("Windows")):
 			_bind_facade(n as MeshInstance3D)
-		elif n is MeshInstance3D and n.name.begins_with("Windows"):
-			_bind_windows(n as MeshInstance3D)
 		elif n is MeshInstance3D and n.name.begins_with("FloodHead"):
 			_unshade(n as MeshInstance3D)
 			_hang_flood(n as MeshInstance3D)
@@ -133,54 +125,22 @@ func setup(arena: Node) -> bool:
 	return true
 
 
-## The pack's buildings: one shared facade material over the atlas + the
-## derived window mask, an instance seed per building so they light apart.
+## The pack's buildings and the tenements: one shared unshaded material per
+## texture (so the faces still batch), the daylit photos graded to dusk.
 func _bind_facade(mi: MeshInstance3D) -> void:
 	var tex := BeachFx._albedo_of(mi)
-	var key := "facade:" + (tex.resource_path if tex != null else "<none>")
-	if not _window_mats.has(key):
-		var m := ShaderMaterial.new()
-		m.shader = WINDOW_SHADER
-		if tex != null:
-			m.set_shader_parameter("albedo", tex)
-		if ResourceLoader.exists(FACADE_MASK):
-			m.set_shader_parameter("mask", load(FACADE_MASK))
-		if ResourceLoader.exists(FACADE_IDS):
-			m.set_shader_parameter("window_id", load(FACADE_IDS))
-		m.set_shader_parameter("use_mask", true)
-		m.set_shader_parameter("cells", FACADE_CELLS)
-		m.set_shader_parameter("lit_share", LIT_SHARE)
-		m.set_shader_parameter("period_base", PERIOD_BASE)
-		m.set_shader_parameter("period_spread", PERIOD_SPREAD)
-		_window_mats[key] = m
-	mi.material_override = _window_mats[key]
-	mi.set_instance_shader_parameter("seed", float(_window_faces))
-	_window_faces += 1
-
-
-## One shared material per window texture (so the faces still batch): the
-## wall tile with 4×4 windows, or the tower tile with 4×8 panes.
-func _bind_windows(mi: MeshInstance3D) -> void:
-	var tex := BeachFx._albedo_of(mi)
 	var key := tex.resource_path if tex != null else "<none>"
-	if not _window_mats.has(key):
-		var m := ShaderMaterial.new()
-		m.shader = WINDOW_SHADER
+	if not _facade_mats.has(key):
+		var m := StandardMaterial3D.new()
+		m.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		m.disable_fog = true
+		m.albedo_color = DUSK_TINT
 		if tex != null:
-			m.set_shader_parameter("albedo", tex)
-		var tower := key.contains("tower")
-		m.set_shader_parameter("use_mask", false)
-		m.set_shader_parameter("cells", Vector2(4, 8) if tower else Vector2(4, 4))
-		m.set_shader_parameter("pane_min", Vector2(0.125, 0.125) if tower else Vector2(0.25, 0.19))
-		m.set_shader_parameter("pane_max", Vector2(0.875, 0.875) if tower else Vector2(0.75, 0.81))
-		m.set_shader_parameter("lit_share", LIT_SHARE)
-		m.set_shader_parameter("period_base", PERIOD_BASE)
-		m.set_shader_parameter("period_spread", PERIOD_SPREAD)
-		if tower:
-			m.set_shader_parameter("lit_color", Color(0.75, 0.85, 1.0))
-		_window_mats[key] = m
-	mi.material_override = _window_mats[key]
-	_window_faces += 1
+			m.albedo_texture = tex
+		m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS if key.contains("facades") else BaseMaterial3D.TEXTURE_FILTER_NEAREST
+		_facade_mats[key] = m
+	mi.material_override = _facade_mats[key]
+	_facade_faces += 1
 
 
 ## A warm spot at the head, aimed at the key, no shadows (the phone's budget).
@@ -231,60 +191,12 @@ static func _unshade(mi: MeshInstance3D) -> void:
 			(m as BaseMaterial3D).disable_fog = true
 
 
-## The shader's rule in GDScript, over a `cols × rows` field of windows: the
-## share lit at `clock` (tests pin it near LIT_SHARE at any time).
-static func lit_fraction(clock: float, cols := 32, rows := 32) -> float:
-	var lit := 0
-	for y in rows:
-		for x in cols:
-			if window_lit(Vector2(x, y), clock):
-				lit += 1
-	return float(lit) / float(cols * rows)
+func facade_count() -> int:
+	return _facade_faces
 
 
-## One window's state at `clock` (the shader's rule, seed 0).
-static func window_lit(cell: Vector2, clock: float) -> bool:
-	var wid := cell.x + cell.y * 131.0
-	var h2 := hash_f(wid, 1.0)
-	var h3 := hash_f(wid, 2.0)
-	var period := PERIOD_BASE + PERIOD_SPREAD * h2
-	var epoch := floorf((clock + h3 * period) / period)
-	return hash_f(wid, 100.0 + epoch) < LIT_SHARE
-
-
-## The share of windows whose state differs between two clocks.
-static func lit_changed(t0: float, t1: float, cols := 32, rows := 32) -> float:
-	var n := 0
-	for y in rows:
-		for x in cols:
-			if window_lit(Vector2(x, y), t0) != window_lit(Vector2(x, y), t1):
-				n += 1
-	return float(n) / float(cols * rows)
-
-
-## windows.gdshader's integer hash, bit for bit (32-bit wrap by masking):
-## exact on every GPU, where the old sine hash collapsed in half precision.
-static func hash_u(x: int) -> int:
-	x = x & 0xFFFFFFFF
-	x ^= x >> 16
-	x = (x * 0x7feb352d) & 0xFFFFFFFF
-	x ^= x >> 15
-	x = (x * 0x846ca68b) & 0xFFFFFFFF
-	x ^= x >> 16
-	return x
-
-
-static func hash_f(a: float, b: float) -> float:
-	var h := hash_u(((int(a + 7.0) * 0x9E3779B9) & 0xFFFFFFFF) ^ hash_u(int(b + 3.0)))
-	return float(h & 0xFFFFFF) / 16777216.0
-
-
-func window_count() -> int:
-	return _window_faces
-
-
-func window_material_count() -> int:
-	return _window_mats.size()
+func facade_material_count() -> int:
+	return _facade_mats.size()
 
 
 func car_count() -> int:
@@ -432,8 +344,6 @@ static func _light_lamps(car: Node) -> void:
 
 func _process(dt: float) -> void:
 	_t += dt
-	for m in _window_mats.values():
-		(m as ShaderMaterial).set_shader_parameter("clock", _t)
 	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
 	if cam != null:
 		for rig in _tree_rigs:

@@ -123,7 +123,7 @@ func run(t) -> void:
 
 
 ## The city: cars cross the street beyond the fence (seeded, freed past the
-## edge, no colliders), the windows run the pane shader, the trees billboard.
+## edge, no colliders), the facades share one dusk material, the trees billboard.
 func _city(t) -> void:
 	for path in CityFx.MODELS:
 		t.ok(FileAccess.file_exists(path), "vehicle model shipped (%s)" % path.get_file())
@@ -133,15 +133,15 @@ func _city(t) -> void:
 	var city: Node = load("res://assets/arena/city/city.glb").instantiate()
 	t.eq(_count(city, "StreetRig", false), 1, "one street line")
 	t.ok(_count(city, "Building") >= 10, "the pack's buildings stand around the court (%d)" % _count(city, "Building"))
-	for f in ["city_facades", "city_facades_lit", "city_facades_id"]:
-		t.ok(FileAccess.file_exists("res://assets/textures/%s.png" % f), "%s conformed" % f)
+	t.ok(FileAccess.file_exists("res://assets/textures/city_facades.png"), "the facade atlas is conformed")
+	t.ok(not FileAccess.file_exists("res://game/court/windows.gdshader"), "the window-light shader is gone (it lagged the phone)")
 	t.eq(_count(city, "TreeRig", false), 4, "4 street trees")
 	t.ok(_count(city, "FloodHead") >= 4, "floodlight heads at the court's corners")
 	t.ok(CosmeticLibrary.get_arena("city").traffic, "the city arena set asks for traffic")
 	var cfx := CityFx.new()
 	t.ok(cfx.setup(city), "CityFx sets up")
-	t.eq(cfx.window_count(), _count(city, "Building") + _count(city, "Windows"), "every building is bound to the facade shader")
-	t.eq(cfx.window_material_count(), 1, "one shared facade material (they still batch)")
+	t.eq(cfx.facade_count(), _count(city, "Building") + _count(city, "Windows"), "every building is bound to the dusk material")
+	t.ok(cfx.facade_material_count() <= 3, "a shared material per texture, no more (%d)" % cfx.facade_material_count())
 	t.eq(cfx.flood_count(), 4, "a spot light hangs on each court floodlight")
 	t.ok(_count(city, "LampHead") >= 5, "street lamps line the far sidewalk (%d)" % _count(city, "LampHead"))
 	t.ok(_count(city, "LampGlow") >= 5, "their bulbs glow toward the court")
@@ -151,13 +151,6 @@ func _city(t) -> void:
 	t.eq(_count(city, "Wall"), 0, "no knee wall: the fence runs to the ground")
 	t.eq(_count(city, "FenceFoot"), 4, "a bottom rail on every side")
 	t.eq(cfx.lamp_count(), _count(city, "LampHead") + _count(city, "ParkHead") + 1, "an omni under every lamp and park head and one in the shelter")
-	var lit0 := CityFx.lit_fraction(0.0)
-	t.ok(lit0 > 0.2 and lit0 < 0.5, "about a third of the windows are lit (%.2f)" % lit0)
-	var changed := CityFx.lit_changed(0.0, 300.0)
-	t.ok(changed > 0.05 and changed < 0.6, "some, not all, have switched five minutes later (%.2f)" % changed)
-	var lit5 := CityFx.lit_fraction(300.0)
-	t.ok(lit5 > 0.2 and lit5 < 0.5, "still about a third lit later (%.2f) — they never all come on" % lit5)
-	t.close(CityFx.lit_fraction(0.0), lit0, 1e-12, "the window rule is pure")
 	t.eq(cfx.car_count(), 0, "no car yet")
 	cfx.spawn_car()
 	t.eq(cfx.car_count(), 1, "a car spawned")
