@@ -194,3 +194,10 @@ yaw_deg / lit / label` in `assets/arena/*/arena_set.tres`), so moving a banner i
 The heat screen builds it in `_after_ready()` only when the heat belongs to a league, from the
 same `Standings` / season calls the dashboard uses. From the KEY on the beach only the near half
 of the fence banner is in the phone's narrow view; the left spots see all of it.
+
+## After the buzzer (2026-10-01)
+
+A league heat ends with the match-end page (`MatchEndOverlay`, docs/HOME.md
+→ Results) before the post-match page: `App.settle_heat` folds the result
+into the campaign, pays out, grants XP, rolls the drop and snapshots the
+before/after standings (`last_heat.league_end`) that the page animates.

@@ -152,6 +152,30 @@ SAME CAGE`, `App.start_mode(App.next_mode)`) beside the gold tickets card
 (`App.to_title`). Copy is `game/ui/results_copy.gd` (`ResultsCopy`, pure,
 `tests/test_results.gd`); the run is `App.last_run` (+ `last_run_was_best`).
 
+**League match end** (`game/ui/match_end_overlay.gd`, design "League Match
+End" 15a, 2026-10-01; copy `game/ui/match_end_copy.gd`,
+`tests/test_match_end.gd`, QA `--qa-match-end`): the moment between the
+final buzzer and the post-match page. The heat screen settles the heat at
+the buzzer (`App.settle_heat`, which also snapshots your record, place,
+titles and series before/after into `last_heat.league_end`) and plays one
+of seven states on a dark-cage backdrop: a regular **win** (YOU WIN slams
+in with a cream flash, orange rays and confetti; your record flips 2-1 →
+3-1 and a chip says `2ND PLACE · UP 1`), a **loss** (THEY TOOK IT sinks in
+and shakes, no rays, a darker scrim, `4TH PLACE · DOWN 1`), a playoff game
+that leaves the **series** open (the bracket shows `SERIES 1 - 0`, `FIRST
+TO 2`), **advance** (ADVANCE, gold rays, YOU slides into the FINAL box over
+`VS DRE`, `ONE WIN FROM THE TITLE`), **eliminated** (ELIMINATED, your row
+dims and is struck through, they move on, `SEASON 2 OVER · 3RD PLACE`),
+**runner-up** (SO CLOSE) and **champions** (the trophy pops and bobs,
+TITLES with a cup per title and `X2`, `SEASON 2 TITLE`, the most confetti).
+A tag pill (`DAY 4 · FINAL` / `PLAYOFFS · SEMIFINAL` / `ARCADE LEAGUE ·
+FINAL`), the score with YOU and their first name, the coins pill and the
+NEW CARD tile (tilted animated face) are on every state; after 3 s TAP TO
+CONTINUE blinks and a tap goes to the post-match page
+(`App.to_heat_result`). Sounds: `peggy_win` on a win, `peggy_jackpot` on
+advance/champions, `match_loss` otherwise. Confetti is
+`game/ui/confetti.gd` (seeded, pure `_draw`); the rays are `PrizeRays`.
+
 **League post-match** (`game/screens/heat_result_screen.gd`, design "League
 Post-Match", `HeatCopy` in `game/ui/heat_copy.gd`, `tests/test_heat_result.gd`):
 the same recipe after a league heat — `ARCADE LEAGUE · SEASON 2 · DAY 4` (or

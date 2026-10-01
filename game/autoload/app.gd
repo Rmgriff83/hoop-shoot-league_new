@@ -427,7 +427,11 @@ func start_heat(mode_id: String, cfg: Dictionary) -> void:
 	get_tree().change_scene_to_file(HEAT_SCENE)
 
 
-func finish_heat(result: Dictionary) -> void:
+## Settle a finished heat: the league apply, payouts, XP and the card roll
+## into `last_heat` (with the before/after snapshot the match-end page plays,
+## `league_end`). The heat screen shows MatchEndOverlay from this, then
+## to_heat_result(); finish_heat does both for the quick-heat path.
+func settle_heat(result: Dictionary) -> Dictionary:
 	last_heat = result.duplicate(true)
 	last_heat["opponent"] = next_heat.get("opponent", QUICK_OPPONENT)
 	last_heat["mode"] = next_mode
@@ -435,7 +439,16 @@ func finish_heat(result: Dictionary) -> void:
 	last_heat["league"] = next_heat.get("league", null)
 	if last_heat["league"] != null:
 		_apply_league_heat(last_heat)
+	return last_heat
+
+
+func to_heat_result() -> void:
 	get_tree().change_scene_to_file(HEAT_RESULT_SCENE)
+
+
+func finish_heat(result: Dictionary) -> void:
+	settle_heat(result)
+	to_heat_result()
 
 
 # ---- power-up cards + coins: one bucket per league --------------------------------
@@ -638,8 +651,11 @@ func _apply_league_heat(result: Dictionary) -> void:
 	var doc := league_doc()
 	if doc.is_empty() or cfg.is_empty():
 		return
+	var league_end := _league_end_before(doc, cfg, result)
 	Campaign.apply_live_result(doc, cfg, result, int(Time.get_unix_time_from_system() * 1000.0))
 	save_league_doc(doc)
+	_league_end_after(league_end, doc, cfg)
+	last_heat["league_end"] = league_end
 	var you: Dictionary = result.get("sides", {}).get("player", {})
 	SaveService.put_live_game({
 		"leagueId": cfg["id"], "opponentId": result.get("opponent", {}).get("id", ""),
@@ -673,6 +689,52 @@ func _apply_league_heat(result: Dictionary) -> void:
 	if drop != "":
 		add_card(drop, 1, cfg["id"])
 	last_heat["card_drop"] = drop
+
+
+## What the match-end page (game/ui/match_end_overlay.gd) needs from the
+## campaign, captured BEFORE the result is folded in: your record, your
+## place, your titles, and in the playoffs your series and the other semi.
+func _league_end_before(doc: Dictionary, cfg: Dictionary, result: Dictionary) -> Dictionary:
+	var season: Dictionary = doc.get("season", {})
+	var league: Dictionary = result.get("league", {}) if result.get("league", null) is Dictionary else {}
+	var out := {
+		"year": LeagueSummary.year_of(doc), "league_name": str(cfg.get("name", "LEAGUE")).to_upper(),
+		"record_before": LeagueSummary.record(season), "place_before": LeagueSummary.place(cfg, season),
+		"titles_before": int(Dictionary(doc.get("career", {})).get("championships", 0)),
+		"playoff": bool(league.get("playoff", false)), "round": "", "series_id": "", "best_of": 0,
+		"series_before": [0, 0], "series_after": [0, 0], "decided": false, "series_won": false,
+		"other_semi": [], "final_opp": "", "teams": LeagueData.team_ids(cfg).size(),
+	}
+	if out["playoff"]:
+		var mine := Season.player_series(season, Campaign.PLAYER)
+		if not mine.is_empty():
+			out["round"] = str(mine.get("round", ""))
+			out["series_id"] = str(mine.get("id", ""))
+			out["best_of"] = int(mine.get("bestOf", 0))
+			out["series_before"] = LeagueSummary.series_record(mine)
+			var other := LeagueSummary.other_semi(season, mine)
+			if not other.is_empty():
+				out["other_semi"] = [str(other["highSeedId"]), str(other["lowSeedId"])]
+	return out
+
+
+## …and AFTER: the new record and place, the titles, how the series stands.
+func _league_end_after(out: Dictionary, doc: Dictionary, cfg: Dictionary) -> void:
+	var season: Dictionary = doc.get("season", {})
+	out["record_after"] = LeagueSummary.record(season)
+	out["place_after"] = LeagueSummary.place(cfg, season)
+	out["titles_after"] = int(Dictionary(doc.get("career", {})).get("championships", 0))
+	out["phase"] = str(season.get("phase", ""))
+	if not bool(out["playoff"]):
+		return
+	for s in season.get("series", []):
+		if str(s.get("id", "")) == str(out["series_id"]):
+			out["series_after"] = LeagueSummary.series_record(s)
+			out["decided"] = str(s.get("winnerId", "")) != ""
+			out["series_won"] = str(s.get("winnerId", "")) == Campaign.PLAYER
+		elif str(s.get("round", "")) == "final" and out["round"] != "final":
+			if s["highSeedId"] == Campaign.PLAYER or s["lowSeedId"] == Campaign.PLAYER:
+				out["final_opp"] = LeagueSummary.opponent_in(s)
 
 
 ## The title's two-step pick: mode, then area. A locked area is refused.

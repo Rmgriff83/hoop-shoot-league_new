@@ -48,7 +48,7 @@ func _ready() -> void:
 		"swish", "net", "chain_rattle_0", "chain_rattle_1", "score_pop", "score_pop_swish", "buzzer",
 		"ice_freeze", "ice_crack_0", "ice_crack_1", "ice_shatter",
 		"peggy_press", "peggy_servo", "peggy_ticket", "peggy_peg_0", "peggy_peg_1", "peggy_peg_2",
-		"peggy_win", "peggy_jackpot",
+		"peggy_win", "peggy_jackpot", "match_loss",
 		"fx/fire_burst", "fx/ice_form", "fx/ice_break", "fx/ice_swish", "fx/fire_out",
 	]:
 		_streams[name_] = load("res://assets/audio/%s.wav" % name_)
@@ -375,6 +375,11 @@ func peggy_win() -> void:
 
 func peggy_jackpot() -> void:
 	_play("peggy_jackpot", -1.0)
+
+
+## The match-end page's loss sting.
+func match_loss() -> void:
+	_play("match_loss", -3.0)
 
 
 ## The carriage's servo whine, looped while the aim moves.

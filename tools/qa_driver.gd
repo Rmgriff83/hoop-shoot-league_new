@@ -14,7 +14,7 @@ var _outcomes: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
-	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy")):
+	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	if args.has("--qa-title"):
@@ -35,6 +35,8 @@ func _ready() -> void:
 		_run_city.call_deferred()
 	elif args.has("--qa-peggy"):
 		_run_peggy.call_deferred()
+	elif args.has("--qa-match-end"):
+		_run_match_end.call_deferred()
 	elif args.has("--qa-aim"):
 		_run_aim.call_deferred()
 	else:
@@ -502,6 +504,43 @@ func _run_peggy() -> void:
 	App.set_dark_mode(was_dark)
 	SaveService.put_cosmetics(cos_before)
 	SaveService.put_settings(set_before)
+	get_tree().quit()
+
+
+## The league match-end page (docs/HOME.md → Results): the five moments
+## staged from heat dicts, each snapped early (the slam / sink) and settled.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-match-end
+func _run_match_end() -> void:
+	await _sleep(0.6)
+	var base := {"year": 2, "league_name": "ARCADE LEAGUE", "record_before": [2, 1], "record_after": [3, 1],
+		"place_before": 3, "place_after": 2, "titles_before": 1, "titles_after": 1, "playoff": false, "round": "",
+		"series_id": "", "best_of": 3, "series_before": [0, 0], "series_after": [0, 0], "decided": false,
+		"series_won": false, "other_semi": ["kingsbridge", "ferry-row"], "final_opp": "", "teams": 6}
+	var opp := LeagueData.shooter("brickport")
+	var cases := [
+		["win", true, 41, 37, {}, "fire7"],
+		["loss", false, 33, 36, {"record_after": [2, 2], "place_after": 4}, ""],
+		["advance", true, 44, 39, {"playoff": true, "round": "semifinal", "series_after": [2, 1], "decided": true, "series_won": true, "final_opp": "kingsbridge"}, "ice"],
+		["eliminated", false, 35, 38, {"playoff": true, "round": "semifinal", "series_after": [1, 2], "decided": true, "series_won": false, "place_after": 3}, ""],
+		["champion", true, 46, 40, {"playoff": true, "round": "final", "series_after": [3, 1], "decided": true, "series_won": true, "titles_after": 2}, "fire7"],
+	]
+	for c in cases:
+		var e: Dictionary = base.duplicate(true)
+		e.merge(c[4], true)
+		var heat := {"won": c[1], "player_score": c[2], "ai_score": c[3], "ot": 0, "opponent": opp, "mode": "heat", "location": "cage",
+			"league": {"id": "cage", "game": "po-sf-1" if bool(e["playoff"]) else "d4", "playoff": e["playoff"]},
+			"coins": 50 if c[1] else 15, "tickets": 28, "card_drop": c[5], "league_end": e}
+		var o := MatchEndOverlay.new()
+		o.name = "MatchEnd"
+		o.build(MatchEndCopy.state(heat))
+		add_child(o)
+		await _sleep(0.75)
+		await _snap("match_end_%s_a" % c[0])
+		await _sleep(2.6)
+		await _snap("match_end_%s_b" % c[0])
+		o.queue_free()
+		await _sleep(0.2)
+	print("QA match end: done")
 	get_tree().quit()
 
 

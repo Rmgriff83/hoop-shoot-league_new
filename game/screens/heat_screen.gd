@@ -978,4 +978,17 @@ func _finish() -> void:
 	_ai_court.set_fire(false)
 	_ai_court.set_ice(false)
 	var result := heat.result()
-	get_tree().create_timer(1.4).timeout.connect(func() -> void: App.finish_heat(result))
+	# The match-end page (docs/HOME.md → Results): settle the heat at the
+	# buzzer and play the moment; a tap goes on to the post-match page. A
+	# heat outside a league skips straight there.
+	get_tree().create_timer(0.6).timeout.connect(func() -> void:
+		var heat_doc := App.settle_heat(result)
+		if heat_doc.get("league", null) == null:
+			get_tree().create_timer(0.8).timeout.connect(App.to_heat_result)
+			return
+		var overlay := MatchEndOverlay.new()
+		overlay.name = "MatchEnd"
+		overlay.build(MatchEndCopy.state(heat_doc))
+		overlay.continued.connect(App.to_heat_result)
+		add_child(overlay)
+	)

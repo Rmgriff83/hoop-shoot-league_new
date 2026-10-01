@@ -43,6 +43,7 @@ func _initialize() -> void:
 	for i in 3:
 		_save("peggy_peg_%d" % i, _peggy_peg(i))
 	_save("peggy_win", _peggy_win())
+	_save("match_loss", _match_loss())
 	_save("peggy_jackpot", _peggy_jackpot())
 	print("sfx done")
 	quit(0)
@@ -286,6 +287,22 @@ func _peggy_peg(variant: int) -> PackedFloat64Array:
 	_apply_env(click, 0.3, 0.0005, 0.003)
 	_mix(buf, tone, 0.0)
 	_mix(buf, click, 0.0)
+	return buf
+
+
+## A league heat lost (the match-end page): two falling square notes and a
+## low thud under the second.
+func _match_loss() -> PackedFloat64Array:
+	var buf := _silence(0.9)
+	var a := _osc("square", 392.0, 392.0, 0.0, 0.22)
+	_apply_env(a, 0.2, 0.005, 0.2)
+	_mix(buf, a, 0.0)
+	var b := _osc("square", 261.6, 246.9, 0.3, 0.5)
+	_apply_env(b, 0.22, 0.005, 0.45)
+	_mix(buf, b, 0.26)
+	var thud := _osc("sine", 70.0, 48.0, 0.3, 0.4)
+	_apply_env(thud, 0.5, 0.004, 0.35)
+	_mix(buf, thud, 0.26)
 	return buf
 
 

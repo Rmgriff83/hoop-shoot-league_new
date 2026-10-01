@@ -9,6 +9,8 @@ const SPEED_DEG := 20.0
 const RADIUS := 1100.0
 
 var color := Color("#E8703A")
+var speed_deg := SPEED_DEG
+var alpha := 0.35
 var _angle := 0.0
 
 
@@ -20,7 +22,7 @@ func _init(p_color := Color("#E8703A")) -> void:
 
 
 func _process(delta: float) -> void:
-	_angle += deg_to_rad(SPEED_DEG) * delta
+	_angle += deg_to_rad(speed_deg) * delta
 	queue_redraw()
 
 
@@ -32,7 +34,7 @@ func _draw() -> void:
 		var a := _angle + i * pitch
 		var pts := PackedVector2Array([c, c + Vector2(cos(a - half), sin(a - half)) * RADIUS,
 			c + Vector2(cos(a + half), sin(a + half)) * RADIUS])
-		draw_colored_polygon(pts, Color(color, 0.35))
+		draw_colored_polygon(pts, Color(color, alpha))
 
 
 func angle() -> float:
