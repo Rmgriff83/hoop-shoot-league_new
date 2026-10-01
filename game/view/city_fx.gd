@@ -44,6 +44,10 @@ const LAMP_ENERGY := 2.6
 const LAMP_RANGE := 12.0
 const SHELTER_ENERGY := 2.0
 const SHELTER_RANGE := 8.0
+## The park lamps behind the player (`ParkHead*`): warm omnis over the
+## near half of the court.
+const PARK_ENERGY := 4.5
+const PARK_RANGE := 20.0
 ## Window lights, SPARING: about a third of the windows lit, each on its
 ## own 4-14 minute switching period, mirrored by windows.gdshader.
 const LIT_SHARE := 0.34
@@ -89,7 +93,10 @@ func setup(arena: Node) -> bool:
 		elif n is MeshInstance3D and n.name.begins_with("LampHead"):
 			_unshade(n as MeshInstance3D)
 			_hang_omni(n as Node3D, Vector3(0, -0.3, 0), Color(1.0, 0.86, 0.6), LAMP_ENERGY, LAMP_RANGE)
-		elif n is MeshInstance3D and (n.name.begins_with("LampGlow") or n.name == "BusPoster" or n.name == "BusSign"):
+		elif n is MeshInstance3D and n.name.begins_with("ParkHead"):
+			_unshade(n as MeshInstance3D)
+			_hang_omni(n as Node3D, Vector3(0.6, -0.4, 0), Color(1.0, 0.92, 0.78), PARK_ENERGY, PARK_RANGE)
+		elif n is MeshInstance3D and (n.name.begins_with("LampGlow") or n.name.begins_with("ParkGlow") or n.name == "BusPoster" or n.name == "BusSign"):
 			_unshade(n as MeshInstance3D)
 		elif n is Node3D and n.name == "BusStop":
 			_hang_omni(n as Node3D, Vector3.ZERO, Color(1.0, 0.95, 0.85), SHELTER_ENERGY, SHELTER_RANGE)

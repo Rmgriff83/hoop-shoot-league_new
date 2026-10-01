@@ -702,7 +702,8 @@ billboard trees, four `FloodHead%d` heads on 8 m poles light the court
 sidewalk (omnis under pale heads with `LampGlow%d` bulbs facing the
 court), and a bus shelter (`BusStop`, its back wall the lit 3 × 2 m
 `BusPoster` from `city_poster.png`, a `BusSign` on the roof) glows by the
-road to the shooter's right.
+road to the shooter's right; three `ParkHead%d` park lamps just outside
+the shooter's fence light the near half of the court (omnis).
 
 **Windows** are not painted on: `CityFx` swaps every `Building*` mesh's
 material for `game/court/windows.gdshader`, a shaded facade shader (the

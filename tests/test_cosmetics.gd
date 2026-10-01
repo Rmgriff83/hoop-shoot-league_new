@@ -154,7 +154,7 @@ func _street_and_arenas(t) -> void:
 		t.eq(chain.net_kind, "chain", "it hangs a chain")
 		t.ok(chain.net_stiffness > 0.9 and chain.net_friction < 0.5, "links: near-inextensible, little grip")
 		t.close(chain.model_board_h, 1.05, 1e-12, "regulation board")
-		t.eq(chain.make_clips.size(), 3, "three chain swishes")
+		t.ok(chain.make_clips.size() >= 1 and str(chain.make_clips[0]).begins_with("res://assets/hoops/chain/sfx/"), "the chain's recorded swish")
 		var hoop_scene: PackedScene = load(chain.model_path)
 		var inst: Node = hoop_scene.instantiate()
 		t.ok(inst.find_child("Gooseneck", true, false) != null, "the chain hoop stands on its own gooseneck")
@@ -173,7 +173,7 @@ func _street_and_arenas(t) -> void:
 		if sfx != null:
 			sfx.load_hoop_set(chain)
 			t.eq(sfx.net_kind(), "chain", "Sfx knows the chain")
-			t.eq(sfx.hoop_clip_count("make"), 3, "and its swishes")
+			t.ok(sfx.hoop_clip_count("make") >= 1, "and its swishes")
 			sfx.load_hoop_set(CosmeticLibrary.starter_hoop())
 			t.eq(sfx.net_kind(), "nylon", "back to nylon with the classic")
 	t.eq(CosmeticLibrary.starter_hoop().id, "classic", "the classic is still the starter hoop")

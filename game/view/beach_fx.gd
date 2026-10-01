@@ -52,6 +52,14 @@ const PLANE_Y := Vector2(26.0, 36.0)
 const PLANE_EDGE := 28.0
 const PLANE_SIZE := Vector2(6.0, 1.5)
 const PLANE_SPEED := Vector2(3.6, 5.4)
+## A second jet, much higher and smaller, now and then (Ross, 2026-09-30).
+## Near the sky cylinder's top (SKY_Y1 50): corner radius sqrt(42² + 30²) = 51.6.
+const JET_GAP := Vector2(90.0, 200.0)
+const JET_X := Vector2(28.0, 42.0)
+const JET_Y := Vector2(42.0, 48.0)
+const JET_EDGE := 30.0
+const JET_SIZE := Vector2(3.6, 0.9)
+const JET_SPEED := Vector2(6.0, 9.0)
 
 var _ocean: MeshInstance3D
 var _shore: MeshInstance3D
@@ -86,6 +94,9 @@ var _next_ship := 25.0
 var _plane: MeshInstance3D
 var _plane_vel := 0.0
 var _next_plane := 30.0
+var _jet: MeshInstance3D
+var _jet_vel := 0.0
+var _next_jet := 60.0
 
 
 ## Find Ocean (required) and Shore (optional) under the arena. False → don't attach.
@@ -147,6 +158,7 @@ func setup(arena: Node) -> bool:
 	_next_wave = _rng.randf_range(WAVE_GAP.x, WAVE_GAP.y)
 	_next_ship = _rng.randf_range(12.0, 30.0)
 	_next_plane = _rng.randf_range(20.0, 50.0)
+	_next_jet = _rng.randf_range(40.0, 120.0)
 	return true
 
 
@@ -255,6 +267,10 @@ func has_plane() -> bool:
 	return is_instance_valid(_plane)
 
 
+func has_jet() -> bool:
+	return is_instance_valid(_jet)
+
+
 ## A flat, unshaded, alpha-cut sprite quad. Used for the things that must NOT
 ## billboard: the ship has to stay side-on as it crosses, and the plane's
 ## sprite already points along its travel.
@@ -308,6 +324,18 @@ func spawn_plane() -> void:
 	_next_plane = _rng.randf_range(PLANE_GAP.x, PLANE_GAP.y)
 
 
+func spawn_jet() -> void:
+	if is_instance_valid(_jet):
+		return
+	var dir := 1.0 if _rng.randf() < 0.5 else -1.0
+	_jet = _flat_sprite(PLANE_SHEET, JET_SIZE, dir, false)
+	_jet.name = "Jet"
+	_jet.position = Vector3(_rng.randf_range(JET_X.x, JET_X.y),
+		_rng.randf_range(JET_Y.x, JET_Y.y), -dir * JET_EDGE)
+	_jet_vel = dir * _rng.randf_range(JET_SPEED.x, JET_SPEED.y)
+	_next_jet = _rng.randf_range(JET_GAP.x, JET_GAP.y)
+
+
 func _step_life(dt: float) -> void:
 	# The ship, one at a time, crossing the horizon.
 	if is_instance_valid(_ship):
@@ -329,6 +357,16 @@ func _step_life(dt: float) -> void:
 		_next_plane -= dt
 		if _next_plane <= 0.0:
 			spawn_plane()
+	# The high jet, its own timer.
+	if is_instance_valid(_jet):
+		_jet.position.z += _jet_vel * dt
+		if absf(_jet.position.z) > JET_EDGE + 1.0:
+			_jet.queue_free()
+			_jet = null
+	else:
+		_next_jet -= dt
+		if _next_jet <= 0.0:
+			spawn_jet()
 
 
 static func _descendants(root: Node) -> Array[Node]:

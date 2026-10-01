@@ -325,6 +325,17 @@ def build():
         cage.add_quad("Tree%d" % i, [(x, 0, z - wdt / 2), (x, 0, z + wdt / 2), (x, hgt, z + wdt / 2), (x, hgt, z - wdt / 2)],
                       (-1, 0, 0), tree, c_props, trig, (1.0, 1.0), origin=(x, 0.0, z))
 
+    # ---- Park lamps behind the player (Ross, 2026-09-30: the court was
+    # still dark): three short posts with lit heads just outside the shooter's
+    # fence, `ParkHead*` — CityFx hangs an omni under each, lighting the near
+    # half of the court.
+    for i, pz in enumerate((-6.0, 0.0, 6.0)):
+        px_ = ENC_X0 - 1.0
+        cage.add_box("ParkPost%d" % i, (0.14, 4.2, 0.14), (px_, 2.1, pz), lamp_steel, c_props, root)
+        cage.add_box("ParkHead%d" % i, (0.5, 0.32, 0.5), (px_, 4.3, pz), head_mat, c_props, root)
+        cage.add_quad("ParkGlow%d" % i, [(px_ + 0.26, 3.95, pz + 0.4), (px_ + 0.26, 3.95, pz - 0.4), (px_ + 0.26, 4.65, pz - 0.4), (px_ + 0.26, 4.65, pz + 0.4)],
+                      (1, 0, 0), flood, c_props, root, (1.0, 1.0))
+
     # ---- Floodlight poles: two close behind the shooter, left and right (the
     # court's light — spot lights fall off with distance squared, so they sit
     # near), two beyond the hoop's fence. CityFx hangs a SpotLight3D on every

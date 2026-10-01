@@ -264,9 +264,6 @@ def build():
     # `TouristRig%d` so the group can be turned as one.
     c_people = cage.sub(coll, "Tourists")
     towels = [cage.mat_flat("Towel0", (220, 70, 60)), cage.mat_flat("Towel1", (60, 120, 210)), cage.mat_flat("Towel2", (240, 200, 80))]
-    skins = [cage.mat_flat("Skin0", (214, 160, 120)), cage.mat_flat("Skin1", (120, 80, 56)), cage.mat_flat("Skin2", (236, 190, 150))]
-    suits = [cage.mat_flat("Suit0", (30, 40, 120)), cage.mat_flat("Suit1", (220, 60, 120)), cage.mat_flat("Suit2", (30, 140, 90))]
-    hair_m = cage.mat_flat("Hair", (40, 30, 24))
     umb_a = cage.mat_flat("UmbrellaA", (240, 240, 235))
     umb_b = cage.mat_flat("UmbrellaB", (220, 60, 50))
     cooler_m = cage.mat_flat("Cooler", (40, 90, 180))
@@ -275,18 +272,9 @@ def build():
         rig.rotation_euler = (0.0, 0.0, yaw)
         cage.add_quad("Towel%d" % i, [(x - 0.95, 0.008, z - 0.5), (x + 0.95, 0.008, z - 0.5), (x + 0.95, 0.008, z + 0.5), (x - 0.95, 0.008, z + 0.5)],
                       (0, 1, 0), towels[i], c_people, rig, (1.0, 1.0), origin=(x, 0.0, z))
-        skin, suit = skins[i], suits[i]
-        # Lying on the back, head toward -x (the court), feet toward the sea.
-        cage.add_box("Torso%d" % i, (0.58, 0.2, 0.4), (-0.05, 0.14, 0.0), suit, c_people, rig)
-        cage.add_box("Legs%d" % i, (0.62, 0.14, 0.32), (0.55, 0.11, 0.0), skin, c_people, rig)
-        cage.add_box("Feet%d" % i, (0.12, 0.2, 0.3), (0.9, 0.14, 0.0), skin, c_people, rig)
-        head = cage.add_box("Head%d" % i, (0.22, 0.22, 0.22), (-0.46, 0.24, 0.0), skin, c_people, rig)
-        head.rotation_euler = (0.0, -0.5, 0.0)          # propped up on the towel
-        cage.add_box("Hair%d" % i, (0.14, 0.08, 0.24), (-0.52, 0.33, 0.0), hair_m, c_people, rig)
-        cage.add_box("ArmDown%d" % i, (0.5, 0.1, 0.1), (-0.05, 0.12, -0.26), skin, c_people, rig)
-        arm = cage.add_empty("Arm%d" % i, c_people, rig, (-0.2, 0.22, 0.26))
-        cage.add_box("ArmUp%d" % i, (0.1, 0.42, 0.1), (0.0, 0.21, 0.0), skin, c_people, arm)
-        cage.add_box("Hand%d" % i, (0.12, 0.12, 0.12), (0.0, 0.46, 0.0), skin, c_people, arm)
+        # Nobody on the towels (Ross, 2026-09-30): the towels, umbrellas and
+        # cooler stay as an empty pitch — the loungers' blocky bodies read
+        # wrong from the court.
         if umbrella:
             urig = cage.add_empty("Umbrella%d" % i, c_people, rig, (0.2, 0.0, -0.75))
             cage.add_box("UmbPole%d" % i, (0.04, 2.0, 0.04), (0.0, 1.0, 0.0), cage.mat_flat("UmbPole", (120, 110, 100)), c_people, urig)

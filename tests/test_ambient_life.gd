@@ -52,7 +52,7 @@ func run(t) -> void:
 	t.eq(_count(beach, "Umbrella", false), 2, "2 umbrella rigs")
 	var bfx := BeachFx.new()
 	t.ok(bfx.setup(beach), "BeachFx sets up")
-	t.eq(bfx.arm_count(), 3, "3 wavable arms")
+	t.eq(bfx.arm_count(), 0, "nobody on the towels (no arms to wave)")
 	t.eq(bfx.bird_count(), 0, "no birds at first")
 	bfx.spawn_flock()
 	var n0 := bfx.bird_count()
@@ -67,14 +67,6 @@ func run(t) -> void:
 		if bfx.bird_count() == 0:
 			break
 	t.eq(bfx.bird_count(), 0, "flock freed once it has crossed")
-	# Arm wave: force one and check the arm moves then returns to rest.
-	bfx._next_wave = 0.0
-	bfx._process(1.0 / 60.0)
-	bfx._process(0.5)
-	var k: int = bfx._wave_arm
-	t.ok(k >= 0 and bfx._arms[k].rotation != bfx._arm_rest[k], "an arm is waving")
-	bfx._process(3.0)
-	t.eq(bfx._arms[k].rotation, bfx._arm_rest[k], "arm back at rest after the wave")
 	# --- Beach life: walkers on the sand, a ship on the horizon, a plane. ---
 	for f in ["beach_ship", "beach_plane"]:
 		t.ok(FileAccess.file_exists("res://assets/textures/%s.png" % f), "%s sheet generated" % f)
@@ -93,7 +85,14 @@ func run(t) -> void:
 		bfx._process(1.0 / 60.0)
 	t.ok(absf(bfx._ship.position.z - sz0) > 1.0, "and it crosses, slowly (%.1f m in 5 s)" % absf(bfx._ship.position.z - sz0))
 
-	t.ok(not bfx.has_plane(), "no plane at first")
+	t.ok(not bfx.has_plane() and not bfx.has_jet(), "no plane at first")
+	bfx.spawn_jet()
+	t.ok(bfx.has_jet(), "a high jet passes now and then")
+	var jp: Vector3 = bfx._jet.position
+	t.ok(jp.y >= 40.0 and Vector2(jp.x, jp.z).length() < 58.0, "the jet is high and inside the sky (y %.0f)" % jp.y)
+	for i in 60:
+		bfx._process(1.0 / 60.0)
+	t.ok(absf(bfx._jet.position.z) < absf(jp.z), "and crosses")
 	bfx.spawn_plane()
 	t.ok(bfx.has_plane(), "an airliner passes")
 	var pp: Vector3 = bfx._plane.position
@@ -148,7 +147,8 @@ func _city(t) -> void:
 	t.ok(_count(city, "LampGlow") >= 5, "their bulbs glow toward the court")
 	t.eq(_count(city, "BusSign"), 1, "the shelter's roof sign")
 	t.ok(_count(city, "BusStop", false) == 1 and _count(city, "BusPoster") == 1, "a bus shelter with a lit poster")
-	t.eq(cfx.lamp_count(), _count(city, "LampHead") + 1, "an omni under every lamp head and one in the shelter")
+	t.eq(_count(city, "ParkHead"), 3, "three park lamps behind the player")
+	t.eq(cfx.lamp_count(), _count(city, "LampHead") + _count(city, "ParkHead") + 1, "an omni under every lamp and park head and one in the shelter")
 	var lit0 := CityFx.lit_fraction(0.0)
 	t.ok(lit0 > 0.2 and lit0 < 0.5, "about a third of the windows are lit (%.2f)" % lit0)
 	var changed := CityFx.lit_changed(0.0, 300.0)
