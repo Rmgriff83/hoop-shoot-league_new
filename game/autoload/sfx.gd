@@ -472,6 +472,10 @@ func contact(kind: String, speed: float) -> void:
 			var wall_i := minf(speed * 0.5 / 7.0, 1.0)
 			_play("rim_clang_%d" % clampi(int(wall_i * 3.0), 0, 2), lerpf(-6.0, 0.0, wall_i))
 			return
+		"prop":
+			# A speaker cabinet or the scoreboard: the board's thud, a touch softer.
+			contact("board", speed * 0.8)
+			return
 		"pole":
 			# Recorded pole hits, a random one each time and never the same
 			# twice running. Falls back to the board thud the way "floor" falls

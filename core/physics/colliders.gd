@@ -11,6 +11,7 @@ const KIND_BOARD := "board"
 const KIND_FLOOR := "floor"
 const KIND_WALL := "wall"
 const KIND_POLE := "pole"
+const KIND_PROP := "prop"
 
 
 class Contact:
@@ -214,6 +215,44 @@ static func lip_contact(p: SimVec3, geo: SimGeometry) -> Contact:
 	return Contact.new(KIND_WALL, SimConstants.R_BALL - d, ex / d, ey / d, 0.0, qx, qy, p.z)
 
 
+## The court's solid props (geo.props: speakers, the scoreboard): the deepest
+## box the ball overlaps, contact with its nearest point so faces, edges and
+## corners all push the right way. A centre caught inside a box is pushed
+## out through its nearest face. Null without props or clear of them.
+static func prop_contact(p: SimVec3, geo: SimGeometry) -> Contact:
+	var best: Contact = null
+	for b in geo.props:
+		var qx := clampf(p.x, b["x0"], b["x1"])
+		var qy := clampf(p.y, b["y0"], b["y1"])
+		var qz := clampf(p.z, b["z0"], b["z1"])
+		var ex := p.x - qx
+		var ey := p.y - qy
+		var ez := p.z - qz
+		var d := sqrt(ex * ex + ey * ey + ez * ez)
+		var c: Contact = null
+		if d >= SimConstants.R_BALL:
+			continue
+		if d < 1e-9:
+			# Inside: out through the nearest face.
+			var dx: float = minf(p.x - b["x0"], b["x1"] - p.x)
+			var dy: float = minf(p.y - b["y0"], b["y1"] - p.y)
+			var dz: float = minf(p.z - b["z0"], b["z1"] - p.z)
+			if dx <= dy and dx <= dz:
+				var sx := 1.0 if b["x1"] - p.x < p.x - b["x0"] else -1.0
+				c = Contact.new(KIND_PROP, SimConstants.R_BALL + dx, sx, 0.0, 0.0, b["x1"] if sx > 0.0 else b["x0"], p.y, p.z)
+			elif dy <= dz:
+				var sy := 1.0 if b["y1"] - p.y < p.y - b["y0"] else -1.0
+				c = Contact.new(KIND_PROP, SimConstants.R_BALL + dy, 0.0, sy, 0.0, p.x, b["y1"] if sy > 0.0 else b["y0"], p.z)
+			else:
+				var sz := 1.0 if b["z1"] - p.z < p.z - b["z0"] else -1.0
+				c = Contact.new(KIND_PROP, SimConstants.R_BALL + dz, 0.0, 0.0, sz, p.x, p.y, b["z1"] if sz > 0.0 else b["z0"])
+		else:
+			c = Contact.new(KIND_PROP, SimConstants.R_BALL - d, ex / d, ey / d, ez / d, qx, qy, qz)
+		if best == null or c.depth > best.depth:
+			best = c
+	return best
+
+
 ## A floor contact on the ramp's slope (its normal leans; the deck's is up).
 static func is_ramp(c: Contact) -> bool:
 	return c.kind == KIND_FLOOR and c.ny < 1.0
@@ -232,6 +271,9 @@ static func find_contact(p: SimVec3, geo: SimGeometry) -> Contact:
 	c = pole_contact(p, geo)
 	if c != null:
 		return c
+	c = prop_contact(p, geo)
+	if c != null:
+		return c
 	c = wall_contact(p, geo)
 	if c != null:
 		return c
@@ -247,13 +289,14 @@ static func _material_e(kind: String, geo: SimGeometry) -> float:
 		KIND_BOARD: return geo.board_e
 		KIND_POLE: return geo.board_e
 		KIND_WALL: return geo.wall_e
+		KIND_PROP: return geo.prop_e
 		_: return SimConstants.E_FLOOR
 
 
 static func _material_mu(kind: String, geo: SimGeometry) -> float:
 	match kind:
 		KIND_RIM: return geo.rim_mu
-		KIND_WALL: return geo.wall_mu
+		KIND_WALL, KIND_PROP: return geo.wall_mu
 		KIND_BOARD: return SimConstants.MU_BOARD
 		_: return SimConstants.MU_FLOOR
 
