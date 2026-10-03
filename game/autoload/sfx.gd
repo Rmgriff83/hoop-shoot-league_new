@@ -324,6 +324,8 @@ func ambience_stopping() -> bool:
 ## Extra gain applied to every clip started while set (the heat screen ducks
 ## the opponent's court to this while dispatching its events, then restores).
 var gain_db := 0.0
+## ArenaSet.wall_sound: the beach's unseen walls make no noise.
+var wall_sound := true
 
 ## The live rim's rigidity (SimGeometry.rim_rigidity): 1.0 = the arcade cage.
 ## A stiffer rim rings TIGHTER and QUIETER — pitch rises as sqrt(r), the same
@@ -465,6 +467,8 @@ func contact(kind: String, speed: float) -> void:
 			# Chain-link / concrete: a softer rattle. This is the ONLY user of the
 			# synthetic clang now — the rim itself plays the hoop's recorded clips
 			# (see miss_on_rim), so it no longer borrows a rim hit to get here.
+			if not wall_sound:
+				return
 			var wall_i := minf(speed * 0.5 / 7.0, 1.0)
 			_play("rim_clang_%d" % clampi(int(wall_i * 3.0), 0, 2), lerpf(-6.0, 0.0, wall_i))
 			return

@@ -54,6 +54,9 @@ extends CosmeticSet
 ## the screen: the alpha of an ink gradient laid over the top TOP_WASH_H px
 ## behind the HUD's cards and the home's top bar (0 = none).
 @export var top_wash := 0.0
+## Does a ball hitting the enclosure's walls make a sound? The beach lost
+## its fence (2026-10-02) but keeps the sim's walls: they stay silent there.
+@export var wall_sound := true
 
 ## Attach BeachFx (animated Ocean waves + tide-driven Shore) at build time.
 @export var ocean := false

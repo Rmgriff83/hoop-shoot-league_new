@@ -121,14 +121,8 @@ def build():
         cage.add_box("Wall%d" % k, size, (cx, WALL_H / 2.0, cz), concrete, c_court, root)
         cage.add_box("WallCap%d" % k, (size[0] + 0.06, 0.06, size[2] + 0.06), (cx, WALL_H + 0.03, cz), curb, c_court, root)
     # No chain-link on the beach (Ross, 2026-10-02): just the concrete
-    # embankment. The league standings banner used to hang on the back fence,
-    # so it gets a free-standing sign frame on the wall line: two dark posts
-    # either side of its span and a crossbar over it.
-    bp = (5.62, 2.35, 2.25)             # ArenaSet.league_banner_pos (beach)
-    bw, bh = 2.2, 1.35                   # ArenaSet.league_banner_size
-    for k, z in enumerate((bp[2] - bw / 2.0 - 0.08, bp[2] + bw / 2.0 + 0.08)):
-        cage.add_box("BannerPost%d" % k, (0.08, bp[1] + bh / 2.0 + 0.15, 0.08), (ENC_X1, (bp[1] + bh / 2.0 + 0.15) / 2.0, z), dark, c_court, root)
-    cage.add_box("BannerBar", (0.06, 0.06, bw + 0.3), (ENC_X1, bp[1] + bh / 2.0 + 0.12, bp[2]), dark, c_court, root)
+    # embankment. The league standings banner stands on the wall cap (its
+    # pos.y in the beach ArenaSet), no frame, nothing to read as a fence post.
 
     # Sand everywhere around the court (the slab sits 5 mm above it), out to the shoreline.
     cage.add_quad("Sand", [(-40, -0.005, -WIDE), (SAND_X1, -0.005, -WIDE), (SAND_X1, -0.005, WIDE), (-40, -0.005, WIDE)],
@@ -176,11 +170,15 @@ def build():
     skyobj.data.materials.append(sky)
     cage.link_obj(skyobj, c_sky, root, (0, 0, (SKY_Y0 + SKY_Y1) / 2))
 
-    # Palms all around: the near/far pairs ahead, a pair beside each baseline corner,
-    # and a pair behind the shooter's flanks. Each palm is a quad under its own
-    # `PalmRig` empty at the trunk base, so BeachFx can turn it to face the camera.
-    for i, (x, z, wdt, hgt) in enumerate(((6.5, -3.0, 2.8, 4.4), (6.5, 3.0, 2.8, 4.4),      # just outside the back fence
-                                           (8.8, -4.8, 2.4, 3.8), (8.8, 4.8, 2.4, 3.8),
+    # Palms: the pair flanking the hoop just past the wall (in view from the
+    # key), four more spread evenly across the beach behind (Ross, 2026-10-02:
+    # spaced out, clear of the tourists at z -6.4 / 1.4 / 6.6), a pair beside
+    # each baseline corner and a pair behind the shooter's flanks. Each palm is
+    # a quad under its own `PalmRig` empty at the trunk base, so BeachFx can
+    # turn it to face the camera.
+    for i, (x, z, wdt, hgt) in enumerate(((6.5, -3.0, 2.8, 4.4), (6.5, 3.0, 2.8, 4.4),      # flanking the hoop
+                                           (9.8, -13.5, 2.4, 3.8), (11.2, -3.6, 2.2, 3.4),  # across the beach behind
+                                           (11.0, 4.0, 2.4, 3.8), (9.8, 13.5, 2.4, 3.8),
                                            (3.5, -9.2, 2.6, 4.2), (3.5, 9.2, 2.6, 4.2),
                                            (-4.0, -9.4, 2.4, 3.6), (-4.0, 9.4, 2.4, 3.6))):
         prig = cage.add_empty("PalmRig%d" % i, c_props, root, (x, 0.0, z))

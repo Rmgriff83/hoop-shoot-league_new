@@ -682,8 +682,8 @@ or File > Export with the §8 settings.
 frame, a fence loop on the beach's enclosure line (`ENC_X0..X1 -11.2..5.7`,
 `±8.6`, every side 3.6 m and down to the ground, no knee wall —
 `SimGeometry.city()` mirrors it; the beach itself lost its chain-link on
-2026-10-02 and keeps only the concrete embankment, with a free-standing
-`BannerPost`/`BannerBar` frame for the standings banner), the reader board a taller cabinet strapped to the back fence left of
+2026-10-02 and keeps only the concrete embankment; its standings banner
+stands on the wall cap, `league_banner_pos.y 1.16`), the reader board a taller cabinet strapped to the back fence left of
 the hoop (`ReaderRig` + `LedFace`; not a `ScoreboardRig`, so it never
 turns), two floor speakers left of the hoop's base as the city's radio
 (`Speakers`, `SpeakerLed`, `ArenaSet.interactables`; the lo-fi playlist is

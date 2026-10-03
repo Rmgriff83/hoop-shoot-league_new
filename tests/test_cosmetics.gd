@@ -5,6 +5,7 @@ extends RefCounted
 
 
 func run(t) -> void:
+	_wall_sound(t)
 	_street_and_arenas(t)
 	# Manifests + library.
 	var hoop := CosmeticLibrary.get_hoop("classic")
@@ -207,3 +208,15 @@ func _street_and_arenas(t) -> void:
 		for a in [cage, beach]:
 			t.ok(a.title_period_s > 0.0 and a.title_fov > 0.0, "%s carries a home-card pan pose" % a.id)
 
+
+func _wall_sound(t) -> void:
+	t.ok(not CosmeticLibrary.get_arena("beach").wall_sound, "the beach's unseen walls are silent")
+	t.ok(CosmeticLibrary.get_arena("cage").wall_sound and CosmeticLibrary.get_arena("city").wall_sound, "the cage and city fences rattle")
+	var sfx = Engine.get_main_loop().root.get_node_or_null("Sfx")
+	if sfx == null:
+		return
+	var was: bool = sfx.wall_sound
+	sfx.wall_sound = false
+	sfx.contact("wall", 5.0)   # returns before any clip is picked
+	sfx.wall_sound = was
+	t.ok(true, "a silent wall plays nothing (no clip picked)")

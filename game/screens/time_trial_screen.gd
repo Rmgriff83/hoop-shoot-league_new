@@ -55,6 +55,7 @@ func _ready() -> void:
 		Sfx.load_hoop_set(_hoop_set)  # the mode's hoop owns make/miss here
 	Sfx.rim_rigidity = base_geo.rim_rigidity()  # the iron rings to match how it bounces
 	Sfx.start_ambience(_arena_set)  # the area's background layers (a no-op if already playing)
+	Sfx.wall_sound = _arena_set.wall_sound if _arena_set != null else true
 	_court = CourtGeometry.new()
 	_court.name = "Court"
 	_court.geo = base_geo
