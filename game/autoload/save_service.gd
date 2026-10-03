@@ -230,7 +230,19 @@ func get_tuning() -> Dictionary:
 ## undo snapshot (below) rides along untouched.
 func put_tuning(mode: bool, fields: Dictionary) -> void:
 	_tuning = {"updatedAt": _now_ms(), "tuningMode": mode, "fields": fields.duplicate(),
-		"undo": _tuning.get("undo", {})}
+		"undo": _tuning.get("undo", {}), "net": _tuning.get("net", {})}
+	_write_json(TUNING_PART, _tuning)
+
+
+## The net knobs' overrides per net kind: {"nylon": {field: value}, "chain": {...}}
+## (docs/BLENDER_101.md §23; the tuning strip's NET page). Device-local.
+func get_tuning_net() -> Dictionary:
+	return Dictionary(_tuning.get("net", {})).duplicate(true)
+
+
+func put_tuning_net(net: Dictionary) -> void:
+	_tuning["net"] = net.duplicate(true)
+	_tuning["updatedAt"] = _now_ms()
 	_write_json(TUNING_PART, _tuning)
 
 

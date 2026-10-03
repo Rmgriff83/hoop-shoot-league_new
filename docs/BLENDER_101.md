@@ -949,7 +949,13 @@ and plays the nylon rustle under the make clip; the ball is sub-sampled
 across the substeps; sleep eases home over 0.3 s; normals follow the
 cords. The chain hoop keeps its heavy, quick-stopping feel (`rest_spring
 160`, `kick 0.6`, `tail_mass 1.2`). Every knob is a `HoopSet` export.
-Check it with `--qa-net` (a synthetic swish, 14 frames). The nylon mesh
+Check it with `--qa-net` (a synthetic swish, 14 frames). **On the device**
+the tuning strip (App.tuning_mode) has a NET page (the NET button; N on a
+keyboard): the live net's knobs for the hoop in play, nylon on the cage
+and beach, chain in the city, stepped with − / +, persisted per net kind
+in the tuning part's `net` dict (`SaveService.put_tuning_net`) and applied
+by every court that hangs that kind; RESET there returns the kind to its
+hoop set; LOG prints `NET <kind> {json}` for logcat. The nylon mesh
 stays 5 rings × 12: the shipped hoop glbs carry hand-authored animations
 and hooks that `build_hoop.py -- --force` does not reproduce, so do not
 rebuild them from the script.

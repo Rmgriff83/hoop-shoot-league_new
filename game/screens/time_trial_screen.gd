@@ -137,6 +137,8 @@ func _ready() -> void:
 		_overlay.fire_toggle = _toggle_fire_preview
 		_overlay.ice_toggle = _toggle_ice_preview
 	_overlay.ball_cycle = _cycle_ball
+	_overlay.net_sim = _court.net_sim
+	_overlay.net_set = _hoop_set
 	add_child(_overlay)
 
 	var input := FlickInput.new()

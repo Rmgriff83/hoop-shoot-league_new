@@ -199,8 +199,20 @@ func _click_named(node_name: String) -> void:
 func _run_net() -> void:
 	await _sleep(1.2)
 	await _close_archive()
+	var was_tuning: bool = App.tuning_mode
+	App.set_tuning_mode(true)   # the strip, with its NET page
 	await _click_button_named("PRACTICE")
 	await _sleep(1.5)
+	await _snap("net_strip_flick")
+	await _click_button_named("NET")
+	await _sleep(0.3)
+	await _snap("net_strip_net")
+	await _click_button_named("+")
+	await _sleep(0.2)
+	await _snap("net_strip_plus")
+	await _click_button_named("RESET")
+	await _sleep(0.2)
+	App.set_tuning_mode(was_tuning)
 	# A synthetic swish: a ball dropped straight through the hoop's axis,
 	# driven into the net sim beside the court's own stepping (no view ball;
 	# this is about the cords), the kick at the rim plane, then a burst.

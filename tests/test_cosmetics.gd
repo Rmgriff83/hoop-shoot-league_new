@@ -6,6 +6,7 @@ extends RefCounted
 
 func run(t) -> void:
 	_wall_sound(t)
+	_net_overrides(t)
 	_street_and_arenas(t)
 	# Manifests + library.
 	var hoop := CosmeticLibrary.get_hoop("classic")
@@ -223,3 +224,17 @@ func _wall_sound(t) -> void:
 	sfx.contact("wall", 5.0)   # returns before any clip is picked
 	sfx.wall_sound = was
 	t.ok(true, "a silent wall plays nothing (no clip picked)")
+
+
+func _net_overrides(t) -> void:
+	var save = Engine.get_main_loop().root.get_node_or_null("SaveService")
+	if save == null:
+		return
+	var before: Dictionary = save.get_tuning_net()
+	save.put_tuning_net({"nylon": {"rest_spring": 120.0}, "chain": {"kick_speed": 0.9}})
+	t.eq(save.get_tuning_net()["nylon"]["rest_spring"], 120.0, "net overrides persist per kind")
+	t.eq(save.get_tuning_net()["chain"]["kick_speed"], 0.9, "…for the chain too")
+	var fields: Dictionary = save.get_tuning().get("fields", {})
+	save.put_tuning(bool(save.get_tuning().get("tuningMode", false)), fields)
+	t.ok(save.get_tuning_net().has("nylon"), "writing the flick fields keeps the net overrides")
+	save.put_tuning_net(before)

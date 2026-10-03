@@ -118,6 +118,52 @@ func configure(set: HoopSet) -> void:
 		_upload()
 
 
+## The knobs the tuning strip turns, by name (docs/BLENDER_101.md §23).
+const KNOBS := ["stiffness", "damping", "rest_pull", "rest_spring", "tail_mass", "kick_speed",
+	"grab_band", "grab_pull", "ball_friction"]
+
+
+func knobs() -> Dictionary:
+	var out := {}
+	for k in KNOBS:
+		out[k] = float(get(k))
+	return out
+
+
+## Set one knob and re-settle the rest pose (the spring, the tail weight and
+## the stiffness all change how the idle net hangs).
+func set_knob(name_: String, value: float) -> void:
+	if not KNOBS.has(name_):
+		return
+	set(name_, value)
+	if name_ == "tail_mass":
+		var y_min := INF
+		for p in _rest:
+			y_min = minf(y_min, p.y)
+		for i in _rest.size():
+			_g_scale[i] = tail_mass if _rest[i].y <= y_min + 1e-4 else 1.0
+	resettle()
+
+
+## On-device overrides over the hoop set's values ({knob: value}).
+func apply_overrides(d: Dictionary) -> void:
+	for k in d:
+		if KNOBS.has(str(k)) and (d[k] is float or d[k] is int):
+			set(str(k), float(d[k]))
+	if _ready_ok:
+		resettle()
+
+
+func resettle() -> void:
+	if not _ready_ok:
+		return
+	_pos = _rest.duplicate()
+	_prev = _rest.duplicate()
+	_settle_rest()
+	_upload()
+	_awake = false
+
+
 ## Take over a MeshInstance3D's mesh (surface 0). Returns false if unusable.
 func setup(mi: MeshInstance3D) -> bool:
 	if mi == null or mi.mesh == null or mi.mesh.get_surface_count() == 0:

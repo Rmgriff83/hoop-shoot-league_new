@@ -281,6 +281,10 @@ func _build_hoop_model() -> bool:
 		net_sim = NetSim.new()
 		net_sim.name = "NetSim"
 		net_sim.configure(hoop_set)
+		# The tuning strip's NET page (device-local overrides per net kind).
+		var save: Node = get_tree().root.get_node_or_null("SaveService") if is_inside_tree() else null
+		if save != null:
+			net_sim.apply_overrides(Dictionary(save.call("get_tuning_net")).get(hoop_set.net_kind, {}))
 		if (hoop_set.net_kind == "chain") != (geo.net_rigidity() > 1.0):
 			push_warning("CourtGeometry: hoop %s hangs a %s net on a geometry whose net rigidity is %.2f" % [hoop_set.id, hoop_set.net_kind, geo.net_rigidity()])
 		add_child(net_sim)

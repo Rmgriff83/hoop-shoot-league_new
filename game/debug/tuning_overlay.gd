@@ -9,11 +9,22 @@ extends CanvasLayer
 ##    the same button reads UNDO (across restarts) until they are put back. Every adjustment persists immediately via SaveService's
 ##    "tuning" part (and the live FlickTuning is App-owned, so it survives scene
 ##    changes); LOG prints `TUNING {json}` so values can be read from logcat.
+##  • NET page (the NET button / N key): the same strip over the live net's
+##    knobs (NetSim.KNOBS) for the hoop in play — nylon or chain — persisted
+##    per net kind in the tuning part's `net` dict and applied to every court
+##    that hangs that kind (CourtGeometry). RESET there clears the kind's
+##    overrides back to the hoop set's values.
 
 const HISTORY := 14
 
 var tuning: FlickTuning
 var geo: SimGeometry
+## The NET page: the live net and the hoop set it hangs from. Set by the screen.
+var net_sim: NetSim
+var net_set: HoopSet
+var _page := 0   # 0 flick, 1 net
+var _net_selected := 0
+var _net_btn: Button
 ## Build the touch strip. Set before add_child.
 var touch_panel := false
 
@@ -30,6 +41,15 @@ var _field_btn: Button
 var _reset_btn: Button
 var _readout: Label
 
+## The net page's knobs: [field, step] and their rails.
+const NET_FIELDS := [
+	["rest_spring", 5.0], ["damping", 0.0005], ["stiffness", 0.01], ["ball_friction", 0.05],
+	["tail_mass", 0.1], ["kick_speed", 0.1], ["rest_pull", 0.001], ["grab_band", 0.005], ["grab_pull", 0.05],
+]
+const NET_LIMITS := {
+	"rest_spring": [0.0, 400.0], "damping": [0.98, 0.9999], "stiffness": [0.02, 1.0], "ball_friction": [0.0, 1.0],
+	"tail_mass": [0.5, 4.0], "kick_speed": [0.0, 5.0], "rest_pull": [0.0, 0.1], "grab_band": [0.0, 0.15], "grab_pull": [0.0, 1.0],
+}
 ## Hard rails per field: [min, max].
 const LIMITS := {
 	"side_dead_deg": [0.0, 12.0], "side_gain": [0.0, 1.5],
@@ -80,6 +100,8 @@ func _unhandled_key_input(event: InputEvent) -> void:
 		if event.keycode == KEY_F3 or event.keycode == KEY_QUOTELEFT:
 			_label.visible = not _label.visible
 			_render()
+		elif _label.visible and event.keycode == KEY_N:
+			toggle_page()
 		elif _label.visible and event.keycode >= KEY_0 and event.keycode <= KEY_9:
 			_select_index(9 if event.keycode == KEY_0 else event.keycode - KEY_1)
 		elif _label.visible and event.keycode in [KEY_MINUS, KEY_EQUAL] and tuning != null:
@@ -137,6 +159,8 @@ func _build_panel() -> void:
 	row3.add_theme_constant_override("separation", 8)
 	vb.add_child(row3)
 	var specs := [["RESET", _reset_or_undo], ["LOG", _log]]
+	if net_sim != null:
+		specs.append(["NET", toggle_page])
 	if fire_toggle.is_valid():
 		specs.append(["FIRE", func() -> void: fire_toggle.call()])
 	if ice_toggle.is_valid():
@@ -149,6 +173,8 @@ func _build_panel() -> void:
 		row3.add_child(b)
 		if spec[0] == "RESET":
 			_reset_btn = b
+		elif spec[0] == "NET":
+			_net_btn = b
 
 	# The ball picker gets its own full-width row rather than a fifth button on
 	# row 3 — with FIRE and ICE up there already, a fifth at 22pt is unreadable
@@ -176,11 +202,73 @@ func _btn(text: String, min_w: float, on_pressed: Callable) -> Button:
 
 
 func _select_index(idx: int) -> void:
-	_selected = posmod(idx, _fields.size())
+	if _page == 1:
+		_net_selected = posmod(idx, NET_FIELDS.size())
+	else:
+		_selected = posmod(idx, _fields.size())
+	_render()
+
+
+## Flip between the flick page and the net page.
+func toggle_page() -> void:
+	_page = 1 - _page if net_sim != null else 0
+	_render()
+
+
+func page() -> int:
+	return _page
+
+
+func net_kind() -> String:
+	return net_set.net_kind if net_set != null else "nylon"
+
+
+## The saved overrides for the net in play, {knob: value}.
+func _net_overrides() -> Dictionary:
+	var save := _save_node()
+	if save == null:
+		return {}
+	return Dictionary(save.call("get_tuning_net")).get(net_kind(), {})
+
+
+func _persist_net(over: Dictionary) -> void:
+	var save := _save_node()
+	if save == null:
+		return
+	var all: Dictionary = save.call("get_tuning_net")
+	all[net_kind()] = over
+	save.call("put_tuning_net", all)
+
+
+func _adjust_net(sign: float) -> void:
+	if net_sim == null:
+		return
+	var field: String = NET_FIELDS[_net_selected][0]
+	var step: float = NET_FIELDS[_net_selected][1]
+	var value := snappedf(float(net_sim.get(field)) + sign * step, 0.0001)
+	value = clampf(value, NET_LIMITS[field][0], NET_LIMITS[field][1])
+	net_sim.set_knob(field, value)
+	var over := _net_overrides()
+	over[field] = value
+	_persist_net(over)
+	_last_outcome = "net %s %s = %s" % [net_kind(), field, str(value)]
+	_render()
+
+
+## Clear the net kind's overrides: back to the hoop set's values.
+func _reset_net() -> void:
+	if net_sim == null or net_set == null:
+		return
+	net_sim.configure(net_set)
+	_persist_net({})
+	_last_outcome = "net %s back to the hoop set" % net_kind()
 	_render()
 
 
 func _adjust(sign: float) -> void:
+	if _page == 1:
+		_adjust_net(sign)
+		return
 	if tuning == null:
 		return
 	var field: String = _fields[_selected][0]
@@ -219,6 +307,9 @@ func _undo_fields() -> Dictionary:
 
 
 func _reset_or_undo() -> void:
+	if _page == 1:
+		_reset_net()
+		return
 	if _undo_fields().is_empty():
 		_reset()
 	else:
@@ -255,6 +346,11 @@ func _undo() -> void:
 
 
 func _log() -> void:
+	if _page == 1 and net_sim != null:
+		print("NET %s %s" % [net_kind(), JSON.stringify(net_sim.knobs())])
+		_last_outcome = "net logged (adb logcat -s godot)"
+		_render()
+		return
 	if tuning == null:
 		return
 	print("TUNING ", JSON.stringify(tuning.to_dict()))
@@ -313,6 +409,23 @@ func record_outcome(outcome: Dictionary) -> void:
 
 
 func _render() -> void:
+	if _net_btn != null:
+		_net_btn.text = "FLICK" if _page == 1 else "NET"
+	if _page == 1 and net_sim != null:
+		if _reset_btn != null:
+			_reset_btn.text = "RESET"
+		var nf: String = NET_FIELDS[_net_selected][0]
+		if _field_btn != null:
+			_field_btn.text = "%s · %s = %s" % [net_kind().to_upper(), nf, str(snappedf(float(net_sim.get(nf)), 0.0001))]
+		if _readout != null:
+			_readout.text = "%s\n%s · makes %d/%d" % [_last_flick, _last_outcome, _makes, _attempts]
+		if _label.visible:
+			var ntxt := "NET LAB (%s) — N flips back · 1-9 select · -/= adjust\n" % net_kind()
+			for i in NET_FIELDS.size():
+				var f: String = NET_FIELDS[i][0]
+				ntxt += "%s %d.%s = %s\n" % ["▶" if i == _net_selected else " ", i + 1, f, str(snappedf(float(net_sim.get(f)), 0.0001))]
+			_label.text = ntxt
+		return
 	if _reset_btn != null:
 		_reset_btn.text = "RESET" if _undo_fields().is_empty() else "UNDO"
 	if tuning == null:
