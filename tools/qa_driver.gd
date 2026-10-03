@@ -471,7 +471,7 @@ func _run_beach() -> void:
 		# (the spots face different ways, so a fixed point can be off-frame).
 		var pcam: Camera3D = get_viewport().get_camera_3d()
 		if pcam != null:
-			var ahead := pcam.global_position - pcam.global_transform.basis.z * 20.0 - pcam.global_transform.basis.x * 5.0 + Vector3(0.0, 6.0, 0.0)
+			var ahead := pcam.global_position - pcam.global_transform.basis.z * 20.0 - pcam.global_transform.basis.x * 5.0 + Vector3(0.0, 8.0, 0.0)
 			bfx._pelican.global_position = ahead
 			bfx._pelican_base_y = bfx._pelican.position.y
 		await _sleep(0.6)

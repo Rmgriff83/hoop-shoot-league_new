@@ -23,14 +23,14 @@ const FLOCK_Y := Vector2(6.0, 11.0)
 const FLOCK_EDGE := 46.0                 # z where a flock enters / leaves
 const BIRD_SPEED := 6.0
 const BIRD_SIZE := Vector2(0.9, 0.68)
-## A pelican (2026-10-03): solo, bigger and slower than the gulls, low over
-## the water with a lazy flap, one every PELICAN_GAP.
+## A pelican (2026-10-03): solo, a little bigger and much slower than the
+## gulls, a band above them, with a lazy flap, one every PELICAN_GAP.
 const PELICAN_SHEET := "res://assets/textures/beach_pelican.png"
 const PELICAN_GAP := Vector2(30.0, 70.0)
 const PELICAN_X := Vector2(15.0, 28.0)
-const PELICAN_Y := Vector2(3.0, 5.5)
+const PELICAN_Y := Vector2(11.5, 14.0)   # the gulls fly FLOCK_Y 6–11
 const PELICAN_SPEED := 2.4
-const PELICAN_SIZE := Vector2(2.1, 1.4)
+const PELICAN_SIZE := Vector2(1.25, 0.83)
 const PELICAN_FLAP_HZ := 1.1
 ## Tourists: one raises an arm now and then; umbrellas sway a little.
 const WAVE_GAP := Vector2(12.0, 25.0)

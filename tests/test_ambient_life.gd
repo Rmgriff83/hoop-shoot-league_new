@@ -145,9 +145,10 @@ func run(t) -> void:
 	bfx.spawn_pelican()
 	t.eq(bfx.pelican_count(), 1, "one pelican")
 	var pel: MeshInstance3D = bfx._pelican
-	t.ok(absf(pel.position.z) > 40.0 and pel.position.y < BeachFx.FLOCK_Y.x, "it enters at the sky's edge, lower than the gulls (y %.1f)" % pel.position.y)
+	t.ok(absf(pel.position.z) > 40.0 and pel.position.y > BeachFx.FLOCK_Y.y, "it enters at the sky's edge, above the gulls' band (y %.1f)" % pel.position.y)
 	t.ok(absf(bfx._pelican_vel.z) < BeachFx.BIRD_SPEED * 0.5, "…at less than half a gull's pace")
-	t.ok((pel.mesh as QuadMesh).size.x > BeachFx.BIRD_SIZE.x * 2.0, "…and more than twice the size")
+	var sx := (pel.mesh as QuadMesh).size.x
+	t.ok(sx > BeachFx.BIRD_SIZE.x * 1.2 and sx < BeachFx.BIRD_SIZE.x * 1.6, "…a little bigger than a gull, not a lot (%.2f m)" % sx)
 	t.ok(float(bfx._pelican_mat.get_shader_parameter("flap_hz")) < 2.0, "…with a lazy flap")
 	var pz0 := pel.position.z
 	bfx._process(1.0)

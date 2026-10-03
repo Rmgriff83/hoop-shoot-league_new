@@ -848,8 +848,9 @@ centroid so the game can tumble it.
 **Pelican (2026-10-03):** a second beach bird, solo. `beach_pelican.png`
 (192×32, four 48×32 flap frames: white body and inner wings, black
 primaries, long orange bill) from `gen_beach_textures.lua`; `BeachFx`
-spawns one every `PELICAN_GAP` (30–70 s), 2.1 × 1.4 m, at 2.4 m/s (the gulls
-do 6), 3–5.5 m up over the water with a 1.1 Hz flap and a long slow lift
+spawns one every `PELICAN_GAP` (30–70 s), 1.25 × 0.83 m (a touch bigger than
+a gull's 0.9; the first cut at 2.1 m was too big), at 2.4 m/s (the gulls do
+6), 11.5–14 m up — a band above the gulls' 6–11 — with a 1.1 Hz flap and a long slow lift
 and settle, on the same `bird.gdshader`. `spawn_pelican()` /
 `pelican_count()`; tested in `tests/test_ambient_life.gd`.
 
