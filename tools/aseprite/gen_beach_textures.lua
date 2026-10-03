@@ -81,6 +81,9 @@ do
   local PATCHES = {
     {col(4.0), row(-6.6), 58}, {col(3.6), row(6.9), 50}, {col(-2.0), row(7.1), 42},
     {col(-8.6), row(-6.4), 52}, {col(-5.5), row(-7.0), 34}, {col(0.8), row(-7.2), 32},
+    -- …and around the key and the elbows, where the shooter stands (Ross, 2026-10-02)
+    {col(-0.9), row(0.9), 30}, {col(0.7), row(-2.0), 34}, {col(1.6), row(2.6), 30},
+    {col(2.3), row(-0.6), 26}, {col(-0.3), row(3.4), 30}, {col(0.2), row(-3.6), 28},
   }
   local function sand_at(x, y)
     local best = 0.0

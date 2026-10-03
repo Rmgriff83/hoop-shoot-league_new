@@ -94,6 +94,9 @@ do
   local DRIFTS = {
     {col(4.1), row(-6.8), 42, 60}, {col(3.4), row(6.6), 34, 44}, {col(-8.4), row(6.9), 40, 52},
     {col(-6.2), row(-7.0), 28, 34}, {col(-0.5), row(7.1), 24, 30},
+    -- …and around the key and the elbows, in the shooter's view (Ross, 2026-10-02)
+    {col(-0.8), row(1.0), 30, 36}, {col(0.8), row(-2.2), 30, 34}, {col(1.7), row(2.5), 28, 32},
+    {col(2.2), row(-0.4), 24, 26}, {col(-0.2), row(3.3), 26, 30},
   }
   for d, drift in ipairs(DRIFTS) do
     local cx, cy, r, n = drift[1], drift[2], drift[3], drift[4]
