@@ -138,6 +138,25 @@ is the worked example: `SimGeometry.city()` + `geo_for_mode`, the `city` /
 seven shooters, `data/economy.json` multipliers, `calibrate_ai -- city`,
 the card lab, `ResultsCopy.board_name`, and `tests/test_city.gd`.
 
+## Splash (design "Splash Screen" 29a, 2026-10-03)
+
+`game/screens/splash_screen.gd` (the main scene; `App.to_splash()`,
+`tests/test_splash.gd`, QA `--qa-splash`): the first screen on launch and
+where the area archive's `<` leads. The arcade cage pans behind a frosted
+glass door — the title's slow truck zoomed out (`zoomed_out()`: +14° fov,
+0.9 m back, half again as slow), rendered at 180×320 in a SubViewport and
+scaled up with linear filtering under an ink scrim — with the 2D neon sign
+hung on it (`game/ui/neon_sign.gd`, `NeonSign`: HOOP / SHOOT / LEAGUE as
+single-stroke pixel tube letters from the design's stroke table, halo +
+orange glass + cream core, the pull chain under the last E). The sign plays
+the moment the screen appears, on the design's timeline: the chain tug at
+0.35–1.2 s, dark until 1.3 s, four uneven blinks, a 2.6 s swell to full,
+then a 7 % breath; a tap replays it. At 4.6 s the two full-width orange
+buttons rise in 0.15 s apart: CONTINUE (NEW GAME on a fresh install,
+`App.has_save()`) → the title, which opens the archive as the front door;
+SETTINGS → the home's sheet. Discord and Reddit icons sit top-left (the
+links come later). Title music starts here and carries into the title.
+
 ## Area archive (design "Area Archive" 17a, 2026-10-02)
 
 `game/ui/area_archive_page.gd` (`AreaArchivePage`, a layer-30 page; copy
@@ -149,7 +168,8 @@ only when it is open, and the `>` wears a gold NEW dot (as does the
 area's archive card) until that area has been visited
 (`settings.visitedAreas`, `App.mark_area_visited` on landing). It opens on every cold launch
 (`App.show_archive`), from the area name, and from the `▾ ALL AREAS · 2/3
-OPEN` line under it; `<` goes back to the area you came from (hidden when
+OPEN` line under it; `<` goes back out to the splash when the archive was the
+front door (a cold launch), else to the area you came from (hidden when
 that area is locked). A cream sheet, `AREAS` and the open count, then a
 320 px card per area: a **snapshot of the real rendered court** under a
 bottom gradient, the stars, the name, a `>` and the history line (`🏆 2

@@ -4,6 +4,7 @@ extends Node
 ## The M2 seam: when MatchEngine arrives, match screens register here beside
 ## the time trial with the same pattern.
 
+const SPLASH_SCENE := "res://game/screens/splash_screen.tscn"
 const TITLE_SCENE := "res://game/screens/title_screen.tscn"
 const TIME_TRIAL_SCENE := "res://game/screens/time_trial_screen.tscn"
 const RESULTS_SCENE := "res://game/screens/results_screen.tscn"
@@ -418,6 +419,19 @@ func peggy_drop(aim_x: float) -> Dictionary:
 func to_title() -> void:
 	get_tree().paused = false
 	get_tree().change_scene_to_file(TITLE_SCENE)
+
+
+## The splash (docs/HOME.md → Splash): the first screen, and where the area
+## archive's back leads.
+func to_splash() -> void:
+	get_tree().paused = false
+	get_tree().change_scene_to_file(SPLASH_SCENE)
+
+
+## Anything played yet? The splash reads CONTINUE over a save, NEW GAME on
+## a fresh install.
+func has_save() -> bool:
+	return xp() > 0 or not SaveService.top_scores(1).is_empty() or not visited_areas().is_empty()
 
 
 func start_mode(id: String) -> void:

@@ -14,10 +14,15 @@ var _outcomes: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
-	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
-	if args.has("--qa-title"):
+	# The splash is the main scene now: every other pass starts from the title.
+	if not args.has("--qa-splash"):
+		App.to_title.call_deferred()
+	if args.has("--qa-splash"):
+		_run_splash.call_deferred()
+	elif args.has("--qa-title"):
 		_run_title.call_deferred()
 	elif args.has("--qa-results"):
 		_run_results.call_deferred()
@@ -761,8 +766,10 @@ func _run_match_end() -> void:
 func _close_archive() -> void:
 	var page: AreaArchivePage = get_tree().root.find_child("AreaArchive", true, false)
 	if page != null:
-		page.close()
-		await _sleep(0.9)
+		# On a cold launch the archive is the front door and its < leads back
+		# out to the splash, so the way "through" it is to pick the home area.
+		page.pick("cage")
+		await _sleep(1.4)
 
 
 func _pick_area(id: String) -> void:
@@ -775,6 +782,25 @@ func _pick_area(id: String) -> void:
 	if page != null:
 		page.pick(id)
 		await _sleep(1.0)
+
+
+## The splash (docs/HOME.md → Splash): the sign dark on the frosted cage,
+## the chain down, the first blink, warming, lit with the buttons up; then
+## CONTINUE / NEW GAME into the archive.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-splash
+func _run_splash() -> void:
+	var marks := [0.2, 0.8, 1.5, 3.0, 5.2]
+	var at := 0.0
+	for i in marks.size():
+		await _sleep(float(marks[i]) - at)
+		at = float(marks[i])
+		await _snap("splash_%02d" % i)
+	await _click_button_named("CONTINUE")
+	await _click_button_named("NEW GAME")
+	await _sleep(1.5)
+	await _snap("splash_after")
+	print("QA splash: done")
+	get_tree().quit(0)
 
 
 func _run_title() -> void:

@@ -925,7 +925,14 @@ func _open_archive(instant := false) -> void:
 	_archive.name = "AreaArchive"
 	var here := str(CARDS[_index]["area"])
 	_archive.build(rows, AreaArchiveCopy.open_count(App.level(), rows), App.area_unlocked(here))
-	_archive.closed.connect(func() -> void: _archive = null)
+	# Opened as the front door (a cold launch, or straight from the splash):
+	# its < goes back out to the splash. From the home's ALL AREAS it just
+	# closes over the home.
+	var front_door := instant
+	_archive.closed.connect(func() -> void:
+		_archive = null
+		if front_door:
+			App.to_splash())
 	_archive.picked.connect(_go_area)
 	add_child(_archive)
 	if not instant:
