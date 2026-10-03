@@ -870,6 +870,7 @@ func _handle_ai_event(ev: Dictionary) -> void:
 			var c: Dictionary = ev["contact"]
 			if c["kind"] == "enter":
 				Sfx.make()
+				_ai_court.net_kick(Vector3(c["pos"]["x"], c["pos"]["y"], c["pos"]["z"]), Vector3(0.0, -float(c.get("speed", 5.0)), 0.0))
 			elif c["kind"] == "rim":
 				_ai_court.rim_react(c["speed"])
 			elif c["kind"] == "floor":

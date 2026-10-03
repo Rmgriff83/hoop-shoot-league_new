@@ -9,24 +9,37 @@ extends Node
 ## Setup takes the Blender-authored Net MeshInstance3D (rest shape, UVs,
 ## material come from the glb); the mesh is replaced by a dynamic ArrayMesh
 ## rebuilt each frame the net is awake. Particles are the mesh's unique vertex
-## positions, springs are its edges plus a weak "cord memory" pull toward the
-## rest shape; the top ring is pinned to the rim.
+## positions, springs are its edges plus a "cord memory" SPRING toward the
+## rest shape (a force, so the net overshoots and rings down — the snap of a
+## real swish, 2026-10-03) and a faint positional pull; the top ring is pinned
+## to the rim, the bottom ring hangs heavier so it lags and whips back. The
+## ball is sub-sampled between frames, the sim's rim-plane `enter` event
+## kicks the cords (kick()), the net eases to sleep rather than jumping, and
+## the normals follow the cords so the light does too.
 
 ## Fixed internal step (s). Position-based springs settle differently per step
 ## size, so the net always integrates at exactly this rate (frame-rate
 ## independent and identical on every device); frames accumulate into it.
 const STEP := 1.0 / 120.0
-const MAX_STEPS_PER_FRAME := 8
+const MAX_STEPS_PER_FRAME := 6
 const ITERATIONS := 3
 ## Feel (instance fields so a HoopSet can configure them; defaults = classic).
-var damping := 0.999
+var damping := 0.9965
 const GRAVITY := 9.81
 ## Cord elasticity: fraction of a spring's length error corrected per iteration.
 ## Below 1 the cords STRETCH under the ball and store energy, which is what
 ## whips them back up after it passes (1.0 = inextensible, no snap at all).
-var stiffness := 0.08
-## Per-substep pull toward the rest shape — a nylon net's shape memory.
-var rest_pull := 0.018
+var stiffness := 0.14
+## Shape memory, two parts: a SPRING toward the rest shape (an acceleration,
+## /s², so the cords carry momentum through rest and overshoot) and a faint
+## per-substep positional pull that kills the last millimetres of drift.
+var rest_spring := 90.0
+var rest_pull := 0.003
+## The bottom ring's share of gravity (×): heavier, it lags the ball and
+## whips back up after it.
+var tail_mass := 1.6
+## The swish kick (m/s) kick() hands the cords under an entering ball.
+var kick_speed := 1.6
 const CORD_R := 0.012
 ## Cords within this band outside the ball's surface are drawn onto it (the net
 ## drapes and grips the ball rather than merely being pushed).
@@ -35,10 +48,13 @@ var grab_pull := 0.6
 ## Fraction of the ball's surface velocity handed to cords it grips. This is
 ## the backspin grab: the spinning surface drags the front cords down as it
 ## passes, and the stretched cords whip them back up afterwards.
-var ball_friction := 1.0
+var ball_friction := 0.55
 const WAKE_RANGE := 0.7
 const SLEEP_POS_EPS := 0.004   # gravity sags the cords ~2 mm below rest
 const SLEEP_VEL_EPS := 0.002
+const SLEEP_EASE_S := 0.3      # near rest this long, eased home, then asleep
+const SLEEP_EASE := 0.1        # per-frame lerp toward rest while easing
+const KICK_REACH := 0.08       # m beyond the ball's radius that the kick reaches
 
 var _mi: MeshInstance3D
 var _mesh: ArrayMesh
@@ -55,6 +71,10 @@ var _spring_len := PackedFloat32Array()
 var _awake := false
 var _ready_ok := false
 var _accum := 0.0
+var _g_scale := PackedFloat32Array()
+var _last_balls: Array = []        # last frame's local balls, for sub-sampling
+var _ease_t := 0.0
+var _index: PackedInt32Array = PackedInt32Array()
 ## Chain rendering (the city hoop): the driven surface is hidden and every
 ## spring between rings is drawn as a run of steel links in a multimesh.
 const LINK_PITCH := 0.028
@@ -85,6 +105,9 @@ func configure(set: HoopSet) -> void:
 	stiffness = set.net_stiffness
 	damping = set.net_damping
 	rest_pull = set.net_rest_pull
+	rest_spring = set.net_rest_spring
+	tail_mass = set.net_tail_mass
+	kick_speed = set.net_kick
 	grab_band = set.net_grab_band
 	grab_pull = set.net_grab_pull
 	ball_friction = set.net_friction
@@ -134,6 +157,14 @@ func setup(mi: MeshInstance3D) -> bool:
 	_pinned.resize(_rest.size())
 	for i in _rest.size():
 		_pinned[i] = 1 if _rest[i].y >= y_max - 1e-4 else 0
+	# The bottom ring hangs heavier.
+	var y_min := INF
+	for p in _rest:
+		y_min = minf(y_min, p.y)
+	_g_scale.resize(_rest.size())
+	for i in _rest.size():
+		_g_scale[i] = tail_mass if _rest[i].y <= y_min + 1e-4 else 1.0
+	_index = index
 
 	# Springs = mesh edges (structural + the triangle diagonals), deduplicated.
 	var seen := {}
@@ -374,32 +405,57 @@ func step(dt: float, balls: Array) -> void:
 	_accum -= steps * STEP
 	if steps == 0:
 		return
-	for _s in steps:
-		_substep(STEP, local_balls)
+	# Sub-sample: each ball slides from where it was last frame to where it
+	# is now across the substeps, so a pass is a pull-through, not shoves.
+	for si in steps:
+		var f := float(si + 1) / float(steps)
+		var sub: Array = []
+		for k in local_balls.size():
+			var cur: Dictionary = local_balls[k]
+			var prev: Dictionary = _last_balls[k] if k < _last_balls.size() else cur
+			var b2 := cur.duplicate()
+			b2["pos"] = (prev["pos"] as Vector3).lerp(cur["pos"], f)
+			sub.push_back(b2)
+		_substep(STEP, sub)
+	_last_balls = local_balls
 
-	# Sleep once still and alone.
+	# Sleep once still and alone: ease the last millimetres home, then stop.
 	if not near:
 		var max_v := 0.0
 		for i in _pos.size():
 			max_v = maxf(max_v, _pos[i].distance_to(_prev[i]))
 		if max_displacement() < SLEEP_POS_EPS and max_v < SLEEP_VEL_EPS:
-			_pos = _rest.duplicate()
-			_prev = _rest.duplicate()
-			_awake = false
+			_ease_t += dt
+			for i in _pos.size():
+				_pos[i] = _pos[i].lerp(_rest[i], SLEEP_EASE)
+				_prev[i] = _prev[i].lerp(_rest[i], SLEEP_EASE)
+			if _ease_t >= SLEEP_EASE_S:
+				_pos = _rest.duplicate()
+				_prev = _rest.duplicate()
+				_awake = false
+				_ease_t = 0.0
+				_last_balls = []
+		else:
+			_ease_t = 0.0
+	else:
+		_ease_t = 0.0
 	_upload()
 
 
 func _substep(h: float, balls: Array) -> void:
 	var n := _pos.size()
 	var g := Vector3(0.0, -GRAVITY * h * h, 0.0)
-	# Verlet integrate + cord memory.
+	var k_spring := rest_spring * h * h
+	# Verlet integrate + cord memory (the spring carries momentum through
+	# rest; the pull only mops up drift).
 	for i in n:
 		if _pinned[i] == 1:
 			continue
 		var p := _pos[i]
 		var v := (p - _prev[i]) * damping
 		_prev[i] = p
-		p += v + g
+		var to_rest := _rest[i] - p
+		p += v + g * (_g_scale[i] if i < _g_scale.size() else 1.0) + to_rest * k_spring
 		p += (_rest[i] - p) * rest_pull
 		_pos[i] = p
 	# Ball contact: push cords to the ball's surface, hand them surface velocity.
@@ -450,11 +506,64 @@ func _substep(h: float, balls: Array) -> void:
 			_pos[i] = _rest[i]
 
 
+## The swish: the sim's rim-plane `enter` event hands the cords under the
+## ball a shove along its travel (plus a little outward), so the net snaps
+## down with the ball instead of waiting to be pushed. World space.
+func kick(world_pos: Vector3, world_vel: Vector3, strength := -1.0) -> void:
+	if not _ready_ok:
+		return
+	var v_kick := kick_speed if strength < 0.0 else strength
+	if v_kick <= 0.0:
+		return
+	var xf := _mi.global_transform if _mi.is_inside_tree() else _mi.transform
+	var inv := xf.affine_inverse()
+	var c: Vector3 = inv * world_pos
+	var dir: Vector3 = (inv.basis * world_vel)
+	dir = dir.normalized() if dir.length() > 1e-6 else Vector3.DOWN
+	var reach := SimConstants.R_BALL + KICK_REACH
+	for i in _pos.size():
+		if _pinned[i] == 1:
+			continue
+		var d := _pos[i] - c
+		var flat := Vector3(d.x, 0.0, d.z)
+		var hd := flat.length()
+		if hd > reach or _pos[i].y > c.y + SimConstants.R_BALL * 0.5:
+			continue
+		var w := 1.0 - hd / reach
+		var out := flat / hd if hd > 1e-6 else Vector3.ZERO
+		var v := (dir + out * 0.35) * v_kick * w
+		_prev[i] -= v * STEP
+	_awake = true
+
+
+## Per-vertex normals from the deformed triangles (accumulated per particle),
+## so the cords shade with their shape and not with the rest pose.
+func _recompute_normals(verts: PackedVector3Array) -> void:
+	var acc := PackedVector3Array()
+	acc.resize(_pos.size())
+	acc.fill(Vector3.ZERO)
+	for t in range(0, _index.size() - 2, 3):
+		var a := _index[t]
+		var b := _index[t + 1]
+		var c := _index[t + 2]
+		var fn := (verts[b] - verts[a]).cross(verts[c] - verts[a])
+		acc[_vert_to_particle[a]] += fn
+		acc[_vert_to_particle[b]] += fn
+		acc[_vert_to_particle[c]] += fn
+	var normals := PackedVector3Array()
+	normals.resize(verts.size())
+	for i in verts.size():
+		var nrm := acc[_vert_to_particle[i]]
+		normals[i] = nrm.normalized() if nrm.length() > 1e-9 else Vector3.UP
+	_arrays[Mesh.ARRAY_NORMAL] = normals
+
+
 func _upload() -> void:
 	var verts: PackedVector3Array = _arrays[Mesh.ARRAY_VERTEX]
 	for i in verts.size():
 		verts[i] = _pos[_vert_to_particle[i]]
 	_arrays[Mesh.ARRAY_VERTEX] = verts
+	_recompute_normals(verts)
 	_mesh.clear_surfaces()
 	_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, _arrays)
 	if _material != null:

@@ -303,6 +303,12 @@ func _build_hoop_model() -> bool:
 	return true
 
 
+## The swish kick: the sim's rim-plane `enter` contact → the net's cords.
+func net_kick(pos: Vector3, vel: Vector3) -> void:
+	if net_sim != null:
+		net_sim.kick(pos, vel)
+
+
 ## Advance the runtime net with the sim's in-flight balls (call every frame).
 func step_net(dt: float, balls: Array[BallState]) -> void:
 	if net_sim == null:

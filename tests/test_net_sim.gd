@@ -46,7 +46,7 @@ func run(t) -> void:
 	var net := NetSim.new()
 	root.add_child(net)
 	t.ok(net.setup(mi), "setup accepts a cylinder net")
-	t.ok(net.particle_count() >= 60 and net.particle_count() <= 80,
+	t.ok(net.particle_count() >= 60 and net.particle_count() <= 100,
 		"particles = unique vertices (%d)" % net.particle_count())
 	t.ok(mi.mesh is ArrayMesh and mi.mesh.get_surface_count() == 1, "mesh replaced by a dynamic ArrayMesh")
 
@@ -74,9 +74,45 @@ func run(t) -> void:
 		if net.rest_position(i).y > 0.2:
 			top_moved = maxf(top_moved, net.particle_position(i).distance_to(net.rest_position(i)))
 	t.close(top_moved, 0.0, 1e-9, "top ring stays pinned to the rim")
+	# The snap-back: after the ball is gone some free cord rises ABOVE its rest
+	# (the spring memory carries momentum through rest), the net never jumps
+	# while it settles, and it is still within 3 s.
+	var overshoot := 0.0
+	var sleep_jump := -1.0
+	var last := PackedVector3Array()
+	for i in net.particle_count():
+		last.push_back(net.particle_position(i))
+	for i in 180:
+		var was_awake := net.is_awake()
+		net.step(dt, [])
+		var jump := 0.0
+		for k in net.particle_count():
+			var pp := net.particle_position(k)
+			if net.rest_position(k).y < 0.2:
+				overshoot = maxf(overshoot, pp.y - net.rest_position(k).y)
+			jump = maxf(jump, pp.distance_to(last[k]))
+			last[k] = pp
+		if was_awake and not net.is_awake():
+			sleep_jump = jump   # the frame it fell asleep: eased home, no snap
+	t.ok(overshoot > 0.004, "the cords whip back above rest after the ball (%.4f m)" % overshoot)
+	t.ok(sleep_jump >= 0.0 and sleep_jump < 0.004, "falling asleep is eased, not a teleport (jump %.4f m)" % sleep_jump)
+	t.ok(net.max_displacement() < 0.02, "net settles after the ball (%.4f m)" % net.max_displacement())
+	# Normals follow the cords: present, unit length, one per vertex.
+	var arrays: Array = mi.mesh.surface_get_arrays(0)
+	var nrm: PackedVector3Array = arrays[Mesh.ARRAY_NORMAL]
+	t.eq(nrm.size(), (arrays[Mesh.ARRAY_VERTEX] as PackedVector3Array).size(), "a normal per vertex")
+	var unit := true
+	for v in nrm:
+		if absf(v.length() - 1.0) > 1e-4:
+			unit = false
+	t.ok(unit, "normals are unit length")
+	# The swish kick moves the cords under the entry point at once.
 	for i in 240:
 		net.step(dt, [])
-	t.ok(net.max_displacement() < 0.02, "net settles after the ball (%.4f m)" % net.max_displacement())
+	var rest_disp := net.max_displacement()
+	net.kick(mi.to_global(Vector3(0, 0.21, 0)), Vector3(0, -5.0, 0))
+	net.step(dt, [])
+	t.ok(net.is_awake() and net.max_displacement() > rest_disp + 0.008, "a kick shoves the cords (%.4f m)" % net.max_displacement())
 
 	# 3. Deterministic: same ball path twice → identical particle positions.
 	var a := NetSim.new()

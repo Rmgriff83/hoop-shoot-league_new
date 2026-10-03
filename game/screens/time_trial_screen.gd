@@ -757,8 +757,12 @@ func _handle_event(ev: Dictionary) -> void:
 			if c["kind"] == "enter":
 				# Ball just dropped into the rim: play the make clip NOW rather than
 				# 22 cm later when the sim declares the make (the audible swish
-				# happens at entry in life too, in-and-outs included).
+				# happens at entry in life too, in-and-outs included). The net
+				# gets its kick here too, and the nylon rustle under the clip.
 				Sfx.make()
+				if Sfx.net_kind() != "chain":
+					Sfx.net_rustle()
+				_court.net_kick(Vector3(c["pos"]["x"], c["pos"]["y"], c["pos"]["z"]), Vector3(0.0, -float(c.get("speed", 5.0)), 0.0))
 				return
 			if c["kind"] == "ice_catch" or c["kind"] == "ice_pop":
 				return  # the trial's ice_caught / ice_break events carry the show

@@ -931,3 +931,25 @@ its leaves in five drifts (warm browns and oranges, a few green, densest at
 each heart, strays outside) instead of an even sprinkle. Both are
 `gen_*_textures.lua` passes; rebuild the area and re-run `--qa-area-snaps`
 after changing them.
+
+## 23. The net's snap (2026-10-03)
+
+Ross: the nylon net read "starchy". The cloth solver (`game/view/net_sim.gd`)
+was dragging the cords home with a positional lerp (`rest_pull`, no
+momentum), overwriting their velocity with the ball's (`friction 1.0`),
+sampling the ball once a frame, teleporting to rest at sleep and never
+updating the normals. Now: shape memory is a SPRING (`net_rest_spring`,
+an acceleration, so the cords carry momentum through rest and overshoot)
+plus a faint pull (`net_rest_pull 0.003`); `net_damping 0.9965` rings a
+swish down in ~2 s; `net_stiffness 0.14`; `net_friction 0.55` keeps half
+the cords' momentum under the ball; the bottom ring hangs `net_tail_mass`
+1.6× heavy so it lags and whips back; the sim's rim-plane `enter` event
+kicks the cords (`net_kick` 1.6 m/s, `NetSim.kick`, `CourtGeometry.net_kick`)
+and plays the nylon rustle under the make clip; the ball is sub-sampled
+across the substeps; sleep eases home over 0.3 s; normals follow the
+cords. The chain hoop keeps its heavy, quick-stopping feel (`rest_spring
+160`, `kick 0.6`, `tail_mass 1.2`). Every knob is a `HoopSet` export.
+Check it with `--qa-net` (a synthetic swish, 14 frames). The nylon mesh
+stays 5 rings × 12: the shipped hoop glbs carry hand-authored animations
+and hooks that `build_hoop.py -- --force` does not reproduce, so do not
+rebuild them from the script.

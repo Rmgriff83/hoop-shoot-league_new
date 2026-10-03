@@ -14,7 +14,7 @@ var _outcomes: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
-	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive")):
+	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	if args.has("--qa-title"):
@@ -41,6 +41,8 @@ func _ready() -> void:
 		_run_area_snaps.call_deferred()
 	elif args.has("--qa-archive"):
 		_run_archive.call_deferred()
+	elif args.has("--qa-net"):
+		_run_net.call_deferred()
 	elif args.has("--qa-aim"):
 		_run_aim.call_deferred()
 	else:
@@ -190,6 +192,52 @@ func _click_named(node_name: String) -> void:
 ## countdown, a live banner after a flick, the pause menu, then practice
 ## with the 30S MODE toggle off and on.
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-hud
+## The net's swish (docs/BLENDER_101.md): a practice shot on the cage, then
+## a burst of frames from the moment the net wakes — the wrap, the snap
+## down, the whip back, the ring-down.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-net
+func _run_net() -> void:
+	await _sleep(1.2)
+	await _close_archive()
+	await _click_button_named("PRACTICE")
+	await _sleep(1.5)
+	# A synthetic swish: a ball dropped straight through the hoop's axis,
+	# driven into the net sim beside the court's own stepping (no view ball;
+	# this is about the cords), the kick at the rim plane, then a burst.
+	var court: Node = get_tree().root.find_child("Court", true, false)
+	var net: NetSim = court.net_sim if court != null else null
+	if net == null:
+		print("QA net: no net sim")
+		get_tree().quit(1)
+		return
+	var geo: SimGeometry = court.geo
+	var hoop := Vector3(geo.hoop_x, geo.hoop_y, geo.hoop_z)
+	var y := hoop.y + 0.5
+	var vy := -5.0
+	var kicked := false
+	var snapped := 0
+	var t := 0.0
+	var next_snap := 0.0
+	while t < 1.6:
+		var dt := 1.0 / 60.0
+		if y > hoop.y - 0.7:
+			var desc := {"pos": Vector3(hoop.x, y, hoop.z), "vel": Vector3(0, vy, 0), "spin": 12.0, "axis": Vector3(0, 0, 1), "radius": SimConstants.R_BALL}
+			net.step(dt, [desc])
+			if not kicked and y <= hoop.y:
+				net.kick(Vector3(hoop.x, hoop.y, hoop.z), Vector3(0, vy, 0))
+				kicked = true
+		vy -= 9.81 * dt
+		y += vy * dt
+		t += dt
+		if t >= next_snap and snapped < 14:
+			await _snap("net_%02d" % snapped)
+			snapped += 1
+			next_snap = t + 0.08
+		await get_tree().process_frame
+	print("QA net: done")
+	get_tree().quit(0)
+
+
 func _run_hud() -> void:
 	await _sleep(1.2)
 	await _close_archive()

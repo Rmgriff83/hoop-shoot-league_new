@@ -17,12 +17,20 @@ extends CosmeticSet
 ## against SimGeometry.net_rigidity() so the visible net matches the sim).
 @export var net_kind := "nylon"
 ## Net feel (see NetSim for what each does). Defaults = the classic net.
-@export var net_stiffness := 0.08
-@export var net_damping := 0.999
-@export var net_rest_pull := 0.018
-@export var net_grab_band := 0.05
-@export var net_grab_pull := 0.6
-@export var net_friction := 1.0
+## Nylon defaults (2026-10-03, the snap model — docs/BLENDER_101.md): cords
+## stretch a little (stiffness), a spring pulls them home through rest so
+## they overshoot and ring down (rest_spring, damping), the bottom ring hangs
+## heavy (tail_mass), an entering ball kicks the cords (kick), and they keep
+## about half their own momentum under the ball (friction).
+@export var net_stiffness := 0.14
+@export var net_damping := 0.9965
+@export var net_rest_pull := 0.003
+@export var net_rest_spring := 90.0
+@export var net_tail_mass := 1.6
+@export var net_kick := 1.6
+@export var net_grab_band := 0.06
+@export var net_grab_pull := 0.5
+@export var net_friction := 0.55
 
 ## LED skin (defaults = LedBoard's constants).
 @export var led_color := Color8(255, 70, 30)

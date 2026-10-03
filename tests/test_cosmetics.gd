@@ -54,6 +54,9 @@ func run(t) -> void:
 	var ns := NetSim.new()
 	t.close(HoopSet.new().net_stiffness, ns.stiffness, 0.0, "set default stiffness = NetSim default")
 	t.close(HoopSet.new().net_damping, ns.damping, 0.0, "set default damping = NetSim default")
+	t.close(HoopSet.new().net_rest_spring, ns.rest_spring, 0.0, "set default rest spring = NetSim default")
+	t.close(HoopSet.new().net_friction, ns.ball_friction, 0.0, "set default friction = NetSim default")
+	t.close(HoopSet.new().net_kick, ns.kick_speed, 0.0, "set default kick = NetSim default")
 	var soft := HoopSet.new()
 	soft.net_stiffness = 0.5
 	soft.net_friction = 0.2
