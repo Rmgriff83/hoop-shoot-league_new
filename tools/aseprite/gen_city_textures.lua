@@ -503,3 +503,34 @@ do
   end
   save(spr, "city_smoke.png")
 end
+
+-- city_speaker_wood.png 64x64 — walnut veneer for the floor speakers' cabinets
+-- (build_city.py Speaker_Wood): warm brown with a fine vertical grain.
+do
+  local W, H = 64, 64
+  local spr, img = newImage(W, H)
+  for y = 0, H - 1 do
+    for x = 0, W - 1 do
+      -- Variation runs across x and barely along y: vertical streaks.
+      local g = vnoise(x * 5, y * 0.35, 9, 301) * 0.55 + vnoise(x * 2, y * 0.2, 11, 302) * 0.45
+      local v = 0.25 + 0.75 * g
+      local r, gg, b = 96 + 68 * v, 54 + 40 * v, 26 + 22 * v
+      if noise(x, y, 303) < 0.04 then r, gg, b = r - 20, gg - 14, b - 8 end
+      img:drawPixel(x, y, rgb(r, gg, b))
+    end
+  end
+  save(spr, "city_speaker_wood.png")
+end
+
+-- city_speaker_baffle.png 32x32 — the speakers' black textured front baffle.
+do
+  local W, H = 32, 32
+  local spr, img = newImage(W, H)
+  for y = 0, H - 1 do
+    for x = 0, W - 1 do
+      local v = 15 + noise(x, y, 311) * 13
+      img:drawPixel(x, y, rgb(v, v, v + 2))
+    end
+  end
+  save(spr, "city_speaker_baffle.png")
+end

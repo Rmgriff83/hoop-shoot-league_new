@@ -428,31 +428,75 @@ def build():
     # ---- Two big floor speakers to the shooter's left of the hoop's base, the
     # city's radio (ArenaSet.interactables kind "radio" on `Speakers`, its LED
     # `SpeakerLed`): a lo-fi beats playlist Ross will pick.
-    spk_body = cage.mat_flat("Speaker_Body", (36, 36, 40), roughness=0.85)
-    spk_grille = cage.mat_flat("Speaker_Grille", (18, 18, 20), roughness=1.0)
-    spk_cone = cage.mat_flat("Speaker_Cone", (70, 70, 76), roughness=0.9)
-    spk_ring = cage.mat_flat("Speaker_Ring", (160, 160, 168), roughness=0.5)
+    #
+    # Polished 2026-10-03 to Ross's reference (a walnut bookshelf speaker): a
+    # veneered cabinet whose wood lip frames a black textured baffle; a big
+    # woofer low and centred (flange with screws, dark rubber surround, black
+    # cone, dome dust cap), a small mid upper-left, a tweeter in a square plate
+    # upper-right with a gold badge under it. Names the game relies on:
+    # `Speakers` (the radio) and `SpeakerLed`.
+    wood = cage.mat_tex("Speaker_Wood", TEX("city_speaker_wood.png"))
+    baffle = cage.mat_tex("Speaker_Baffle", TEX("city_speaker_baffle.png"))
+    spk_cone = cage.mat_flat("Speaker_Cone", (26, 24, 26), roughness=0.95)
+    spk_surround = cage.mat_flat("Speaker_Surround", (14, 13, 15), roughness=1.0)
+    spk_cap = cage.mat_flat("Speaker_Cap", (58, 56, 60), roughness=0.55)
+    spk_flange = cage.mat_flat("Speaker_Flange", (36, 36, 40), roughness=0.8)
+    spk_screw = cage.mat_flat("Speaker_Screw", (176, 176, 184), roughness=0.4)
+    spk_gold = cage.mat_flat("Speaker_Gold", (214, 172, 72), roughness=0.4)
     spk_red = cage.mat_flat("Speaker_Red", (220, 60, 50), roughness=0.6)
     speakers = cage.add_empty("Speakers", c_props, root, (ENC_X1 - 1.15, 0.0, -1.75))
+
+    def spk_part(name, obj, mat, loc, rot=(0.0, math.pi / 2, 0.0)):
+        obj.name = obj.data.name = name
+        obj.rotation_euler = rot
+        obj.data.materials.append(mat)
+        cage.link_obj(obj, c_props, speakers, cage.s2b(loc))
+        return obj
+
+    def spk_driver(tag, fx, cy, cz, r, screws):
+        """A driver on the baffle at (cy, cz): flange ring + screws, surround,
+        cone sinking into the cabinet, dust cap. `fx` is the baffle's face x."""
+        bpy.ops.mesh.primitive_torus_add(major_radius=r + 0.012, minor_radius=0.010, major_segments=20, minor_segments=5, location=(0, 0, 0))
+        spk_part("Speaker%sFlange" % tag, bpy.context.active_object, spk_flange, (fx - 0.006, cy, cz))
+        bpy.ops.mesh.primitive_torus_add(major_radius=r - 0.010, minor_radius=0.013, major_segments=20, minor_segments=5, location=(0, 0, 0))
+        spk_part("Speaker%sSurround" % tag, bpy.context.active_object, spk_surround, (fx - 0.004, cy, cz))
+        depth = r * 0.42
+        bpy.ops.mesh.primitive_cone_add(vertices=20, radius1=r - 0.016, radius2=r * 0.22, depth=depth, location=(0, 0, 0))
+        spk_part("Speaker%sCone" % tag, bpy.context.active_object, spk_cone, (fx + depth / 2.0 - 0.002, cy, cz))
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=8, radius=r * 0.24, location=(0, 0, 0))
+        spk_part("Speaker%sCap" % tag, bpy.context.active_object, spk_cap, (fx + depth - r * 0.16, cy, cz), rot=(0.0, 0.0, 0.0))
+        for k in range(screws):
+            a = (k + 0.5) * 2.0 * math.pi / screws
+            bpy.ops.mesh.primitive_cylinder_add(vertices=6, radius=0.006, depth=0.006, location=(0, 0, 0))
+            spk_part("Speaker%sScrew%d" % (tag, k), bpy.context.active_object, spk_screw,
+                     (fx - 0.012, cy + (r + 0.012) * math.sin(a), cz + (r + 0.012) * math.cos(a)))
+
     for i, dz in enumerate((-0.42, 0.42)):
         w, h, d = 0.52, 0.92, 0.46
-        cage.add_box("SpeakerBox%d" % i, (d, h, w), (0.0, h / 2.0, dz), spk_body, c_props, speakers)
-        cage.add_box("SpeakerGrille%d" % i, (0.02, h - 0.1, w - 0.1), (-d / 2.0 - 0.005, h / 2.0, dz), spk_grille, c_props, speakers)
-        for j, (cy, cr) in enumerate(((0.32, 0.17), (0.70, 0.09))):
-            bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=cr, depth=0.03, location=(0, 0, 0))
-            cone = bpy.context.active_object
-            cone.name = cone.data.name = "SpeakerCone%d_%d" % (i, j)
-            cone.rotation_euler = (0.0, math.pi / 2, 0.0)
-            cone.data.materials.append(spk_cone)
-            cage.link_obj(cone, c_props, speakers, cage.s2b((-d / 2.0 - 0.02, cy, dz)))
-            bpy.ops.mesh.primitive_torus_add(major_radius=cr, minor_radius=0.012, major_segments=16, minor_segments=4, location=(0, 0, 0))
-            ring = bpy.context.active_object
-            ring.name = ring.data.name = "SpeakerRing%d_%d" % (i, j)
-            ring.rotation_euler = (0.0, math.pi / 2, 0.0)
-            ring.data.materials.append(spk_ring)
-            cage.link_obj(ring, c_props, speakers, cage.s2b((-d / 2.0 - 0.03, cy, dz)))
-    cage.add_box("SpeakerLed", (0.02, 0.03, 0.03), (-0.245, 0.86, -0.24), spk_red, c_props, speakers)
-    cage.add_box("SpeakerCable", (0.02, 0.02, 0.5), (0.1, 0.02, 0.0), spk_grille, c_props, speakers)
+        fx = -d / 2.0
+        cage.add_box("SpeakerBox%d" % i, (d, h, w), (0.0, h / 2.0, dz), wood, c_props, speakers)
+        # The baffle, 3 mm proud of the cabinet's front, inset so the veneer
+        # frames it like the reference's lip.
+        lip = 0.028
+        cage.add_quad("SpeakerBaffle%d" % i,
+                      [(fx - 0.003, lip, dz - w / 2.0 + lip), (fx - 0.003, lip, dz + w / 2.0 - lip),
+                       (fx - 0.003, h - lip, dz + w / 2.0 - lip), (fx - 0.003, h - lip, dz - w / 2.0 + lip)],
+                      (-1, 0, 0), baffle, c_props, speakers, (3.0, 5.0))
+        bx = fx - 0.003
+        spk_driver("Woofer%d" % i, bx, 0.30, dz, 0.150, 6)
+        spk_driver("Mid%d" % i, bx, 0.645, dz - 0.115, 0.068, 4)
+        # Tweeter in its square plate, the badge under the dome.
+        cage.add_box("SpeakerTweeter%d" % i, (0.010, 0.17, 0.17), (bx - 0.005, 0.66, dz + 0.12), spk_flange, c_props, speakers)
+        bpy.ops.mesh.primitive_uv_sphere_add(segments=12, ring_count=8, radius=0.022, location=(0, 0, 0))
+        spk_part("SpeakerDome%d" % i, bpy.context.active_object, spk_cap, (bx - 0.012, 0.69, dz + 0.12), rot=(0.0, 0.0, 0.0))
+        for k in range(4):
+            a = (k + 0.5) * math.pi / 2.0
+            bpy.ops.mesh.primitive_cylinder_add(vertices=6, radius=0.005, depth=0.006, location=(0, 0, 0))
+            spk_part("SpeakerTweeterScrew%d_%d" % (i, k), bpy.context.active_object, spk_screw,
+                     (bx - 0.012, 0.66 + 0.068 * math.sin(a) * math.sqrt(2.0), dz + 0.12 + 0.068 * math.cos(a) * math.sqrt(2.0)))
+        cage.add_box("SpeakerBadge%d" % i, (0.006, 0.026, 0.05), (bx - 0.013, 0.60, dz + 0.12), spk_gold, c_props, speakers)
+    cage.add_box("SpeakerLed", (0.02, 0.03, 0.03), (-0.245, 0.055, -0.24), spk_red, c_props, speakers)
+    cage.add_box("SpeakerCable", (0.02, 0.02, 0.5), (0.1, 0.02, 0.0), spk_surround, c_props, speakers)
 
     # No arena pole: the chain hoop (build_chain_hoop.py) brings its own
     # gooseneck on the same pole line.

@@ -686,7 +686,13 @@ frame, a fence loop on the beach's enclosure line (`ENC_X0..X1 -11.2..5.7`,
 stands on the wall cap, `league_banner_pos.y 1.16`), the reader board a taller cabinet strapped to the back fence left of
 the hoop (`ReaderRig` + `LedFace`; not a `ScoreboardRig`, so it never
 turns), two floor speakers left of the hoop's base as the city's radio
-(`Speakers`, `SpeakerLed`, `ArenaSet.interactables`; the lo-fi playlist is
+(`Speakers`, `SpeakerLed`, `ArenaSet.interactables`; polished 2026-10-03 to
+Ross's walnut-bookshelf reference: a veneered cabinet (`city_speaker_wood.png`)
+whose lip frames a black textured baffle (`city_speaker_baffle.png`), a big
+woofer low and centred with a screwed flange, rubber surround, sunk cone and
+dome cap, a small mid upper-left, a tweeter in a square plate upper-right
+with a gold badge under it — `spk_driver()` in `build_city.py`; `--qa-city`
+snaps `city_speakers` up close; the lo-fi playlist is
 Ross's to fill — `assets/music/` placeholders for now), a 14.6 × 15.2 m slab whose lines
 `gen_city_textures.lua` paints with the rim at x 3.625 and the baseline at
 4.6, then, behind the back fence, kerb → sidewalk → a two-lane road

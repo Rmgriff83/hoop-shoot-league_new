@@ -43,6 +43,10 @@ func run(t) -> void:
 	t.ok(str(city.interactables[0]["kind"]) == "radio" and str(city.interactables[0]["node"]) == "Speakers", "the floor speakers are its radio")
 	var cglb: Node = load(city.model_path).instantiate()
 	t.ok(cglb.find_child("Speakers", true, false) is Node3D and cglb.find_child("SpeakerLed", true, false) is MeshInstance3D, "Speakers + SpeakerLed in the city glb")
+	# The 2026-10-03 polish: woofer, mid, tweeter and badge per cabinet.
+	for i in 2:
+		for part in ["SpeakerWoofer%dCone", "SpeakerWoofer%dCap", "SpeakerWoofer%dScrew5", "SpeakerMid%dCone", "SpeakerTweeter%d", "SpeakerDome%d", "SpeakerBadge%d", "SpeakerBaffle%d"]:
+			t.ok(cglb.find_child(part % i, true, false) is MeshInstance3D, "%s in the city glb" % (part % i))
 	t.ok(cglb.find_child("ScoreboardRig", true, false) == null and cglb.find_child("LedFace", true, false) is MeshInstance3D, "the city's reader board hangs on the fence (no turning rig)")
 	cglb.free()
 	# The glb has the boombox and its LED.
