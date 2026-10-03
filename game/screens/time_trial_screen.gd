@@ -744,6 +744,7 @@ func _step_rules(dt: float) -> void:
 func _handle_event(ev: Dictionary) -> void:
 	match ev["kind"]:
 		"go":
+			_court.arcade_chase()
 			if not _practice:
 				_hud.banner("GO!", Color(0.4, 0.9, 0.55))
 				_court.led.set_text("")

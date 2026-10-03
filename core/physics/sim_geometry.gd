@@ -102,6 +102,10 @@ var lip_h: float = 0.0
 ## 0.9 m rise to the back wall at 4.4 — build_cage.py RAMP_X0 / RAMP_TOP_Y.
 ## The deck in front rolls like a rubber mat (2 m/s²: a 2 m/s roll stops in
 ## a metre) and only floor hits above 0.35 m/s log a bounce.
+## The back wall the ball bounces off: the peaks of the egg-crate foam over
+## the panel (build_cage.py PAD_FACE_X − PAD_DEPTH = 4.31), not the panel
+## itself at 4.4. The ramp still runs to the panel behind the foam.
+const ARCADE_BACK_X := 4.31
 const ARCADE_RAMP_X0 := 3.5
 const ARCADE_RAMP_H := 0.9
 const ARCADE_RAMP_E := 0.35
@@ -256,7 +260,7 @@ static func arcade(dist := 2.6) -> SimGeometry:
 	# CAGE_HALF_W in that script — the ball has to bounce where the fence is
 	# drawn, or it rebounds off thin air.
 	g.wall_x_min = -1.8
-	g.wall_x_max = 4.4
+	g.wall_x_max = ARCADE_BACK_X
 	g.wall_z_min = -1.26
 	g.wall_z_max = 1.26
 	g.wall_y_max = 3.9

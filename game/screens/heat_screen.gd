@@ -827,6 +827,7 @@ func _handle_event(ev: Dictionary) -> void:
 		"done":
 			return  # the heat decides when it is over (overtime may follow)
 		"go":
+			_court.arcade_chase()
 			if heat.ot > 0:
 				# OT tip-off: keep the carried score on the board, flash GO.
 				_hud.banner("GO!", Color(0.4, 0.9, 0.55))
@@ -862,6 +863,7 @@ func _handle_ai_event(ev: Dictionary) -> void:
 	Sfx.gain_db = AI_SFX_GAIN_DB
 	match ev["kind"]:
 		"go":
+			_ai_court.arcade_chase()
 			if heat.ot > 0:
 				_ai_court.led.show_score(heat.ai.score)
 			else:

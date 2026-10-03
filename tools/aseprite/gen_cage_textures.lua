@@ -85,8 +85,6 @@ end
 local function tread(name, rubber, dot, dip)
   local W, H = 128, 128
   local spr, img = newImage(W, H)
-  local yellow = pc.rgba(236, 110, 48, 255)   -- orange chevrons (rim family)
-  local ydark  = pc.rgba(160, 70, 30, 255)
   for y = 0, H - 1 do
     for x = 0, W - 1 do
       local c = rubber
@@ -95,20 +93,9 @@ local function tread(name, rubber, dot, dip)
       img:drawPixel(x, y, c)
     end
   end
-  -- Chevrons: apex at x = 20 and x = 84, arms sweep back (toward +u) 24 px.
-  for _, apex in ipairs({20, 84}) do
-    for i = 0, 24 do
-      for t = 0, 3 do
-        local x = apex + i
-        local yu = 64 - i - t
-        local yd = 64 + i + t
-        if x < W then
-          img:drawPixel(x, yu, (t == 3) and ydark or yellow)
-          img:drawPixel(x, yd, (t == 3) and ydark or yellow)
-        end
-      end
-    end
-  end
+  -- (The old chevrons baked into this tile tiled badly across the deck and
+  -- were cut off at its edges; the deck's arrows are now their own decals,
+  -- cage_arrow.png below, lit in a chase by ArcadeFx.)
   save(spr, name)
 end
 tread("cage_deck.png", pc.rgba(36, 34, 34, 255), pc.rgba(48, 46, 45, 255), pc.rgba(26, 24, 24, 255))
@@ -189,3 +176,55 @@ do
   save(spr, "cage_hall.png")
 end
 
+
+-- cage_pad.png 32x32 — one cell of the back wall's egg-crate foam (the
+-- BackPad in build_cage.py maps each pyramid cell to this tile): a charcoal
+-- foam that is lightest on the peak at the centre and falls to the dark
+-- valleys at the edges, with a fine open-cell speckle.
+do
+  local W, H = 32, 32
+  local spr, img = newImage(W, H)
+  -- Low contrast on purpose: the pyramids' flat-shaded faces already catch
+  -- the light differently, and a bright peak on top of that read as gloss.
+  local peak   = pc.rgba(66, 61, 58, 255)
+  local mid    = pc.rgba(56, 52, 50, 255)
+  local valley = pc.rgba(42, 38, 37, 255)
+  local pore   = pc.rgba(34, 31, 30, 255)
+  for y = 0, H - 1 do
+    for x = 0, W - 1 do
+      -- Chebyshev distance to the centre: square rings, like a pyramid's faces.
+      local dx = math.abs(x + 0.5 - W / 2) / (W / 2)
+      local dy = math.abs(y + 0.5 - H / 2) / (H / 2)
+      local d = math.max(dx, dy)
+      local c = valley
+      if d < 0.32 then c = peak elseif d < 0.72 then c = mid end
+      -- Dither the two ring edges so they do not read as hard bands.
+      if d >= 0.28 and d < 0.36 and (x + y) % 2 == 0 then c = (d < 0.32) and mid or peak end
+      if d >= 0.66 and d < 0.78 and (x + y) % 2 == 0 then c = (d < 0.72) and valley or mid end
+      if noise(x, y, 61) < 0.08 then c = pore end
+      img:drawPixel(x, y, c)
+    end
+  end
+  save(spr, "cage_pad.png")
+end
+
+-- cage_arrow.png 64x64 RGBA — one deck arrow (build_cage.py DeckArrow%02dL/R
+-- decals, lit in succession by ArcadeFx.chase()): a minimal chevron pointing
+-- toward -u (the shooter) — two thin arms, one flat yellow, no outline. The
+-- lit state is the shader's (deck_arrow.gdshader), not the texture's.
+do
+  local W, H = 64, 64
+  local spr, img = newImage(W, H)
+  local fill_c = pc.rgba(250, 206, 70, 255)   -- yellow (Ross, 2026-10-03)
+  local apex, cy, thick, half = 10, 31.5, 7, 22
+  for y = 0, H - 1 do
+    for x = 0, W - 1 do
+      local dy = math.abs(y + 0.5 - cy - 0.5)
+      local lead = apex + dy
+      if dy <= half and x >= lead and x < lead + thick then
+        img:drawPixel(x, y, fill_c)
+      end
+    end
+  end
+  save(spr, "cage_arrow.png")
+end

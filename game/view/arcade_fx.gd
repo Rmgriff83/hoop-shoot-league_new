@@ -15,6 +15,17 @@ const MARQUEE_TINTS := [Color(1.0, 0.8, 0.35), Color(0.9, 0.35, 0.3), Color(0.5,
 ## ordinal baked into its name by build_cage.py's _hall_lights.
 const BULB_SHADER := preload("res://game/court/bulb.gdshader")
 const FLARE_S := 0.9
+## The return arrows down the deck, two rows (DeckArrow%02dL / %02dR,
+## build_cage.py ARROW_XS): chase() lights each step — both rows together —
+## one after another from the top of the ramp back to the shooter,
+## CHASE_PASSES sweeps, each step flashing CHASE_HOLD and the next starting
+## CHASE_STAGGER later.
+const ARROW_SHADER := preload("res://game/court/deck_arrow.gdshader")
+const ARROW_STEPS := 9
+const CHASE_STAGGER := 0.11
+const CHASE_HOLD := 0.3
+const CHASE_GAP := 0.3
+const CHASE_PASSES := 3
 var _t := 0.0
 var _screens: Array[ShaderMaterial] = []
 var _marquees: Array[ShaderMaterial] = []
@@ -22,6 +33,10 @@ var _lights: Array[OmniLight3D] = []
 var _bulb_mat: ShaderMaterial
 var _flare := 0.0
 var _bulbs := 0
+var _arrows: Array[ShaderMaterial] = []
+var _arrow_steps: Array[int] = []   # each arrow's step (the ordinal in its name)
+var _steps := 0
+var _chase_t := -1.0   # < 0: no chase running
 ## Seeded, not randomize(): ambient life should replay identically so a QA
 ## screenshot or a test is reproducible.
 var _rng := RandomNumberGenerator.new()
@@ -68,7 +83,27 @@ func setup(arena: Node) -> bool:
 	if _bulb_mat != null:
 		_bulb_mat.set_shader_parameter("count", float(bulbs))
 	_bulbs = bulbs
-	if _screens.is_empty() and _marquees.is_empty() and bulbs == 0:
+	# The return arrows: the step is the ordinal in the name (00 is the top of
+	# the ramp, the last step is at the shooter's feet; L/R are its two rows).
+	var arrows: Array[MeshInstance3D] = []
+	for n in BeachFx._descendants(arena):
+		if n is MeshInstance3D and n.name.begins_with("DeckArrow"):
+			arrows.push_back(n)
+	arrows.sort_custom(func(a: MeshInstance3D, b: MeshInstance3D) -> bool: return a.name < b.name)
+	for mi3 in arrows:
+		var step := String(mi3.name).substr(9, 2).to_int()
+		_arrow_steps.push_back(step)
+		_steps = maxi(_steps, step + 1)
+		var m := ShaderMaterial.new()
+		m.shader = ARROW_SHADER
+		var base := mi3.mesh.surface_get_material(0) if mi3.mesh != null and mi3.mesh.get_surface_count() > 0 else null
+		if base is BaseMaterial3D:
+			m.set_shader_parameter("tex", (base as BaseMaterial3D).albedo_texture)
+		m.set_shader_parameter("lit", 0.0)
+		mi3.material_override = m
+		mi3.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_arrows.push_back(m)
+	if _screens.is_empty() and _marquees.is_empty() and bulbs == 0 and _arrows.is_empty():
 		return false
 	_rng.seed = 0x5EED_CA6E
 	# A faint glow from each run of machines on the back wall.
@@ -100,6 +135,61 @@ func bulb_count() -> int:
 	return _bulbs
 
 
+func arrow_count() -> int:
+	return _arrows.size()
+
+
+func arrow_steps() -> int:
+	return _steps
+
+
+## How lit step i's arrows are right now (0 dim … 1 flashing).
+func arrow_lit(step: int) -> float:
+	for k in _arrows.size():
+		if _arrow_steps[k] == step:
+			var v = _arrows[k].get_shader_parameter("lit")
+			return float(v) if v != null else 0.0
+	return 0.0
+
+
+func chasing() -> bool:
+	return _chase_t >= 0.0
+
+
+## One sweep's length: every step's start plus the last flash and a gap.
+func chase_period() -> float:
+	return (_steps - 1) * CHASE_STAGGER + CHASE_HOLD + CHASE_GAP
+
+
+## Run the return arrows: lit in succession from the top of the ramp back to
+## the shooter, CHASE_PASSES times — the screens call this on GO.
+func chase() -> void:
+	if _arrows.is_empty():
+		return
+	_chase_t = 0.0
+	_step_chase(0.0)
+
+
+func _step_chase(dt: float) -> void:
+	if _chase_t < 0.0:
+		return
+	_chase_t += dt
+	var period := chase_period()
+	var done := _chase_t >= CHASE_PASSES * period
+	for k in _arrows.size():
+		var i := _arrow_steps[k]
+		var lit := 0.0
+		if not done:
+			for pass_i in CHASE_PASSES:
+				var since := _chase_t - (pass_i * period + i * CHASE_STAGGER)
+				if since >= 0.0 and since < CHASE_HOLD:
+					# Snap on, ease off.
+					lit = maxf(lit, 1.0 - (since / CHASE_HOLD) * (since / CHASE_HOLD))
+		_arrows[k].set_shader_parameter("lit", lit)
+	if done:
+		_chase_t = -1.0
+
+
 ## The string lights surge. Replaces the old marquee sign's MarqueePulse clip,
 ## which went with the sign — the screens call this on heat-up instead.
 func flare() -> void:
@@ -119,3 +209,4 @@ func _process(dt: float) -> void:
 		_bulb_mat.set_shader_parameter("flare", 0.8 * (_flare / FLARE_S))
 	for k in _lights.size():
 		_lights[k].light_energy = 0.45 + 0.1 * sin(_t * 2.3 + k * 1.7)
+	_step_chase(dt)

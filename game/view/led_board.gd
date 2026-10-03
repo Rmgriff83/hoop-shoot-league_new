@@ -14,6 +14,12 @@ const ROWS := 8
 const CELL := 4
 const WIDTH := COLS * CELL   # 192
 const HEIGHT := ROWS * CELL  # 32
+## The cage's full-width league ribbon (build_cage.py LeagueFace, 2.36 m at
+## 9:1): 72 columns so its LEDs stay square on the wider face.
+const LEAGUE_COLS := 72
+## This board's columns / texel width (the scoreboard's 48 / 192 by default).
+var cols := COLS
+var width := WIDTH
 const GLYPH_W := 3
 const GLYPH_H := 5
 const TOP_MARGIN := 1
@@ -107,8 +113,10 @@ var _band_lit := false
 const FLASH_PERIOD := 0.25
 
 
-func _init() -> void:
-	_img = Image.create(WIDTH, HEIGHT, false, Image.FORMAT_RGBA8)
+func _init(p_cols: int = COLS) -> void:
+	cols = p_cols
+	width = cols * CELL
+	_img = Image.create(width, HEIGHT, false, Image.FORMAT_RGBA8)
 	_tex = ImageTexture.create_from_image(_img)
 	material = StandardMaterial3D.new()
 	material.albedo_texture = _tex
@@ -184,7 +192,7 @@ func ticker(items: PackedStringArray, cols_per_s := 9.0, color := Color.TRANSPAR
 	_color = _resolve(color)
 	_marquee_speed = cols_per_s
 	_text = items[0]
-	_marquee_x = float(COLS)
+	_marquee_x = float(cols)
 	_dirty = true
 
 
@@ -232,7 +240,7 @@ func _start(item: Dictionary) -> void:
 	else:
 		_mode = "marquee"
 		_marquee_speed = item["speed"]
-		_marquee_x = float(COLS)
+		_marquee_x = float(cols)
 	_dirty = true
 
 
@@ -327,7 +335,7 @@ func advance(dt: float) -> void:
 				else:
 					_ticker_i = (_ticker_i + 1) % _ticker_items.size()
 					_text = _ticker_items[_ticker_i]
-					_marquee_x = float(COLS)
+					_marquee_x = float(cols)
 				_dirty = true
 	# Band.
 	if _band_solid_left > 0.0:
@@ -352,7 +360,7 @@ static func text_cols(text: String) -> int:
 func lit_count() -> int:
 	var n := 0
 	for r in ROWS:
-		for c in COLS:
+		for c in cols:
 			var px := _img.get_pixel(c * CELL + 1, r * CELL + 1)
 			if px != OFF and px != BG:
 				n += 1
@@ -363,7 +371,7 @@ func _render_frame() -> void:
 	_dirty = false
 	_img.fill(BG)
 	for r in ROWS:
-		for c in COLS:
+		for c in cols:
 			_led(c, r, OFF)
 	var text := _idle_text
 	var x0 := 0
@@ -381,7 +389,7 @@ func _render_frame() -> void:
 			x0 = int(floor(_marquee_x))
 	if draw:
 		if _mode != "marquee" and _mode != "ticker":
-			x0 = maxi(0, (COLS - text_cols(text)) / 2)   # centre static text
+			x0 = maxi(0, (cols - text_cols(text)) / 2)   # centre static text
 		_draw_text(text, x0, _color)
 	_tex.update(_img)
 
@@ -401,7 +409,7 @@ func _draw_text(text: String, x0: int, color: Color) -> void:
 
 
 func _led(col: int, row: int, color: Color) -> void:
-	if col < 0 or col >= COLS or row < 0 or row >= ROWS:
+	if col < 0 or col >= cols or row < 0 or row >= ROWS:
 		return
 	var x := col * CELL
 	var y := row * CELL

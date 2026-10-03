@@ -986,3 +986,39 @@ the old rules byte-exact (golden grid 100 %). Tests: `tests/test_ramp.gd`;
 a flat deck. QA: `--qa-hud` drops a ball over the slope and snaps `ramp_00..03`.
 If you move the ramp or the lip in Blender, change the `ARCADE_RAMP_*` /
 `ARCADE_LIP_*` constants to match — the ball must roll where the slope is drawn.
+
+## 25. The padded back, the return arrows and the full-width ribbon (2026-10-03)
+
+Three cage changes, all in `build_cage.py` (`-- --force`) and
+`gen_cage_textures.lua`:
+
+- **Egg-crate foam** over the back panel: `add_pad()` builds `BackPad`, a
+  lattice of `PAD_CELL` (0.12 m) square cells, each a four-sided pyramid whose
+  peak stands `PAD_DEPTH` (0.07 m) toward the shooter, from just above the
+  ramp's top to just under the roof tube. Every cell maps to one full tile of
+  `cage_pad.png` (charcoal foam, a touch lighter at the peak, dark in the
+  valleys — low contrast, since the faces already shade differently) and the
+  mesh is flat-shaded, so each pyramid's faces catch the light differently.
+  The material is matte (`mat_tex(matte=True)`: no specular lobe; and
+  `CourtGeometry._matte("BackPad")` repeats it at load) — the first cut read
+  as glossy. The sim's back wall moved to the peaks
+  (`SimGeometry.ARCADE_BACK_X` 4.31): the ball bounces off the foam, not the
+  panel behind it.
+- **The league ribbon** sits ON the foam: a dark `LeagueHousing` box whose back
+  is buried in the pad with the `LeagueFace` 10 mm proud of it. It is full
+  width again (2.36 m, inboard of the corner posts) and a touch taller
+  (0.262 m): the league `LedBoard` now runs `LedBoard.LEAGUE_COLS` (72) columns,
+  288×32 texels at 9:1, so its LEDs stay square on the wider face.
+- **Return arrows**: the chevrons that used to be baked into the deck/ramp
+  tread tiles (they tiled badly and were cut off at the edges) are gone; the
+  tread is plain. In their place two rows of minimal yellow chevron decals
+  (`DeckArrow%02dL` / `%02dR`, `cage_arrow.png`, `ARROW_XS`: three steps on
+  the ramp's slope, six down the deck, 0.22 × 0.36 m, rows at z ±0.42) a few
+  millimetres above the surface. `ArcadeFx` gives each its own
+  `deck_arrow.gdshader` material (the decal dim at `idle`, glowing at `lit`)
+  and `chase()` — called by the screens on GO (`CourtGeometry.arcade_chase()`)
+  — lights the steps in succession from the top of the ramp back to the
+  shooter, three passes, as if guiding the ball home. From the shooting spot
+  the deck is below the frame, so what the player sees run are the three
+  ramp steps and the first deck step. Tests in `tests/test_ambient_life.gd`;
+  `--qa-hud` snaps `hud_go` and `chase_00..02`.

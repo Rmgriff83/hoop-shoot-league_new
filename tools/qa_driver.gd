@@ -259,6 +259,17 @@ func _run_hud() -> void:
 	await _snap("hud_countdown")
 	await _sleep(3.0)
 	_hook_trial()
+	# GO: the cage's return arrows run their chase (ArcadeFx.chase()). hud_go
+	# catches the real one; chase_00..02 restart it so the snaps land at known
+	# moments (ramp steps lit, then down the deck).
+	await _sleep(0.25)
+	await _snap("hud_go")
+	var screen_c := get_tree().current_scene
+	if screen_c != null and "_court" in screen_c:
+		(screen_c.get("_court") as CourtGeometry).arcade_chase()
+		for i in 3:
+			await _sleep([0.05, 0.45, 0.5][i])
+			await _snap("chase_%02d" % i)
 	await _flick(1.9, 0.30, 0.0)
 	await _sleep(1.6)
 	await _snap("hud_live")

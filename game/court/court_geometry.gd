@@ -179,7 +179,7 @@ func _build_arena_model() -> bool:
 		_led_surfaces += 1
 	var lface := _arena.find_child("LeagueFace", true, false)
 	if lface is MeshInstance3D:
-		league_led = LedBoard.new()
+		league_led = LedBoard.new(LedBoard.LEAGUE_COLS)
 		league_led.name = "LeagueLed"
 		if hoop_set != null:
 			league_led.set_palette(hoop_set)
@@ -188,6 +188,7 @@ func _build_arena_model() -> bool:
 	# Lit-from-within surfaces (marquees, neon, the sky) glow independent of the sun.
 	for n in arena_set.emissive_nodes:
 		_unshade(n)
+	_matte("BackPad")   # the cage's foam: no specular, whatever the importer kept
 	_build_interactables(arena_set)
 	if arena_set.ocean:
 		_beach_fx = BeachFx.new()
@@ -587,6 +588,28 @@ func set_ticker(items: PackedStringArray) -> void:
 func set_ticker_paused(paused: bool) -> void:
 	if league_led != null:
 		league_led.set_ticker_paused(paused)
+
+
+## Strip the specular lobe from a mesh's surface material (foam, cloth): the
+## glTF's KHR_materials_specular may not survive import. Shared resource, so
+## every instance of the arena (the PiP too) gets it.
+func _matte(node_name: String) -> void:
+	var mi := _arena.find_child(node_name, true, false)
+	if not (mi is MeshInstance3D) or (mi as MeshInstance3D).mesh == null:
+		return
+	var mesh := (mi as MeshInstance3D).mesh
+	for i in mesh.get_surface_count():
+		var m := mesh.surface_get_material(i)
+		if m is BaseMaterial3D:
+			(m as BaseMaterial3D).metallic_specular = 0.0
+			(m as BaseMaterial3D).roughness = 1.0
+
+
+## The cage's return arrows light up in succession back to the shooter
+## (ArcadeFx.chase()); nothing elsewhere.
+func arcade_chase() -> void:
+	if _arcade_fx != null:
+		_arcade_fx.chase()
 
 
 ## The cage's string lights surge. Replaces the marquee sign's MarqueePulse

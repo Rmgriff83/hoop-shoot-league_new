@@ -18,8 +18,19 @@ func run(t) -> void:
 	t.eq(_count(cage, "Cabinet"), 14, "14 cabinet bodies")
 	t.eq(_count(cage, "CabScreen"), 14, "14 cabinet screens")
 	t.eq(_count(cage, "CabMarquee"), 14, "14 cabinet marquees")
+	# The padded back (2026-10-03): egg-crate foam over the panel, the ribbon
+	# board housed on top of it, and the return arrows down the lane.
+	t.eq(_count(cage, "BackPad"), 1, "the egg-crate foam over the back panel")
+	t.eq(_count(cage, "LeagueHousing"), 1, "the ribbon board's housing on the foam")
+	t.eq(_count(cage, "DeckArrow"), 2 * ArcadeFx.ARROW_STEPS, "two rows of %d return arrows" % ArcadeFx.ARROW_STEPS)
+	var lface: MeshInstance3D = cage.find_child("LeagueFace", true, false)
+	var aabb := lface.get_aabb()
+	t.ok(aabb.size.z > 2.3 and aabb.size.z < 2.4, "the ribbon board is full width (%.2f m)" % aabb.size.z)
+	t.ok(aabb.size.y > 0.25 and aabb.size.y < 0.28, "…and a touch taller (%.3f m)" % aabb.size.y)
 	var afx := ArcadeFx.new()
 	t.ok(afx.setup(cage), "ArcadeFx binds the cabinets")
+	t.eq(afx.arrow_count(), 2 * ArcadeFx.ARROW_STEPS, "…and the return arrows")
+	t.eq(afx.arrow_steps(), ArcadeFx.ARROW_STEPS, "…in %d steps" % ArcadeFx.ARROW_STEPS)
 	t.eq(afx.screen_count(), 14, "14 screen materials")
 	t.eq(afx.marquee_count(), 14, "14 marquee materials")
 	afx._process(0.5)
@@ -42,6 +53,15 @@ func run(t) -> void:
 	t.ok(lit > 0.1, "heat-up flares the string lights (%.2f)" % lit)
 	afx._process(ArcadeFx.FLARE_S + 0.1)
 	t.close(afx._bulb_mat.get_shader_parameter("flare"), 0.0, 1e-6, "the flare decays back out")
+	# The return arrows' chase (GO): top of the ramp first, down to the
+	# shooter's feet, three passes, then dim again.
+	t.ok(not afx.chasing() and afx.arrow_lit(0) == 0.0, "arrows idle dim")
+	afx.chase()
+	t.ok(afx.chasing() and afx.arrow_lit(0) > 0.99 and afx.arrow_lit(ArcadeFx.ARROW_STEPS - 1) == 0.0, "GO: the top-of-ramp arrow lights first")
+	afx._process((ArcadeFx.ARROW_STEPS - 1) * ArcadeFx.CHASE_STAGGER + 0.01)
+	t.ok(afx.arrow_lit(ArcadeFx.ARROW_STEPS - 1) > 0.9 and afx.arrow_lit(0) < 0.05, "…and the chase reaches the shooter's feet")
+	afx._process(ArcadeFx.CHASE_PASSES * afx.chase_period())
+	t.ok(not afx.chasing() and afx.arrow_lit(0) == 0.0 and afx.arrow_lit(4) == 0.0, "after %d passes the arrows go dim" % ArcadeFx.CHASE_PASSES)
 	afx.free()
 	cage.free()
 	# Beach: three tourist groups with arms and umbrellas; birds spawn and cross.

@@ -59,6 +59,21 @@ TUBE = 0.1
 DECK_X0 = -0.4
 RAMP_X0 = 3.5                       # flat landing zone ends past the far hoop pose (3.4)
 RAMP_TOP_Y = 0.9                    # mirrored by SimGeometry.arcade ramp_x0/ramp_h: the ball rolls down it
+# Egg-crate foam over the back panel (2026-10-03): a lattice of PAD_CELL
+# pyramids standing PAD_DEPTH proud of the panel's face, from the ramp's top to
+# the roof tube. The sim's back wall sits at the peaks' x (SimGeometry.arcade
+# ARCADE_BACK_X), so the ball bounces off the foam, not the panel behind it.
+# Return arrows (DeckArrow%02dL / %02dR): two rows at z ±ARROW_ROW_Z, centres
+# along x — three steps on the ramp's slope and six down the deck — each a
+# minimal 0.22 x 0.36 m chevron. Decals only (nothing in the sim);
+# ArcadeFx.ARROW_STEPS is the step count, two meshes per step.
+ARROW_XS = (4.2, 3.9, 3.62, 3.2, 2.75, 2.3, 1.85, 1.4, 0.95)
+ARROW_LEN = 0.22
+ARROW_HALF_W = 0.18
+ARROW_ROW_Z = 0.42
+PAD_CELL = 0.12
+PAD_DEPTH = 0.07
+PAD_FACE_X = CAGE_X1 - 0.02         # the panel box is 4 cm thick, centred on CAGE_X1
 HANGER_LEN = 0.71                   # rail (3.5) down to the hoop's arm (2.79)
 # String lights along the two top-corner rails, in place of the old marquee sign.
 # At CAGE_H they ride the frame tubes; the sim roof is also 3.9, so nothing hangs
@@ -116,13 +131,20 @@ def mat_flat(name, rgb, roughness=1.0):
     return m
 
 
-def mat_tex(name, path, alpha_clip=False, double_sided=False, emissive=False):
+def mat_tex(name, path, alpha_clip=False, double_sided=False, emissive=False, matte=False):
     m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
     m.use_nodes = True
     nodes, links = m.node_tree.nodes, m.node_tree.links
     b = nodes["Principled BSDF"]
     b.inputs["Roughness"].default_value = 1.0
     b.inputs["Metallic"].default_value = 0.0
+    if matte:
+        # No specular lobe at all (foam): KHR_materials_specular on export, and
+        # CourtGeometry._matte() repeats it at load for importers that drop it.
+        for key in ("Specular IOR Level", "Specular"):
+            if key in b.inputs:
+                b.inputs[key].default_value = 0.0
+                break
     tex = nodes.new("ShaderNodeTexImage")
     tex.name = tex.label = "Skin"
     tex.location = (b.location.x - 420, b.location.y)
@@ -198,6 +220,53 @@ def add_quad(name, sim_corners, toward, mat, coll, parent, uv_repeat=(1.0, 1.0),
     uvs = [(0, 0), (uv_repeat[0], 0), (uv_repeat[0], uv_repeat[1]), (0, uv_repeat[1])]
     for loop in f.loops:
         loop[uv].uv = uvs[verts.index(loop.vert)]
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    me.materials.append(mat)
+    o = bpy.data.objects.new(name, me)
+    link_obj(o, coll, parent, (0, 0, 0))
+    return o
+
+
+def add_pad(name, x_face, depth, y0, y1, z0, z1, cell, mat, coll, parent):
+    """Egg-crate foam: a grid of square cells, each a four-sided pyramid whose
+    peak stands `depth` toward the shooter (-x) of the valleys at the cell
+    corners. Every cell maps to one full tile of the pad texture (peak at the
+    tile's centre) and the mesh is flat-shaded, so each pyramid's four faces
+    catch the light differently and the lattice reads from the key."""
+    bm = bmesh.new()
+    uv = bm.loops.layers.uv.new("UVMap")
+    nz = max(1, int(round((z1 - z0) / cell)))
+    ny = max(1, int(round((y1 - y0) / cell)))
+    cz = (z1 - z0) / nz
+    cy = (y1 - y0) / ny
+    corners = {}
+    for j in range(ny + 1):
+        for i in range(nz + 1):
+            corners[(i, j)] = bm.verts.new(s2b((x_face, y0 + j * cy, z0 + i * cz)))
+    for j in range(ny):
+        for i in range(nz):
+            peak = bm.verts.new(s2b((x_face - depth, y0 + (j + 0.5) * cy, z0 + (i + 0.5) * cz)))
+            c = [corners[(i, j)], corners[(i + 1, j)], corners[(i + 1, j + 1)], corners[(i, j + 1)]]
+            cuv = [(0, 0), (1, 0), (1, 1), (0, 1)]
+            for k in range(4):
+                a, b = c[k], c[(k + 1) % 4]
+                f = bm.faces.new([a, b, peak])
+                f.smooth = False
+                for loop in f.loops:
+                    if loop.vert is peak:
+                        loop[uv].uv = (0.5, 0.5)
+                    elif loop.vert is a:
+                        loop[uv].uv = cuv[k]
+                    else:
+                        loop[uv].uv = cuv[(k + 1) % 4]
+    bm.normal_update()
+    # Face the shooter: flip anything whose normal points away from -x.
+    want = Vector(s2b((-1, 0, 0)))
+    flip = [f for f in bm.faces if f.normal.dot(want) < 0.0]
+    if flip:
+        bmesh.ops.reverse_faces(bm, faces=flip)
     me = bpy.data.meshes.new(name)
     bm.to_mesh(me)
     bm.free()
@@ -292,6 +361,8 @@ def build():
     metal_dark = mat_flat("Cage_MetalDark", (30, 28, 28), roughness=0.8)
     accent = mat_flat("Cage_Accent", (206, 62, 34), roughness=0.7)   # red-orange trim (rim family)
     panel = mat_flat("Cage_BackPanel", (34, 30, 30), roughness=1.0)  # solid back, flat colour
+    pad = mat_tex("Cage_Pad", TEX("cage_pad.png"), matte=True)       # egg-crate foam over it
+    arrow = mat_tex("Cage_Arrow", TEX("cage_arrow.png"), alpha_clip=True, emissive=True)
     lip = accent
     led_off = mat_tex("Cage_LeagueFace", TEX("hoop_led_off.png"), emissive=True)
 
@@ -319,6 +390,10 @@ def build():
     add_quad("MeshTop", [(CAGE_X0, CAGE_H, -w), (CAGE_X1, CAGE_H, -w), (CAGE_X1, CAGE_H, w), (CAGE_X0, CAGE_H, w)],
              (0, -1, 0), mesh, c_walls, cage, (reps_x, 2.0 * w * MESH_REPEATS_PER_M))
     add_box("BackPanel", (0.04, CAGE_H, 2.0 * w), (CAGE_X1, CAGE_H / 2.0, 0.0), panel, c_walls, cage)
+    # Egg-crate foam over the panel, from just above the ramp's top to just
+    # under the roof tube, inboard of the corner posts.
+    add_pad("BackPad", PAD_FACE_X, PAD_DEPTH, RAMP_TOP_Y + 0.02, CAGE_H - TUBE,
+            -(w - TUBE), w - TUBE, PAD_CELL, pad, c_walls, cage)
     # Side rails the crossbar rides on.
     rl = RAIL_X1 - RAIL_X0
     for j, z in enumerate((-RAIL_Z, RAIL_Z)):
@@ -340,6 +415,21 @@ def build():
         add_box("DeckCurb%d" % j, (RAMP_X0 - DECK_X0, 0.08, 0.08),
                 ((DECK_X0 + RAMP_X0) / 2.0, 0.04, z), accent, c_deck, cage)
     add_box("TrayLip", (0.06, 0.45, 2.0 * w), (DECK_X0, 0.225, 0.0), lip, c_deck, cage)
+    # Return arrows down the centre lane (DeckArrow00 at the top of the ramp,
+    # numbered toward the shooter): decals a few mm above the surface, the ones
+    # on the ramp laid along its slope. ArcadeFx lights them in succession when
+    # a game starts — a chase running back to the player.
+    def floor_h(x):
+        return 0.0 if x <= RAMP_X0 else RAMP_TOP_Y * (x - RAMP_X0) / (CAGE_X1 - RAMP_X0)
+    for i, xc in enumerate(ARROW_XS):
+        for side, zc in (("L", -ARROW_ROW_Z), ("R", ARROW_ROW_Z)):
+            x0, x1 = xc - ARROW_LEN / 2.0, xc + ARROW_LEN / 2.0
+            z0, z1 = zc - ARROW_HALF_W, zc + ARROW_HALF_W
+            lift = 0.004
+            add_quad("DeckArrow%02d%s" % (i, side),
+                     [(x0, floor_h(x0) + lift, z0), (x1, floor_h(x1) + lift, z0),
+                      (x1, floor_h(x1) + lift, z1), (x0, floor_h(x0) + lift, z1)],
+                     (-1, 1, 0), arrow, c_deck, cage, (1.0, 1.0))
     # League ribbon board across the bottom of the back wall (CourtGeometry
     # binds a SECOND LedBoard to it; the name must NOT be "LedFace", which
     # find_child would confuse with the hoop's own scoreboard).
@@ -351,10 +441,20 @@ def build():
     # Sized down from the full 2.36 m wall run, which read as a billboard. The
     # 6:1 aspect is fixed by the 192x32 LED texture, so width and height scale
     # together: 1.30 x 0.217 m, centred, is about half the cage's width.
-    lf_hw, lf_h, lf_cy = 0.65, 0.2167, 1.34
+    # 2026-10-03: full width again, inboard of the corner posts (|z| 1.21) at
+    # 2.36 m, and a touch taller at 0.262 m — the league LedBoard now runs 72
+    # columns (288x32, 9:1; LedBoard.LEAGUE_COLS) so its LEDs stay square.
+    lf_hw, lf_h, lf_cy = 1.18, 2.36 / 9.0, 1.34
     lf_y0, lf_y1, lf_z = lf_cy - lf_h / 2.0, lf_cy + lf_h / 2.0, lf_hw
-    add_quad("LeagueFace", [(CAGE_X1 - 0.03, lf_y0, -lf_z), (CAGE_X1 - 0.03, lf_y0, lf_z),
-                            (CAGE_X1 - 0.03, lf_y1, lf_z), (CAGE_X1 - 0.03, lf_y1, -lf_z)],
+    # The board now sits ON the foam: a dark housing box standing on the pad
+    # peaks (its back buried in the foam) with the LED face 10 mm proud of it.
+    lb_d = 0.05
+    lb_x = PAD_FACE_X - PAD_DEPTH - lb_d / 2.0
+    add_box("LeagueHousing", (lb_d + PAD_DEPTH, lf_h + 0.06, 2.0 * lf_hw + 0.04),
+            (lb_x + PAD_DEPTH / 2.0, lf_cy, 0.0), metal_dark, c_deck, cage)
+    lf_x = PAD_FACE_X - PAD_DEPTH - lb_d - 0.01
+    add_quad("LeagueFace", [(lf_x, lf_y0, -lf_z), (lf_x, lf_y0, lf_z),
+                            (lf_x, lf_y1, lf_z), (lf_x, lf_y1, -lf_z)],
              (-1, 0, 0), led_off, c_deck, cage, (1.0, 1.0))
     # ---- Arcade hall around the cage --------------------------------------
     hw = HALL_HALF_W

@@ -17,6 +17,10 @@ func run(t) -> void:
 	var led := LedBoard.new()
 	t.eq(led.material.albedo_texture.get_width(), LedBoard.WIDTH, "texture is 192 wide")
 	t.eq(led.material.albedo_texture.get_height(), LedBoard.HEIGHT, "texture is 32 tall")
+	var wide := LedBoard.new(LedBoard.LEAGUE_COLS)
+	t.eq(wide.material.albedo_texture.get_width(), LedBoard.LEAGUE_COLS * LedBoard.CELL, "the league ribbon is 288 wide")
+	t.eq(wide.cols, 72, "…72 columns")
+	wide.free()
 
 	# Every glyph renders, and the lit count matches the font's '#' count.
 	for key in LedBoard.FONT.keys():
