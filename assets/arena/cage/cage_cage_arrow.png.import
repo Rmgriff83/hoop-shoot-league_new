@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dbyh0p230e0km"
-path="res://.godot/imported/cage_cage_ramp.png-02de003ee065f40f7d40fb7f43fbdb9d.ctex"
+uid="uid://m1usf74mru2i"
+path="res://.godot/imported/cage_cage_arrow.png-8e369dc01f1c52aa9e5bf587ff2a2882.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "63bed50c60a6e2d7c8844d3bbb023849"
+"md5": "9ebf8da9ea581cfb18da5a48ed9fb1c6"
 }
 
 [deps]
 
-source_file="res://assets/arena/cage/cage_cage_ramp.png"
-dest_files=["res://.godot/imported/cage_cage_ramp.png-02de003ee065f40f7d40fb7f43fbdb9d.ctex"]
+source_file="res://assets/arena/cage/cage_cage_arrow.png"
+dest_files=["res://.godot/imported/cage_cage_arrow.png-8e369dc01f1c52aa9e5bf587ff2a2882.ctex"]
 
 [params]
 
