@@ -5,7 +5,10 @@ extends Node3D
 ## scrim; on a CanvasLayer above it sit the top bar (LVL01 + meter, the
 ## locker ball, the ticket pill, the menu), the AREA ZONE — the difficulty
 ## stars over the area's name (a dithered drop shadow) with the ranks and
-## multiplayer icons, big chevrons at the screen edges to page — the CARD
+## multiplayer icons, and the `▾ ALL AREAS · n/3 OPEN` line that opens the
+## AREA ARCHIVE (AreaArchivePage, docs/HOME.md → Area archive: the page you
+## see before any area's home, the only way between areas, so a locked
+## area's home is never shown; it opens on every cold launch) — the CARD
 ## AREA (the big LEAGUE card with its season numbers, trophies and loadout
 ## chips, and the TIME TRIAL / PRACTICE pair; tapping LEAGUE slides the
 ## cards out and the league in context in: LeagueContext), a FLOATING LAYER
@@ -16,18 +19,17 @@ extends Node3D
 ## court lives at a time: a page turn covers the screen, rebuilds the court
 ## and refreshes the chrome.
 
-const CARDS := [{"area": "cage", "mode": "practice"}, {"area": "beach", "mode": "beach"}, {"area": "city", "mode": "city"}]
+## The areas in page order live in AreaArchiveCopy.AREAS (the archive and
+## the snapshot tool read the same list).
+const CARDS := AreaArchiveCopy.AREAS
 const MARGIN := 36.0
 const COLUMN_W := 648.0
 const SCRIM_ALPHA := 0.25
 const FADE_S := 0.2
-const SWIPE_PX := 60.0
 ## The chrome's rows (design px). The zone: the stars over the name under the
-## top bar; the chevrons at mid-height between the zone and the card area.
+## top bar, the ALL AREAS line under the name.
 const ZONE_Y := 180.0
 const NAME_W := 430.0
-const CHEVRON_SIZE := Vector2(112, 176)
-const CHEVRON_Y := 520.0 - (CHEVRON_SIZE.y - 72.0) / 2.0
 ## The card area: a fixed box above the ticker that holds the home block
 ## (LEAGUE + the pair) or the league in context. Cards carry their shadow in
 ## their size, so the gaps are the design's less the 6 px strip.
@@ -69,8 +71,8 @@ var _float: Control
 var _league: LeagueContext
 var _open := false
 var _open_frac := 0.0
-var _prev: Button
-var _next: Button
+var _archive: AreaArchivePage
+var _all_areas: Button
 var _ticker: HomeTicker
 var _badge: LevelBadge
 var _season_chip: ShadowPanel
@@ -78,7 +80,6 @@ var _chip_a: Label
 var _chip_b: Label
 var _settings: SettingsPanel
 var _switching := false
-var _drag_x := NAN
 
 
 func _ready() -> void:
@@ -103,11 +104,23 @@ func _ready() -> void:
 		for i in CARDS.size():
 			if LeagueData.league(deep).get("location", "") == CARDS[i]["area"]:
 				_index = i
+	# A stale card for a locked area (the gate rose, or a new save): the
+	# first open area, and the archive in front.
+	var stale := not App.area_unlocked(str(CARDS[_index]["area"]))
+	if stale:
+		for i in CARDS.size():
+			if App.area_unlocked(str(CARDS[i]["area"])):
+				_index = i
+				break
+		App.home_card = _index
 	rebuild_chrome()
 	_ui.add_child(_cover)
 	_build_court(_index)
 	if deep != "" and App.enter_league(deep):
 		_open_league(true)
+	elif App.show_archive or stale:
+		App.show_archive = false
+		_open_archive(true)
 
 
 func _process(dt: float) -> void:
@@ -160,13 +173,12 @@ func rebuild_chrome() -> void:
 	_ui.add_child(_chrome)
 	_ui.move_child(_chrome, 0)
 
-	# The scrim over the court; it also takes the horizontal swipe.
+	# The scrim over the court.
 	var scrim := ColorRect.new()
 	scrim.name = "Scrim"
 	scrim.color = Color(RetroTheme.LIGHT["ink"], SCRIM_ALPHA)
 	scrim.set_anchors_preset(Control.PRESET_FULL_RECT)
 	scrim.mouse_filter = Control.MOUSE_FILTER_STOP
-	scrim.gui_input.connect(_on_swipe)
 	_chrome.add_child(scrim)
 
 	# Top bar.
@@ -218,6 +230,11 @@ func rebuild_chrome() -> void:
 	_area_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_area_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	RetroTheme.dithered(_area_name)
+	_area_name.mouse_filter = Control.MOUSE_FILTER_STOP
+	_area_name.gui_input.connect(func(ev: InputEvent) -> void:
+		if (ev is InputEventMouseButton or ev is InputEventScreenTouch) and not ev.pressed:
+			_open_archive()
+	)
 	name_row.add_child(_area_name)
 	var ranks := IconButton.new("ranks")
 	ranks.name = "Ranks"
@@ -239,6 +256,33 @@ func rebuild_chrome() -> void:
 		tw.tween_callback(func() -> void: soon.visible = false)
 	ranks.pressed.connect(flash)
 	multi.pressed.connect(flash)
+	# `▾ ALL AREAS · 2/3 OPEN`: the archive's door.
+	_all_areas = Button.new()
+	_all_areas.name = "AllAreas"
+	_all_areas.flat = true
+	_all_areas.focus_mode = Control.FOCUS_NONE
+	_all_areas.custom_minimum_size = Vector2(0, 34)
+	_all_areas.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+		_all_areas.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	var row := HBoxContainer.new()
+	row.name = "AllAreasRow"
+	row.add_theme_constant_override("separation", 10)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_all_areas.add_child(row)
+	var tri := DownTriangle.new()
+	tri.name = "Triangle"
+	tri.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(tri)
+	var all_label := _float_text("", 16, RetroTheme.SCENE_TEXT, false)
+	all_label.name = "AllAreasText"
+	all_label.add_theme_color_override("font_shadow_color", RetroTheme.SCENE_OUTLINE)
+	all_label.add_theme_constant_override("shadow_offset_x", 2)
+	all_label.add_theme_constant_override("shadow_offset_y", 2)
+	all_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(all_label)
+	_all_areas.pressed.connect(func() -> void: _open_archive())
+	zone.add_child(_all_areas)
 	# The season chip: `SEASON 2 - 2-1`, slid in from the left while the league is open.
 	_season_chip = ShadowPanel.new(RetroTheme.c("orange"), 0.0, 0.30, 16.0)
 	_season_chip.name = "SeasonChip"
@@ -261,13 +305,6 @@ func rebuild_chrome() -> void:
 	_chip_b.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	chip_row.add_child(_chip_b)
 	_chrome.add_child(_season_chip)
-	_prev = _chevron("<", -1)
-	_prev.position = Vector2(8, CHEVRON_Y)
-	_chrome.add_child(_prev)
-	_next = _chevron(">", 1)
-	_next.position = Vector2(720 - 8 - CHEVRON_SIZE.x, CHEVRON_Y)
-	_chrome.add_child(_next)
-
 	# The wash under the card area: a vertical gradient from nothing at the
 	# area's top to a dark gray at the ticker.
 	var wash := TextureRect.new()
@@ -373,9 +410,8 @@ func _apply_area(f: float) -> void:
 		_league.position = Vector2(1.1 * AREA_W * (1.0 - f), 0)
 		_league.size = _area.size
 	var home := f < 0.5
-	if _prev != null:
-		_prev.visible = home
-		_next.visible = home
+	if _all_areas != null:
+		_all_areas.visible = home
 	if _float != null:
 		_float.visible = not home
 	if _season_chip != null:
@@ -437,25 +473,17 @@ func is_league_open() -> bool:
 	return _open
 
 
-## A big edge chevron over the court: a dithered-shadow glyph on a bare button.
-func _chevron(text: String, dir: int) -> Button:
-	var b := Button.new()
-	b.name = "Prev" if dir < 0 else "Next"
-	b.flat = true
-	b.focus_mode = Control.FOCUS_NONE
-	b.size = CHEVRON_SIZE
-	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	var glyph := RetroTheme.on_scene(RetroTheme.display(text, 72)) as Label
-	glyph.name = "Glyph"
-	glyph.set_anchors_preset(Control.PRESET_FULL_RECT)
-	glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	RetroTheme.dithered(glyph)
-	b.add_child(glyph)
-	b.button_down.connect(func() -> void: glyph.add_theme_color_override("font_color", RetroTheme.LIGHT["orange"]))
-	b.button_up.connect(func() -> void: glyph.add_theme_color_override("font_color", RetroTheme.SCENE_TEXT))
-	b.pressed.connect(func() -> void: _switch(dir))
-	return b
+## The little bordered down-triangle on the ALL AREAS line.
+class DownTriangle extends Control:
+	func _init() -> void:
+		custom_minimum_size = Vector2(30, 30)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		draw_rect(Rect2(Vector2(2, 2), Vector2(28, 28)), RetroTheme.SCENE_OUTLINE, false, 2.0)
+		draw_rect(Rect2(Vector2(0, 0), Vector2(28, 28)), RetroTheme.SCENE_TEXT, false, 2.0)
+		var pts := PackedVector2Array([Vector2(8, 11), Vector2(20, 11), Vector2(14, 19)])
+		draw_colored_polygon(pts, RetroTheme.SCENE_TEXT)
 
 
 func _update_zone() -> void:
@@ -473,6 +501,9 @@ func _update_zone() -> void:
 	var n := int(arena.title_stars) if arena != null else 1
 	for i in maxi(n, 1):
 		_stars.add_child(PixelIcon.new("icon_star", Vector2(27, 27)))
+	var all_label: Label = _all_areas.find_child("AllAreasText", true, false) if _all_areas != null else null
+	if all_label != null:
+		all_label.text = "ALL AREAS · " + AreaArchiveCopy.open_count(App.level(), _archive_rows())
 
 
 func headline() -> String:
@@ -756,37 +787,52 @@ func _open_settings() -> void:
 	add_child(_settings)
 
 
-## A horizontal drag on the scrim turns the page (cards above it take their taps).
-func _on_swipe(ev: InputEvent) -> void:
-	if _open:
+# ---- the area archive --------------------------------------------------------------
+
+
+func _archive_rows() -> Array:
+	return AreaArchiveCopy.rows(App.level(), App.league_states(), AreaArchiveCopy.bests(), App.league_gating)
+
+
+## The page before an area's home (docs/HOME.md → Area archive). `instant`
+## on a cold launch: no slide, and no `<` when the area behind is locked.
+func _open_archive(instant := false) -> void:
+	if _archive != null or _locker != null or _settings != null or _switching:
 		return
-	if ev is InputEventScreenTouch or ev is InputEventMouseButton:
-		if ev.pressed:
-			_drag_x = ev.position.x
-		elif not is_nan(_drag_x):
-			var dx: float = ev.position.x - _drag_x
-			_drag_x = NAN
-			if dx <= -SWIPE_PX:
-				_switch(1)
-			elif dx >= SWIPE_PX:
-				_switch(-1)
+	var rows := _archive_rows()
+	_archive = AreaArchivePage.new()
+	_archive.name = "AreaArchive"
+	var here := str(CARDS[_index]["area"])
+	_archive.build(rows, AreaArchiveCopy.open_count(App.level(), rows), App.area_unlocked(here))
+	_archive.closed.connect(func() -> void: _archive = null)
+	_archive.picked.connect(_go_area)
+	add_child(_archive)
+	if not instant:
+		_archive.slide_in()
 
 
-## Page turn: cover the screen, rebuild the court, refresh the chrome, uncover.
-func _switch(dir: int) -> void:
-	if _switching or _open or CARDS.size() < 2:
+func archive() -> AreaArchivePage:
+	return _archive
+
+
+## Land on an area's home from the archive: the page's ink hands over to
+## the title's cover, the court rebuilds underneath, the cover lifts.
+func _go_area(id: String) -> void:
+	var i := AreaArchiveCopy.index_of(id)
+	if i < 0 or not App.area_unlocked(id) or _switching:
 		return
 	_switching = true
-	_cover.color = Color(RetroTheme.c("ink"), 0.0)
-	var fade := create_tween()
-	fade.tween_property(_cover, "color:a", 1.0, FADE_S).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	await fade.finished
-	_index = posmod(_index + dir, CARDS.size())
-	App.home_card = _index
-	_build_court(_index)
-	_update_zone()
-	_fill_cards()
-	_refresh_ticker()
+	_cover.color = Color(RetroTheme.c("ink"), 1.0)
+	if _archive != null:
+		_archive.queue_free()
+		_archive = null
+	if i != _index:
+		_index = i
+		App.home_card = _index
+		_build_court(_index)
+		_update_zone()
+		_fill_cards()
+		_refresh_ticker()
 	var back := create_tween()
 	back.tween_property(_cover, "color:a", 0.0, FADE_S * 1.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	await back.finished

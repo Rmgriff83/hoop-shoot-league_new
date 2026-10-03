@@ -899,3 +899,10 @@ against the core within 1 mm). Skins: `tools/aseprite/gen_peggy_textures.lua`.
 See-through parts (`Glass`, `Frost%d`) are flat materials with an Alpha
 below 1 and `blend_method` BLEND, which the glTF exporter writes as
 `alphaMode: BLEND`. Full write-up: docs/LOCKER.md.
+
+## 21. Area snapshots (2026-10-02)
+
+The area archive's cards show the real courts: after rebuilding any area
+(or changing its lighting or hoop) run `godot --path . --resolution
+360x640 -- --qa-area-snaps`, then `--import`, and commit
+`assets/ui/areas/area_<id>.png` (docs/HOME.md → Area archive).

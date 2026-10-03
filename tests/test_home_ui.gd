@@ -56,7 +56,7 @@ func _theme(t) -> void:
 	t.eq(int(CosmeticLibrary.get_arena("city").title_stars), 3, "the city is three stars")
 	t.eq(int(CosmeticLibrary.get_arena("cage").title_stars), 1, "the cage is one star")
 	t.ok(int(CosmeticLibrary.get_arena("beach").title_stars) > int(CosmeticLibrary.get_arena("cage").title_stars), "the beach is harder")
-	for icon in ["ball", "coin", "jersey", "multiplayer", "star", "stopwatch", "trophy"]:
+	for icon in ["ball", "coin", "jersey", "multiplayer", "star", "stopwatch", "trophy", "ticket", "lock"]:
 		t.ok(ResourceLoader.exists("res://assets/ui/icon_%s.png" % icon), "icon_%s ships" % icon)
 	var solid := ShadowCard.solid(RetroTheme.SCENE_TEXT, RetroTheme.TAN, RetroTheme.LIGHT["orange"])
 	t.eq(solid.fill, RetroTheme.SCENE_TEXT, "a solid card fills its face")

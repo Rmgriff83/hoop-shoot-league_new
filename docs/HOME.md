@@ -138,6 +138,33 @@ is the worked example: `SimGeometry.city()` + `geo_for_mode`, the `city` /
 seven shooters, `data/economy.json` multipliers, `calibrate_ai -- city`,
 the card lab, `ResultsCopy.board_name`, and `tests/test_city.gd`.
 
+## Area archive (design "Area Archive" 17a, 2026-10-02)
+
+`game/ui/area_archive_page.gd` (`AreaArchivePage`, a layer-30 page; copy
+`game/ui/area_archive_copy.gd`, `tests/test_area_archive.gd`, QA
+`--qa-archive`): **the page you see before any area's home**, and the only
+way between areas — the home's edge chevrons and swipe are gone, so a
+locked area's home is never shown. It opens on every cold launch
+(`App.show_archive`), from the area name, and from the `▾ ALL AREAS · 2/3
+OPEN` line under it; `<` goes back to the area you came from (hidden when
+that area is locked). A cream sheet, `AREAS` and the open count, then a
+320 px card per area: a **snapshot of the real rendered court** under a
+bottom gradient, the stars, the name, a `>` and the history line (`🏆 2
+TITLES · 3 SEASONS · ⏱ BEST 31`, `NO RUNS`) when it is open; a locked area
+under an ink overlay with the lock (`assets/ui/icon_lock.png`,
+`tools/aseprite/gen_ui_icons.lua`) and `OPENS AT LVL n`, disabled.
+Tapping an open card presses it, inks the page over and hands the fade to
+the title (`_go_area`: the court rebuilds underneath, the cover lifts).
+
+The snapshots are `assets/ui/areas/area_<id>.png`, rendered by the game
+itself: `godot --path . --resolution 360x640 -- --qa-area-snaps` builds
+each area's real `CourtGeometry` (glb, hoop, lights, ambient life) in an
+offscreen 1328×640 viewport from the area's title pose (fov × 0.78 for the
+landscape crop), lets it settle 1.4 s and saves the PNG into the project.
+**Re-run it (then `--import`) after an area's model, lighting or hoop
+changes**, and commit the PNGs. The areas' page order is
+`AreaArchiveCopy.AREAS` (the title's `CARDS` is the same list).
+
 ## Results (design "Time Trial Results", 2026-09-26)
 
 `game/screens/results_screen.gd` (a `Node3D`): the finished time trial's

@@ -23,6 +23,9 @@ var league_gating: bool = not OS.is_debug_build()
 var current_league := ""
 ## The home screen's last card (page index), so leaving an area returns to it.
 var home_card := 0
+## The area archive opens in front of the home on a cold launch (docs/HOME.md
+## → Area archive); the title consumes this.
+var show_archive := true
 ## A league the home page should open straight into (its id), set by
 ## to_league_hub() — the heat result's CONTINUE SEASON. Cleared once used.
 var home_open_league := ""

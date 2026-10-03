@@ -14,7 +14,7 @@ var _outcomes: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
-	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end")):
+	if not (args.has("--qa") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	if args.has("--qa-title"):
@@ -37,6 +37,10 @@ func _ready() -> void:
 		_run_peggy.call_deferred()
 	elif args.has("--qa-match-end"):
 		_run_match_end.call_deferred()
+	elif args.has("--qa-area-snaps"):
+		_run_area_snaps.call_deferred()
+	elif args.has("--qa-archive"):
+		_run_archive.call_deferred()
 	elif args.has("--qa-aim"):
 		_run_aim.call_deferred()
 	else:
@@ -45,6 +49,7 @@ func _ready() -> void:
 
 func _run() -> void:
 	await _sleep(1.2)
+	await _close_archive()
 	await _snap("01_title")
 	await _click_button_named("TIME TRIAL")   # the cage card is the first page
 	await _sleep(1.2)
@@ -187,6 +192,7 @@ func _click_named(node_name: String) -> void:
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-hud
 func _run_hud() -> void:
 	await _sleep(1.2)
+	await _close_archive()
 	await _click_button_named("TIME TRIAL")
 	await _sleep(0.5)
 	await _snap("hud_countdown")
@@ -366,8 +372,7 @@ func _run_cards() -> void:
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-beach
 func _run_beach() -> void:
 	await _sleep(1.2)
-	await _click_button_named(">")           # page to the beach card
-	await _sleep(1.0)                         # the page turn (fade + slide)
+	await _pick_area("beach")
 	await _click_button_named("TIME TRIAL")
 	await _sleep(4.4)             # countdown, then GO
 	for i in 9:
@@ -384,10 +389,7 @@ func _run_beach() -> void:
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-city
 func _run_city() -> void:
 	await _sleep(1.2)
-	await _click_button_named(">")
-	await _sleep(1.0)
-	await _click_button_named(">")           # page to the city card
-	await _sleep(1.0)
+	await _pick_area("city")
 	await _snap("city_home")
 	App.start_mode("trial_city")             # straight in (the dev save may be under level 5)
 	await _sleep(4.4)
@@ -411,6 +413,7 @@ func _run_city() -> void:
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-peggy
 func _run_peggy() -> void:
 	await _sleep(1.0)
+	await _close_archive()
 	var cos_before: Dictionary = SaveService.get_cosmetics()
 	var set_before: Dictionary = SaveService.get_settings()
 	App.grant_tickets(1200)
@@ -507,6 +510,95 @@ func _run_peggy() -> void:
 	get_tree().quit()
 
 
+## The area archive's snapshots (docs/HOME.md → Area archive): each area's
+## REAL court — its glb, hoop, lights and ambient life — rendered offscreen
+## at twice the card's size from the area's own title pose, saved into the
+## project as assets/ui/areas/area_<id>.png (re-run after an area changes).
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-area-snaps
+const SNAP_SIZE := Vector2i(1328, 640)
+const SNAP_FOV_SCALE := 0.78
+const SNAP_SETTLE_S := 1.4
+
+
+func _run_area_snaps() -> void:
+	await _sleep(0.6)
+	var out_dir := ProjectSettings.globalize_path("res://assets/ui/areas")
+	DirAccess.make_dir_recursive_absolute(out_dir)
+	for card in AreaArchiveCopy.AREAS:
+		var area := str(card["area"])
+		var arena := CosmeticLibrary.get_arena(area)
+		if arena == null:
+			continue
+		var vp := SubViewport.new()
+		vp.size = SNAP_SIZE
+		vp.own_world_3d = true
+		vp.transparent_bg = false
+		vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		add_child(vp)
+		var court := CourtGeometry.new()
+		court.name = "Court"
+		court.geo = App.geo_for_mode(str(card["mode"]))
+		court.arena_set = arena
+		court.hoop_set = App.hoop_for_mode(str(card["mode"]))
+		vp.add_child(court)
+		court.led.set_text("HOOP SHOOT", court.led.accent_color)
+		court.set_ticker(TickerText.arcade_items(0))
+		var cam := Camera3D.new()
+		var spec := TitlePan.spec_of(arena)
+		cam.fov = float(spec["fov"]) * SNAP_FOV_SCALE
+		var p := TitlePan.pose(spec, 0.0)
+		vp.add_child(cam)
+		cam.position = p["pos"]
+		cam.look_at(p["look"])
+		var t := 0.0
+		while t < SNAP_SETTLE_S:
+			var dt: float = get_process_delta_time()
+			court.step_rim(dt)
+			t += dt
+			await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		var img := vp.get_texture().get_image()
+		img.save_png(out_dir + "/area_%s.png" % area)
+		img.save_png("user://qa/area_%s.png" % area)
+		print("QA area snap %s (%dx%d)" % [area, img.get_width(), img.get_height()])
+		vp.queue_free()
+		await _sleep(0.2)
+	print("QA area snaps: done")
+	get_tree().quit()
+
+
+## The area archive page (docs/HOME.md → Area archive): the page as the
+## player sees it, then staged at level 1 and level 5, then a pressed card.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-archive
+func _run_archive() -> void:
+	await _sleep(1.2)
+	await _snap("archive_open")
+	var page: AreaArchivePage = get_tree().root.find_child("AreaArchive", true, false)
+	if page != null:
+		page.close()
+		await _sleep(0.5)
+	for level in [1, 5]:
+		var rows := AreaArchiveCopy.rows(level, App.league_states(), AreaArchiveCopy.bests(), true)
+		var staged := AreaArchivePage.new()
+		staged.build(rows, AreaArchiveCopy.open_count(level, rows))
+		add_child(staged)
+		await _sleep(0.5)
+		await _snap("archive_lvl%d" % level)
+		if level == 5:
+			var card: Button = staged.card("beach")
+			if card != null:
+				var c := (card.global_position + Vector2(100, 100)) * 0.5
+				_mouse_button(c, true)
+				await _sleep(0.15)
+				await _snap("archive_press")
+				_mouse_button(c, false)
+				await _sleep(0.3)
+		staged.queue_free()
+		await _sleep(0.3)
+	print("QA archive: done")
+	get_tree().quit()
+
+
 ## The league match-end page (docs/HOME.md → Results): the five moments
 ## staged from heat dicts, each snapped early (the slam / sink) and settled.
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-match-end
@@ -544,8 +636,30 @@ func _run_match_end() -> void:
 	get_tree().quit()
 
 
+## The archive opens in front of the home on a cold launch: close it (or
+## pick an area through it) before tapping the home's own buttons.
+func _close_archive() -> void:
+	var page: AreaArchivePage = get_tree().root.find_child("AreaArchive", true, false)
+	if page != null:
+		page.close()
+		await _sleep(0.4)
+
+
+func _pick_area(id: String) -> void:
+	var title: Node = get_tree().current_scene
+	var page: AreaArchivePage = get_tree().root.find_child("AreaArchive", true, false)
+	if page == null and title != null and title.has_method("_open_archive"):
+		title.call("_open_archive")
+		await _sleep(0.4)
+		page = get_tree().root.find_child("AreaArchive", true, false)
+	if page != null:
+		page.pick(id)
+		await _sleep(1.0)
+
+
 func _run_title() -> void:
 	await _sleep(1.0)
+	await _close_archive()
 	for i in 4:
 		await _snap("title_cage_%02d" % i)
 		if i < 3:
@@ -561,13 +675,13 @@ func _run_title() -> void:
 		await _sleep(0.1)
 		_mouse_button(Vector2(2, 2), false)
 		await _sleep(0.4)
-	await _click_button_named(">")
-	await _sleep(1.2)
+	await _pick_area("beach")
+	await _sleep(0.4)
 	await _snap("title_beach_00")
 	await _sleep(6.0)
 	await _snap("title_beach_01")
-	await _click_button_named("<")
-	await _sleep(1.2)
+	await _pick_area("cage")
+	await _sleep(0.4)
 	await _snap("title_cage_back")
 	# The league in context: open it, walk the tabs, close it.
 	await _click_button_named("LEAGUE")
@@ -635,6 +749,7 @@ func _run_title() -> void:
 func _run_aim() -> void:
 	App.set_shot_help(App.SHOT_HELP_FULL)   # the whole point of this pass
 	await _sleep(1.2)
+	await _close_archive()
 	await _click_button_named("TIME TRIAL")   # on the cage card
 	await _sleep(4.4)             # countdown, then GO
 
