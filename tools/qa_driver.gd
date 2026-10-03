@@ -500,9 +500,17 @@ func _run_city() -> void:
 		await _snap("city_%02d" % i)
 		await _sleep(4.5)
 	await _snap("city_last")
-	# The floor speakers up close (the camera parked in front of them).
-	var spk: Node3D = get_tree().root.find_child("Speakers", true, false)
+	# The fence scoreboard up close, then the floor speakers (the camera
+	# parked in front of each).
 	var ccam: Camera3D = get_viewport().get_camera_3d()
+	var rig: Node3D = get_tree().root.find_child("ReaderRig", true, false)
+	if rig != null and ccam != null:
+		var at := rig.global_position + Vector3(0.0, 0.5, 0.0)
+		ccam.global_position = at + Vector3(-2.6, 0.2, 0.0)
+		ccam.look_at(at)
+		await _sleep(0.3)
+		await _snap("city_scoreboard")
+	var spk: Node3D = get_tree().root.find_child("Speakers", true, false)
 	if spk != null and ccam != null:
 		var at := spk.global_position + Vector3(0.0, 0.46, 0.0)
 		ccam.global_position = at + Vector3(-1.35, 0.35, 0.25)

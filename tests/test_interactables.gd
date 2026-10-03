@@ -47,7 +47,7 @@ func run(t) -> void:
 	for i in 2:
 		for part in ["SpeakerWoofer%dCone", "SpeakerWoofer%dCap", "SpeakerWoofer%dScrew5", "SpeakerMid%dCone", "SpeakerTweeter%d", "SpeakerDome%d", "SpeakerBadge%d", "SpeakerBaffle%d"]:
 			t.ok(cglb.find_child(part % i, true, false) is MeshInstance3D, "%s in the city glb" % (part % i))
-	t.ok(cglb.find_child("ScoreboardRig", true, false) == null and cglb.find_child("LedFace", true, false) is MeshInstance3D, "the city's reader board hangs on the fence (no turning rig)")
+	t.ok(cglb.find_child("ScoreboardRig", true, false) == null and cglb.find_child("ScoreClock", true, false) is MeshInstance3D, "the city's scoreboard hangs on the fence (no turning rig; tests/test_scoreboard.gd)")
 	cglb.free()
 	# The glb has the boombox and its LED.
 	var glb: Node = load(str(beach.model_path)).instantiate()

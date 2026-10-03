@@ -173,6 +173,26 @@ func _build_arena_model() -> bool:
 	_arena_pole = _arena.find_child("Pole", true, false) as Node3D
 	_scoreboard = _arena.find_child("ScoreboardRig", true, false) as Node3D
 	_arena_anim = _arena.find_child("AnimationPlayer", true, false)
+	# The city's fence scoreboard (Scoreboard): its clock window takes the
+	# hoop board's place — score, clock and every message — plus the
+	# HOME / VISITOR / PER digit windows.
+	var clock := _arena.find_child("ScoreClock", true, false)
+	if clock is MeshInstance3D:
+		var sb := Scoreboard.new()
+		sb.name = "Scoreboard"
+		if hoop_set != null:
+			sb.set_palette(hoop_set)
+		remove_child(led)
+		led.free()
+		led = sb
+		info = sb
+		add_child(sb)
+		(clock as MeshInstance3D).material_override = sb.material
+		for pair in [["ScoreHome", sb.home], ["ScoreVisitor", sb.visitor], ["ScorePeriod", sb.period]]:
+			var win := _arena.find_child(str(pair[0]), true, false)
+			if win is MeshInstance3D:
+				(win as MeshInstance3D).material_override = (pair[1] as DigitPanel).material
+		_led_surfaces += 1
 	# An arena may host the scoreboard itself (the beach's ground cabinet).
 	var aface := _arena.find_child("LedFace", true, false)
 	if aface is MeshInstance3D:
@@ -593,6 +613,28 @@ func _matte(node_name: String) -> void:
 		if m is BaseMaterial3D:
 			(m as BaseMaterial3D).metallic_specular = 0.0
 			(m as BaseMaterial3D).roughness = 1.0
+
+
+## The city scoreboard's clock / VISITOR / PER windows; no-ops on a board
+## without them (the hoop boards show the score and the messages only).
+func set_clock(seconds: float) -> void:
+	if led is Scoreboard:
+		(led as Scoreboard).set_clock(seconds)
+
+
+func clear_clock() -> void:
+	if led is Scoreboard:
+		(led as Scoreboard).clear_clock()
+
+
+func set_visitor(score: int) -> void:
+	if led is Scoreboard:
+		(led as Scoreboard).set_visitor(score)
+
+
+func set_period(p: int) -> void:
+	if led is Scoreboard:
+		(led as Scoreboard).set_period(p)
 
 
 ## The cage's return arrows light up in succession back to the shooter

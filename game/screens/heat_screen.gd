@@ -949,6 +949,15 @@ func _on_ai_outcome(outcome: Dictionary) -> void:
 
 func _process(dt: float) -> void:
 	super(dt)
+	# The city scoreboards: VISITOR is the other side, PER the period (OT 2+),
+	# and the opponent's own clock in the PiP. After super: the heat's period
+	# outranks the base trial's regulation/overtime pair.
+	_court.set_visitor(heat.ai.score)
+	_court.set_period(heat.ot + 1)
+	if _ai_court != null:
+		_ai_court.set_visitor(heat.player.score)
+		_ai_court.set_period(heat.ot + 1)
+		_ai_court.set_clock(heat.ai.time_left)
 	# Opponent view sync (their board slides too in the last 30 s).
 	if heat.ai.geo != _ai_applied_geo:
 		_ai_applied_geo = heat.ai.geo

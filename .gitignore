@@ -13,3 +13,4 @@ build/
 .DS_Store
 *.blend1
 *.tmp
+__pycache__/

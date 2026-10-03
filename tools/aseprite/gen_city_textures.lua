@@ -534,3 +534,48 @@ do
   end
   save(spr, "city_speaker_baffle.png")
 end
+
+-- city_scoreboard_face.png 224x160 — the fence scoreboard's glass (1.4 x 1.0 m
+-- at 160 px/m; build_city.py ScoreFace). Black face, a dark bezel line, the
+-- recessed digit windows (the live Scoreboard quads sit a few mm proud of
+-- them) and the HOME / PER / VISITOR labels in the 3x5 pixel face.
+do
+  local W, H = 224, 160
+  local spr, img = newImage(W, H)
+  local face, bezel, well, label = rgb(16, 16, 18), rgb(40, 40, 44), rgb(6, 6, 8), rgb(236, 236, 232)
+  fill(img, 0, 0, W - 1, H - 1, face)
+  fill(img, 0, 0, W - 1, 3, bezel); fill(img, 0, H - 4, W - 1, H - 1, bezel)
+  fill(img, 0, 0, 3, H - 1, bezel); fill(img, W - 4, 0, W - 1, H - 1, bezel)
+  -- Windows (x from the left edge, y from the top): clock, HOME, PER, VISITOR.
+  fill(img, 49, 21, 175, 56, well)
+  fill(img, 4, 97, 92, 146, well)
+  fill(img, 97, 104, 127, 140, well)
+  fill(img, 132, 97, 220, 146, well)
+  local FONT = {
+    H = {"#.#", "#.#", "###", "#.#", "#.#"}, O = {"###", "#.#", "#.#", "#.#", "###"},
+    M = {"#.#", "###", "###", "#.#", "#.#"}, E = {"###", "#..", "##.", "#..", "###"},
+    P = {"###", "#.#", "###", "#..", "#.."}, R = {"##.", "#.#", "##.", "#.#", "#.#"},
+    V = {"#.#", "#.#", "#.#", "#.#", ".#."}, I = {"###", ".#.", ".#.", ".#.", "###"},
+    S = {"###", "#..", "###", "..#", "###"}, T = {"###", ".#.", ".#.", ".#.", ".#."},
+  }
+  local function word(text, cx, y0, sc)
+    local w = #text * 4 * sc - sc
+    local x = math.floor(cx - w / 2 + 0.5)
+    for i = 1, #text do
+      local g = FONT[text:sub(i, i)]
+      for r = 1, 5 do
+        local row = g[r]
+        for c = 1, 3 do
+          if row:sub(c, c) == "#" then
+            local px, py = x + (i - 1) * 4 * sc + (c - 1) * sc, y0 + (r - 1) * sc
+            fill(img, px, py, px + sc - 1, py + sc - 1, label)
+          end
+        end
+      end
+    end
+  end
+  word("HOME", 48, 72, 3)
+  word("PER", 112, 78, 2)
+  word("VISITOR", 176, 72, 3)
+  save(spr, "city_scoreboard_face.png")
+end

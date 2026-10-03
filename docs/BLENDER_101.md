@@ -685,7 +685,18 @@ frame, a fence loop on the beach's enclosure line (`ENC_X0..X1 -11.2..5.7`,
 2026-10-02 and keeps only the concrete embankment; its standings banner
 stands on the wall cap, `league_banner_pos.y 1.16`), the reader board a taller cabinet strapped to the back fence left of
 the hoop (`ReaderRig` + `LedFace`; not a `ScoreboardRig`, so it never
-turns), two floor speakers left of the hoop's base as the city's radio
+turns), the **fence scoreboard** (2026-10-03, Ross's tabletop-scoreboard
+reference: `ReaderRig` — a rounded black bezel, a wedge housing that deepens
+toward the bottom with vent slots, brackets to the mesh; the glass
+`ScoreFace` is `city_scoreboard_face.png` with the HOME / PER / VISITOR
+labels and recessed windows, and the live windows sit a few mm proud of it:
+`ScoreClock`, a 32-column `LedBoard` matrix in yellow that shows the clock
+and takes every message in the time area, and `ScoreHome` / `ScoreVisitor` /
+`ScorePeriod`, `DigitPanel` seven-segment glass in red and green —
+`game/view/scoreboard.gd`, `Scoreboard extends LedBoard`, bound by
+`CourtGeometry` as the city's `led`/`info`; the screens tick
+`CourtGeometry.set_clock/set_visitor/set_period`; `tests/test_scoreboard.gd`;
+`--qa-city` snaps `city_scoreboard`), two floor speakers left of the hoop's base as the city's radio
 (`Speakers`, `SpeakerLed`, `ArenaSet.interactables`; polished 2026-10-03 to
 Ross's walnut-bookshelf reference: a veneered cabinet (`city_speaker_wood.png`)
 whose lip frames a black textured baffle (`city_speaker_baffle.png`), a big

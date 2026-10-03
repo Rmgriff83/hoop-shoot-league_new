@@ -720,6 +720,10 @@ func _process(dt: float) -> void:
 	_court.step_rim(dt)
 	_court.step_net(dt, trial.balls())
 	_hud.update_clock(trial.time_left, trial.countdown, trial.phase)
+	# The city scoreboard's clock and period (practice has no clock: blank).
+	if not _practice:
+		_court.set_clock(trial.time_left)
+		_court.set_period(2 if trial.overtime else 1)
 	# Backboard light band: flashes yellow as the clock runs down.
 	if trial.phase == TimeTrial.PHASE_RUNNING and not _practice:
 		_court.led.band_flash(_court.led.band_flash_color, LedBoard.band_hz_for(trial.time_left))
