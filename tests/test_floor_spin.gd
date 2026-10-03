@@ -23,8 +23,16 @@ static func _rolling_spin(s: BallState) -> float:
 	return -v_t / SimConstants.R_BALL
 
 
-func _drives_toward_rolling(t) -> void:
+## The arcade feel on a flat deck: the cage's ball-return ramp (which this
+## shot would land on the crease of) has its own test, tests/test_ramp.gd.
+static func _flat_arcade() -> SimGeometry:
 	var geo := SimGeometry.arcade()
+	geo.ramp_h = 0.0
+	return geo
+
+
+func _drives_toward_rolling(t) -> void:
+	var geo := _flat_arcade()
 	var s := ShotSim.create_shot({
 		"angle_deg": 44.0, "speed": 5.4, "rx": 0.0, "ry": 1.85,
 		"rz": 0.0, "bx": 1.0, "bz": 0.0,
@@ -56,7 +64,7 @@ func _drives_toward_rolling(t) -> void:
 
 ## Rim and board must be untouched — they only decay spin, as before.
 func _other_surfaces_unchanged(t) -> void:
-	var geo := SimGeometry.arcade()
+	var geo := _flat_arcade()
 	for kind in [Colliders.KIND_RIM, Colliders.KIND_BOARD]:
 		var s := ShotSim.create_shot({
 			"angle_deg": 50.0, "speed": 6.0, "rx": 0.0, "ry": 1.85,
@@ -74,6 +82,6 @@ func _other_surfaces_unchanged(t) -> void:
 func _deterministic(t) -> void:
 	var launch := {"angle_deg": 44.0, "speed": 5.4, "rx": 0.0, "ry": 1.85,
 		"rz": 0.0, "bx": 1.0, "bz": 0.0}
-	var a := ShotSim.simulate_shot(launch, false, SimGeometry.arcade())
-	var b := ShotSim.simulate_shot(launch, false, SimGeometry.arcade())
+	var a := ShotSim.simulate_shot(launch, false, _flat_arcade())
+	var b := ShotSim.simulate_shot(launch, false, _flat_arcade())
 	t.eq(JSON.stringify(a), JSON.stringify(b), "floor spin stays deterministic")

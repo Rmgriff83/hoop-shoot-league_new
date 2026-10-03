@@ -117,11 +117,37 @@ static func board_contact(p: SimVec3, geo: SimGeometry) -> Contact:
 	return Contact.new(KIND_BOARD, SimConstants.R_BALL - d, ex / d, ey / d, ez / d, qx, qy, qz)
 
 
-static func floor_contact(p: SimVec3) -> Contact:
+## The floor: flat at y 0, plus the arcade's ball-return ramp where the
+## geometry has one (the deeper of the two wins at the crease). Without a
+## geometry, or without a ramp, this is the original flat floor exactly.
+static func floor_contact(p: SimVec3, geo: SimGeometry = null) -> Contact:
 	var depth := SimConstants.R_BALL - p.y
-	if depth <= 0.0:
+	var best: Contact = null
+	if depth > 0.0:
+		best = Contact.new(KIND_FLOOR, depth, 0.0, 1.0, 0.0, p.x, 0.0, p.z)
+	if geo != null and geo.has_ramp():
+		var c := ramp_contact(p, geo)
+		if c != null and (best == null or c.depth > best.depth):
+			best = c
+	return best
+
+
+## The ball-return ramp: an inclined plane from the deck at ramp_x0 up to
+## ramp_h at ramp_x1, full width. Its normal leans toward the shooter, so a
+## ball that lands on it bounces and rolls down the slope. It is floor
+## material (E_FLOOR / MU_FLOOR, ground torque), and its hits are floor hits.
+static func ramp_contact(p: SimVec3, geo: SimGeometry) -> Contact:
+	var run := geo.ramp_x1 - geo.ramp_x0
+	var len := sqrt(run * run + geo.ramp_h * geo.ramp_h)
+	var nx := -geo.ramp_h / len
+	var ny := run / len
+	# Signed distance from the plane through (ramp_x0, 0). In front of the
+	# crease the plane runs below the deck, so a ball on the deck is clear.
+	var d := (p.x - geo.ramp_x0) * nx + p.y * ny
+	var depth := SimConstants.R_BALL - d
+	if depth <= 0.0 or p.x > geo.ramp_x1 + SimConstants.R_BALL:
 		return null
-	return Contact.new(KIND_FLOOR, depth, 0.0, 1.0, 0.0, p.x, 0.0, p.z)
+	return Contact.new(KIND_FLOOR, depth, nx, ny, 0.0, p.x - nx * d, p.y - ny * d, p.z)
 
 
 ## The in-ground pole behind the board: a vertical cylinder from the floor to
@@ -162,7 +188,35 @@ static func wall_contact(p: SimVec3, geo: SimGeometry) -> Contact:
 	depth = p.y + r - geo.wall_y_max
 	if depth > 0.0 and (best == null or depth > best.depth):
 		best = Contact.new(KIND_WALL, depth, 0.0, -1.0, 0.0, p.x, geo.wall_y_max, p.z)
+	var lip := lip_contact(p, geo)
+	if lip != null and (best == null or lip.depth > best.depth):
+		best = lip
 	return best
+
+
+## The tray lip: a thin box LIP_T deep behind lip_x, lip_h tall, full width.
+## Contact with its nearest point (like the board's edge), so a ball rolling
+## into its face is stopped and one dropping onto its top edge is deflected,
+## never flung. Null without a lip.
+const LIP_T := 0.06
+static func lip_contact(p: SimVec3, geo: SimGeometry) -> Contact:
+	if geo.lip_x == -INF or geo.lip_h <= 0.0:
+		return null
+	var qx := clampf(p.x, geo.lip_x - LIP_T, geo.lip_x)
+	var qy := clampf(p.y, 0.0, geo.lip_h)
+	var ex := p.x - qx
+	var ey := p.y - qy
+	var d := sqrt(ex * ex + ey * ey)
+	if d >= SimConstants.R_BALL:
+		return null
+	if d < 1e-9:
+		return Contact.new(KIND_WALL, SimConstants.R_BALL, 1.0, 0.0, 0.0, geo.lip_x, p.y, p.z)
+	return Contact.new(KIND_WALL, SimConstants.R_BALL - d, ex / d, ey / d, 0.0, qx, qy, p.z)
+
+
+## A floor contact on the ramp's slope (its normal leans; the deck's is up).
+static func is_ramp(c: Contact) -> bool:
+	return c.kind == KIND_FLOOR and c.ny < 1.0
 
 
 static func find_contact(p: SimVec3, geo: SimGeometry) -> Contact:
@@ -181,7 +235,7 @@ static func find_contact(p: SimVec3, geo: SimGeometry) -> Contact:
 	c = wall_contact(p, geo)
 	if c != null:
 		return c
-	return floor_contact(p)
+	return floor_contact(p, geo)
 
 
 ## Restitution per surface. Rim/board come from the geometry so an arcade
@@ -236,8 +290,9 @@ static func resolve_contact(state: BallState, c: Contact) -> float:
 			var cos_in := -vn / speed  # 1 = dead head-on into the tube
 			kappa = cos_in * cos_in
 
-	# Normal restitution.
-	var j := (1.0 + _material_e(c.kind, state.geo) * kappa) * kappa * vn
+	# Normal restitution (the ramp's slope has its own, softer bounce).
+	var e := state.geo.ramp_e if is_ramp(c) else _material_e(c.kind, state.geo)
+	var j := (1.0 + e * kappa) * kappa * vn
 	v.x -= j * c.nx
 	v.y -= j * c.ny
 	v.z -= j * c.nz

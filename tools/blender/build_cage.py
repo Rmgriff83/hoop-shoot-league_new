@@ -58,7 +58,7 @@ RAIL_Z = CAGE_HALF_W - 0.08
 TUBE = 0.1
 DECK_X0 = -0.4
 RAMP_X0 = 3.5                       # flat landing zone ends past the far hoop pose (3.4)
-RAMP_TOP_Y = 0.9                    # visual only — the sim floor stays flat at y = 0
+RAMP_TOP_Y = 0.9                    # mirrored by SimGeometry.arcade ramp_x0/ramp_h: the ball rolls down it
 HANGER_LEN = 0.71                   # rail (3.5) down to the hoop's arm (2.79)
 # String lights along the two top-corner rails, in place of the old marquee sign.
 # At CAGE_H they ride the frame tubes; the sim roof is also 3.9, so nothing hangs
@@ -327,7 +327,9 @@ def build():
     add_quad("Deck", [(DECK_X0, 0, -w), (RAMP_X0, 0, -w), (RAMP_X0, 0, w), (DECK_X0, 0, w)],
              (0, 1, 0), deck, c_deck, cage, ((RAMP_X0 - DECK_X0), 2.0 * w))
     # Ball-return ramp: rises from the landing zone up to the back panel so the
-    # ball visibly "comes down" toward the shooter. Cosmetic — sim floor is y 0.
+    # ball comes down toward the shooter. The sim has the same plane
+    # (SimGeometry.arcade ARCADE_RAMP_X0 / ARCADE_RAMP_H) and the TrayLip below
+    # (ARCADE_LIP_X / ARCADE_LIP_H): a miss lands on it and rolls to the lip.
     add_quad("Ramp", [(RAMP_X0, 0, -w), (CAGE_X1, RAMP_TOP_Y, -w), (CAGE_X1, RAMP_TOP_Y, w), (RAMP_X0, 0, w)],
              (-1, 1, 0), ramp, c_deck, cage, (1.0, 2.0 * w))
     for j, z in enumerate((-w + 0.05, w - 0.05)):

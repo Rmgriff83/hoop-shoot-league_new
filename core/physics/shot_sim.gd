@@ -269,11 +269,17 @@ static func _update_resolution(s: BallState) -> void:
 	if not s.geo.has_walls():
 		far = (pos.x < s.rx - 3.0 or pos.x > s.geo.hoop_x + 3.0
 			or minf(absf(pos.z - s.geo.hoop_z), absf(pos.z - s.rz)) > 4.0)
+	# With a ball-return ramp (the arcade cage) the ball is not dropped on its
+	# third floor hit: on the slope it keeps rolling down whatever its speed,
+	# and on the deck it rolls out against deck_roll_decel until it is slower
+	# than the rest speed. Everywhere else the original rules hold exactly.
+	var ramp := s.geo.has_ramp()
+	var on_ramp := ramp and pos.x > s.geo.ramp_x0
 	if (
-		s.floor_hits >= 3
+		(s.floor_hits >= 3 and not ramp)
 		or s.t > SimConstants.MAX_SHOT_TIME
 		or far
-		or (s.floor_hits > 0 and s.vel.length() < 0.6)
+		or (s.floor_hits > 0 and s.vel.length() < 0.6 and not on_ramp)
 	):
 		s.settled = true
 		s.resolved = true
@@ -285,7 +291,10 @@ static func _resolve_in_place(s: BallState, contact: Colliders.Contact) -> void:
 	if not is_nan(impact):
 		# Only meaningful hits become events — soft partial-impulse grazes (< ~0.4 m/s
 		# effective) are one physical "rub" and would spam the log/sfx as dozens of hits.
-		if impact > s.geo.rim_log_impact or contact.kind != Colliders.KIND_RIM:
+		# Floor rubs under floor_log_impact (a rolling ball touches the ground
+		# every step) are not events either; 0 everywhere but the arcade.
+		var soft_floor := contact.kind == Colliders.KIND_FLOOR and impact < s.geo.floor_log_impact
+		if (impact > s.geo.rim_log_impact or contact.kind != Colliders.KIND_RIM) and not soft_floor:
 			_record_event(s, contact, impact)
 		if contact.kind == Colliders.KIND_FLOOR:
 			s.floor_hits += 1
@@ -300,6 +309,22 @@ static func _resolve_in_place(s: BallState, contact: Colliders.Contact) -> void:
 		s.pos.x += residual.nx * (residual.depth + 1e-4)
 		s.pos.y += residual.ny * (residual.depth + 1e-4)
 		s.pos.z += residual.nz * (residual.depth + 1e-4)
+
+
+## Rolling resistance on the deck in front of the arcade's ramp: a ball in
+## floor contact there loses deck_roll_decel m/s² of horizontal speed, so a
+## roll-out comes to rest (and the trial can drop it) instead of rolling to
+## the front wall. Zero (no-op) everywhere without a ramp.
+static func _deck_roll(s: BallState) -> void:
+	var geo := s.geo
+	if not geo.has_ramp() or geo.deck_roll_decel <= 0.0 or s.pos.x > geo.ramp_x0:
+		return
+	var h := sqrt(s.vel.x * s.vel.x + s.vel.z * s.vel.z)
+	if h <= 1e-9:
+		return
+	var h2 := maxf(0.0, h - geo.deck_roll_decel * SimConstants.SIM_DT)
+	s.vel.x *= h2 / h
+	s.vel.z *= h2 / h
 
 
 ## Has this ball touched the rim or board so far? (A clean entry has not.)
@@ -425,6 +450,8 @@ static func step_shot(s: BallState) -> void:
 				_resolve_in_place(s, contact)
 		else:
 			_resolve_in_place(s, hit)
+	if hit != null and hit.kind == Colliders.KIND_FLOOR:
+		_deck_roll(s)
 	_update_cylinder_state(s, prev_x, prev_y, prev_z)
 	_maybe_vortex_capture(s)
 	# Tunneling invariant: after resolution the ball must sit outside every collider.

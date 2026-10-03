@@ -23,13 +23,13 @@ extends CosmeticSet
 ## heavy (tail_mass), an entering ball kicks the cords (kick), and they keep
 ## about half their own momentum under the ball (friction).
 @export var net_stiffness := 0.14
-@export var net_damping := 0.9965
+@export var net_damping := 0.9864
 @export var net_rest_pull := 0.003
 @export var net_rest_spring := 90.0
 @export var net_tail_mass := 1.6
 @export var net_kick := 1.6
 @export var net_grab_band := 0.06
-@export var net_grab_pull := 0.5
+@export var net_grab_pull := 0.0
 @export var net_friction := 0.55
 
 ## LED skin (defaults = LedBoard's constants).

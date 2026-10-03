@@ -266,6 +266,7 @@ func _run_hud() -> void:
 	# Rim pops (design "Solo Modes HUD" 5a): a swish and an ON FIRE pop at
 	# the rim, snapped through their 1.1 s life.
 	await _pop_snaps("_court", "hud_pop")
+	await _ramp_snaps()
 	var pause: Button = get_tree().root.find_child("PauseButton", true, false)
 	if pause != null:
 		var c := (pause.global_position + pause.size / 2.0) * 0.5
@@ -872,6 +873,28 @@ func _pop_snaps(court_var: String, prefix: String) -> void:
 	await _snap("%s_01" % prefix)
 	await _sleep(0.4)
 	await _snap("%s_02" % prefix)
+
+
+## The cage's ball-return ramp: drop a ball from rest over the slope (as a
+## miss behind the rim would) and snap it bouncing and rolling down to the
+## deck: ramp_00..03.
+func _ramp_snaps() -> void:
+	var screen := get_tree().current_scene
+	if screen == null or not "trial" in screen:
+		print("QA: no trial for the ramp snaps!")
+		return
+	var trial: TimeTrial = screen.get("trial")
+	var geo: SimGeometry = trial.geo
+	if not geo.has_ramp():
+		print("QA: this geometry has no ramp")
+		return
+	trial._flights.push_back({
+		"state": ShotSim.create_shot({"angle_deg": 0.0, "speed": 0.0, "rx": geo.ramp_x1 - 0.3, "ry": 1.3, "rz": 0.2, "bx": 1.0, "bz": 0.0}, geo),
+		"seen_events": 0, "scored": false,
+	})
+	for i in 4:
+		await _sleep([0.3, 0.35, 0.4, 0.5][i])
+		await _snap("ramp_%02d" % i)
 
 
 func _hook_trial() -> void:

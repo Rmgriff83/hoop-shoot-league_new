@@ -64,7 +64,7 @@ func run(t) -> void:
 	root.add_child(court)
 	var p := court.rim_pop_from(HudCopy.rim_pop(ShotClassify.SWISH, 2))
 	t.eq(court.pop_count(), 1, "one pop on the court")
-	t.close(p.position.y, court.geo.hoop_y + 0.05, 1e-6, "just above the rim")
+	t.close(p.position.y, court.geo.hoop_y + CourtGeometry.POP_LIFT, 1e-6, "a hand above the rim")
 	t.close(p.position.x, court.geo.hoop_x + 0.1, 1e-6, "a little behind it")
 	var fire := court.rim_pop_from(HudCopy.fire_pop())
 	t.eq(court.pop_count(), 2, "pops stack instead of replacing each other")

@@ -71,10 +71,46 @@ var wall_mu: float = 0.3
 var pole_r: float = 0.0
 var pole_off: float = 0.3
 var pole_top: float = 0.0
+## The arcade cabinet's ball-return ramp (the Ramp quad in
+## tools/blender/build_cage.py): the floor rises from y 0 at ramp_x0 to
+## ramp_h at ramp_x1 (the back wall), full width. ramp_h 0 = a flat floor
+## everywhere (regulation, beach, city — the golden fixtures never see it).
+## With a ramp the ball is let ROLL instead of being dropped on its third
+## floor hit: on the slope it never settles, on the deck in front it rolls
+## against deck_roll_decel (m/s²) until it is slower than the rest speed.
+## Floor hits softer than floor_log_impact (m/s) are not logged, so a rolling
+## ball does not spam contact events (and bounce sounds) every step.
+var ramp_x0: float = 0.0
+var ramp_x1: float = 0.0
+var ramp_h: float = 0.0
+## The slope's restitution (the deck keeps E_FLOOR): the cabinet's return
+## channel is padded, so a ball dropping onto it does not rocket back at the
+## shooter the way a hardwood floor would send it.
+var ramp_e: float = SimConstants.E_FLOOR
+var deck_roll_decel: float = 0.0
+var floor_log_impact: float = 0.0
+## The tray lip at the front of the deck (the TrayLip box in build_cage.py):
+## a low wall of height lip_h at lip_x that stops a roll-out in front of the
+## shooter. -INF = none.
+var lip_x: float = -INF
+var lip_h: float = 0.0
 
 ## Arcade rim feel (regulation E_RIM 0.32, MU_RIM 0.12, SPIN_DECAY_RIM 0.55).
 ## Tuned with Ross on-device 2026-09-12: livelier bounce, less grab, spin
 ## survives contacts longer. The backboard keeps its SimConstants values.
+## The cage's ball-return ramp (2026-10-03): flat deck to x 3.5, then a
+## 0.9 m rise to the back wall at 4.4 — build_cage.py RAMP_X0 / RAMP_TOP_Y.
+## The deck in front rolls like a rubber mat (2 m/s²: a 2 m/s roll stops in
+## a metre) and only floor hits above 0.35 m/s log a bounce.
+const ARCADE_RAMP_X0 := 3.5
+const ARCADE_RAMP_H := 0.9
+const ARCADE_RAMP_E := 0.35
+const ARCADE_DECK_ROLL_DECEL := 2.0
+const ARCADE_FLOOR_LOG_IMPACT := 0.35
+## The tray lip (build_cage.py DECK_X0 / TrayLip 0.45 tall) catches the
+## roll-out at the shooter's feet.
+const ARCADE_LIP_X := -0.4
+const ARCADE_LIP_H := 0.45
 const ARCADE_RIM_E := 0.38
 const ARCADE_RIM_MU := 0.08
 const ARCADE_RIM_SPIN_DECAY := 0.70
@@ -150,6 +186,14 @@ func with_pose(dist: float, lateral: float) -> SimGeometry:
 	g.pole_r = pole_r
 	g.pole_off = pole_off
 	g.pole_top = pole_top
+	g.ramp_x0 = ramp_x0
+	g.ramp_x1 = ramp_x1
+	g.ramp_h = ramp_h
+	g.ramp_e = ramp_e
+	g.deck_roll_decel = deck_roll_decel
+	g.floor_log_impact = floor_log_impact
+	g.lip_x = lip_x
+	g.lip_h = lip_h
 	return g
 
 
@@ -173,6 +217,17 @@ func with_vortex(on: bool) -> SimGeometry:
 ## Does this geometry have an enclosure at all?
 func has_walls() -> bool:
 	return wall_x_max < INF or wall_x_min > -INF or wall_z_max < INF or wall_z_min > -INF
+
+
+func has_ramp() -> bool:
+	return ramp_h > 0.0 and ramp_x1 > ramp_x0
+
+
+## Height of the floor surface at x (the ramp's slope, 0 on the deck).
+func floor_height(x: float) -> float:
+	if not has_ramp() or x <= ramp_x0:
+		return 0.0
+	return ramp_h * (minf(x, ramp_x1) - ramp_x0) / (ramp_x1 - ramp_x0)
 
 
 ## Clone at a new hoop distance, keeping the current lateral offset.
@@ -205,6 +260,17 @@ static func arcade(dist := 2.6) -> SimGeometry:
 	g.wall_z_min = -1.26
 	g.wall_z_max = 1.26
 	g.wall_y_max = 3.9
+	# The ball-return ramp under the hoop (RAMP_X0 / RAMP_TOP_Y in that
+	# script): a miss that drops behind the rim lands on the slope and rolls
+	# back down toward the shooter.
+	g.ramp_x0 = ARCADE_RAMP_X0
+	g.ramp_x1 = 4.4
+	g.ramp_h = ARCADE_RAMP_H
+	g.ramp_e = ARCADE_RAMP_E
+	g.deck_roll_decel = ARCADE_DECK_ROLL_DECEL
+	g.floor_log_impact = ARCADE_FLOOR_LOG_IMPACT
+	g.lip_x = ARCADE_LIP_X
+	g.lip_h = ARCADE_LIP_H
 	return g
 
 

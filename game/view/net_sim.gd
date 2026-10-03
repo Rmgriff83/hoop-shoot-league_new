@@ -24,7 +24,7 @@ const STEP := 1.0 / 120.0
 const MAX_STEPS_PER_FRAME := 6
 const ITERATIONS := 3
 ## Feel (instance fields so a HoopSet can configure them; defaults = classic).
-var damping := 0.9965
+var damping := 0.9864   # Ross, on-device 2026-10-03 (was 0.9965)
 const GRAVITY := 9.81
 ## Cord elasticity: fraction of a spring's length error corrected per iteration.
 ## Below 1 the cords STRETCH under the ball and store energy, which is what
@@ -44,7 +44,7 @@ const CORD_R := 0.012
 ## Cords within this band outside the ball's surface are drawn onto it (the net
 ## drapes and grips the ball rather than merely being pushed).
 var grab_band := 0.05
-var grab_pull := 0.6
+var grab_pull := 0.0    # Ross, on-device 2026-10-03: no drape-grab on nylon
 ## Fraction of the ball's surface velocity handed to cords it grips. This is
 ## the backspin grab: the spinning surface drags the front cords down as it
 ## passes, and the stretched cords whip them back up afterwards.

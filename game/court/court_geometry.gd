@@ -314,12 +314,15 @@ func _build_hoop_model() -> bool:
 var pop_scale := 1.0
 ## Seconds between pops that would otherwise start together.
 const POP_GAP := 0.6
+## How far above the rim plane a pop starts (m). Raised from 0.05 on
+## 2026-10-03: Ross wanted the numbers to sit a bit clearer of the ring.
+const POP_LIFT := 0.2
 
 
 func rim_pop(number: String, word: String, color: Color) -> RimPop:
 	var pop := RimPop.new()
 	pop.name = "RimPop"
-	pop.position = Vector3(geo.hoop_x + 0.1, geo.hoop_y + 0.05, geo.hoop_z)
+	pop.position = Vector3(geo.hoop_x + 0.1, geo.hoop_y + POP_LIFT, geo.hoop_z)
 	# A make and its streak call (`+2` then `ON FIRE`) land in the same
 	# frame: queue the newcomer behind the youngest pop still at the rim.
 	var latest := -POP_GAP

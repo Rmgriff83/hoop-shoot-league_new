@@ -940,8 +940,10 @@ momentum), overwriting their velocity with the ball's (`friction 1.0`),
 sampling the ball once a frame, teleporting to rest at sleep and never
 updating the normals. Now: shape memory is a SPRING (`net_rest_spring`,
 an acceleration, so the cords carry momentum through rest and overshoot)
-plus a faint pull (`net_rest_pull 0.003`); `net_damping 0.9965` rings a
-swish down in ~2 s; `net_stiffness 0.14`; `net_friction 0.55` keeps half
+plus a faint pull (`net_rest_pull 0.003`); `net_damping 0.9864` (Ross's
+on-device set, baked 2026-10-03; was 0.9965) rings a swish down quickly;
+`net_grab_pull 0` (no drape-grab on nylon, same bake);
+`net_stiffness 0.14`; `net_friction 0.55` keeps half
 the cords' momentum under the ball; the bottom ring hangs `net_tail_mass`
 1.6× heavy so it lags and whips back; the sim's rim-plane `enter` event
 kicks the cords (`net_kick` 1.6 m/s, `NetSim.kick`, `CourtGeometry.net_kick`)
@@ -959,3 +961,28 @@ hoop set; LOG prints `NET <kind> {json}` for logcat. The nylon mesh
 stays 5 rings × 12: the shipped hoop glbs carry hand-authored animations
 and hooks that `build_hoop.py -- --force` does not reproduce, so do not
 rebuild them from the script.
+
+## 24. The cage ramp has physics (2026-10-03)
+
+The cabinet's ball-return ramp (`Ramp` in `build_cage.py`: the floor rises
+from y 0 at x 3.5 to 0.9 m at the back wall, x 4.4) used to be cosmetic — the
+sim's floor was flat at y 0 and a miss sank through it. `SimGeometry.arcade`
+now carries the same plane (`ramp_x0/ramp_x1/ramp_h`, the constants
+`ARCADE_RAMP_*`) and `Colliders.floor_contact` takes the deeper of the flat
+deck and the slope (`ramp_contact`), so a ball that drops behind the rim lands
+on the slope, bounces (its own softer `ramp_e 0.35` — a padded channel; the
+deck keeps `E_FLOOR`) and rolls down toward the shooter. The tray lip at the
+front of the deck (`TrayLip`, x −0.4, 0.45 tall) is a collider too
+(`lip_contact`, wall material) so a roll-out stops at the shooter's feet.
+
+With a ramp the shot sim does not drop the ball on its third floor hit: on the
+slope it never settles, on the deck it rolls out against `deck_roll_decel`
+(2 m/s²; in practice the floor's per-contact friction stops it sooner) until it
+is under the rest speed, and floor rubs softer than `floor_log_impact`
+(0.35 m/s) are not logged, so a rolling ball does not fire a bounce sound every
+step. Everything is zero/off for regulation, the beach and the city, which keep
+the old rules byte-exact (golden grid 100 %). Tests: `tests/test_ramp.gd`;
+`tests/test_floor_spin.gd` flattens the arcade's ramp to test ground torque on
+a flat deck. QA: `--qa-hud` drops a ball over the slope and snaps `ramp_00..03`.
+If you move the ramp or the lip in Blender, change the `ARCADE_RAMP_*` /
+`ARCADE_LIP_*` constants to match — the ball must roll where the slope is drawn.
