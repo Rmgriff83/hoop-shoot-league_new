@@ -393,6 +393,12 @@ func _run_city() -> void:
 	await _snap("city_home")
 	App.start_mode("trial_city")             # straight in (the dev save may be under level 5)
 	await _sleep(4.4)
+	# A bunch of pigeons forced over the street, snapped as it crosses the view.
+	var birds: CityFx = get_tree().root.find_child("CityFx", true, false)
+	if birds != null:
+		birds.spawn_pigeons()
+		await _sleep(CityFx.PIGEON_EDGE / CityFx.PIGEON_SPEED)   # the bunch is mid-view
+		await _snap("city_pigeons")
 	for i in 10:
 		await _snap("city_%02d" % i)
 		await _sleep(4.5)

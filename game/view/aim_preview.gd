@@ -35,8 +35,9 @@ func _ready() -> void:
 	mesh.radial_segments = 6
 	mesh.rings = 3
 	var mat := StandardMaterial3D.new()
-	# Quiet grey rather than a hot yellow — it sits behind the shot, not in it.
-	mat.albedo_color = Color(0.78, 0.81, 0.88, 0.72)
+	# The light yellow of the original (Ross, 2026-10-02: back from the quiet
+	# grey) — soft enough to sit behind the shot, warm enough to read on any court.
+	mat.albedo_color = Color(1.0, 0.93, 0.62, 0.74)
 	mat.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 	mat.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
 	for i in DOTS:

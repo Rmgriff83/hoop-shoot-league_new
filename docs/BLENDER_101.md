@@ -719,6 +719,12 @@ glows hidden. **Windows** are painted, not lit: every `Building*` and
 (`CityFx.FACADE_TINT`). (The per-window light shader with its
 authored mask and id maps was removed on 2026-10-01: it lagged the phone.)
 
+**Pigeons** (2026-10-02): now and then a loose bunch of 4–7 crosses low
+over the street (`CityFx.spawn_pigeons`, its own RNG stream so the
+traffic's draws stay put): `city_pigeon.png` is a 4-frame flap of a plump
+grey bird on the beach's `bird.gdshader` billboard, quick shallow flaps
+with glides, 4.6 m/s, 0.5 m across — a different bird from the gulls.
+
 **Cars** are the hometown pack's glbs under `assets/vehicles/` (GGBot,
 credited): light traffic since 2026-10-01 (a car every 14–34 s a lane, at
 most two on the street, one real headlight spot — the bumper-to-bumper

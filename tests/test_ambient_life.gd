@@ -159,6 +159,30 @@ func _city(t) -> void:
 	t.eq(_count(city, "Wall"), 0, "no knee wall: the fence runs to the ground")
 	t.eq(_count(city, "FenceFoot"), 4, "a bottom rail on every side")
 	t.ok(city.find_child("Fence", true, false) is MeshInstance3D and city.find_child("FenceBack", true, false) == null, "one chain-link loop (black, all four sides)")
+	# Pigeons: a loose bunch crosses over the street now and then (a
+	# different bird from the beach's gulls), glides included, freed past the edge.
+	t.ok(FileAccess.file_exists("res://assets/textures/city_pigeon.png"), "pigeon sheet generated")
+	t.eq(cfx.pigeon_count(), 0, "no pigeons at first")
+	cfx.spawn_pigeons()
+	var np := cfx.pigeon_count()
+	t.ok(np >= 4 and np <= 7, "a bunch of 4-7 pigeons (%d)" % np)
+	var pz: float = cfx._pigeons[0].position.z
+	var px: float = cfx._pigeons[0].position.x
+	t.ok(px >= CityFx.PIGEON_X.x and px <= CityFx.PIGEON_X.y, "over the street (%.1f)" % px)
+	t.ok(cfx._pigeons[0].position.y < BeachFx.FLOCK_Y.x + 3.0, "lower than the gulls")
+	for i in 60:
+		cfx._step_pigeons(1.0 / 60.0)
+	t.ok(absf(cfx._pigeons[0].position.z) < absf(pz), "pigeons fly inward")
+	var glided := false
+	for i in 60 * 20:
+		cfx._step_pigeons(1.0 / 60.0)
+		for g in cfx._pigeon_gliding:
+			if g:
+				glided = true
+		if cfx.pigeon_count() == 0:
+			break
+	t.ok(glided, "some pigeons glided on the way")
+	t.eq(cfx.pigeon_count(), 0, "the bunch is freed once it has crossed")
 	t.eq(cfx.car_count(), 0, "no car yet")
 	cfx.spawn_car()
 	t.eq(cfx.car_count(), 1, "a car spawned")

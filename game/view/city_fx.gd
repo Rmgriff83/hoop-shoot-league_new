@@ -20,6 +20,18 @@ const MODELS: Array[String] = [
 	"res://assets/vehicles/jalopy_brown.glb",
 ]
 const RNG_SEED := 0x0C17_0CA5
+## Pigeons: now and then a loose bunch crosses over the street beyond the
+## fence — plump, quick shallow flaps with glides, lower and closer than the
+## beach's gulls (a different bird: Ross, 2026-10-02).
+const PIGEON_SHADER := preload("res://game/court/bird.gdshader")
+const PIGEON_SHEET := "res://assets/textures/city_pigeon.png"
+const PIGEON_GAP := Vector2(18.0, 40.0)    # s between flocks
+const PIGEON_X := Vector2(8.5, 13.5)        # over the street
+const PIGEON_Y := Vector2(5.0, 8.0)
+const PIGEON_EDGE := 30.0                   # z where a flock enters / leaves
+const PIGEON_SPEED := 4.6
+const PIGEON_SIZE := Vector2(0.5, 0.34)
+const PIGEON_GLIDE := Vector2(1.2, 2.6)     # s of flapping between glides
 ## The street runs laterally behind the hoop (along sim z); `StreetRig` in the
 ## glb sits on its centre line (tools/blender/build_city.py STREET_X).
 const STREET_X := 11.1
@@ -70,6 +82,16 @@ var _spots := 0
 var _sent := 0
 var _rng := RandomNumberGenerator.new()
 var _tree_rigs: Array[Node3D] = []
+var _pigeons: Array[MeshInstance3D] = []
+var _pigeon_mats: Array[ShaderMaterial] = []
+var _pigeon_vel: Array[Vector3] = []
+var _pigeon_phase: Array[float] = []
+var _pigeon_base_y: Array[float] = []
+var _pigeon_glide: Array[float] = []       # s until this bird toggles flap / glide
+var _pigeon_gliding: Array[bool] = []
+var _pigeon_root: Node3D
+var _next_flock := 12.0
+var _bird_rng := RandomNumberGenerator.new()   # its own stream: the traffic's draws stay put
 var _facade_mats: Dictionary = {}     # texture path → the one dusk material its faces share
 var _facade_faces := 0
 var _t := 0.0
@@ -96,7 +118,12 @@ func setup(arena: Node) -> bool:
 	_fx_root = Node3D.new()
 	_fx_root.name = "Traffic"
 	arena.add_child(_fx_root)
+	_pigeon_root = Node3D.new()
+	_pigeon_root.name = "Pigeons"
+	arena.add_child(_pigeon_root)
 	_rng.seed = RNG_SEED
+	_bird_rng.seed = RNG_SEED ^ 0x5EED
+	_next_flock = _bird_rng.randf_range(8.0, PIGEON_GAP.y)
 	_next_car = _rng.randf_range(3.0, CAR_GAP.y)
 	return true
 
@@ -280,6 +307,7 @@ static func _light_lamps(car: Node) -> void:
 
 func _process(dt: float) -> void:
 	_t += dt
+	_step_pigeons(dt)
 	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
 	if cam != null:
 		for rig in _tree_rigs:
@@ -328,3 +356,85 @@ func _process(dt: float) -> void:
 		if float(_lane_wait[k]) <= 0.0 and lane_clear(dir) and _cars.size() < MAX_CARS:
 			spawn_car(dir)
 			_lane_wait[k] = _rng.randf_range(CAR_GAP.x, CAR_GAP.y)
+
+
+# ---- pigeons --------------------------------------------------------------------
+
+
+func pigeon_count() -> int:
+	return _pigeons.size()
+
+
+## A loose bunch of 4–7 pigeons, side by side and staggered (no V), low over
+## the street, headed across. Some glide between bursts of flapping.
+func spawn_pigeons() -> void:
+	_clear_pigeons()
+	if _pigeon_root == null:
+		return
+	var from_left := _bird_rng.randf() < 0.5
+	var n := _bird_rng.randi_range(4, 7)
+	var y0 := _bird_rng.randf_range(PIGEON_Y.x, PIGEON_Y.y)
+	var dir := 1.0 if from_left else -1.0
+	var sheet: Texture2D = load(PIGEON_SHEET)
+	for i in n:
+		var mi := MeshInstance3D.new()
+		mi.name = "Pigeon%d" % i
+		var quad := QuadMesh.new()
+		quad.size = PIGEON_SIZE
+		mi.mesh = quad
+		var m := ShaderMaterial.new()
+		m.shader = PIGEON_SHADER
+		m.set_shader_parameter("sheet", sheet)
+		m.set_shader_parameter("phase", _bird_rng.randf())
+		m.set_shader_parameter("flap_hz", _bird_rng.randf_range(5.0, 7.0))
+		m.set_shader_parameter("facing", dir)
+		mi.material_override = m
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		mi.position = Vector3(_bird_rng.randf_range(PIGEON_X.x, PIGEON_X.y), y0 + _bird_rng.randf_range(-0.8, 0.8),
+			-dir * (PIGEON_EDGE + _bird_rng.randf_range(0.0, 2.5)))
+		_pigeon_root.add_child(mi)
+		_pigeons.push_back(mi)
+		_pigeon_mats.push_back(m)
+		_pigeon_vel.push_back(Vector3(0.0, 0.0, dir * PIGEON_SPEED * _bird_rng.randf_range(0.9, 1.1)))
+		_pigeon_phase.push_back(_bird_rng.randf() * TAU)
+		_pigeon_base_y.push_back(mi.position.y)
+		_pigeon_glide.push_back(_bird_rng.randf_range(PIGEON_GLIDE.x, PIGEON_GLIDE.y))
+		_pigeon_gliding.push_back(false)
+	_next_flock = _bird_rng.randf_range(PIGEON_GAP.x, PIGEON_GAP.y)
+
+
+func _clear_pigeons() -> void:
+	for b in _pigeons:
+		b.queue_free()
+	_pigeons.clear()
+	_pigeon_mats.clear()
+	_pigeon_vel.clear()
+	_pigeon_phase.clear()
+	_pigeon_base_y.clear()
+	_pigeon_glide.clear()
+	_pigeon_gliding.clear()
+
+
+func _step_pigeons(dt: float) -> void:
+	if _pigeons.is_empty():
+		_next_flock -= dt
+		if _next_flock <= 0.0:
+			spawn_pigeons()
+		return
+	var all_out := true
+	for i in _pigeons.size():
+		var b := _pigeons[i]
+		b.position += _pigeon_vel[i] * dt
+		# A quick shallow bob (offset from a base, never integrated).
+		b.position.y = _pigeon_base_y[i] + 0.18 * sin(_t * 2.4 + _pigeon_phase[i])
+		# Flap for a while, then a short glide (wings held on the mid frame).
+		_pigeon_glide[i] -= dt
+		if _pigeon_glide[i] <= 0.0:
+			_pigeon_gliding[i] = not _pigeon_gliding[i]
+			_pigeon_glide[i] = _bird_rng.randf_range(0.6, 1.1) if _pigeon_gliding[i] else _bird_rng.randf_range(PIGEON_GLIDE.x, PIGEON_GLIDE.y)
+			_pigeon_mats[i].set_shader_parameter("flap_hz", 0.0 if _pigeon_gliding[i] else _bird_rng.randf_range(5.0, 7.0))
+		_pigeon_mats[i].set_shader_parameter("t", _t)
+		if absf(b.position.z) < PIGEON_EDGE + 5.0:
+			all_out = false
+	if all_out:
+		_clear_pigeons()

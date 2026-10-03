@@ -425,3 +425,39 @@ do
   src:close()
   save(spr, "city_fence_black.png")
 end
+
+-- city_pigeon.png 96x16 — a 4-frame pigeon flap (24x16 each): a plump
+-- grey-blue body with a pale breast, short rounded wings that beat quick
+-- and shallow — nothing like the beach's long-winged gull silhouette.
+do
+  local FW, FH, N = 24, 16, 4
+  local spr = Sprite(FW * N, FH, ColorMode.RGBA)
+  local img = spr.cels[1].image
+  fill(img, 0, 0, FW * N - 1, FH - 1, pc.rgba(0, 0, 0, 0))
+  local body = pc.rgba(54, 58, 72, 255)
+  local breast = pc.rgba(118, 118, 132, 255)
+  local wing = pc.rgba(40, 44, 56, 255)
+  local tip = pc.rgba(22, 24, 32, 255)
+  local lift = {4, 1, -3, 1}
+  for f = 0, N - 1 do
+    local ox = f * FW
+    local cx, cy = ox + 12, 9
+    -- body: a plump oval with a paler breast and a short tail
+    fill(img, cx - 4, cy - 1, cx + 3, cy + 1, body)
+    fill(img, cx - 3, cy, cx + 2, cy + 2, breast)
+    fill(img, cx + 3, cy - 1, cx + 4, cy, body)   -- head
+    img:drawPixel(cx + 5, cy, tip)                  -- beak
+    fill(img, cx - 7, cy, cx - 5, cy + 1, wing)     -- tail
+    local t = lift[f + 1]
+    for side = -1, 1, 2 do
+      for d = 1, 8 do
+        local u = d / 8
+        local y = cy - 1 - math.floor(t * u * u + 0.5)
+        local x = cx + side * d
+        img:drawPixel(x, y, d > 6 and tip or wing)
+        if d < 6 then img:drawPixel(x, y + 1, wing) end
+      end
+    end
+  end
+  save(spr, "city_pigeon.png")
+end
