@@ -766,8 +766,10 @@ bottom, and a GOOSENECK:
 one bent tube swept by `_tube()` from the ground on the sim's pole line up
 to 2.1 m, round a 0.55 m bend and up to a bolted mount on the board's back.
 The city arena builds no pole. `hoop_set.tres` sets `net_kind = "chain"`
-and stiff, low-grip feel numbers; its makes are the generated
-`chain_swish_*` clatters (`tools/gen_sfx.gd`). The sim side is
+and stiff, low-grip feel numbers; its makes are Ross's four recorded chain
+swishes (`assets/hoops/chain/sfx/swish_1..4.wav`; 2–4 cut from his
+2026-10-03 `chain_swishes.m4a` with ffmpeg, mono 16-bit, peak −6 dB), one
+picked at random per make, never the same twice running. The sim side is
 `SimGeometry.city()`'s `net_drag 1.6` / `net_wall_e 0.20`.
 
 ## 15. Flipbooks: authoring fire (and other effects) in Blender

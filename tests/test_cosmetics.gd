@@ -165,7 +165,11 @@ func _street_and_arenas(t) -> void:
 		t.eq(chain.net_kind, "chain", "it hangs a chain")
 		t.ok(chain.net_stiffness > 0.9 and chain.net_friction < 0.5, "links: near-inextensible, little grip")
 		t.close(chain.model_board_h, 1.05, 1e-12, "regulation board")
-		t.ok(chain.make_clips.size() >= 1 and str(chain.make_clips[0]).begins_with("res://assets/hoops/chain/sfx/"), "the chain's recorded swish")
+		# Four recorded chain swishes (Ross's 2026-10-03 cuts joined the first);
+		# Sfx.make() picks one at random, never the same twice running.
+		t.eq(chain.make_clips.size(), 4, "the chain's four recorded swishes")
+		for c in chain.make_clips:
+			t.ok(str(c).begins_with("res://assets/hoops/chain/sfx/swish_") and load(str(c)) is AudioStream, "%s is a chain swish that loads" % str(c).get_file())
 		var hoop_scene: PackedScene = load(chain.model_path)
 		var inst: Node = hoop_scene.instantiate()
 		t.ok(inst.find_child("Gooseneck", true, false) != null, "the chain hoop stands on its own gooseneck")
