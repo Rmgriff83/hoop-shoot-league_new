@@ -23,6 +23,15 @@ const FLOCK_Y := Vector2(6.0, 11.0)
 const FLOCK_EDGE := 46.0                 # z where a flock enters / leaves
 const BIRD_SPEED := 6.0
 const BIRD_SIZE := Vector2(0.9, 0.68)
+## A pelican (2026-10-03): solo, bigger and slower than the gulls, low over
+## the water with a lazy flap, one every PELICAN_GAP.
+const PELICAN_SHEET := "res://assets/textures/beach_pelican.png"
+const PELICAN_GAP := Vector2(30.0, 70.0)
+const PELICAN_X := Vector2(15.0, 28.0)
+const PELICAN_Y := Vector2(3.0, 5.5)
+const PELICAN_SPEED := 2.4
+const PELICAN_SIZE := Vector2(2.1, 1.4)
+const PELICAN_FLAP_HZ := 1.1
 ## Tourists: one raises an arm now and then; umbrellas sway a little.
 const WAVE_GAP := Vector2(12.0, 25.0)
 const WAVE_S := 2.2
@@ -77,6 +86,11 @@ var _bird_phase: Array[float] = []
 var _bird_base_y: Array[float] = []
 var _bird_root: Node3D
 var _next_flock := 10.0
+var _pelican: MeshInstance3D
+var _pelican_mat: ShaderMaterial
+var _pelican_vel := Vector3.ZERO
+var _pelican_base_y := 0.0
+var _next_pelican := 20.0
 var _rng := RandomNumberGenerator.new()
 var _arms: Array[Node3D] = []
 var _arm_rest: Array[Vector3] = []
@@ -159,6 +173,7 @@ func setup(arena: Node) -> bool:
 	_next_ship = _rng.randf_range(12.0, 30.0)
 	_next_plane = _rng.randf_range(20.0, 50.0)
 	_next_jet = _rng.randf_range(40.0, 120.0)
+	_next_pelican = _rng.randf_range(14.0, 40.0)   # drawn last: the older timers keep their seeded values
 	return true
 
 
@@ -204,6 +219,58 @@ func spawn_flock() -> void:
 		_bird_phase.push_back(_rng.randf() * TAU)
 		_bird_base_y.push_back(mi.position.y)
 	_next_flock = _rng.randf_range(FLOCK_GAP.x, FLOCK_GAP.y)
+
+
+func pelican_count() -> int:
+	return 1 if _pelican != null else 0
+
+
+## One pelican, low over the water, crossing the sky at its own pace.
+func spawn_pelican() -> void:
+	_clear_pelican()
+	var from_left := _rng.randf() < 0.5
+	var dir := 1.0 if from_left else -1.0
+	var mi := MeshInstance3D.new()
+	mi.name = "Pelican"
+	var quad := QuadMesh.new()
+	quad.size = PELICAN_SIZE
+	mi.mesh = quad
+	var m := ShaderMaterial.new()
+	m.shader = BIRD_SHADER
+	m.set_shader_parameter("sheet", load(PELICAN_SHEET))
+	m.set_shader_parameter("phase", _rng.randf())
+	m.set_shader_parameter("flap_hz", PELICAN_FLAP_HZ)
+	m.set_shader_parameter("facing", dir)
+	mi.material_override = m
+	mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	mi.position = Vector3(_rng.randf_range(PELICAN_X.x, PELICAN_X.y), _rng.randf_range(PELICAN_Y.x, PELICAN_Y.y), -dir * FLOCK_EDGE)
+	_bird_root.add_child(mi)
+	_pelican = mi
+	_pelican_mat = m
+	_pelican_vel = Vector3(0.0, 0.0, dir * PELICAN_SPEED)
+	_pelican_base_y = mi.position.y
+	_next_pelican = _rng.randf_range(PELICAN_GAP.x, PELICAN_GAP.y)
+
+
+func _clear_pelican() -> void:
+	if _pelican != null:
+		_pelican.queue_free()
+	_pelican = null
+	_pelican_mat = null
+
+
+func _step_pelican(dt: float) -> void:
+	if _pelican == null:
+		_next_pelican -= dt
+		if _next_pelican <= 0.0:
+			spawn_pelican()
+		return
+	_pelican.position += _pelican_vel * dt
+	# A long, slow lift and settle, like a glide over the swell.
+	_pelican.position.y = _pelican_base_y + 0.5 * sin(_t * 0.45)
+	_pelican_mat.set_shader_parameter("t", _t)
+	if absf(_pelican.position.z) >= FLOCK_EDGE + 4.0:
+		_clear_pelican()
 
 
 func _clear_birds() -> void:
@@ -403,6 +470,7 @@ func _process(dt: float) -> void:
 		for rig in _palm_rigs:
 			rig.rotation.y = CourtGeometry.yaw_toward(rig.global_position, cam.global_position)
 	_step_birds(dt)
+	_step_pelican(dt)
 	_step_tourists(dt)
 	if _fx_root != null:
 		_step_life(dt)

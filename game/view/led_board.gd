@@ -151,6 +151,18 @@ func show_score(score: int, mult := 1) -> void:
 		_dirty = true
 
 
+## What the board shows when nothing is playing ("SCORE 0"; "" for a board
+## that goes dark between messages, like the cage's ribbon).
+func set_idle_text(text: String) -> void:
+	_idle_text = text
+	if _mode == "idle":
+		_dirty = true
+
+
+func idle_text() -> String:
+	return _idle_text
+
+
 ## Persistent text (READY, TIME) until the next call; interrupts animations.
 func set_text(text: String, color := Color.TRANSPARENT) -> void:
 	_queue.clear()

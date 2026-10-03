@@ -156,7 +156,6 @@ func _build_court(i: int) -> void:
 	_court.hoop_set = App.hoop_for_mode(card["mode"])
 	add_child(_court)
 	_court.led.set_text("HOOP SHOOT", _court.led.accent_color)
-	_court.set_ticker(TickerText.arcade_items(_best(card["area"])))
 	App.mark_area_visited(str(card["area"]))
 	_spec = TitlePan.spec_of(arena)
 	_cam.fov = float(_spec["fov"])

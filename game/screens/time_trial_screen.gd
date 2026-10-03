@@ -62,10 +62,9 @@ func _ready() -> void:
 	_court.arena_set = _arena_set
 	_court.hoop_set = _hoop_set
 	add_child(_court)
+	_court.led.show_score(0)   # the hoop's board: the score, nothing else
 	if _mode["led_text"] != "":
-		_court.led.set_text(_mode["led_text"], _court.led.accent_color)
-	else:
-		_court.led.show_score(0)  # a plain reader board: the score, from the first shot
+		_court.info.set_text(_mode["led_text"], _court.info.accent_color)
 
 	# Camera: placed behind whichever shooting spot is active (_set_spot).
 	_cam = Camera3D.new()
@@ -158,22 +157,15 @@ func _make_rules() -> void:
 	trial = TimeTrial.new(base_geo)
 
 
-## Hook for subclasses once every view exists (the heat screen adds its PiP).
-## The cage's back-wall league ribbon. The base shows attract copy; the heat
-## screen overrides this with live league content. A no-op on an arena with no
-## LeagueFace mesh, so callers need not care which arena they are in.
-func _refresh_ticker() -> void:
-	_court.set_ticker(TickerText.arcade_items(_best_score()))
-
-
 ## Top time-trial score for this location, 0 if none yet.
 func _best_score() -> int:
 	var top := SaveService.top_scores(1, str(_mode.get("location", "")))
 	return int(top[0].get("score", 0)) if not top.is_empty() else 0
 
 
+## Hook for subclasses once every view exists (the heat screen adds its PiP).
 func _after_ready() -> void:
-	_refresh_ticker()
+	pass
 
 
 ## The top row's button (design "Solo Modes HUD"): PAUSE at the top-left,
@@ -418,7 +410,7 @@ func _process_shuffle(dt: float) -> void:
 		_picker_locked = true
 		_refresh_picker()
 		var nm: String = _spots[_shuffle_target]["name"]
-		_court.led.marquee("MOVE TO %s" % nm, 24.0, _court.led.accent_color)
+		_court.info.marquee("MOVE TO %s" % nm, 24.0, _court.info.accent_color)
 		if _shuffle_next == 0 and _shuffle_clock < SHUFFLE_PRACTICE_PERIOD:
 			Sfx.score_pop(true)
 	var nm2: String = _spots[_shuffle_target]["name"]
@@ -435,7 +427,7 @@ func _process_shuffle(dt: float) -> void:
 	# Time: walk over.
 	_set_spot(_shuffle_target)
 	_hud.banner("NOW SHOOTING: %s" % nm2, Color(0.4, 0.9, 0.55))
-	_court.led.flash(nm2, 2, _court.led.accent_color)
+	_court.info.flash(nm2, 2, _court.info.accent_color)
 	_shuffle_target = -1
 	_shuffle_shown = -1
 	_shuffle_advance()
@@ -747,9 +739,9 @@ func _handle_event(ev: Dictionary) -> void:
 			_court.arcade_chase()
 			if not _practice:
 				_hud.banner("GO!", Color(0.4, 0.9, 0.55))
-				_court.led.set_text("")
+				_court.info.set_text("")
 				_court.led.show_score(0)
-				_court.led.flash("GO!", 2, _court.led.accent_color)
+				_court.info.flash("GO!", 2, _court.info.accent_color)
 		"ot_period":
 			# Overtime opens with everyone back at the key, no shuffle pending.
 			_shuffle_target = -1
@@ -794,20 +786,20 @@ func _handle_event(ev: Dictionary) -> void:
 		# banners or chip) — the rig animations and the LED carry it.
 		"ice_on":
 			_court.set_ice(true)
-			_court.led.marquee("ICED OVER", 24.0, _court.led.accent_color)
+			_court.info.marquee("ICED OVER", 24.0, _court.info.accent_color)
 		"ice_caught":
 			_court.ice_grab()
-			_court.led.flash("CAUGHT", 2, _court.led.accent_color)
+			_court.info.flash("CAUGHT", 2, _court.info.accent_color)
 		"ice_crack":
 			_court.ice_crack(int(ev["left"]))
 		"ice_break":
 			_court.set_ice(false, str(ev["by"]))
-			_court.led.marquee("ICE BROKEN", 24.0, _court.led.accent_color)
+			_court.info.marquee("ICE BROKEN", 24.0, _court.info.accent_color)
 		"fire_on":
 			# A fire card: lit from FIRE_AT for the card's window.
 			_tier_shown = 1
 			_court.set_fire(true, StreakRules.FIRE_AT)
-			_court.led.marquee("ON FIRE", 24.0, _court.led.accent_color)
+			_court.info.marquee("ON FIRE", 24.0, _court.info.accent_color)
 			Sfx.score_pop(true)
 		"fire_off":
 			# The card's window closed (a miss already cooled it via the outcome).
@@ -815,23 +807,23 @@ func _handle_event(ev: Dictionary) -> void:
 			_court.led.show_score(trial.score)
 			if _court.fire_lit():
 				_court.set_fire(false)
-				_court.led.marquee("BURNED OUT" if str(ev.get("reason", "")) == "time" else "COOLED OFF", 24.0, _court.led.accent_color)
+				_court.info.marquee("BURNED OUT" if str(ev.get("reason", "")) == "time" else "COOLED OFF", 24.0, _court.info.accent_color)
 		"vortex_on":
 			# A vortex card: the rim pulls touched balls through for the window.
-			_court.led.marquee("VORTEX", 24.0, _court.led.accent_color)
+			_court.info.marquee("VORTEX", 24.0, _court.info.accent_color)
 			Sfx.score_pop(true)
 		"vortex_off":
 			_court.led.show_score(trial.score)
-			_court.led.marquee("VORTEX SPENT" if str(ev.get("reason", "")) == "time" else "VORTEX ICED", 24.0, _court.led.accent_color)
+			_court.info.marquee("VORTEX SPENT" if str(ev.get("reason", "")) == "time" else "VORTEX ICED", 24.0, _court.info.accent_color)
 		"heat_up":
 			Sfx.score_pop(true)
 			_court.rim_pop_from(HudCopy.heat_pop())
-			_court.led.marquee("HEATING UP", 24.0, _court.led.accent_color)
+			_court.info.marquee("HEATING UP", 24.0, _court.info.accent_color)
 			_court.flare_lights()
 		"buzzer":
 			Sfx.buzzer()
 			_hud.banner("TIME!", RetroTheme.LIGHT["orange"])
-			_court.led.set_text("TIME")
+			_court.info.set_text("TIME")
 			_court.led.band_solid(_court.led.band_buzzer_color, 2.0)
 			_court.play_arena("CageShake")
 		"done":
@@ -843,7 +835,7 @@ func _on_outcome(outcome: Dictionary, buzzer_beater: bool) -> void:
 	_overlay.record_outcome(outcome)
 	var streak: int = outcome.get("streak", trial.streak)
 	var pts: int = outcome["points"]
-	var accent := _court.led.accent_color
+	var accent := _court.info.accent_color
 	if outcome.get("iced_out", false):
 		# The ball went in but only cleared the ice (the ice_break event just
 		# announced it). Net/rim react; nothing to score.
@@ -855,7 +847,6 @@ func _on_outcome(outcome: Dictionary, buzzer_beater: bool) -> void:
 		var lit := StreakRules.is_lit(streak)
 		# (The make clip already played on the "enter" contact event.)
 		_hud.set_score(trial.score)
-		_refresh_ticker()
 		_court.led.show_score(trial.score, tier)
 		# The net reacts to the ball itself (NetSim); the pivot spring adds a
 		# little rim bounce even on a clean swish (rim contacts kick it harder).
@@ -864,15 +855,15 @@ func _on_outcome(outcome: Dictionary, buzzer_beater: bool) -> void:
 		# stays on the LED.
 		_court.rim_pop_from(HudCopy.rim_pop(str(outcome["type"]), pts, buzzer_beater))
 		if buzzer_beater:
-			_court.led.flash("BUZZER +%d" % pts, 3, accent)
+			_court.info.flash("BUZZER +%d" % pts, 3, accent)
 		elif is_swish:
-			_court.led.flash("SWISH +%d" % pts, 2, accent)
+			_court.info.flash("SWISH +%d" % pts, 2, accent)
 		if lit and streak == StreakRules.FIRE_AT:
 			_court.rim_pop_from(HudCopy.fire_pop())
-			_court.led.marquee("ON FIRE", 24.0, accent)
+			_court.info.marquee("ON FIRE", 24.0, accent)
 			Sfx.score_pop(true)
 		elif lit and tier > _tier_shown:
-			_court.led.marquee("%d PTS A BASKET" % tier, 24.0, accent)
+			_court.info.marquee("%d PTS A BASKET" % tier, 24.0, accent)
 			Sfx.score_pop(true)
 		if lit:
 			_tier_shown = tier
@@ -882,7 +873,7 @@ func _on_outcome(outcome: Dictionary, buzzer_beater: bool) -> void:
 		_court.led.show_score(trial.score)
 		if _court.fire_lit():
 			_court.set_fire(false)
-			_court.led.marquee("COOLED OFF", 24.0, accent)
+			_court.info.marquee("COOLED OFF", 24.0, accent)
 		elif outcome["type"] == ShotClassify.IN_AND_OUT:
 			_court.rim_pop_from(HudCopy.in_out_pop())
 

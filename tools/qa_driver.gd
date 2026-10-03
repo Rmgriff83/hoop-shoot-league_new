@@ -253,9 +253,17 @@ func _run_net() -> void:
 
 func _run_hud() -> void:
 	await _sleep(1.2)
-	await _close_archive()
-	await _click_button_named("TIME TRIAL")
-	await _sleep(0.5)
+	# The archive's slide-out can still be in flight on a cold launch: tap
+	# TIME TRIAL until the trial screen is actually up (three tries).
+	for attempt in 3:
+		await _close_archive()
+		await _click_button_named("TIME TRIAL")
+		await _sleep(0.5)
+		var sc := get_tree().current_scene
+		if sc != null and "trial" in sc:
+			break
+		print("QA: TIME TRIAL tap %d did not open the trial, retrying" % (attempt + 1))
+		await _sleep(0.8)
 	await _snap("hud_countdown")
 	await _sleep(3.0)
 	_hook_trial()
@@ -455,6 +463,19 @@ func _run_beach() -> void:
 		await _snap("beach_%02d" % i)
 		await _sleep(4.5)
 	await _snap("beach_last")
+	# The pelican, forced over the water and placed mid-view for the snap.
+	var bfx: BeachFx = get_tree().root.find_child("BeachFx", true, false)
+	if bfx != null:
+		bfx.spawn_pelican()
+		# Parked 20 m ahead of whichever spot the pass ended on, up in the sky
+		# (the spots face different ways, so a fixed point can be off-frame).
+		var pcam: Camera3D = get_viewport().get_camera_3d()
+		if pcam != null:
+			var ahead := pcam.global_position - pcam.global_transform.basis.z * 20.0 - pcam.global_transform.basis.x * 5.0 + Vector3(0.0, 6.0, 0.0)
+			bfx._pelican.global_position = ahead
+			bfx._pelican_base_y = bfx._pelican.position.y
+		await _sleep(0.6)
+		await _snap("beach_pelican")
 	print("QA beach: done")
 	get_tree().quit(0)
 

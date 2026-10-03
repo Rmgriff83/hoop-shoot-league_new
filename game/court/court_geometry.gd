@@ -54,6 +54,10 @@ var led: LedBoard
 ## the arena model carries a `LeagueFace` mesh, so every other arena is
 ## unaffected and no ArenaSet field is needed.
 var league_led: LedBoard
+## Where the screens send their messages (GO!, SWISH +2, HEATING UP, MOVE TO,
+## TIME …): the cage's ribbon when the arena has one — it idles blank and the
+## hoop's own board then shows nothing but the score — else the hoop's board.
+var info: LedBoard
 
 var _hoop: Node3D               # model root, null when falling back to primitives
 var _model_board: Node3D
@@ -91,6 +95,7 @@ func _ready() -> void:
 		arena_set = CosmeticLibrary.starter_arena()
 	led = LedBoard.new()
 	led.name = "LedBoard"
+	info = led
 	if hoop_set != null:
 		led.set_palette(hoop_set)
 	add_child(led)
@@ -183,8 +188,10 @@ func _build_arena_model() -> bool:
 		league_led.name = "LeagueLed"
 		if hoop_set != null:
 			league_led.set_palette(hoop_set)
+		league_led.set_idle_text("")
 		add_child(league_led)
 		(lface as MeshInstance3D).material_override = league_led.material
+		info = league_led
 	# Lit-from-within surfaces (marquees, neon, the sky) glow independent of the sun.
 	for n in arena_set.emissive_nodes:
 		_unshade(n)
@@ -571,23 +578,6 @@ func face_scoreboard(shooter: Vector3) -> void:
 	if _scoreboard == null:
 		return
 	_scoreboard.rotation.y = yaw_toward(_scoreboard.global_position, shooter)
-
-
-## Run the league ribbon board across the back wall. A no-op on an arena with
-## no `LeagueFace`, so callers need not know which arena they are in.
-func set_ticker(items: PackedStringArray) -> void:
-	if league_led == null:
-		return
-	if league_led.mode() == "ticker":
-		league_led.set_ticker_items(items)   # swap content without a jump
-	else:
-		league_led.ticker(items)
-
-
-## Freeze / run the league ribbon (see LedBoard.set_ticker_paused).
-func set_ticker_paused(paused: bool) -> void:
-	if league_led != null:
-		league_led.set_ticker_paused(paused)
 
 
 ## Strip the specular lobe from a mesh's surface material (foam, cloth): the

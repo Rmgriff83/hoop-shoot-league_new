@@ -82,18 +82,6 @@ func _after_ready() -> void:
 	_build_toast()
 	_build_ot_break()
 	_build_league_banner()
-	_refresh_ticker()
-
-
-## The cage's back-wall ribbon. League content during a league heat, attract
-## copy otherwise — the ribbon is part of the room, not part of the match.
-func _refresh_ticker() -> void:
-	if _heat_cfg.get("league", null) == null:
-		_court.set_ticker(TickerText.arcade_items(_best_score()))
-		return
-	var id := str(_heat_cfg["league"]["id"])
-	_court.set_ticker(TickerText.league_items(
-		App.league_cfg(id), App.league_doc(id), heat.player.score, heat.ai.score, _ai_id()))
 
 
 func _ai_id() -> String:
@@ -675,7 +663,7 @@ func _build_pip() -> void:
 	_ai_court.hoop_set = _hoop_set
 	_ai_court.pop_scale = 2.4   # the PiP is a third the width: the pops stay readable
 	_pip_vp.add_child(_ai_court)
-	_ai_court.led.set_text(_mode["led_text"], _ai_court.led.accent_color)
+	_ai_court.info.set_text(_mode["led_text"], _ai_court.info.accent_color)
 
 	_ai_cam = Camera3D.new()
 	_ai_cam.name = "OpponentCamera"
@@ -832,14 +820,14 @@ func _handle_event(ev: Dictionary) -> void:
 				# OT tip-off: keep the carried score on the board, flash GO.
 				_hud.banner("GO!", Color(0.4, 0.9, 0.55))
 				_court.led.show_score(heat.player.score)
-				_court.led.flash("GO!", 2, _court.led.accent_color)
+				_court.info.flash("GO!", 2, _court.info.accent_color)
 			else:
 				super(ev)
 		"ot_start":
 			_hud.set_ot(int(ev["n"]))
 			_show_ot_break(int(ev["n"]))
-			_court.led.marquee("OVERTIME", 24.0, _court.led.accent_color)
-			_ai_court.led.marquee("OVERTIME", 24.0, _ai_court.led.accent_color)
+			_court.info.marquee("OVERTIME", 24.0, _court.info.accent_color)
+			_ai_court.info.marquee("OVERTIME", 24.0, _ai_court.info.accent_color)
 		"ot_period":
 			_hide_ot_break()
 			super(ev)
@@ -851,7 +839,7 @@ func _handle_event(ev: Dictionary) -> void:
 			if ev.get("ok", false):
 				_show_card_play(str(ev["card"]), false, str(ev.get("target", Heat.AI)))
 				# The opponent's board announces what was played on, or against, them.
-				_ai_court.led.marquee(_card_marquee(str(ev["card"]), str(ev.get("target", Heat.AI)) == Heat.AI), 24.0, _ai_court.led.accent_color)
+				_ai_court.info.marquee(_card_marquee(str(ev["card"]), str(ev.get("target", Heat.AI)) == Heat.AI), 24.0, _ai_court.info.accent_color)
 		_:
 			super(ev)
 
@@ -867,7 +855,7 @@ func _handle_ai_event(ev: Dictionary) -> void:
 			if heat.ot > 0:
 				_ai_court.led.show_score(heat.ai.score)
 			else:
-				_ai_court.led.set_text("")
+				_ai_court.info.set_text("")
 				_ai_court.led.show_score(0)
 		"contact":
 			var c: Dictionary = ev["contact"]
@@ -886,46 +874,46 @@ func _handle_ai_event(ev: Dictionary) -> void:
 			_on_ai_outcome(ev["outcome"])
 		"ice_on":
 			_ai_court.set_ice(true)
-			_ai_court.led.marquee("ICED OVER", 24.0, _ai_court.led.accent_color)
+			_ai_court.info.marquee("ICED OVER", 24.0, _ai_court.info.accent_color)
 		"ice_caught":
 			_ai_court.ice_grab()
 		"ice_crack":
 			_ai_court.ice_crack(int(ev["left"]))
 		"ice_break":
 			_ai_court.set_ice(false, str(ev["by"]))
-			_ai_court.led.marquee("ICE BROKEN", 24.0, _ai_court.led.accent_color)
+			_ai_court.info.marquee("ICE BROKEN", 24.0, _ai_court.info.accent_color)
 		"buzzer":
-			_ai_court.led.set_text("TIME")
+			_ai_court.info.set_text("TIME")
 		"heat_up":
-			_ai_court.led.marquee("HEATING UP", 24.0, _ai_court.led.accent_color)
+			_ai_court.info.marquee("HEATING UP", 24.0, _ai_court.info.accent_color)
 			_ai_court.flare_lights()
 			_ai_court.rim_pop_from(HudCopy.heat_pop())
 		"ai_spot":
 			var sp: Dictionary = ev["spot"]
 			_place_ai_frame(Vector3(float(sp["x"]), float(sp["y"]), float(sp["z"])))
 			if int(ev["index"]) < _spots.size():
-				_ai_court.led.flash(str(_spots[int(ev["index"])]["name"]), 2, _ai_court.led.accent_color)
+				_ai_court.info.flash(str(_spots[int(ev["index"])]["name"]), 2, _ai_court.info.accent_color)
 		"fire_on":
 			_ai_tier_shown = 1
 			_ai_court.set_fire(true, StreakRules.FIRE_AT)
-			_ai_court.led.marquee("ON FIRE", 24.0, _ai_court.led.accent_color)
+			_ai_court.info.marquee("ON FIRE", 24.0, _ai_court.info.accent_color)
 		"fire_off":
 			_ai_tier_shown = 1
 			_ai_court.led.show_score(heat.ai.score)
 			if _ai_court.fire_lit():
 				_ai_court.set_fire(false)
-				_ai_court.led.marquee("BURNED OUT" if str(ev.get("reason", "")) == "time" else "COOLED OFF", 24.0, _ai_court.led.accent_color)
+				_ai_court.info.marquee("BURNED OUT" if str(ev.get("reason", "")) == "time" else "COOLED OFF", 24.0, _ai_court.info.accent_color)
 		"vortex_on":
-			_ai_court.led.marquee("VORTEX", 24.0, _ai_court.led.accent_color)
+			_ai_court.info.marquee("VORTEX", 24.0, _ai_court.info.accent_color)
 		"vortex_off":
 			_ai_court.led.show_score(heat.ai.score)
-			_ai_court.led.marquee("VORTEX SPENT" if str(ev.get("reason", "")) == "time" else "VORTEX ICED", 24.0, _ai_court.led.accent_color)
+			_ai_court.info.marquee("VORTEX SPENT" if str(ev.get("reason", "")) == "time" else "VORTEX ICED", 24.0, _ai_court.info.accent_color)
 		"card_played":
 			if ev.get("ok", false):
 				Sfx.gain_db = prev_gain
 				_show_card_play(str(ev["card"]), true, str(ev.get("target", Heat.PLAYER)))
 				# Your board announces the opponent's play, whether it hit you or helped them.
-				_court.led.marquee(_card_marquee(str(ev["card"]), str(ev.get("target", Heat.AI)) == Heat.PLAYER), 24.0, _court.led.accent_color)
+				_court.info.marquee(_card_marquee(str(ev["card"]), str(ev.get("target", Heat.AI)) == Heat.PLAYER), 24.0, _court.info.accent_color)
 		_:
 			pass
 	Sfx.gain_db = prev_gain
@@ -939,7 +927,6 @@ func _on_ai_outcome(outcome: Dictionary) -> void:
 		var tier := StreakRules.base_points(streak)
 		var lit := StreakRules.is_lit(streak)
 		_hud.set_opponent_score(heat.ai.score)
-		_refresh_ticker()
 		_ai_court.led.show_score(heat.ai.score, tier)
 		_ai_court.rim_nudge()
 		_ai_court.play_make()
@@ -947,9 +934,9 @@ func _on_ai_outcome(outcome: Dictionary) -> void:
 		_ai_court.rim_pop_from(HudCopy.rim_pop(str(outcome["type"]), int(outcome["points"]), false))
 		if lit and streak == StreakRules.FIRE_AT:
 			_ai_court.rim_pop_from(HudCopy.fire_pop())
-			_ai_court.led.marquee("ON FIRE", 24.0, _ai_court.led.accent_color)
+			_ai_court.info.marquee("ON FIRE", 24.0, _ai_court.info.accent_color)
 		elif lit and tier > _ai_tier_shown:
-			_ai_court.led.marquee("%d PTS A BASKET" % tier, 24.0, _ai_court.led.accent_color)
+			_ai_court.info.marquee("%d PTS A BASKET" % tier, 24.0, _ai_court.info.accent_color)
 		if lit:
 			_ai_tier_shown = tier
 			_ai_court.set_fire(true, streak)
@@ -957,7 +944,7 @@ func _on_ai_outcome(outcome: Dictionary) -> void:
 		_ai_tier_shown = 1
 		if _ai_court.fire_lit():
 			_ai_court.set_fire(false)
-			_ai_court.led.marquee("COOLED OFF", 24.0, _ai_court.led.accent_color)
+			_ai_court.info.marquee("COOLED OFF", 24.0, _ai_court.info.accent_color)
 
 
 func _process(dt: float) -> void:

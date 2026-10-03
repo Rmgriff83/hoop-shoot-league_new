@@ -349,6 +349,76 @@ do
   save(spr, "beach_bird.png")
 end
 
+-- beach_pelican.png 192x32 — a 4-frame pelican flap (48x32 each), Ross's
+-- 2026-10-03 ask: a bigger, slower, solo bird. White body and inner wings,
+-- black primaries on the outer third, a long orange bill held level, feet
+-- tucked. Faces +u like the gull (BeachFx mirrors it with `facing`). The
+-- wings sweep back from the shoulders and are drawn FIRST, so the neck, head
+-- and bill read in front of them whatever the frame.
+do
+  local FW, FH, N = 48, 32, 4
+  local spr, img = newImage(FW * N, FH)
+  fill(img, 0, 0, FW * N - 1, FH - 1, pc.rgba(0, 0, 0, 0))
+  local white = pc.rgba(236, 234, 228, 255)
+  local shade = pc.rgba(190, 188, 184, 255)
+  local black = pc.rgba(36, 32, 34, 255)
+  local bill  = pc.rgba(238, 150, 46, 255)
+  local eye   = pc.rgba(30, 28, 30, 255)
+  local lift = {9, 3, -5, 3}
+  for f = 0, N - 1 do
+    local ox = f * FW
+    local cx, cy = ox + 24, 20
+    -- wings: shoulders at cx - 2, span 19 each side, swept back 4 px; white
+    -- for the inner 12, black primaries beyond
+    local tip = lift[f + 1]
+    for side = -1, 1, 2 do
+      for d = 1, 19 do
+        local u = d / 19
+        local y = cy - 2 - math.floor(tip * (u * u) + 0.5) - math.floor(2.0 * math.sin(u * 3.14159) + 0.5)
+        local x = cx - 2 + side * d - ((side > 0) and math.floor(u * 4) or 0)
+        local c = (d > 12) and black or white
+        img:drawPixel(x, y, c)
+        if d < 16 then img:drawPixel(x, y + 1, (d > 12) and black or shade) end
+        if d < 8 then img:drawPixel(x, y + 2, shade) end
+      end
+    end
+    -- body: a plump teardrop, shaded underneath
+    fill(img, cx - 7, cy - 2, cx + 3, cy + 2, white)
+    fill(img, cx - 5, cy + 3, cx + 1, cy + 3, shade)
+    img:drawPixel(cx - 8, cy - 1, white); img:drawPixel(cx - 8, cy, white)   -- tail
+    img:drawPixel(cx - 9, cy, shade)
+    -- neck + head, forward and up (over the wing roots)
+    fill(img, cx + 3, cy - 5, cx + 5, cy - 1, white)
+    fill(img, cx + 5, cy - 7, cx + 8, cy - 4, white)
+    img:drawPixel(cx + 7, cy - 6, eye)
+    -- bill: long, level, a little heavier at the base — drawn last
+    for d = 0, 10 do
+      img:drawPixel(cx + 8 + d, cy - 5, bill)
+      if d < 7 then img:drawPixel(cx + 8 + d, cy - 4, bill) end
+    end
+  end
+  -- A one-pixel ink outline around everything: a white bird on a sunset sky
+  -- otherwise disappears (only its bill and wingtips showed in QA).
+  local ink = pc.rgba(58, 52, 54, 255)
+  local edge = {}
+  for y = 0, FH - 1 do
+    for x = 0, FW * N - 1 do
+      if pc.rgbaA(img:getPixel(x, y)) == 0 then
+        for _, o in ipairs({{1, 0}, {-1, 0}, {0, 1}, {0, -1}}) do
+          local nx, ny = x + o[1], y + o[2]
+          if nx >= 0 and ny >= 0 and nx < FW * N and ny < FH and pc.rgbaA(img:getPixel(nx, ny)) ~= 0
+             and (nx % FW) ~= 0 and (x % FW) ~= 0 and ((x + 1) % FW) ~= 0 then
+            edge[#edge + 1] = {x, y}
+            break
+          end
+        end
+      end
+    end
+  end
+  for _, e in ipairs(edge) do img:drawPixel(e[1], e[2], ink) end
+  save(spr, "beach_pelican.png")
+end
+
 
 -- Local helpers for the horizon sprites below (px/limb are not used elsewhere).
 local function px(img, x, y, c)

@@ -845,6 +845,15 @@ centroid so the game can tumble it.
   `BeachFx` spawns a 3–6 gull V every 18–35 s that crosses the sky over the water
   (`bird.gdshader`: camera-facing flipbook) and frees it past the far edge.
 
+**Pelican (2026-10-03):** a second beach bird, solo. `beach_pelican.png`
+(192×32, four 48×32 flap frames: white body and inner wings, black
+primaries, long orange bill) from `gen_beach_textures.lua`; `BeachFx`
+spawns one every `PELICAN_GAP` (30–70 s), 2.1 × 1.4 m, at 2.4 m/s (the gulls
+do 6), 3–5.5 m up over the water with a 1.1 Hz flap and a long slow lift
+and settle, on the same `bird.gdshader`. `spawn_pelican()` /
+`pelican_count()`; tested in `tests/test_ambient_life.gd`.
+
+
 ## 18. Interactable props (2026-09-19)
 
 The beach boombox (`Boombox` + flat sibling parts `BoomboxFace/Speaker/Ring/Deck/Led/Antenna`
@@ -1010,7 +1019,12 @@ Three cage changes, all in `build_cage.py` (`-- --force`) and
   is buried in the pad with the `LeagueFace` 10 mm proud of it. It is full
   width again (2.36 m, inboard of the corner posts) and a touch taller
   (0.262 m): the league `LedBoard` now runs `LedBoard.LEAGUE_COLS` (72) columns,
-  288×32 texels at 9:1, so its LEDs stay square on the wider face.
+  288×32 texels at 9:1, so its LEDs stay square on the wider face. It is the
+  cage's **message board** (`CourtGeometry.info`): GO!, SWISH +2, HEATING UP,
+  MOVE TO …, TIME and the card calls play there, and it idles blank
+  (`LedBoard.set_idle_text("")`) — the attract ticker is gone. The hoop's own
+  board shows nothing but the score. On an arena without a ribbon `info` is the
+  hoop's board, which carries both as before. `tests/test_led_routing.gd`.
 - **Return arrows**: the chevrons that used to be baked into the deck/ramp
   tread tiles (they tiled badly and were cut off at the edges) are gone; the
   tread is plain. In their place two rows of minimal yellow chevron decals

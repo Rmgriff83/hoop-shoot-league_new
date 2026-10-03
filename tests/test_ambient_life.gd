@@ -138,6 +138,25 @@ func run(t) -> void:
 	c2.free()
 	beach3.free()
 
+	# The pelican: solo, bigger and slower than a gull, low, and freed past the edge.
+	t.ok(FileAccess.file_exists("res://assets/textures/beach_pelican.png"), "pelican sheet generated")
+	bfx._clear_pelican()   # the loops above ran long enough for its timer to fire
+	t.eq(bfx.pelican_count(), 0, "no pelican once cleared")
+	bfx.spawn_pelican()
+	t.eq(bfx.pelican_count(), 1, "one pelican")
+	var pel: MeshInstance3D = bfx._pelican
+	t.ok(absf(pel.position.z) > 40.0 and pel.position.y < BeachFx.FLOCK_Y.x, "it enters at the sky's edge, lower than the gulls (y %.1f)" % pel.position.y)
+	t.ok(absf(bfx._pelican_vel.z) < BeachFx.BIRD_SPEED * 0.5, "…at less than half a gull's pace")
+	t.ok((pel.mesh as QuadMesh).size.x > BeachFx.BIRD_SIZE.x * 2.0, "…and more than twice the size")
+	t.ok(float(bfx._pelican_mat.get_shader_parameter("flap_hz")) < 2.0, "…with a lazy flap")
+	var pz0 := pel.position.z
+	bfx._process(1.0)
+	t.ok(absf(bfx._pelican.position.z) < absf(pz0), "it flies inward")
+	for i in 60:
+		bfx._process(1.0)
+		if bfx.pelican_count() == 0:
+			break
+	t.eq(bfx.pelican_count(), 0, "freed once it has crossed")
 	bfx.free()
 	beach.free()
 
