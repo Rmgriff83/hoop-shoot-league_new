@@ -40,8 +40,10 @@ BOARD_X = BEACH_DIST + 0.3796
 POLE_X = BOARD_X + 0.3                    # CourtGeometry.CROSSBAR_X_OFF
 COURT_X0, COURT_X1, COURT_HALF_W = -9.9, 4.3, 7.6
 SAND_X0, SAND_X1 = 4.5, 18.0
-# Knee-high concrete wall + chain-link fence enclosing the whole court, set
-# back from the baseline so the hoop has room; rectangle x ENC_X0..ENC_X1, z ±ENC_HALF_W.
+# Knee-high concrete wall (the embankment) enclosing the whole court, set
+# back from the baseline so the hoop has room; rectangle x ENC_X0..ENC_X1,
+# z ±ENC_HALF_W. The chain-link fence above it came off on 2026-10-02; the
+# sim's walls (SimGeometry.beach) still stand there, unseen.
 WALL_T = 0.25
 WALL_H = 0.45
 FENCE_TOP = 3.6
@@ -107,9 +109,7 @@ def build():
                   (0, 1, 0), apron, c_court, root, ((ap_x1 - ap_x0) * 0.5, 2 * ap_w * 0.5))
     cage.add_quad("Court", [(COURT_X0, 0, -w), (COURT_X1, 0, -w), (COURT_X1, 0, w), (COURT_X0, 0, w)],
                   (0, 1, 0), court, c_court, root, (1.0, 1.0))
-    # Knee-high wall + chain-link fence around the whole court: ONE continuous
-    # loop. The fence is a single strip mesh (4 faces sharing corner vertices),
-    # the rail a loop of boxes overlapping at the corners, one post per corner.
+    # The knee-high wall around the whole court: four boxes.
     corners = [(ENC_X0, -ENC_HALF_W), (ENC_X1, -ENC_HALF_W), (ENC_X1, ENC_HALF_W), (ENC_X0, ENC_HALF_W)]
     # Wall: four boxes, each extended by the wall thickness so corners are solid.
     for k in range(4):
@@ -120,46 +120,15 @@ def build():
         size = (length + WALL_T, WALL_H, WALL_T) if along_x else (WALL_T, WALL_H, length + WALL_T)
         cage.add_box("Wall%d" % k, size, (cx, WALL_H / 2.0, cz), concrete, c_court, root)
         cage.add_box("WallCap%d" % k, (size[0] + 0.06, 0.06, size[2] + 0.06), (cx, WALL_H + 0.03, cz), curb, c_court, root)
-        top = FENCE_TOPS[k]
-        rail = (length + 0.05, 0.05, 0.05) if along_x else (0.05, 0.05, length + 0.05)
-        cage.add_box("FenceRail%d" % k, rail, (cx, top, cz), dark, c_court, root)
-        # Intermediate posts (corners get theirs below, once).
-        n_posts = max(2, int(round(length / 2.6)) + 1)
-        for i in range(1, n_posts - 1):
-            t = i / (n_posts - 1)
-            px, pz = ax + (bx - ax) * t, az + (bz - az) * t
-            cage.add_box("FencePost%d_%d" % (k, i), (0.08, top - WALL_H + 0.1, 0.08), (px, (WALL_H + top) / 2.0, pz), dark, c_court, root)
-    # A corner belongs to two runs; it takes the TALLER so the side fence does
-    # not dip where it meets the shortened back.
-    for k, (px, pz) in enumerate(corners):
-        ctop = max(FENCE_TOPS[k], FENCE_TOPS[(k - 1) % 4])
-        cage.add_box("FenceCorner%d" % k, (0.10, ctop - WALL_H + 0.1, 0.10), (px, (WALL_H + ctop) / 2.0, pz), dark, c_court, root)
-    # The mesh: FOUR independent faces. They used to share one top vertex ring,
-    # which is why every side had to be the same height — lowering the back
-    # would have dragged the ends of both side runs down with it.
-    bm = bmesh.new()
-    uvl = bm.loops.layers.uv.verify()
-    u = 0.0
-    for k in range(4):
-        (ax, az), (bx, bz) = corners[k], corners[(k + 1) % 4]
-        length = math.hypot(bx - ax, bz - az)
-        top = FENCE_TOPS[k]
-        v0 = bm.verts.new(cage.s2b((ax, WALL_H, az)))
-        v1 = bm.verts.new(cage.s2b((bx, WALL_H, bz)))
-        v2 = bm.verts.new(cage.s2b((bx, top, bz)))
-        v3 = bm.verts.new(cage.s2b((ax, top, az)))
-        f = bm.faces.new((v0, v1, v2, v3))
-        u0, u1 = u * 1.25, (u + length) * 1.25
-        vv = (top - WALL_H) * 1.25   # per-face, so the mesh cells stay square
-        for loop, uvc in zip(f.loops, ((u0, 0.0), (u1, 0.0), (u1, vv), (u0, vv))):
-            loop[uvl].uv = uvc
-        u += length
-    me = bpy.data.meshes.new("Fence")
-    bm.to_mesh(me)
-    bm.free()
-    me.materials.append(fence)
-    fence_obj = bpy.data.objects.new("Fence", me)
-    cage.link_obj(fence_obj, c_court, root, (0, 0, 0))
+    # No chain-link on the beach (Ross, 2026-10-02): just the concrete
+    # embankment. The league standings banner used to hang on the back fence,
+    # so it gets a free-standing sign frame on the wall line: two dark posts
+    # either side of its span and a crossbar over it.
+    bp = (5.62, 2.35, 2.25)             # ArenaSet.league_banner_pos (beach)
+    bw, bh = 2.2, 1.35                   # ArenaSet.league_banner_size
+    for k, z in enumerate((bp[2] - bw / 2.0 - 0.08, bp[2] + bw / 2.0 + 0.08)):
+        cage.add_box("BannerPost%d" % k, (0.08, bp[1] + bh / 2.0 + 0.15, 0.08), (ENC_X1, (bp[1] + bh / 2.0 + 0.15) / 2.0, z), dark, c_court, root)
+    cage.add_box("BannerBar", (0.06, 0.06, bw + 0.3), (ENC_X1, bp[1] + bh / 2.0 + 0.12, bp[2]), dark, c_court, root)
 
     # Sand everywhere around the court (the slab sits 5 mm above it), out to the shoreline.
     cage.add_quad("Sand", [(-40, -0.005, -WIDE), (SAND_X1, -0.005, -WIDE), (SAND_X1, -0.005, WIDE), (-40, -0.005, WIDE)],

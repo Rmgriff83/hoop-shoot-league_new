@@ -50,6 +50,10 @@ extends CosmeticSet
 ## The home page's star row over the area name: how hard this area plays
 ## (one star per step; the cage is 1, the beach 2).
 @export var title_stars := 1
+## A bright sky (the midday city) washes out the cream chrome at the top of
+## the screen: the alpha of an ink gradient laid over the top TOP_WASH_H px
+## behind the HUD's cards and the home's top bar (0 = none).
+@export var top_wash := 0.0
 
 ## Attach BeachFx (animated Ocean waves + tide-driven Shore) at build time.
 @export var ocean := false

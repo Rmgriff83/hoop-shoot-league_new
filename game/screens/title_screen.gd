@@ -603,6 +603,29 @@ func _update_zone() -> void:
 	if all_label != null:
 		all_label.text = "ALL AREAS · " + AreaArchiveCopy.open_count(App.level(), _archive_rows())
 	_update_chevrons()
+	_update_top_wash(arena)
+
+
+## A bright sky (ArenaSet.top_wash): an ink gradient over the top of the
+## chrome, right above the scrim, so the top bar and the zone stay legible.
+func _update_top_wash(arena: ArenaSet) -> void:
+	if _chrome == null:
+		return
+	var old: Node = _chrome.get_node_or_null("TopWash")
+	if old != null:
+		_chrome.remove_child(old)
+		old.queue_free()
+	var alpha := float(arena.top_wash) if arena != null else 0.0
+	if alpha <= 0.0:
+		return
+	var wash := ShadowStyle.top_wash(alpha)
+	_chrome.add_child(wash)
+	var scrim: Node = _chrome.get_node_or_null("Scrim")
+	_chrome.move_child(wash, scrim.get_index() + 1 if scrim != null else 0)
+
+
+func has_top_wash() -> bool:
+	return _chrome != null and _chrome.get_node_or_null("TopWash") != null
 
 
 func headline() -> String:

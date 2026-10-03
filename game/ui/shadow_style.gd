@@ -99,6 +99,33 @@ static func _face(ci: CanvasItem, face: Rect2, edge: Color, fill: Color, dot: Co
 	ci.draw_rect(face, edge, false, EDGE)
 
 
+## An ink wash fading downward from `alpha` at the top to nothing at `h`:
+## what a bright sky needs behind the chrome at the top of the screen
+## (ArenaSet.top_wash). Added by the caller.
+const TOP_WASH_H := 300.0
+
+
+static func top_wash(alpha: float, h := TOP_WASH_H) -> TextureRect:
+	var wash := TextureRect.new()
+	wash.name = "TopWash"
+	var grad := Gradient.new()
+	grad.set_color(0, Color(RetroTheme.SCENE_OUTLINE, alpha))
+	grad.set_color(1, Color(RetroTheme.SCENE_OUTLINE, 0.0))
+	var gt := GradientTexture2D.new()
+	gt.gradient = grad
+	gt.fill_from = Vector2(0, 0)
+	gt.fill_to = Vector2(0, 1)
+	gt.width = 4
+	gt.height = 64
+	wash.texture = gt
+	wash.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	wash.stretch_mode = TextureRect.STRETCH_SCALE
+	wash.position = Vector2.ZERO
+	wash.size = Vector2(720, h)
+	wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return wash
+
+
 ## Content margins that keep children inside the face, clear of the shadow.
 static func margins(pad: float, pad_h := -1.0) -> StyleBoxEmpty:
 	var sb := StyleBoxEmpty.new()

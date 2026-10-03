@@ -58,6 +58,23 @@ var _opp_spring := JuiceSpring.new(0.0, 90.0, 0.75)
 var _ot := 0
 var _practice := false
 var _best := -1
+var _top_wash: TextureRect
+
+
+## A bright sky (ArenaSet.top_wash): an ink gradient behind the top cards.
+func set_top_wash(alpha: float) -> void:
+	if _top_wash != null:
+		_top_wash.queue_free()
+		_top_wash = null
+	if alpha <= 0.0:
+		return
+	_top_wash = ShadowStyle.top_wash(alpha)
+	add_child(_top_wash)
+	move_child(_top_wash, 0)
+
+
+func has_top_wash() -> bool:
+	return _top_wash != null
 
 
 func _ready() -> void:

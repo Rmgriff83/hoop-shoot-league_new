@@ -30,6 +30,7 @@ title_drift = Vector3(0.05, 0, 0.35)
 title_period_s = 30.0
 title_fov = 66.0
 title_stars = 3
+top_wash = 0.62
 traffic = true
 spot_names = PackedStringArray("KEY", "L ELBOW", "R ELBOW", "L BASE", "R BASE")
 spot_positions = PackedVector3Array(0, 0, 0, 0.953, 0, -2.45, 0.953, 0, 2.45, 2.291, 0, -3.37, 2.291, 0, 3.37)

@@ -80,6 +80,8 @@ func _ready() -> void:
 	_hud = Hud.new()
 	_hud.name = "Hud"
 	add_child(_hud)
+	if _arena_set != null:
+		_hud.set_top_wash(_arena_set.top_wash)
 
 	# Hints over the area's tappable props (the beach radio).
 	var prop_layer := CanvasLayer.new()
