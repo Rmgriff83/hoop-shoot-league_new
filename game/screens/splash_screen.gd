@@ -1,26 +1,20 @@
 extends Node3D
 ## The splash (design "Splash Screen" 29a, 2026-10-03; docs/HOME.md →
 ## Splash): the first screen on launch and where the Area Archive's back
-## leads. The arcade cage pans behind a frosted glass door — the title's
-## slow truck, zoomed out a little, rendered small and scaled up soft under
-## an ink scrim — with the 2D neon sign (NeonSign) hung on it. The sign
-## lights up the moment the screen appears; as it reaches full glow the two
-## orange buttons rise in: CONTINUE (NEW GAME with no save) → the title,
+## leads. The design's own 3D neon sign (NeonSign3D) hangs in a 720×720
+## viewport over black — Ross's call for now: no court, no frosted glass —
+## and lights up the moment the screen appears; as it reaches full glow the
+## two orange buttons rise in: CONTINUE (NEW GAME with no save) → the title,
 ## which opens the archive as the front door, and SETTINGS → the campaign
 ## home's sheet. Discord and Reddit icons sit top-left (links to come).
 ## A tap on the sign replays it.
 
-const GLASS_SIZE := Vector2i(180, 320)   # the court renders at a quarter size: a soft 4 px blur
-const SCRIM_ALPHA := 0.45
-const ZOOM_OUT_FOV := 14.0               # wider than the title's pan
-const ZOOM_OUT_BACK := 0.9               # metres pulled back along the look
-const PAN_SLOW := 1.5                    # the truck takes half again as long
+const SIGN_VIEW := Vector2i(720, 720)
+const SIGN_TOP := 150.0
+const SIGN_FOV := 40.0
 const ICON_ROW := Vector2(28.0, 40.0)
 const ICON_HIT := 56.0
 const ICON_PX := 40.0
-const SIGN_LEFT := 60.0
-const SIGN_TOP := 150.0
-const SIGN_AREA_H := 720.0
 const BUTTON_LEFT := 36.0
 const BUTTON_RIGHT := 42.0
 const BUTTON_TOP := 900.0
@@ -33,11 +27,8 @@ const SOCIAL := ["discord", "reddit"]
 
 var _sub: SubViewport
 var _cam: Camera3D
-var _court: CourtGeometry
-var _spec: Dictionary
-var _t := 0.0
+var _sign: NeonSign3D
 var _ui: CanvasLayer
-var _sign: NeonSign
 var _buttons: Array[Control] = []
 var _risen := false
 var _settings: SettingsPanel
@@ -51,46 +42,48 @@ static func primary_label(has_save: bool) -> String:
 
 func _ready() -> void:
 	Sfx.start_music(App.TITLE_MUSIC["id"], App.TITLE_MUSIC["clip"], App.TITLE_MUSIC["gain_db"])
-	_build_glass()
+	_build_sign()
 	_build_ui()
 
 
-## The cage in a small viewport: the title's pan, zoomed out, drawn soft.
-func _build_glass() -> void:
+## The sign in its own world: black, a touch of glow for the tubes, a soft
+## key light for the steel chain and the blocked-out jumps; the camera fits
+## the sign the way the design's embed does.
+func _build_sign() -> void:
 	_sub = SubViewport.new()
-	_sub.name = "Glass"
-	_sub.size = GLASS_SIZE
+	_sub.name = "SignView"
+	_sub.size = SIGN_VIEW
+	_sub.own_world_3d = true
+	_sub.transparent_bg = true
 	_sub.render_target_update_mode = SubViewport.UPDATE_ALWAYS
 	add_child(_sub)
+	var env := Environment.new()
+	env.background_mode = Environment.BG_COLOR
+	env.background_color = Color.BLACK
+	env.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+	env.ambient_light_color = Color(0.5, 0.45, 0.4)
+	env.ambient_light_energy = 0.35
+	env.glow_enabled = true
+	env.glow_intensity = 0.7
+	env.glow_bloom = 0.15
+	env.glow_hdr_threshold = 1.0
+	var we := WorldEnvironment.new()
+	we.environment = env
+	_sub.add_child(we)
+	var key := DirectionalLight3D.new()
+	key.name = "Key"
+	key.light_energy = 0.8
+	key.rotation_degrees = Vector3(-35.0, 25.0, 0.0)
+	_sub.add_child(key)
+	_sign = NeonSign3D.new()
+	_sub.add_child(_sign)
 	_cam = Camera3D.new()
 	_cam.name = "Camera"
+	_cam.fov = SIGN_FOV
+	var c := _sign.bounds().get_center()
 	_sub.add_child(_cam)
-	var card: Dictionary = AreaArchiveCopy.AREAS[0]
-	var arena := CosmeticLibrary.get_arena(str(card["area"]))
-	if arena == null:
-		arena = CosmeticLibrary.starter_arena()
-	_court = CourtGeometry.new()
-	_court.name = "Court"
-	_court.geo = App.geo_for_mode(str(card["mode"]))
-	_court.arena_set = arena
-	_court.hoop_set = App.hoop_for_mode(str(card["mode"]))
-	_sub.add_child(_court)
-	_court.led.set_text("HOOP SHOOT", _court.led.accent_color)
-	_spec = zoomed_out(TitlePan.spec_of(arena))
-	_cam.fov = float(_spec["fov"])
-	var p := TitlePan.pose(_spec, 0.0)
-	_cam.position = p["pos"]
-	_cam.look_at(p["look"])
-
-
-## The title's pan spec, pulled back and widened: you are outside the door.
-static func zoomed_out(spec: Dictionary) -> Dictionary:
-	var out := spec.duplicate()
-	var dir: Vector3 = (Vector3(spec["look_at"]) - Vector3(spec["cam_pos"])).normalized()
-	out["cam_pos"] = Vector3(spec["cam_pos"]) - dir * ZOOM_OUT_BACK
-	out["fov"] = float(spec["fov"]) + ZOOM_OUT_FOV
-	out["period_s"] = float(spec["period_s"]) * PAN_SLOW
-	return out
+	_cam.position = Vector3(c.x, c.y, c.z + _sign.fit_distance(SIGN_FOV, 1.0))
+	_cam.look_at(c)
 
 
 func _build_ui() -> void:
@@ -98,22 +91,30 @@ func _build_ui() -> void:
 	_ui.name = "Ui"
 	_ui.layer = 10
 	add_child(_ui)
-	# The glass: the small render scaled up with linear filtering, then the scrim.
-	var glass := TextureRect.new()
-	glass.name = "GlassView"
-	glass.texture = _sub.get_texture()
-	glass.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	glass.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	glass.stretch_mode = TextureRect.STRETCH_SCALE
-	glass.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
-	glass.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ui.add_child(glass)
-	var scrim := ColorRect.new()
-	scrim.name = "Scrim"
-	scrim.color = Color(RetroTheme.SCENE_OUTLINE, SCRIM_ALPHA)
-	scrim.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ui.add_child(scrim)
+	# Black for now, then the sign's viewport in its 720 px band.
+	var bg := ColorRect.new()
+	bg.name = "Bg"
+	bg.color = Color.BLACK
+	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui.add_child(bg)
+	var view := TextureRect.new()
+	view.name = "SignTexture"
+	view.texture = _sub.get_texture()
+	view.position = Vector2(0.0, SIGN_TOP)
+	view.size = Vector2(SIGN_VIEW)
+	view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_ui.add_child(view)
+	var tap := Button.new()
+	tap.name = "SignTap"
+	tap.flat = true
+	tap.focus_mode = Control.FOCUS_NONE
+	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+		tap.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	tap.position = view.position
+	tap.size = view.size
+	tap.pressed.connect(_replay)
+	_ui.add_child(tap)
 	# Discord / Reddit, top-left (the links come later).
 	for i in SOCIAL.size():
 		var b := Button.new()
@@ -128,12 +129,6 @@ func _build_ui() -> void:
 		ic.position = Vector2.ONE * ((ICON_HIT - ICON_PX) / 2.0)
 		b.add_child(ic)
 		_ui.add_child(b)
-	# The sign, centred in its 720 px band.
-	_sign = NeonSign.new()
-	_sign.name = "NeonSign"
-	_sign.position = Vector2(SIGN_LEFT, SIGN_TOP + (SIGN_AREA_H - NeonSign.sign_size().y) / 2.0)
-	_sign.tapped.connect(_replay)
-	_ui.add_child(_sign)
 	# The two buttons, parked low and clear until the sign is lit.
 	var primary := _button(primary_label(App.has_save()), "icon_ball", BUTTON_TOP)
 	primary.name = "Primary"
@@ -180,12 +175,7 @@ func _button(text: String, icon: String, top: float) -> ShadowCard:
 	return b
 
 
-func _process(dt: float) -> void:
-	_t += dt
-	var p := TitlePan.pose(_spec, _t)
-	_cam.position = p["pos"]
-	_cam.look_at(p["look"])
-	_court.step_rim(dt)
+func _process(_dt: float) -> void:
 	if not _risen and _sign.done():
 		_rise()
 

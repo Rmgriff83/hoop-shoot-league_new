@@ -142,17 +142,18 @@ the card lab, `ResultsCopy.board_name`, and `tests/test_city.gd`.
 
 `game/screens/splash_screen.gd` (the main scene; `App.to_splash()`,
 `tests/test_splash.gd`, QA `--qa-splash`): the first screen on launch and
-where the area archive's `<` leads. The arcade cage pans behind a frosted
-glass door — the title's slow truck zoomed out (`zoomed_out()`: +14° fov,
-0.9 m back, half again as slow), rendered at 180×320 in a SubViewport and
-scaled up with linear filtering under an ink scrim — with the 2D neon sign
-hung on it (`game/ui/neon_sign.gd`, `NeonSign`: HOOP / SHOOT / LEAGUE as
-single-stroke pixel tube letters from the design's stroke table, halo +
-orange glass + cream core, the pull chain under the last E). The sign plays
-the moment the screen appears, on the design's timeline: the chain tug at
-0.35–1.2 s, dark until 1.3 s, four uneven blinks, a 2.6 s swell to full,
-then a 7 % breath; a tap replays it. At 4.6 s the two full-width orange
-buttons rise in 0.15 s apart: CONTINUE (NEW GAME on a fresh install,
+where the area archive's `<` leads. The design's own 3D neon sign
+(`game/view/neon_sign_3d.gd`, `NeonSign3D`, the "Neon Sign.html" model
+rebuilt with SurfaceTool at startup: HOOP / SHOOT / LEAGUE as rounded
+single-stroke glass tubes — cream core, orange glass, two additive halos —
+the jumps between a word's strokes blocked out behind, electrodes at the
+word ends, the sixteen-bead pull chain under the last E, three orange spill
+lights) hangs in a 720×720 viewport of its own (black, a little glow) over a
+black background — Ross's call for now; the frosted-cage version was cut.
+It plays the moment the screen appears, on the design's timeline: the chain
+tug at 0.35–1.2 s, dark until 1.3 s, four uneven blinks, a 2.6 s swell to
+full, then a 7 % breath; a tap replays it. At 4.6 s the two full-width
+orange buttons rise in 0.15 s apart: CONTINUE (NEW GAME on a fresh install,
 `App.has_save()`) → the title, which opens the archive as the front door;
 SETTINGS → the home's sheet. Discord and Reddit icons sit top-left (the
 links come later). Title music starts here and carries into the title.
