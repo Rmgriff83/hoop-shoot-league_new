@@ -177,8 +177,8 @@ def build():
     # a quad under its own `PalmRig` empty at the trunk base, so BeachFx can
     # turn it to face the camera.
     for i, (x, z, wdt, hgt) in enumerate(((6.5, -3.0, 2.8, 4.4), (6.5, 3.0, 2.8, 4.4),      # flanking the hoop
-                                           (9.8, -13.5, 2.4, 3.8), (11.2, -3.6, 2.2, 3.4),  # across the beach behind
-                                           (11.0, 4.0, 2.4, 3.8), (9.8, 13.5, 2.4, 3.8),
+                                           (10.0, -21.0, 2.4, 3.8), (11.2, -9.5, 2.2, 3.4),  # across the beach behind, wide apart
+                                           (11.2, 9.5, 2.4, 3.8), (10.0, 21.0, 2.4, 3.8),
                                            (3.5, -9.2, 2.6, 4.2), (3.5, 9.2, 2.6, 4.2),
                                            (-4.0, -9.4, 2.4, 3.6), (-4.0, 9.4, 2.4, 3.6))):
         prig = cage.add_empty("PalmRig%d" % i, c_props, root, (x, 0.0, z))
