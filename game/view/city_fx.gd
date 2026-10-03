@@ -32,6 +32,18 @@ const PIGEON_EDGE := 30.0                   # z where a flock enters / leaves
 const PIGEON_SPEED := 4.6
 const PIGEON_SIZE := Vector2(0.5, 0.34)
 const PIGEON_GLIDE := Vector2(1.2, 2.6)     # s of flapping between glides
+## Rooftop smoke: a persistent thin plume from the chimney on the grand
+## block across the street (`SmokeStack`, build_city.py) — a handful of
+## billboard puffs cycling up, drifting with the wind, growing and fading.
+## No particles, no RNG: SMOKE_N quads moved by the clock.
+const SMOKE_SHADER := preload("res://game/court/smoke.gdshader")
+const SMOKE_PUFF := "res://assets/textures/city_smoke.png"
+const SMOKE_N := 7
+const SMOKE_LIFE := 7.0                     # s a puff takes from the stack to gone
+const SMOKE_RISE := 11.0                    # m it climbs
+const SMOKE_DRIFT := Vector3(1.0, 0.0, 4.0) # m it is blown over its life
+const SMOKE_SIZE := Vector2(2.0, 7.0)       # m across at birth → at the end (it is 60 m away)
+const SMOKE_ALPHA := 0.55
 ## The street runs laterally behind the hoop (along sim z); `StreetRig` in the
 ## glb sits on its centre line (tools/blender/build_city.py STREET_X).
 const STREET_X := 11.1
@@ -46,6 +58,7 @@ const CAR_EDGE := 34.0            # z where a car appears / is freed (corner rad
 ## exit (just past where the cars leave view) that goes red now and then —
 ## the pile-up behind it is the jam.
 const CAR_SPEED := Vector2(0.0, 5.0)        # a car's pace: stop to a slow roll
+const CAR_PACE := Vector2(0.68, 1.3)         # each car's own cruising pace, × CAR_SPEED.y (Ross, 2026-10-02: not all the same)
 const SIGNAL_GREEN := Vector2(14.0, 30.0)   # s a lane's exit signal stays green
 const SIGNAL_RED := Vector2(10.0, 22.0)     # s it holds red (the queue builds)
 const SIGNAL_X := 2.0                       # m past the exit edge where the lead car stops
@@ -92,6 +105,9 @@ var _pigeon_gliding: Array[bool] = []
 var _pigeon_root: Node3D
 var _next_flock := 12.0
 var _bird_rng := RandomNumberGenerator.new()   # its own stream: the traffic's draws stay put
+var _smoke_stack: Node3D
+var _smoke: Array[MeshInstance3D] = []
+var _smoke_mats: Array[ShaderMaterial] = []
 var _facade_mats: Dictionary = {}     # texture path → the one dusk material its faces share
 var _facade_faces := 0
 var _t := 0.0
@@ -115,12 +131,15 @@ func setup(arena: Node) -> bool:
 			n.visible = false   # bulbs are off at midday
 		elif n is MeshInstance3D and (n.name == "BusPoster" or n.name == "BusSign"):
 			_unshade(n as MeshInstance3D)
+		elif n is Node3D and n.name == "SmokeStack":
+			_smoke_stack = n as Node3D
 	_fx_root = Node3D.new()
 	_fx_root.name = "Traffic"
 	arena.add_child(_fx_root)
 	_pigeon_root = Node3D.new()
 	_pigeon_root.name = "Pigeons"
 	arena.add_child(_pigeon_root)
+	_build_smoke()
 	_rng.seed = RNG_SEED
 	_bird_rng.seed = RNG_SEED ^ 0x5EED
 	_next_flock = _bird_rng.randf_range(8.0, PIGEON_GAP.y)
@@ -262,7 +281,8 @@ func spawn_car(dir := 0.0) -> void:
 	car.position = Vector3(_street_x + dir * LANE_HALF, 0.0, _street_z0 - dir * CAR_EDGE)
 	car.rotation.y = (0.0 if dir > 0.0 else PI) + _yaw
 	_fx_root.add_child(car)
-	_cars.push_back({"node": car, "dir": dir, "spot": has_spot, "vel": lane_speed(dir) * 0.5})
+	var pace := CAR_SPEED.y * _rng.randf_range(CAR_PACE.x, CAR_PACE.y)
+	_cars.push_back({"node": car, "dir": dir, "spot": has_spot, "vel": dir * pace * 0.5, "pace": pace})
 	_sent += 1
 
 
@@ -308,6 +328,7 @@ static func _light_lamps(car: Node) -> void:
 func _process(dt: float) -> void:
 	_t += dt
 	_step_pigeons(dt)
+	_step_smoke()
 	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
 	if cam != null:
 		for rig in _tree_rigs:
@@ -326,11 +347,11 @@ func _process(dt: float) -> void:
 	for i in _cars.size():
 		var c := _cars[i]
 		var dir := float(c["dir"])
-		var pace := absf(lane_speed(dir))
+		var pace := float(c.get("pace", absf(lane_speed(dir))))
 		var room := gap_ahead(i)
 		var want := pace
 		if room < INF:
-			want = minf(pace, clampf((room - STOP_GAP) / FOLLOW_GAP, 0.0, 1.0) * CAR_SPEED.y)
+			want = minf(pace, clampf((room - STOP_GAP) / FOLLOW_GAP, 0.0, 1.0) * pace)
 		var v := absf(float(c["vel"]))
 		if want > v:
 			v = minf(v + ACCEL * dt, want)
@@ -438,3 +459,46 @@ func _step_pigeons(dt: float) -> void:
 			all_out = false
 	if all_out:
 		_clear_pigeons()
+
+
+# ---- rooftop smoke ----------------------------------------------------------------
+
+
+func _build_smoke() -> void:
+	if _smoke_stack == null:
+		return
+	var puff: Texture2D = load(SMOKE_PUFF)
+	for i in SMOKE_N:
+		var mi := MeshInstance3D.new()
+		mi.name = "Smoke%d" % i
+		var quad := QuadMesh.new()
+		quad.size = Vector2.ONE
+		mi.mesh = quad
+		var m := ShaderMaterial.new()
+		m.shader = SMOKE_SHADER
+		m.set_shader_parameter("puff", puff)
+		mi.material_override = m
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_smoke_stack.add_child(mi)
+		_smoke.push_back(mi)
+		_smoke_mats.push_back(m)
+	_step_smoke()
+
+
+func smoke_count() -> int:
+	return _smoke.size()
+
+
+## Where puff i is in its life, 0 at the stack → 1 gone.
+func smoke_phase(i: int) -> float:
+	return fposmod(_t / SMOKE_LIFE + float(i) / float(maxi(SMOKE_N, 1)), 1.0)
+
+
+func _step_smoke() -> void:
+	for i in _smoke.size():
+		var p := smoke_phase(i)
+		var ease := 1.0 - (1.0 - p) * (1.0 - p)   # quick off the stack, slowing as it thins
+		var size := lerpf(SMOKE_SIZE.x, SMOKE_SIZE.y, ease)
+		_smoke[i].position = Vector3(0, SMOKE_RISE * ease, 0) + SMOKE_DRIFT * ease + Vector3(0.25 * sin(p * TAU * 1.5 + i), 0, 0)
+		_smoke[i].scale = Vector3.ONE * size
+		_smoke_mats[i].set_shader_parameter("alpha", SMOKE_ALPHA * (1.0 - p) * minf(1.0, p * 6.0))

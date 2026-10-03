@@ -461,3 +461,22 @@ do
   end
   save(spr, "city_pigeon.png")
 end
+
+-- city_smoke.png 32x32 RGBA — one soft puff for the rooftop plume: a pale
+-- grey radial blob whose alpha falls off to nothing, a little ragged.
+do
+  local W, H = 32, 32
+  local spr = Sprite(W, H, ColorMode.RGBA)
+  local img = spr.cels[1].image
+  for y = 0, H - 1 do
+    for x = 0, W - 1 do
+      local dx, dy = (x + 0.5 - 16) / 15, (y + 0.5 - 16) / 15
+      local d = math.sqrt(dx * dx + dy * dy) + (vnoise(x, y, 5, 611) - 0.5) * 0.3
+      local a = math.max(0, 1 - d)
+      a = a * a
+      local v = 196 + vnoise(x, y, 6, 613) * 30
+      img:drawPixel(x, y, pc.rgba(math.floor(v), math.floor(v), math.floor(v + 6), math.floor(a * 255)))
+    end
+  end
+  save(spr, "city_smoke.png")
+end

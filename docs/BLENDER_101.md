@@ -719,6 +719,13 @@ glows hidden. **Windows** are painted, not lit: every `Building*` and
 (`CityFx.FACADE_TINT`). (The per-window light shader with its
 authored mask and id maps was removed on 2026-10-01: it lagged the phone.)
 
+**Rooftop smoke** (2026-10-02): a `Chimney` on the grand block's front tier
+(build_city.py finds the highest front-wall ledge under 24 m the court can
+see; the 42 m roof is out of frame) with a `SmokeStack` empty; `CityFx`
+hangs seven `smoke.gdshader` billboard puffs on it and moves them on the
+clock — up 11 m, blown 4 m along the street, 2 → 7 m across, fading — no
+particles, no RNG, seven quads.
+
 **Pigeons** (2026-10-02): now and then a loose bunch of 4–7 crosses low
 over the street (`CityFx.spawn_pigeons`, its own RNG stream so the
 traffic's draws stay put): `city_pigeon.png` is a 4-frame flap of a plump

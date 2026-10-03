@@ -322,7 +322,35 @@ def build():
     # ---- The blocks: Sam Grady's pack at real scale (see LAYOUT). Nothing
     # stands between the far sidewalk and the frontage: the facades ARE the view.
     for name, index, xz, yaw in LAYOUT:
-        _building(name, index, facade, c_blocks, root, xz, yaw)
+        obj = _building(name, index, facade, c_blocks, root, xz, yaw)
+        if name == "Building01":
+            # A chimney on the grand block's roof near its front edge, and the
+            # `SmokeStack` empty CityFx hangs its persistent plume from
+            # (Ross, 2026-10-02). dimensions: blender x = sim x, z = height.
+            # The block's roof (44 m) is out of the court's view, so the chimney
+            # stands on the FRONT PARAPET's lower tier: the highest vertex of the
+            # front wall near the right end (local x = toward the court, y = along
+            # the street, z = up; the origin is the footprint centre on the ground).
+            d = obj.dimensions
+            front_x = xz[0] - d.x / 2.0
+            verts = obj.data.vertices
+            min_x = min(v.co.x for v in verts)
+            # The highest front-wall ledge the court's camera can still see
+            # (under ~24 m), and where along the street it is.
+            tiers = {}
+            for v in verts:
+                if abs(v.co.y) < 16.0 and v.co.z > 5.0:
+                    key = (round(v.co.z), round((v.co.x - min_x) / 2.0) * 2)
+                    tiers[key] = tiers.get(key, 0) + 1
+            print("TIERS (height, depth from front): %s" % sorted(k for k, n in tiers.items() if n >= 4))
+            ledges = [(v.co.z, v.co.y, v.co.x - min_x) for v in verts if v.co.x < min_x + 9.0 and v.co.z <= 24.0 and abs(v.co.y) < 12.0]
+            top, sz, depth = max(ledges) if ledges else (d.z, 0.0, 0.0)
+            sz = max(-10.0, min(12.0, sz))
+            sx = front_x + depth + 1.2
+            cage.add_box("Chimney", (1.2, 2.2, 1.2), (sx, top + 1.1, sz), dark, c_props, root)
+            cage.add_box("ChimneyCap", (1.6, 0.25, 1.6), (sx, top + 2.25, sz), dark, c_props, root)
+            cage.add_empty("SmokeStack", c_props, root, (sx, top + 2.5, sz))
+            print("CHIMNEY at x %.1f z %.1f on the front tier at %.1f m (block %.1f m)" % (sx, sz, top, d.z))
 
     # ---- Trees at the court's corners, billboarded by CityFx.
     for i, (x, z) in enumerate(((-12.3, -9.6), (-12.3, 9.6), (6.6, -10.6), (6.6, 10.6))):

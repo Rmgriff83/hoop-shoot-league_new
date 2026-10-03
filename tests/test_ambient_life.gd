@@ -183,6 +183,29 @@ func _city(t) -> void:
 			break
 	t.ok(glided, "some pigeons glided on the way")
 	t.eq(cfx.pigeon_count(), 0, "the bunch is freed once it has crossed")
+	# Rooftop smoke: a chimney on the grand block, a persistent plume of a few
+	# cheap billboard puffs rising, drifting, growing and fading on the clock.
+	t.ok(FileAccess.file_exists("res://assets/textures/city_smoke.png"), "smoke puff generated")
+	t.eq(_count(city, "Chimney"), 2, "a chimney and its cap on the roof across the street")
+	t.ok(city.find_child("SmokeStack", true, false) != null, "the SmokeStack empty")
+	t.eq(cfx.smoke_count(), CityFx.SMOKE_N, "a handful of puffs, no particles")
+	cfx._step_smoke()
+	var ys := []
+	for i in CityFx.SMOKE_N:
+		ys.push_back(cfx._smoke[i].position.y)
+	ys.sort()
+	t.ok(ys[0] >= 0.0 and ys[ys.size() - 1] <= CityFx.SMOKE_RISE + 0.01, "puffs sit between the stack and the top of the plume")
+	t.ok(ys[ys.size() - 1] - ys[0] > CityFx.SMOKE_RISE * 0.5, "…spread along it")
+	var young := -1
+	for i in CityFx.SMOKE_N:
+		if young < 0 or cfx.smoke_phase(i) < cfx.smoke_phase(young):
+			young = i
+	var old := -1
+	for i in CityFx.SMOKE_N:
+		if old < 0 or cfx.smoke_phase(i) > cfx.smoke_phase(old):
+			old = i
+	t.ok(cfx._smoke[old].scale.x > cfx._smoke[young].scale.x, "a puff grows as it rises")
+	t.ok(float(cfx._smoke_mats[old].get_shader_parameter("alpha")) < float(cfx._smoke_mats[young].get_shader_parameter("alpha")) or cfx.smoke_phase(young) < 0.05, "…and fades")
 	t.eq(cfx.car_count(), 0, "no car yet")
 	cfx.spawn_car()
 	t.eq(cfx.car_count(), 1, "a car spawned")
@@ -195,7 +218,18 @@ func _city(t) -> void:
 	t.ok(Vector2(p0.x, p0.z).length() < 58.0, "inside the sky cylinder")
 	t.ok(absf(sin(car.rotation.y)) < 1e-6, "aligned with the street")
 	var v0 := absf(cfx.car_velocity(0))
-	t.ok(v0 >= CityFx.CAR_SPEED.x and v0 <= CityFx.CAR_SPEED.y, "a roll (%.1f m/s)" % v0)
+	t.ok(v0 >= CityFx.CAR_SPEED.x and v0 <= CityFx.CAR_SPEED.y * CityFx.CAR_PACE.y, "a roll (%.1f m/s)" % v0)
+	# Every car has its own cruising pace, so a stream is never one speed.
+	var paces := {}
+	var pf := CityFx.new()
+	pf.setup(load("res://assets/arena/city/city.glb").instantiate())
+	for i in 6:
+		pf.spawn_car(1.0 if i % 2 == 0 else -1.0)
+		for c in pf._cars:
+			paces["%.2f" % float(c["pace"])] = true
+		pf._cars.clear()
+	t.ok(paces.size() >= 3, "cars cruise at different paces (%d distinct of 6)" % paces.size())
+	pf.free()
 	for i in 600:
 		cfx._process(1.0 / 60.0)
 	t.ok(absf(cfx.car_position(0).z) < absf(p0.z), "it rolls inward")
