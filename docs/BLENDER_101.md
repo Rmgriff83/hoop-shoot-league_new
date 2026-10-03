@@ -921,3 +921,13 @@ The area archive's cards show the real courts: after rebuilding any area
 (or changing its lighting or hoop) run `godot --path . --resolution
 360x640 -- --qa-area-snaps`, then `--import`, and commit
 `assets/ui/areas/area_<id>.png` (docs/HOME.md → Area archive).
+
+## 22. Court dressing (2026-10-02)
+
+`beach_court.png` carries a few sand patches (blobs near the edges, corners
+and the baseline, the asphalt blended toward the sand with a lighter grain,
+sand re-covering the paint at a blob's heart); `city_court.png` scatters
+its leaves in five drifts (warm browns and oranges, a few green, densest at
+each heart, strays outside) instead of an even sprinkle. Both are
+`gen_*_textures.lua` passes; rebuild the area and re-run `--qa-area-snaps`
+after changing them.

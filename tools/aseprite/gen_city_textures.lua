@@ -87,13 +87,33 @@ do
       img:drawPixel(x, y, rgb(pc.rgbaR(c) * 0.8, pc.rgbaG(c) * 0.86, pc.rgbaB(c) * 0.9))
     end
   end
-  -- leaves: small warm blobs
-  for i = 0, 70 do
-    local lx = math.floor(noise(i, 1, 175) * (W - 4))
-    local ly = math.floor(noise(i, 2, 175) * (H - 4))
-    local warm = noise(i, 3, 175)
-    local leaf = rgb(120 + warm * 80, 70 + warm * 40, 30)
-    fill(img, lx, ly, lx + 1 + math.floor(warm * 2), ly + 1, leaf)
+  -- Leaves in a few DRIFTS (Ross, 2026-10-02), not an even sprinkle: each a
+  -- blob in a corner or along the fence side, packed with small leaves
+  -- (warm browns and oranges, a few still green) densest at its heart,
+  -- with a handful of strays just outside.
+  local DRIFTS = {
+    {col(4.1), row(-6.8), 42, 60}, {col(3.4), row(6.6), 34, 44}, {col(-8.4), row(6.9), 40, 52},
+    {col(-6.2), row(-7.0), 28, 34}, {col(-0.5), row(7.1), 24, 30},
+  }
+  for d, drift in ipairs(DRIFTS) do
+    local cx, cy, r, n = drift[1], drift[2], drift[3], drift[4]
+    for i = 0, n + 7 do
+      local stray = i >= n
+      local ang = noise(i, d, 175) * 6.2832
+      local rad = (stray and (1.05 + noise(i, d, 176) * 0.5) or math.sqrt(noise(i, d, 176)) * 0.95) * r
+      local lx = math.floor(cx + math.cos(ang) * rad)
+      local ly = math.floor(cy + math.sin(ang) * rad * 0.8)
+      local warm = noise(i, d, 177)
+      local leaf
+      if noise(i, d, 178) < 0.22 then
+        leaf = rgb(70 + warm * 40, 120 + warm * 50, 40)         -- still green
+      else
+        leaf = rgb(120 + warm * 90, 60 + warm * 50, 24 + warm * 10)
+      end
+      local w = 1 + math.floor(noise(i, d, 179) * 2.5)
+      fill(img, lx, ly, lx + w, ly + 1, leaf)
+      if w > 1 then img:drawPixel(lx + 1, ly - 1, leaf) end
+    end
   end
   fill(img, base_c, row(-7.5), base_c + 1, row(7.5), line)
   fill(img, half_c, row(-7.5), half_c + 1, row(7.5), line)

@@ -74,6 +74,38 @@ do
   local hoop_c, base_c, ft_c, half_c = col(3.4075), col(4.25), col(3.4075 - 4.2), col(-9.75)
   local mid = row(0)
   local lane_half = math.floor(2.45 * px + 0.5)
+  -- Sand blown onto the court in a few patches (Ross, 2026-10-02): blobs
+  -- near the edges, the corners and the baseline side, ragged by noise,
+  -- the asphalt blended toward the sand's colour with a lighter grain.
+  -- (The lines are painted after, then sand re-covers them inside a blob.)
+  local PATCHES = {
+    {col(4.0), row(-6.6), 58}, {col(3.6), row(6.9), 50}, {col(-2.0), row(7.1), 42},
+    {col(-8.6), row(-6.4), 52}, {col(-5.5), row(-7.0), 34}, {col(0.8), row(-7.2), 32},
+  }
+  local function sand_at(x, y)
+    local best = 0.0
+    for i, pch in ipairs(PATCHES) do
+      local dx, dy = x - pch[1], y - pch[2]
+      local r = pch[3] * (0.75 + vnoise(x, y, 14, 300 + i) * 0.5)
+      local d = math.sqrt(dx * dx + dy * dy) / r
+      if d < 1.0 then
+        local a = (1.0 - d) * (1.0 - d) * 2.0
+        if a > best then best = math.min(1.0, a) end
+      end
+    end
+    return best
+  end
+  for y = 0, H - 1 do
+    for x = 0, W - 1 do
+      local a = sand_at(x, y)
+      if a > 0.04 then
+        local n = vnoise(x, y, 8, 311) * 0.7 + noise(x, y, 312) * 0.3
+        local sr, sg, sb = 214 + n * 24, 194 + n * 22, 150 + n * 22
+        local c = img:getPixel(x, y)
+        img:drawPixel(x, y, rgb(pc.rgbaR(c) + (sr - pc.rgbaR(c)) * a, pc.rgbaG(c) + (sg - pc.rgbaG(c)) * a, pc.rgbaB(c) + (sb - pc.rgbaB(c)) * a))
+      end
+    end
+  end
   for y = mid - lane_half, mid + lane_half do
     for x = ft_c, base_c do
       local c = img:getPixel(x, y)
@@ -103,6 +135,20 @@ do
   fill(img, x_join, mid + math.floor(zc) - 1, base_c, mid + math.floor(zc), line)
   -- centre circle (half of it shows on this side of the half-court line)
   arc(img, half_c, mid, 1.8 * px, -math.pi / 2, math.pi / 2, line, 2)
+  -- sand over the paint inside the blobs' hearts
+  for y = 0, H - 1 do
+    for x = 0, W - 1 do
+      local a = sand_at(x, y)
+      if a > 0.55 then
+        local c = img:getPixel(x, y)
+        if pc.rgbaR(c) > 200 and pc.rgbaG(c) > 200 and pc.rgbaB(c) > 190 then   -- a line pixel
+          local n = vnoise(x, y, 8, 311)
+          local k = (a - 0.55) / 0.45
+          img:drawPixel(x, y, rgb(pc.rgbaR(c) + (214 + n * 24 - pc.rgbaR(c)) * k, pc.rgbaG(c) + (194 + n * 22 - pc.rgbaG(c)) * k, pc.rgbaB(c) + (150 + n * 22 - pc.rgbaB(c)) * k))
+        end
+      end
+    end
+  end
   save(spr, "beach_court.png")
 end
 
