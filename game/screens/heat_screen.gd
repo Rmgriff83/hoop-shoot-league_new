@@ -673,6 +673,7 @@ func _build_pip() -> void:
 	_ai_court.geo = base_geo
 	_ai_court.arena_set = _arena_set
 	_ai_court.hoop_set = _hoop_set
+	_ai_court.pop_scale = 2.4   # the PiP is a third the width: the pops stay readable
 	_pip_vp.add_child(_ai_court)
 	_ai_court.led.set_text(_mode["led_text"], _ai_court.led.accent_color)
 
@@ -896,6 +897,7 @@ func _handle_ai_event(ev: Dictionary) -> void:
 		"heat_up":
 			_ai_court.led.marquee("HEATING UP", 24.0, _ai_court.led.accent_color)
 			_ai_court.flare_lights()
+			_ai_court.rim_pop_from(HudCopy.heat_pop())
 		"ai_spot":
 			var sp: Dictionary = ev["spot"]
 			_place_ai_frame(Vector3(float(sp["x"]), float(sp["y"]), float(sp["z"])))
@@ -939,7 +941,10 @@ func _on_ai_outcome(outcome: Dictionary) -> void:
 		_ai_court.led.show_score(heat.ai.score, tier)
 		_ai_court.rim_nudge()
 		_ai_court.play_make()
+		# Their scoring pop in the PiP (design 5a: every mode).
+		_ai_court.rim_pop_from(HudCopy.rim_pop(str(outcome["type"]), int(outcome["points"]), false))
 		if lit and streak == StreakRules.FIRE_AT:
+			_ai_court.rim_pop_from(HudCopy.fire_pop())
 			_ai_court.led.marquee("ON FIRE", 24.0, _ai_court.led.accent_color)
 		elif lit and tier > _ai_tier_shown:
 			_ai_court.led.marquee("%d PTS A BASKET" % tier, 24.0, _ai_court.led.accent_color)

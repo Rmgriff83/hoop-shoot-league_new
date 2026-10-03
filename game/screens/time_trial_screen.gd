@@ -824,7 +824,7 @@ func _handle_event(ev: Dictionary) -> void:
 			_court.led.marquee("VORTEX SPENT" if str(ev.get("reason", "")) == "time" else "VORTEX ICED", 24.0, _court.led.accent_color)
 		"heat_up":
 			Sfx.score_pop(true)
-			_hud.banner("HEATING UP", RetroTheme.LIGHT["orange"])
+			_court.rim_pop_from(HudCopy.heat_pop())
 			_court.led.marquee("HEATING UP", 24.0, _court.led.accent_color)
 			_court.flare_lights()
 		"buzzer":
@@ -859,17 +859,15 @@ func _on_outcome(outcome: Dictionary, buzzer_beater: bool) -> void:
 		# The net reacts to the ball itself (NetSim); the pivot spring adds a
 		# little rim bounce even on a clean swish (rim contacts kick it harder).
 		_court.rim_nudge()
-		# HUD banners are plain scoring only; the streak story stays on the LED.
+		# The scoring pop rises off the rim (design 5a); the streak story
+		# stays on the LED.
+		_court.rim_pop_from(HudCopy.rim_pop(str(outcome["type"]), pts, buzzer_beater))
 		if buzzer_beater:
-			_hud.banner("BUZZER BEATER +%d" % pts, RetroTheme.LIGHT["orange"])
 			_court.led.flash("BUZZER +%d" % pts, 3, accent)
 		elif is_swish:
-			_hud.banner("SWISH +%d" % pts)
 			_court.led.flash("SWISH +%d" % pts, 2, accent)
-		else:
-			_hud.banner("+%d" % pts, RetroTheme.SCENE_TEXT)
 		if lit and streak == StreakRules.FIRE_AT:
-			_hud.banner("ON FIRE", RetroTheme.LIGHT["orange"])
+			_court.rim_pop_from(HudCopy.fire_pop())
 			_court.led.marquee("ON FIRE", 24.0, accent)
 			Sfx.score_pop(true)
 		elif lit and tier > _tier_shown:
@@ -885,7 +883,7 @@ func _on_outcome(outcome: Dictionary, buzzer_beater: bool) -> void:
 			_court.set_fire(false)
 			_court.led.marquee("COOLED OFF", 24.0, accent)
 		elif outcome["type"] == ShotClassify.IN_AND_OUT:
-			_hud.banner("IN AND OUT", RetroTheme.SCENE_TEXT)
+			_court.rim_pop_from(HudCopy.in_out_pop())
 
 
 func _finish() -> void:

@@ -307,6 +307,43 @@ func _build_hoop_model() -> bool:
 	return true
 
 
+## Scoring pops that rise off the rim (RimPop, design "Solo Modes HUD"
+## 5a): world text at the rim's centre, a little above and behind it so the
+## ball and the ring draw over it. `pop_scale` enlarges them on a small
+## viewport (the heat's PiP).
+var pop_scale := 1.0
+## Seconds between pops that would otherwise start together.
+const POP_GAP := 0.6
+
+
+func rim_pop(number: String, word: String, color: Color) -> RimPop:
+	var pop := RimPop.new()
+	pop.name = "RimPop"
+	pop.position = Vector3(geo.hoop_x + 0.1, geo.hoop_y + 0.05, geo.hoop_z)
+	# A make and its streak call (`+2` then `ON FIRE`) land in the same
+	# frame: queue the newcomer behind the youngest pop still at the rim.
+	var latest := -POP_GAP
+	for c in get_children():
+		if c is RimPop:
+			latest = maxf(latest, -c.age())
+	pop.delay = maxf(0.0, latest + POP_GAP)
+	add_child(pop)
+	pop.setup(number, word, color, pop_scale)
+	return pop
+
+
+func rim_pop_from(spec: Dictionary) -> RimPop:
+	return rim_pop(str(spec.get("number", "")), str(spec.get("word", "")), spec.get("color", Color.WHITE))
+
+
+func pop_count() -> int:
+	var n := 0
+	for c in get_children():
+		if c is RimPop:
+			n += 1
+	return n
+
+
 ## The swish kick: the sim's rim-plane `enter` contact → the net's cords.
 func net_kick(pos: Vector3, vel: Vector3) -> void:
 	if net_sim != null:

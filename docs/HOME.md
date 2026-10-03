@@ -225,8 +225,24 @@ and gets only HOME.
 ten; `OT1 12.3` in overtime) or the teal PRACTICE card, the orange SCORE card
 with the springy count-up and, in a trial, the gold BEST chip (`NEW BEST`
 once you pass it) — the dithered countdown at 160 px, and the centre banners
-on two dithered lines (`SWISH` / `+2`, `HEATING` / `UP`, `TIME!`, `+1`);
-messages too long for the big lines draw as a small note. Practice adds
+on two dithered lines, now only `GO!` and `TIME!`; messages too long for
+the big lines draw as a small note (the shuffle and 30 s notes).
+
+**Rim pops** (design "Solo Modes HUD" 5a, 2026-10-03; `game/view/rim_pop.gd`,
+`RimPop`, `tests/test_rim_pop.gd`): every scoring call — `+1`, `+2` under
+`SWISH` (gold), `BUZZER BEATER`, `HEATING UP`, `ON FIRE` (orange), `IN AND
+OUT` — is a small 3D pop that rises off the hoop instead of a centre banner,
+in every mode. `CourtGeometry.rim_pop()` spawns one just above the rim
+centre (so it follows the moving board); two billboarded `Label3D`s (the
+number in Press Start 2P at 32 px, the word above in Silkscreen bold at
+16 px, ink outline, an offset ink shadow copy) on the mock's 1.1 s curve:
+pop in to 112 % by 12 %, settle, drift up 110 px with a 10 px sine sway,
+fade out over the last 30 %. They are depth-tested so the ball and the rim
+draw over them, and they stack (each pop is its own node, freed when done),
+so `+2` and `ON FIRE` no longer overwrite each other. The copy lives in
+`HudCopy.rim_pop/heat_pop/fire_pop/in_out_pop`. The league opponent's PiP
+court spawns the same pops at `pop_scale 2.4` so they read at a third of
+the width. Practice adds
 the 30S MODE row (`ToggleSwitch`) under PAUSE and the beach's spot picker
 under that. The pause menu is shared (`game/ui/pause_menu.gd`, `PauseMenu`):
 PAUSED, RESUME, SHOT HELP (taps cycle the value), QUIT TO TITLE — the old
@@ -245,7 +261,7 @@ chip across its middle for WAIT (dimmed) or the fire window's seconds. A
 played card grows in the middle over its shadow with a caption chip
 (`DEEP FREEZE > OLLIE`; blue for yours, orange for theirs) then flies to its
 target; the overtime break dims the court under `TIED 37-37` / OVERTIME /
-the period's note. ON FIRE joins the banners.
+the period's note. ON FIRE is a rim pop like the rest.
 
 ## QA and tests
 

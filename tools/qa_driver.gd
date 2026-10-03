@@ -151,6 +151,7 @@ func _run_heat() -> void:
 	await _flick(1.9, 0.30, 0.0)
 	await _sleep(1.4)
 	await _snap("heat_live")
+	await _pop_snaps("_ai_court", "heat_pop")
 	# Deal the first card: the face flies out under its caption.
 	var card0: Control = get_tree().root.find_child("Card0", true, false)
 	if card0 != null and card0.is_visible_in_tree():
@@ -262,6 +263,9 @@ func _run_hud() -> void:
 	await _sleep(1.6)
 	await _snap("hud_live")
 	await _sleep(1.5)
+	# Rim pops (design "Solo Modes HUD" 5a): a swish and an ON FIRE pop at
+	# the rim, snapped through their 1.1 s life.
+	await _pop_snaps("_court", "hud_pop")
 	var pause: Button = get_tree().root.find_child("PauseButton", true, false)
 	if pause != null:
 		var c := (pause.global_position + pause.size / 2.0) * 0.5
@@ -708,7 +712,7 @@ func _close_archive() -> void:
 	var page: AreaArchivePage = get_tree().root.find_child("AreaArchive", true, false)
 	if page != null:
 		page.close()
-		await _sleep(0.4)
+		await _sleep(0.9)
 
 
 func _pick_area(id: String) -> void:
@@ -852,6 +856,24 @@ var _stats := {}
 
 
 ## Snapshot the trial's stats on a poll — drain_events belongs to the screen.
+## Spawn a swish pop and an ON FIRE pop on the current screen's court
+## (`_court` or the opponent's `_ai_court`) and snap at 0.15, 0.5 and 0.9 s.
+func _pop_snaps(court_var: String, prefix: String) -> void:
+	var screen := get_tree().current_scene
+	if screen == null or not court_var in screen:
+		print("QA: no %s on current scene!" % court_var)
+		return
+	var court: CourtGeometry = screen.get(court_var)
+	court.rim_pop_from(HudCopy.rim_pop(ShotClassify.SWISH, 2))
+	court.rim_pop_from(HudCopy.fire_pop())
+	await _sleep(0.15)
+	await _snap("%s_00" % prefix)
+	await _sleep(0.35)
+	await _snap("%s_01" % prefix)
+	await _sleep(0.4)
+	await _snap("%s_02" % prefix)
+
+
 func _hook_trial() -> void:
 	var screen := get_tree().current_scene
 	if screen == null or not "trial" in screen:

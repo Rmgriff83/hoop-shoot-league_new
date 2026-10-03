@@ -1,0 +1,82 @@
+extends RefCounted
+## Rim pops (design "Solo Modes HUD" 5a, docs/HOME.md → HUD): the copy per
+## kind of make, a pop's two labels and shadows, the mock's keyframes
+## (hidden at the start, full by 12 %, rising, swaying, gone at 1.1 s), and
+## the court spawning one at the rim.
+
+
+func run(t) -> void:
+	# Copy.
+	t.eq(HudCopy.rim_pop(ShotClassify.SWISH, 2), {"number": "+2", "word": "SWISH", "color": HudCopy.POP_GOLD}, "a swish: +2 under SWISH in gold")
+	t.eq(HudCopy.rim_pop("make", 1), {"number": "+1", "word": "", "color": HudCopy.POP_CREAM}, "a plain make: +1 in cream")
+	t.eq(HudCopy.rim_pop(ShotClassify.SWISH, 3, true), {"number": "+3", "word": "BUZZER BEATER", "color": HudCopy.POP_ORANGE}, "a buzzer beater outranks the swish")
+	t.eq(HudCopy.heat_pop()["word"], "HEATING UP", "heating up")
+	t.eq(HudCopy.fire_pop(), {"number": "", "word": "ON FIRE", "color": HudCopy.POP_ORANGE}, "on fire")
+	t.eq(HudCopy.in_out_pop()["word"], "IN AND OUT", "in and out")
+	# Keyframes.
+	var k0 := RimPop.keyframes(0.0)
+	t.close(float(k0["alpha"]), 0.0, 1e-9, "hidden at the start")
+	t.close(float(k0["scale"]), 0.5, 1e-9, "…half size")
+	var k12 := RimPop.keyframes(0.12)
+	t.close(float(k12["alpha"]), 1.0, 1e-9, "full by 12 %")
+	t.close(float(k12["scale"]), 1.12, 1e-9, "…with the overshoot")
+	t.close(float(k12["rise"]), 14.0, 1e-9, "…14 px up")
+	var k50 := RimPop.keyframes(0.5)
+	t.ok(float(k50["rise"]) > 22.0 and float(k50["rise"]) < 110.0, "rising through the middle (%.0f px)" % float(k50["rise"]))
+	t.close(float(k50["sway"]), RimPop.SWAY_PX, 1e-6, "the sway peaks mid-life")
+	var k1 := RimPop.keyframes(1.0)
+	t.close(float(k1["alpha"]), 0.0, 1e-9, "gone at the end")
+	t.close(float(k1["rise"]), 110.0, 1e-9, "…110 px up")
+	t.close(float(k1["scale"]), 0.94, 1e-9, "…a touch smaller")
+	# A pop node.
+	var pop := RimPop.new()
+	pop.setup("+2", "SWISH", HudCopy.POP_GOLD)
+	var num: Label3D = pop.find_child("Number", true, false)
+	var word: Label3D = pop.find_child("Word", true, false)
+	t.ok(num != null and word != null, "a number and a word label")
+	t.eq(num.text, "+2", "the number")
+	t.eq(word.text, "SWISH", "the word")
+	t.ok(word.position.y > num.position.y, "the word sits above the number")
+	t.eq(pop.find_child("Shadow", true, false) != null, true, "a shadow copy")
+	t.ok(num.billboard == BaseMaterial3D.BILLBOARD_ENABLED and not num.no_depth_test and num.alpha_cut == Label3D.ALPHA_CUT_DISCARD, "billboarded, depth-tested: the ball draws over it")
+	t.close(num.modulate.a, 0.0, 1e-9, "invisible at the start")
+	pop.step(0.132)
+	t.close(num.modulate.a, 1.0, 1e-9, "full at 12 % of 1.1 s")
+	t.ok(pop.offset().y > 0.0, "and it has risen")
+	pop.step(0.42)
+	t.ok(pop.offset().x > 0.0, "swaying to the right mid-life")
+	var mid := pop.offset().y
+	pop.step(0.56)
+	t.ok(pop.offset().y > mid and pop.alpha() < 0.1, "near the end: higher and fading")
+	t.close(pop.progress(), 1.0, 1e-9, "done at 1.1 s")
+	pop.free()
+	var alone := RimPop.new()
+	alone.setup("+1", "", HudCopy.POP_CREAM, 2.4)
+	t.ok(alone.find_child("Word", true, false) == null, "no word label without a word")
+	t.close((alone.find_child("Number", true, false) as Label3D).pixel_size, RimPop.PX * 2.4, 1e-9, "the PiP scale enlarges the text")
+	alone.free()
+	# The court spawns it at the rim.
+	var court := CourtGeometry.new()
+	court.geo = SimGeometry.regulation()
+	court.arena_set = CosmeticLibrary.starter_arena()
+	court.hoop_set = CosmeticLibrary.starter_hoop()
+	var root := Node3D.new()
+	root.add_child(court)
+	var p := court.rim_pop_from(HudCopy.rim_pop(ShotClassify.SWISH, 2))
+	t.eq(court.pop_count(), 1, "one pop on the court")
+	t.close(p.position.y, court.geo.hoop_y + 0.05, 1e-6, "just above the rim")
+	t.close(p.position.x, court.geo.hoop_x + 0.1, 1e-6, "a little behind it")
+	var fire := court.rim_pop_from(HudCopy.fire_pop())
+	t.eq(court.pop_count(), 2, "pops stack instead of replacing each other")
+	t.close(p.delay, 0.0, 1e-9, "the first pop starts at once")
+	t.close(fire.delay, CourtGeometry.POP_GAP, 1e-9, "a pop spawned in the same frame waits its turn")
+	fire.step(0.15)
+	t.close(fire.alpha(), 0.0, 1e-9, "…and stays hidden while it waits")
+	fire.step(CourtGeometry.POP_GAP - 0.15 + 0.132)
+	t.close(fire.alpha(), 1.0, 1e-9, "…then plays its curve from the delay")
+	p.step(0.1)
+	var third := court.rim_pop_from(HudCopy.heat_pop())
+	# The youngest (the first pop) started 0.1 s ago: the third starts one
+	# gap after it did.
+	t.close(third.delay, CourtGeometry.POP_GAP - 0.1, 1e-6, "a third queues one gap behind the youngest")
+	root.free()

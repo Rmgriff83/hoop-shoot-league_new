@@ -7,6 +7,31 @@ extends RefCounted
 ## A banner line longer than this is a note (drawn small, one line).
 const NOTE_OVER := 12
 const HOT_SECONDS := 10.0
+const POP_CREAM := Color("#F1E8D0")
+const POP_GOLD := Color("#F0B84A")
+const POP_ORANGE := Color("#E8703A")
+
+
+## The rim pop for a make (design 5a): `+N` alone in cream, `+N` under
+## SWISH in gold, `+N` under BUZZER BEATER in orange. {number, word, color}.
+static func rim_pop(outcome_type: String, pts: int, buzzer := false) -> Dictionary:
+	if buzzer:
+		return {"number": "+%d" % pts, "word": "BUZZER BEATER", "color": POP_ORANGE}
+	if outcome_type == ShotClassify.SWISH:
+		return {"number": "+%d" % pts, "word": "SWISH", "color": POP_GOLD}
+	return {"number": "+%d" % pts, "word": "", "color": POP_CREAM}
+
+
+static func heat_pop() -> Dictionary:
+	return {"number": "", "word": "HEATING UP", "color": POP_ORANGE}
+
+
+static func fire_pop() -> Dictionary:
+	return {"number": "", "word": "ON FIRE", "color": POP_ORANGE}
+
+
+static func in_out_pop() -> Dictionary:
+	return {"number": "", "word": "IN AND OUT", "color": POP_CREAM}
 
 
 ## A banner as [top, bottom]: a trailing `+N` is the bottom line (`SWISH +2`
