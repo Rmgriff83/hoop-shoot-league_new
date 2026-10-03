@@ -74,9 +74,18 @@ func _board(t) -> void:
 
 func _city(t) -> void:
 	var glb: Node = load("res://assets/arena/city/city.glb").instantiate()
-	for n in ["ReaderRig", "ScoreBezel", "ScoreHousing", "ScoreFace", "ScoreClock", "ScoreHome", "ScoreVisitor", "ScorePeriod"]:
+	for n in ["ReaderRig", "ScoreTilt", "ScoreBezel", "ScoreHousing", "ScoreVentL5", "ScoreFace", "ScoreClock", "ScoreHome", "ScoreVisitor", "ScorePeriod"]:
 		t.ok(glb.find_child(n, true, false) != null, "%s in the city glb" % n)
 	t.ok(glb.find_child("LedFace", true, false) == null, "the fence reader board is gone")
+	t.ok(glb.find_child("ReaderBracket0", true, false) == null, "…and its fence brackets")
+	# Tabletop size, on the ground, to the shooter's right of the pole, by the fence.
+	var rig: Node3D = glb.find_child("ReaderRig", true, false)
+	var plate: MeshInstance3D = glb.find_child("ScoreBezel", true, false)
+	var ps := plate.get_aabb().size
+	t.ok(ps.z < 0.8 and ps.y < 0.6, "a tabletop unit (%.2f x %.2f m)" % [ps.z, ps.y])
+	t.ok(absf(rig.position.y) < 0.01 and rig.position.z > 1.0 and rig.position.x > 4.8, "on the ground, right of the pole, against the fence (%s)" % str(rig.position))
+	var tilt: Node3D = glb.find_child("ScoreTilt", true, false)
+	t.ok(absf(tilt.rotation.z) > 0.05 or absf(tilt.rotation.y) > 0.05 or absf(tilt.rotation.x) > 0.05, "the plate leans back")
 	t.ok(glb.find_child("AnimationPlayer", true, false).has_animation("ScorePop"), "the board still hops on a make")
 	glb.free()
 	var root := Node3D.new()

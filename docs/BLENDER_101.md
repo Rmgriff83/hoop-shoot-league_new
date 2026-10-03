@@ -685,9 +685,12 @@ frame, a fence loop on the beach's enclosure line (`ENC_X0..X1 -11.2..5.7`,
 2026-10-02 and keeps only the concrete embankment; its standings banner
 stands on the wall cap, `league_banner_pos.y 1.16`), the reader board a taller cabinet strapped to the back fence left of
 the hoop (`ReaderRig` + `LedFace`; not a `ScoreboardRig`, so it never
-turns), the **fence scoreboard** (2026-10-03, Ross's tabletop-scoreboard
-reference: `ReaderRig` — a rounded black bezel, a wedge housing that deepens
-toward the bottom with vent slots, brackets to the mesh; the glass
+turns), the **tabletop scoreboard** (2026-10-03, Ross's reference, side
+profile included: `ReaderRig`, a 0.70 × 0.50 m unit on the ground to the
+shooter's right of the pole against the back fence — a rounded face plate
+(`ScoreBezel`, bevelled) leaning back 8° on `ScoreTilt`, and behind it the
+wedge housing whose sloped back runs from the plate's top down to a flat
+base 0.40 m deep, vent slots low in its sides; the glass
 `ScoreFace` is `city_scoreboard_face.png` with the HOME / PER / VISITOR
 labels and recessed windows, and the live windows sit a few mm proud of it:
 `ScoreClock`, a 32-column `LedBoard` matrix in yellow that shows the clock

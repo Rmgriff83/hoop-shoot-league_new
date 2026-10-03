@@ -22,7 +22,7 @@ chain hoop brings its own gooseneck pole (no arena `Pole`); `StreetRig` (an empt
 the street's centre line) gives CityFx the lane line; every `Building*` mesh
 gets the facade shader (dusk + lit panes switching on and off); `FloodHead*` quads
 are unshaded; `TreeRig*` billboards turn to the camera; `ScoreboardRig` /
-`ReaderRig` is the scoreboard hung on the back fence (ScoreClock + digit windows); `Speakers` + `SpeakerLed`
+`ReaderRig` is the tabletop scoreboard on the ground by the fence (ScoreClock + digit windows); `Speakers` + `SpeakerLed`
 the floor speakers' radio. `City` is the static root / shake handle.
 
 CREATOR script: refuses to overwrite an existing city.blend unless run with
@@ -409,33 +409,45 @@ def build():
     skyobj.data.materials.append(sky)
     cage.link_obj(skyobj, c_sky, root, (0, 0, (SKY_Y0 + SKY_Y1) / 2))
 
-    # ---- The scoreboard hung ON the back fence to the shooter's left of the
-    # hoop (Ross's 2026-10-03 reference: a tabletop scoreboard — a rounded
-    # black bezel round the glass, a wedge housing behind that deepens toward
-    # the bottom with vent slots in its sides, strapped to the mesh with
-    # brackets). Still `ReaderRig` (the ScorePop hop keys its scale) and
-    # bolted on, so it never turns to face the shooter. CourtGeometry binds
+    # ---- The scoreboard: a TABLETOP unit (Ross's 2026-10-03 reference, the
+    # side profile especially) sitting on the ground to the shooter's right
+    # of the basket pole, against the back fence. A rounded face plate 0.70 x
+    # 0.50 m leaning back a few degrees, and behind it the wedge housing: a
+    # sloped back running from the top of the plate down to a flat base that
+    # reaches 0.40 m behind, with vent slots low in its sides. Still
+    # `ReaderRig` (the ScorePop hop keys its scale). CourtGeometry binds
     # `ScoreClock` (a 32-column LedBoard: clock + messages) and the
     # `ScoreHome` / `ScoreVisitor` / `ScorePeriod` digit windows; `ScoreFace`
     # is the static glass with the labels (city_scoreboard_face.png).
     led_off = cage.mat_tex("City_LedOff", TEX("hoop_led_off.png"))
     glass = cage.mat_tex("City_ScoreFace", TEX("city_scoreboard_face.png"))
     housing = cage.mat_flat("City_ScoreHousing", (22, 22, 24), roughness=0.9)
-    vent = cage.mat_flat("City_ScoreVent", (10, 10, 12), roughness=1.0)
-    SB_W, SB_H = 1.4, 1.0
-    sb_x, sb_y, sb_z = ENC_X1 - 0.38, 1.35, -1.75
+    vent = cage.mat_flat("City_ScoreVent", (8, 8, 10), roughness=1.0)
+    SB_W, SB_H, SB_T = 0.70, 0.50, 0.07          # face plate: width, height, thickness
+    SB_TILT = math.radians(8.0)                   # the plate leans back
+    SB_BASE = 0.40                                # the housing's base reaches this far back
+    sb_x, sb_y, sb_z = ENC_X1 - SB_BASE - 0.05, 0.0, 1.45
     rig = cage.add_empty("ReaderRig", c_props, root, (sb_x, sb_y, sb_z))
-    # Bezel: the front frame, a hair bigger than the glass all round.
-    cage.add_box("ScoreBezel", (0.12, SB_H + 0.08, SB_W + 0.08), (0.0, SB_H / 2.0, 0.0), housing, c_props, rig)
-    # The wedge housing behind it: a prism whose depth grows toward the bottom.
+    # The leaning plate hangs off its own empty so the tilt is one number.
+    tilt = cage.add_empty("ScoreTilt", c_props, rig, (0.0, 0.03, 0.0))
+    tilt.rotation_euler = (0.0, SB_TILT, 0.0)   # about Blender Y: the plate's top goes back (+x)
+    plate = cage.add_box("ScoreBezel", (SB_T, SB_H + 0.06, SB_W + 0.06), (0.0, SB_H / 2.0, 0.0), housing, c_props, tilt)
+    bev = plate.modifiers.new("Round", "BEVEL")
+    bev.width = 0.025
+    bev.segments = 3
+    bpy.context.view_layer.objects.active = plate
+    bpy.ops.object.modifier_apply(modifier=bev.name)
+    # The wedge housing, in rig space: its front-top meets the plate's top edge.
+    top_y = 0.03 + SB_H + 0.03
+    top_x = SB_T / 2.0 + (top_y - 0.03) * math.sin(SB_TILT) - 0.01
     bm = bmesh.new()
-    hw = SB_W / 2.0 - 0.02
+    hw = SB_W / 2.0 - 0.03
     vs = {}
     for side, z in (("l", -hw), ("r", hw)):
-        vs[side + "ft"] = bm.verts.new(cage.s2b((0.06, SB_H + 0.02, z)))
-        vs[side + "fb"] = bm.verts.new(cage.s2b((0.06, -0.02, z)))
-        vs[side + "bb"] = bm.verts.new(cage.s2b((0.34, -0.02, z)))
-        vs[side + "bt"] = bm.verts.new(cage.s2b((0.12, SB_H + 0.02, z)))
+        vs[side + "ft"] = bm.verts.new(cage.s2b((top_x, top_y - 0.02, z)))
+        vs[side + "fb"] = bm.verts.new(cage.s2b((0.0, 0.0, z)))
+        vs[side + "bb"] = bm.verts.new(cage.s2b((SB_BASE, 0.0, z)))
+        vs[side + "bt"] = bm.verts.new(cage.s2b((top_x + 0.05, top_y - 0.02, z)))
     for quad in (("lft", "lbt", "rbt", "rft"), ("lbt", "lbb", "rbb", "rbt"), ("lfb", "rfb", "rbb", "lbb"),
                  ("lft", "lfb", "lbb", "lbt"), ("rft", "rbt", "rbb", "rfb")):
         bm.faces.new([vs[k] for k in quad])
@@ -447,25 +459,25 @@ def build():
     me.materials.append(housing)
     hobj = bpy.data.objects.new("ScoreHousing", me)
     cage.link_obj(hobj, c_props, rig, (0, 0, 0))
-    # Vent slots in both sides of the wedge.
+    # Vent slots low in both sides of the wedge, just behind the plate.
     for side, z in (("L", -hw - 0.002), ("R", hw + 0.002)):
-        for k in range(5):
-            cage.add_box("ScoreVent%s%d" % (side, k), (0.07, 0.012, 0.004), (0.20, 0.22 + k * 0.05, z), vent, c_props, rig)
-    # The glass, then the live windows a few mm proud of it.
-    fx = -0.062
+        for k in range(6):
+            cage.add_box("ScoreVent%s%d" % (side, k), (0.05, 0.007, 0.004), (0.11, 0.05 + k * 0.022, z), vent, c_props, rig)
+    # The glass on the plate's front, then the live windows a few mm proud.
+    fx = -SB_T / 2.0 - 0.002
     cage.add_quad("ScoreFace", [(fx, 0.0, -SB_W / 2.0), (fx, 0.0, SB_W / 2.0), (fx, SB_H, SB_W / 2.0), (fx, SB_H, -SB_W / 2.0)],
-                  (-1, 0, 0), glass, c_props, rig, (1.0, 1.0), origin=(0, 0, 0))
-    wx = fx - 0.004
-    def window(name, z0, z1, y0, y1):
+                  (-1, 0, 0), glass, c_props, tilt, (1.0, 1.0), origin=(0, 0, 0))
+    wx = fx - 0.003
+    def window(name, u0, u1, v0, v1):
+        """Windows in face fractions (u across from the left, v up from the bottom)."""
+        z0, z1 = (u0 - 0.5) * SB_W, (u1 - 0.5) * SB_W
+        y0, y1 = v0 * SB_H, v1 * SB_H
         cage.add_quad(name, [(wx, y0, z0), (wx, y0, z1), (wx, y1, z1), (wx, y1, z0)],
-                      (-1, 0, 0), led_off, c_props, rig, (1.0, 1.0), origin=(0, 0, 0))
-    window("ScoreClock", -0.38, 0.38, 0.665, 0.855)       # 4:1, the 32x8 matrix
-    window("ScoreHome", -0.66, -0.14, 0.10, 0.38)         # 3 digits, 52x28 (1.86:1)
-    window("ScorePeriod", -0.08, 0.08, 0.14, 0.34)        # 1 digit, 16x28
-    window("ScoreVisitor", 0.14, 0.66, 0.10, 0.38)
-    for i, bz in enumerate((-0.5, 0.5)):
-        cage.add_box("ReaderBracket%d" % i, (0.10, 0.08, 0.06), (0.33, 0.78, bz), steel, c_props, rig)
-        cage.add_box("ReaderBracketLo%d" % i, (0.10, 0.08, 0.06), (0.33, 0.10, bz), steel, c_props, rig)
+                      (-1, 0, 0), led_off, c_props, tilt, (1.0, 1.0), origin=(0, 0, 0))
+    window("ScoreClock", 49 / 224.0, 175 / 224.0, 1.0 - 56 / 160.0, 1.0 - 21 / 160.0)      # 4:1, the 32x8 matrix
+    window("ScoreHome", 4 / 224.0, 92 / 224.0, 1.0 - 146 / 160.0, 1.0 - 97 / 160.0)        # 3 digits
+    window("ScorePeriod", 99 / 224.0, 125 / 224.0, 1.0 - 140 / 160.0, 1.0 - 104 / 160.0)   # 1 digit
+    window("ScoreVisitor", 132 / 224.0, 220 / 224.0, 1.0 - 146 / 160.0, 1.0 - 97 / 160.0)
 
     # ---- Two big floor speakers to the shooter's left of the hoop's base, the
     # city's radio (ArenaSet.interactables kind "radio" on `Speakers`, its LED
