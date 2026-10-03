@@ -27,9 +27,13 @@ const COLUMN_W := 648.0
 const SCRIM_ALPHA := 0.25
 const FADE_S := 0.2
 ## The chrome's rows (design px). The zone: the stars over the name under the
-## top bar, the ALL AREAS line under the name.
+## top bar, the ALL AREAS line under the name; the chevrons at mid-height
+## between the zone and the card area — `<` to the area before, `>` to the
+## next only when it is open, with a NEW badge until it has been visited.
 const ZONE_Y := 180.0
 const NAME_W := 430.0
+const CHEVRON_SIZE := Vector2(112, 176)
+const CHEVRON_Y := 520.0 - (CHEVRON_SIZE.y - 72.0) / 2.0
 ## The card area: a fixed box above the ticker that holds the home block
 ## (LEAGUE + the pair) or the league in context. Cards carry their shadow in
 ## their size, so the gaps are the design's less the 6 px strip.
@@ -73,6 +77,8 @@ var _open := false
 var _open_frac := 0.0
 var _archive: AreaArchivePage
 var _all_areas: Button
+var _prev: Button
+var _next: Button
 var _ticker: HomeTicker
 var _badge: LevelBadge
 var _season_chip: ShadowPanel
@@ -151,6 +157,7 @@ func _build_court(i: int) -> void:
 	add_child(_court)
 	_court.led.set_text("HOOP SHOOT", _court.led.accent_color)
 	_court.set_ticker(TickerText.arcade_items(_best(card["area"])))
+	App.mark_area_visited(str(card["area"]))
 	_spec = TitlePan.spec_of(arena)
 	_cam.fov = float(_spec["fov"])
 	_t = 0.0
@@ -283,6 +290,12 @@ func rebuild_chrome() -> void:
 	row.add_child(all_label)
 	_all_areas.pressed.connect(func() -> void: _open_archive())
 	zone.add_child(_all_areas)
+	_prev = _chevron("<", -1)
+	_prev.position = Vector2(8, CHEVRON_Y)
+	_chrome.add_child(_prev)
+	_next = _chevron(">", 1)
+	_next.position = Vector2(720 - 8 - CHEVRON_SIZE.x, CHEVRON_Y)
+	_chrome.add_child(_next)
 	# The season chip: `SEASON 2 - 2-1`, slid in from the left while the league is open.
 	_season_chip = ShadowPanel.new(RetroTheme.c("orange"), 0.0, 0.30, 16.0)
 	_season_chip.name = "SeasonChip"
@@ -412,6 +425,9 @@ func _apply_area(f: float) -> void:
 	var home := f < 0.5
 	if _all_areas != null:
 		_all_areas.visible = home
+	if _prev != null:
+		_prev.visible = home and _chevron_ok(-1)
+		_next.visible = home and _chevron_ok(1)
 	if _float != null:
 		_float.visible = not home
 	if _season_chip != null:
@@ -473,6 +489,88 @@ func is_league_open() -> bool:
 	return _open
 
 
+## A big edge chevron over the court: a dithered-shadow glyph on a bare
+## button, with a NEW badge the next chevron shows for an unvisited area.
+func _chevron(text: String, dir: int) -> Button:
+	var b := Button.new()
+	b.name = "Prev" if dir < 0 else "Next"
+	b.custom_minimum_size = CHEVRON_SIZE
+	b.size = CHEVRON_SIZE
+	b.focus_mode = Control.FOCUS_NONE
+	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
+		b.add_theme_stylebox_override(state, StyleBoxEmpty.new())
+	var glyph := _float_text(text, 72, RetroTheme.SCENE_TEXT, true)
+	glyph.name = "Glyph"
+	glyph.set_anchors_preset(Control.PRESET_FULL_RECT)
+	glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	RetroTheme.dithered(glyph)
+	b.add_child(glyph)
+	var badge := ChevronBadge.new()
+	badge.name = "Badge"
+	badge.position = Vector2(CHEVRON_SIZE.x - 40, 40)
+	badge.visible = false
+	b.add_child(badge)
+	b.button_down.connect(func() -> void: glyph.add_theme_color_override("font_color", RetroTheme.LIGHT["orange"]))
+	b.button_up.connect(func() -> void: glyph.add_theme_color_override("font_color", RetroTheme.SCENE_TEXT))
+	b.pressed.connect(func() -> void: _switch(dir))
+	return b
+
+
+## Is there an open area in that direction?
+func _chevron_ok(dir: int) -> bool:
+	var i := _index + dir
+	return i >= 0 and i < CARDS.size() and App.area_unlocked(str(CARDS[i]["area"]))
+
+
+func _update_chevrons() -> void:
+	if _prev == null:
+		return
+	var home := _open_frac < 0.5
+	_prev.visible = home and _chevron_ok(-1)
+	_next.visible = home and _chevron_ok(1)
+	var badge: Control = _next.get_node_or_null("Badge")
+	if badge != null:
+		badge.visible = _chevron_ok(1) and App.area_unvisited(str(CARDS[_index + 1]["area"]))
+
+
+func next_badge_visible() -> bool:
+	var badge: Control = _next.get_node_or_null("Badge") if _next != null else null
+	return badge != null and badge.visible and _next.visible
+
+
+## Page turn: cover the screen, rebuild the court, refresh the chrome, uncover.
+func _switch(dir: int) -> void:
+	if _switching or _open or not _chevron_ok(dir):
+		return
+	_switching = true
+	_cover.color = Color(RetroTheme.c("ink"), 0.0)
+	var fade := create_tween()
+	fade.tween_property(_cover, "color:a", 1.0, FADE_S).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	await fade.finished
+	_index = _index + dir
+	App.home_card = _index
+	_build_court(_index)
+	_update_zone()
+	_fill_cards()
+	_refresh_ticker()
+	var back := create_tween()
+	back.tween_property(_cover, "color:a", 0.0, FADE_S * 1.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	await back.finished
+	_switching = false
+
+
+## The gold NEW dot on the next chevron.
+class ChevronBadge extends Control:
+	func _init() -> void:
+		size = Vector2(28, 28)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		draw_circle(Vector2(14, 14), 12.0, RetroTheme.SCENE_OUTLINE)
+		draw_circle(Vector2(14, 14), 8.5, RetroTheme.LIGHT["gold"])
+
+
 ## The little bordered down-triangle on the ALL AREAS line.
 class DownTriangle extends Control:
 	func _init() -> void:
@@ -504,6 +602,7 @@ func _update_zone() -> void:
 	var all_label: Label = _all_areas.find_child("AllAreasText", true, false) if _all_areas != null else null
 	if all_label != null:
 		all_label.text = "ALL AREAS · " + AreaArchiveCopy.open_count(App.level(), _archive_rows())
+	_update_chevrons()
 
 
 func headline() -> String:
@@ -791,7 +890,7 @@ func _open_settings() -> void:
 
 
 func _archive_rows() -> Array:
-	return AreaArchiveCopy.rows(App.level(), App.league_states(), AreaArchiveCopy.bests(), App.league_gating)
+	return AreaArchiveCopy.rows(App.level(), App.league_states(), AreaArchiveCopy.bests(), App.league_gating, App.visited_areas())
 
 
 ## The page before an area's home (docs/HOME.md → Area archive). `instant`

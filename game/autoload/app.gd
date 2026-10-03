@@ -349,6 +349,29 @@ func mark_balls_seen() -> void:
 	SaveService.put_settings(st)
 
 
+# ---- visited areas (docs/HOME.md → Area archive) ------------------------------------
+## An open area you have never landed on carries a NEW badge on the home's
+## next chevron and on its archive card until you visit it.
+
+
+func visited_areas() -> Array:
+	return Array(SaveService.get_settings().get("visitedAreas", [])).duplicate()
+
+
+func mark_area_visited(id: String) -> void:
+	var st := SaveService.get_settings()
+	var seen: Array = Array(st.get("visitedAreas", [])).duplicate()
+	if seen.has(id):
+		return
+	seen.push_back(id)
+	st["visitedAreas"] = seen
+	SaveService.put_settings(st)
+
+
+func area_unvisited(id: String) -> bool:
+	return area_unlocked(id) and not visited_areas().has(id)
+
+
 func peggy_seed(drop_index: int) -> int:
 	return DetRng.hash_seed("%s:peggy:%d" % [SaveService.get_client_id(), drop_index])
 

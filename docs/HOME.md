@@ -143,8 +143,11 @@ the card lab, `ResultsCopy.board_name`, and `tests/test_city.gd`.
 `game/ui/area_archive_page.gd` (`AreaArchivePage`, a layer-30 page; copy
 `game/ui/area_archive_copy.gd`, `tests/test_area_archive.gd`, QA
 `--qa-archive`): **the page you see before any area's home**, and the only
-way between areas — the home's edge chevrons and swipe are gone, so a
-locked area's home is never shown. It opens on every cold launch
+way into a locked area's home — which it never allows. The home keeps its
+edge chevrons for the open areas: `<` to the one before, `>` to the next
+only when it is open, and the `>` wears a gold NEW dot (as does the
+area's archive card) until that area has been visited
+(`settings.visitedAreas`, `App.mark_area_visited` on landing). It opens on every cold launch
 (`App.show_archive`), from the area name, and from the `▾ ALL AREAS · 2/3
 OPEN` line under it; `<` goes back to the area you came from (hidden when
 that area is locked). A cream sheet, `AREAS` and the open count, then a

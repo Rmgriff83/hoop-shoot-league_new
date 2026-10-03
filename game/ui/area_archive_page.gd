@@ -246,9 +246,32 @@ func _card(r: Dictionary) -> Button:
 			l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			hist.add_child(l)
 		block.add_child(hist)
+	if not locked and bool(r.get("unvisited", false)):
+		var badge := NewBadge.new()
+		badge.name = "NewBadge"
+		badge.position = Vector2(CARD_W - 24 - 88, 24)
+		face.add_child(badge)
 	if not locked:
 		b.pressed.connect(func() -> void: pick(id))
 	return b
+
+
+## `● NEW` in gold with the ink ring, on an open area you have not visited.
+class NewBadge extends Control:
+	func _init() -> void:
+		size = Vector2(88, 28)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var l := UiFont.label("NEW", 14, Color("#F0B84A"), UiFont.display())
+		l.add_theme_color_override("font_outline_color", Color("#221C18"))
+		l.add_theme_constant_override("outline_size", RetroTheme.OUTLINE)
+		l.position = Vector2(26, 0)
+		l.size = Vector2(62, 28)
+		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		add_child(l)
+
+	func _draw() -> void:
+		draw_circle(Vector2(12, 14), 10.0, Color("#221C18"))
+		draw_circle(Vector2(12, 14), 7.0, Color("#F0B84A"))
 
 
 func page_root() -> Control:

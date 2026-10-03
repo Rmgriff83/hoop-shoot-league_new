@@ -18,7 +18,7 @@ func run(t) -> void:
 	t.eq(AreaArchiveCopy.lock_line(5), "OPENS AT LVL 5", "the lock line")
 	t.eq(AreaArchiveCopy.history(2, 3, 31), ["2 TITLES", "3 SEASONS", "BEST 31"], "the history line")
 	t.eq(AreaArchiveCopy.history(1, 1, 0), ["1 TITLE", "1 SEASON", "NO RUNS"], "singulars and no runs")
-	var rows3 := AreaArchiveCopy.rows(3, [], {"cage": 31}, true)
+	var rows3 := AreaArchiveCopy.rows(3, [], {"cage": 31}, true, ["cage", "beach"])
 	t.eq(rows3.size(), 3, "a row per area")
 	t.eq(rows3[0]["name"], "ARCADE CAGE", "the cage's name")
 	t.eq([rows3[0]["stars"], rows3[1]["stars"], rows3[2]["stars"]], [1, 2, 3], "stars 1 / 2 / 3")
@@ -33,6 +33,9 @@ func run(t) -> void:
 	t.eq(AreaArchiveCopy.open_count(5, rows5), "3/3 OPEN", "everything at level 5")
 	var ungated := AreaArchiveCopy.rows(1, [], {}, false)
 	t.ok(not bool(ungated[2]["locked"]), "with the gate off (a debug build) the city is open")
+	var visited := AreaArchiveCopy.rows(5, [], {}, true, ["cage", "beach"])
+	t.eq([visited[0]["unvisited"], visited[1]["unvisited"], visited[2]["unvisited"]], [false, false, true], "the city is open and not yet visited")
+	t.ok(not bool(AreaArchiveCopy.rows(3, [], {}, true, [])[2]["unvisited"]), "a locked area is never 'new'")
 	# League history flows from the campaign doc.
 	var cage := LeagueData.league("cage")
 	var doc := Campaign.new_doc(cage, 5, 0)
@@ -71,6 +74,13 @@ func run(t) -> void:
 	t.eq((cage_card.find_child("Name", true, false) as Label).text, "ARCADE CAGE", "the name on the card")
 	t.eq(cage_card.find_child("Stars", true, false).get_child_count(), 1, "one star on the cage")
 	t.ok(cage_card.find_child("Snap", true, false) != null, "the snapshot on the card")
+	t.ok(cage_card.find_child("NewBadge", true, false) == null, "no NEW badge once visited")
+	var fresh := AreaArchivePage.new()
+	fresh.build(AreaArchiveCopy.rows(5, [], {}, true, ["cage"]), "3/3 OPEN")
+	t.ok(fresh.card("beach").find_child("NewBadge", true, false) != null, "an unvisited open area wears the NEW badge")
+	t.ok(fresh.card("cage").find_child("NewBadge", true, false) == null, "the visited cage does not")
+	fresh.free()
+	_visits(t)
 	var got := []
 	page.picked.connect(func(id: String) -> void: got.push_back(id))
 	page.pick("city")
@@ -83,3 +93,20 @@ func run(t) -> void:
 	hidden.build(rows1, "1/3 OPEN", false)
 	t.ok(not (hidden.page_root().find_child("Back", true, false) as Control).visible, "no < when there is nothing open behind")
 	hidden.free()
+
+
+func _visits(t) -> void:
+	var app = _app()
+	if app == null:
+		return
+	var before: Dictionary = SaveService.get_settings()
+	var st := before.duplicate(true)
+	st["visitedAreas"] = []
+	SaveService.put_settings(st)
+	t.eq(app.visited_areas(), [], "a fresh save has visited nothing")
+	t.ok(app.area_unvisited("cage"), "the cage is open and new")
+	app.mark_area_visited("cage")
+	app.mark_area_visited("cage")
+	t.eq(app.visited_areas(), ["cage"], "visiting records once")
+	t.ok(not app.area_unvisited("cage"), "…and the cage is no longer new")
+	SaveService.put_settings(before)

@@ -65,7 +65,7 @@ static func bests() -> Dictionary:
 
 ## The rows at a level: [{id, mode, name, stars, lvl, locked, titles,
 ## seasons, best, history}]. `states` are App.league_states() rows.
-static func rows(level: int, states: Array, best_by_area: Dictionary, gating := true) -> Array:
+static func rows(level: int, states: Array, best_by_area: Dictionary, gating := true, visited: Array = []) -> Array:
 	var out := []
 	for a in AREAS:
 		var id := str(a["area"])
@@ -82,11 +82,13 @@ static func rows(level: int, states: Array, best_by_area: Dictionary, gating := 
 			titles = int(career.get("championships", 0))
 			seasons = Array(career.get("seasons", [])).size()
 		var best := int(best_by_area.get(id, 0))
+		var locked := gating and level < lvl
 		out.push_back({
+			"unvisited": not locked and not visited.has(id),
 			"id": id, "mode": str(a["mode"]),
 			"name": (str(arena.display_name) if arena != null else id).to_upper(),
 			"stars": maxi(int(arena.title_stars), 1) if arena != null else 1,
-			"lvl": lvl, "locked": gating and level < lvl,
+			"lvl": lvl, "locked": locked,
 			"titles": titles, "seasons": seasons, "best": best,
 			"history": history(titles, seasons, best),
 		})
