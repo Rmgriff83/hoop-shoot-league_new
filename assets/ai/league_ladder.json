@@ -1,0 +1,178 @@
+{
+  "generated": "2026-10-03",
+  "leagues": {
+    "beach": {
+      "err_mult": 1.0,
+      "max": 30.1,
+      "mean": 24.9,
+      "min": 19.9,
+      "n": 40,
+      "pushovers": 1,
+      "ref_mean": 24.1,
+      "shooters": {
+        "bellmeadow": {
+          "acc": 0.55,
+          "ai": 24.3,
+          "ref": 23.3,
+          "win": 0.5
+        },
+        "coalditch": {
+          "acc": 0.46,
+          "ai": 24.4,
+          "ref": 23.6,
+          "win": 0.53
+        },
+        "frostpeak": {
+          "acc": 0.56,
+          "ai": 23.9,
+          "ref": 23.8,
+          "win": 0.55
+        },
+        "harborlight": {
+          "acc": 0.58,
+          "ai": 23.6,
+          "ref": 24.4,
+          "win": 0.48
+        },
+        "ironvale": {
+          "acc": 0.59,
+          "ai": 30.1,
+          "ref": 24.5,
+          "win": 0.73
+        },
+        "red-rock": {
+          "acc": 0.58,
+          "ai": 28.0,
+          "ref": 25.7,
+          "win": 0.6
+        },
+        "thunder-mesa": {
+          "acc": 0.51,
+          "ai": 19.9,
+          "ref": 23.4,
+          "win": 0.23
+        }
+      },
+      "top_id": "ironvale"
+    },
+    "cage": {
+      "err_mult": 1.0,
+      "max": 28.7,
+      "mean": 19.4,
+      "min": 13.1,
+      "n": 40,
+      "pushovers": 3,
+      "ref_mean": 21.0,
+      "shooters": {
+        "brickport": {
+          "acc": 0.38,
+          "ai": 13.1,
+          "ref": 20.4,
+          "win": 0.08
+        },
+        "cactus-flats": {
+          "acc": 0.5,
+          "ai": 23.0,
+          "ref": 20.8,
+          "win": 0.7
+        },
+        "dustplain": {
+          "acc": 0.42,
+          "ai": 17.1,
+          "ref": 21.9,
+          "win": 0.28
+        },
+        "goldgulch": {
+          "acc": 0.56,
+          "ai": 20.3,
+          "ref": 21.9,
+          "win": 0.45
+        },
+        "maple-falls": {
+          "acc": 0.5,
+          "ai": 16.4,
+          "ref": 21.6,
+          "win": 0.18
+        },
+        "pinewick": {
+          "acc": 0.56,
+          "ai": 28.7,
+          "ref": 20.1,
+          "win": 0.78
+        },
+        "sunnyvale-flex": {
+          "acc": 0.46,
+          "ai": 17.0,
+          "ref": 20.0,
+          "win": 0.25
+        }
+      },
+      "top_id": "pinewick"
+    },
+    "city": {
+      "err_mult": 1.0,
+      "max": 34.4,
+      "mean": 28.5,
+      "min": 25.4,
+      "n": 40,
+      "pushovers": 0,
+      "ref_mean": 24.5,
+      "shooters": {
+        "eastgate": {
+          "acc": 0.61,
+          "ai": 25.4,
+          "ref": 24.8,
+          "win": 0.5
+        },
+        "ferry-row": {
+          "acc": 0.54,
+          "ai": 27.4,
+          "ref": 24.1,
+          "win": 0.68
+        },
+        "kingsbridge": {
+          "acc": 0.54,
+          "ai": 26.1,
+          "ref": 24.4,
+          "win": 0.6
+        },
+        "north-tunnel": {
+          "acc": 0.53,
+          "ai": 27.7,
+          "ref": 23.9,
+          "win": 0.78
+        },
+        "rooftop-hill": {
+          "acc": 0.6,
+          "ai": 29.2,
+          "ref": 25.4,
+          "win": 0.68
+        },
+        "starfall": {
+          "acc": 0.59,
+          "ai": 34.4,
+          "ref": 22.9,
+          "win": 0.9
+        },
+        "union-yards": {
+          "acc": 0.59,
+          "ai": 29.7,
+          "ref": 25.7,
+          "win": 0.73
+        }
+      },
+      "top_id": "starfall"
+    }
+  },
+  "n": 40,
+  "pushover_win": 0.25,
+  "reference": {
+    "accuracy": 0.55,
+    "composure": 0.6,
+    "consistency": 0.8,
+    "pace": 4.0,
+    "streakiness": 0.3,
+    "swish": 0.5
+  },
+  "seed": 7171
+}

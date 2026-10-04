@@ -93,6 +93,12 @@ the title at the cap; the suite runs it.
   line under the opponent: `LEVEL 1 · 64/100 XP`, `LEVEL UP · LEVEL 2`
   (gold) or `LEVEL 3 · CAP`.
 
+## Difficulty
+
+The AI side of a league's difficulty is the roster's ratings and `err_mult`, measured in
+points by `tools/league_lab.gd` — see docs/LEAGUE.md → Difficulty ladder (fewer pushovers
+per league, not stronger stars). The player's side is the area's hoop geometry.
+
 ## Adding a league
 
 Give it `levels: {min: <previous cap>, cap: <min + 2>}`, `unlock: {level:

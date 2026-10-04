@@ -163,6 +163,14 @@ buys a season. Re-run 2026-09-27 with the city (allowance 14, 8 signature,
 target 1.0) and playable-only income: cage allowance 5 → parity 0.53, beach
 0.83, city 1.18 — see `tools/card_ledger.gd` for the live numbers.
 
+Re-run 2026-10-03 after the difficulty ladder (docs/LEAGUE.md: weaker rosters,
+`err_mult` 1.0 everywhere): ice measures 0.78 / 0.50 / 0.48 (mean 0.59 → **common**,
+price 100 — a rim nobody gets hot on freezes less), fire7 0.95 (rare, 170 ok), vortex6
+1.05 / 1.89 / 2.04 (epic, price → 390). The beach's parity fell to 0.65 with its
+eight authored ice cards, so its target is now **0.7** (cage 0.5 → beach 0.7 → city
+1.0 along the chain); the city's allowance drops 14 → 12 so it measures ~1.1 against 1.0
+(the cheaper shop buys the player more cards, which had pushed it to 1.26).
+
 ## 5. What is deliberately not modelled
 
 - **Unwatched games are card-free.** `QuickSim` (the 26 of 28 league games

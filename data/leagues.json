@@ -17,7 +17,7 @@
         "goldgulch",
         "pinewick"
       ],
-      "err_mult": 1.2,
+      "err_mult": 1.0,
       "heat_seconds": 90,
       "ot_seconds": 20,
       "ball_return_s": 1.0,
@@ -92,7 +92,7 @@
         "ice",
         "fire7"
       ],
-      "card_parity": 1.0,
+      "card_parity": 0.7,
       "ai_cards": {
         "coalditch": [
           "ice"
@@ -138,7 +138,7 @@
       "hoop": "chain",
       "calib_key": "city",
       "roster": ["starfall", "kingsbridge", "ferry-row", "union-yards", "eastgate", "north-tunnel", "rooftop-hill"],
-      "err_mult": 0.9,
+      "err_mult": 1.0,
       "heat_seconds": 90,
       "ot_seconds": 20,
       "ball_return_s": 1.0,
@@ -147,7 +147,7 @@
       "semis_best_of": 3,
       "final_best_of": 5,
       "unlock": { "level": 5 },
-      "ai_cards_per_season": 14,
+      "ai_cards_per_season": 12,
       "ai_hand_max": 2,
       "ai_pool": ["ice", "fire7", "vortex6"],
       "card_parity": 1.0,

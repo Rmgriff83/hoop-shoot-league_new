@@ -3,8 +3,8 @@
     {
       "id": "ice",
       "name": "Deep Freeze",
-      "rarity": "rare",
-      "price": 150,
+      "rarity": "common",
+      "price": 100,
       "target": "opponent",
       "effect": {
         "kind": "ice"
@@ -65,7 +65,7 @@
       "id": "vortex6",
       "name": "Vortex",
       "rarity": "epic",
-      "price": 470,
+      "price": 390,
       "target": "self",
       "effect": {
         "kind": "vortex",

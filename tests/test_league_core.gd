@@ -33,7 +33,7 @@ func _data(t) -> void:
 	t.ok(LeagueData.league("cage")["unlock"] == null, "arcade league is open")
 	t.eq(int(LeagueData.league("beach")["unlock"]["level"]), 3, "the beach opens at level 3")
 	t.eq(int(LeagueData.league("city")["unlock"]["level"]), 5, "the city opens at level 5")
-	t.close(LeagueData.ratings_of("starfall").accuracy, 0.8, 1e-9, "ratings parse")
+	t.close(LeagueData.ratings_of("starfall").accuracy, 0.59, 1e-9, "ratings parse (the city star, re-tiered 2026-10-03)")
 	for l in LeagueData.leagues():
 		t.close(float(l["ball_return_s"]), 1.0, 1e-9, "%s league ball-return wait is 1 s" % l["id"])
 

@@ -115,11 +115,12 @@ func _dealer(t) -> void:
 	t.eq(CardRewards.ai_hands(bare, 1), {"a": ["ice"], "b": []}, "no allowance fields → authored only")
 	# The rarity-weighted picker leans common, like the drops.
 	var rng := DetRng.new(3)
-	var n_fire := 0
+	var common := "ice" if str(CardDefs.get_card("ice")["rarity"]) == "common" else "fire7"
+	var n_common := 0
 	for i in 400:
-		if CardRewards.pick_weighted(["ice", "fire7"], rng) == "fire7":
-			n_fire += 1
-	t.ok(n_fire > 200, "common cards are dealt more often (%d/400)" % n_fire)
+		if CardRewards.pick_weighted(["ice", "fire7"], rng) == common:
+			n_common += 1
+	t.ok(n_common > 200, "common cards (%s) are dealt more often (%d/400)" % [common, n_common])
 	# The dealer's data rules live in LeagueData.validate: a typo'd id is caught.
 	var bad := cage.duplicate(true)
 	bad["ai_cards"] = {"brickport": ["fire77"]}

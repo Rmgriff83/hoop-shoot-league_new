@@ -160,7 +160,10 @@ func run(t) -> void:
 		if id != "":
 			ids[id] = int(ids.get(id, 0)) + 1
 	t.ok(ids.has("ice") and ids.has("fire7"), "both cards drop (%s)" % str(ids))
-	t.ok(int(ids.get("fire7", 0)) > int(ids.get("ice", 0)), "the common fire card drops more often than the rare ice")
+	# Whichever of the two is the common card (ice since the 2026-10-03 re-measure) drops more.
+	var common := "ice" if str(CardDefs.get_card("ice")["rarity"]) == "common" else "fire7"
+	var rare := "fire7" if common == "ice" else "ice"
+	t.ok(int(ids.get(common, 0)) > int(ids.get(rare, 0)), "the common %s drops more often than the rare %s" % [common, rare])
 	for id in ids:
 		t.ok(not CardDefs.get_card(str(id)).is_empty(), "drops are real card ids")
 	# The policy is side-agnostic: a player bot plays its ice on the streaking AI.
