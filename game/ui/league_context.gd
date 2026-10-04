@@ -87,12 +87,16 @@ func setup(id: String, p_tab := "HEAT", p_sub := "LOADOUT") -> void:
 
 
 ## The doc moved (a purchase, an equip, a season step): re-read and rebuild the panes.
+## The old rows are queued, not freed: refresh() runs from inside their own
+## buttons' `pressed` (START SEASON, ADVANCE, buy, equip), and freeing the
+## emitter mid-signal aborted the rebuild — the MATCH pane came back blank
+## after a season rollover until the league was re-entered (2026-10-03).
 func refresh() -> void:
 	doc = App.league_doc(league_id)
 	for tab in TABS:
 		for c in _list(tab).get_children():
 			_list(tab).remove_child(c)
-			c.free()
+			c.queue_free()
 	_fill_all()
 	changed.emit()
 

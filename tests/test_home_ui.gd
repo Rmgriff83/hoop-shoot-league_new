@@ -339,6 +339,24 @@ func _widgets(t) -> void:
 	t.ok(lc.find_child("Slot_2", true, false) == null, "the equipped slots are not in the pane (they float on the home)")
 	t.ok(lc.find_child("Spares", true, false) != null, "CARDS shows the spares")
 	t.ok(lc.find_child("Career", true, false) != null, "STATS has the career grid")
+	# Season rollover from the MATCH pane: START SEASON is a button inside
+	# the pane it rebuilds, so refresh() must not free it mid-press. Staged
+	# on a copy of the campaign and restored after.
+	var kept: Dictionary = app.league_doc("cage").duplicate(true)
+	var done: Dictionary = app.league_doc("cage")
+	done["season"]["phase"] = "done"
+	done["season"]["championId"] = str(done["season"]["schedule"][0]["homeId"]) if not done["season"]["schedule"].is_empty() else "pinewick"
+	app.save_league_doc(done, "cage")
+	var over := LeagueContext.new()
+	over.setup("cage")
+	var nxt: Button = over.find_child("NextSeason", true, false)
+	t.ok(nxt != null, "a finished season offers START SEASON on the match pane")
+	nxt.pressed.emit()
+	t.eq(int(app.league_doc("cage")["year"]), int(kept["year"]) + 1, "pressing it starts the next year")
+	t.ok(over.find_child("NextSeason", true, false) == null or not is_instance_valid(over.find_child("NextSeason", true, false)), "…the START SEASON card is gone")
+	t.ok(over.find_child("Opponent", true, false) != null and over.find_child("PlayHeat", true, false) != null, "…and the match pane shows the new season's first opponent, not a blank")
+	over.free()
+	app.save_league_doc(kept, "cage")
 	var tabs := []
 	lc.tab_changed.connect(func(tab: String) -> void: tabs.push_back(tab))
 	lc._show_tab("STATS")
