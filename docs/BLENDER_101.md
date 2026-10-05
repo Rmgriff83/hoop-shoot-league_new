@@ -1062,3 +1062,19 @@ Three cage changes, all in `build_cage.py` (`-- --force`) and
   the deck is below the frame, so what the player sees run are the three
   ramp steps and the first deck step. Tests in `tests/test_ambient_life.gd`;
   `--qa-hud` snaps `hud_go` and `chase_00..02`.
+
+## 26. The front console (2026-10-04)
+
+The bit of the machine the shooter leans on, kept minimal: `Console` in
+`build_cage.py` — a dark cabinet across the lane from x 0.2 to 0.8 (just past
+the release point), 0.3 to 1.0 m up, with a padded orange rail along its far
+edge, a green START and a red button on bezels, a coin plate, a ticket
+dispenser box on the right with a cream stub poking out toward the shooter,
+and two balls waiting in the gutter on the left. From the key only its far
+edge shows along the bottom of the frame (the top is at chest height; the
+held ball rests just above the rail and is drawn in front of it on a pull).
+Returning balls roll under it and out of sight — that is the ball return.
+`SimGeometry.arcade()` carries it as a prop box (`ARCADE_CONSOLE_*`,
+`props`), so a dribbled flick bounces off its top while a roll-out passes
+underneath. Move it in Blender and in `arcade()` together.
+`tests/test_props.gd`, `tests/test_ambient_life.gd`.

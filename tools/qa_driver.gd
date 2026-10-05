@@ -674,7 +674,6 @@ func _run_area_snaps() -> void:
 		court.hoop_set = App.hoop_for_mode(str(card["mode"]))
 		vp.add_child(court)
 		court.led.set_text("HOOP SHOOT", court.led.accent_color)
-		court.set_ticker(TickerText.arcade_items(0))
 		var cam := Camera3D.new()
 		var spec := TitlePan.spec_of(arena)
 		cam.fov = float(spec["fov"]) * SNAP_FOV_SCALE

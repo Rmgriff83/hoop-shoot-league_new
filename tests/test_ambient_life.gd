@@ -23,6 +23,9 @@ func run(t) -> void:
 	t.eq(_count(cage, "BackPad"), 1, "the egg-crate foam over the back panel")
 	t.eq(_count(cage, "LeagueHousing"), 1, "the ribbon board's housing on the foam")
 	t.eq(_count(cage, "DeckArrow"), 2 * ArcadeFx.ARROW_STEPS, "two rows of %d return arrows" % ArcadeFx.ARROW_STEPS)
+	# The front console (2026-10-04): body, top, rail, two buttons, the ticket box with its stub, two waiting balls.
+	for n in ["ConsoleBody", "ConsoleTop", "ConsoleRail", "ConsoleButton0", "ConsoleButton1", "ConsoleTicketBox", "ConsoleTicketStub", "ConsoleBall0", "ConsoleBall1"]:
+		t.ok(cage.find_child(n, true, false) is MeshInstance3D, "%s in the cage glb" % n)
 	var lface: MeshInstance3D = cage.find_child("LeagueFace", true, false)
 	var aabb := lface.get_aabb()
 	t.ok(aabb.size.z > 2.3 and aabb.size.z < 2.4, "the ribbon board is full width (%.2f m)" % aabb.size.z)
