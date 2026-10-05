@@ -167,6 +167,13 @@ func _run_heat() -> void:
 		await _sleep(0.45)
 		await _snap("heat_deal")
 	await _sleep(2.0)
+	# The OVERTIME toast (design 4a), shown by hand: the pass never reaches OT.
+	var hud_n: Hud = get_tree().root.find_child("Hud", true, false)
+	if hud_n != null:
+		hud_n.toast("OVERTIME", "20S", "icon_stopwatch", Hud.GOLD)
+		await _sleep(0.5)
+		await _snap("heat_ot_toast")
+		hud_n.hide_toast()
 	await _click_named("PipMin")
 	await _sleep(0.5)
 	await _snap("heat_pipmin")

@@ -281,8 +281,17 @@ a chip in their colour with their score and a restore glyph. The card tray
 chip across its middle for WAIT (dimmed) or the fire window's seconds. A
 played card grows in the middle over its shadow with a caption chip
 (`DEEP FREEZE > OLLIE`; blue for yours, orange for theirs) then flies to its
-target; the overtime break dims the court under `TIED 37-37` / OVERTIME /
-the period's note. ON FIRE is a rim pop like the rest.
+target. ON FIRE is a rim pop like the rest. **Toasts (design 4a update,
+2026-10-04; `game/ui/toast.gd`, `Toast`)**: the league's countdown is a chip
+at y 300 — `STARTS IN` over the digit, min 240 wide, dark fill under the
+colour's dots, the checker shadow — that slides in from above and swaps its
+digit; GO is the same chip in orange for 0.9 s (`Hud.countdown_toast`,
+`go_toast`). The overtime break is the small chip at y 196 — stopwatch,
+OVERTIME (or OVERTIME 2), `20S` in gold — up for the break (`Hud.toast`,
+`HudCopy.ot_toast`); the dim and the TIED line are gone. The tray shows a
+dashed empty box in every slot without a card (a played card leaves one
+behind; the full stack stays centred, `tray_layout`), and the opponent's
+loadout row under the PiP shows dashed 40 px chips for their empty slots.
 
 ## QA and tests
 

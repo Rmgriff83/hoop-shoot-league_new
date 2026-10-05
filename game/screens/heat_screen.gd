@@ -44,6 +44,7 @@ var _pip_pos := Vector2(720 - 36 - 216 - PIP_FRAME, PIP_Y + PIP_FRAME)
 var _pip_size := PIP_SIZE
 var _tray: Array[TrayCard] = []
 var _tray_ids: Array = []
+var _empties: Array[Control] = []
 
 
 func _make_rules() -> void:
@@ -80,7 +81,6 @@ func _after_ready() -> void:
 	_build_pip()
 	_build_tray()
 	_build_toast()
-	_build_ot_break()
 	_build_league_banner()
 
 
@@ -262,6 +262,14 @@ func _build_tray() -> void:
 		tc.button.pressed.connect(_on_card_tapped.bind(i))
 		layer.add_child(tc)
 		_tray.push_back(tc)
+	# Dashed empty slots (design 4a): one per slot without a card, stacked
+	# above the cards; a played card leaves one behind.
+	for i in CardDefs.SLOTS:
+		var e := ModeCards.Dashed.new(TRAY_CARD, 2.0, 0.0)
+		e.name = "Empty%d" % i
+		e.visible = false
+		layer.add_child(e)
+		_empties.push_back(e)
 	_layout_tray(false)
 
 
@@ -274,24 +282,39 @@ func _tray_shown() -> Array[int]:
 	return out
 
 
-## Stack the remaining cards centred on the tray column (slide when animate).
+## The tray column's slot positions, lowest slot first: the full stack of
+## `slots` cards centred on TRAY_CENTRE_Y (the design's slotTop), cards in
+## the first `n_cards` slots and dashed empties above them.
+static func tray_layout(slots: int, centre_y := TRAY_CENTRE_Y, card_h := TRAY_CARD.y, pitch := TRAY_PITCH, x := TRAY_POS.x) -> Array:
+	var total := slots * card_h + (slots - 1) * (pitch - card_h)
+	var top := centre_y - total * 0.5
+	var out := []
+	for k in slots:
+		out.push_back(Vector2(x, top + (slots - 1 - k) * pitch))
+	return out
+
+
+## Stack the remaining cards from the bottom slot up (slide when animate) and
+## park a dashed empty in every slot above them.
 func _layout_tray(animate: bool) -> void:
 	var shown := _tray_shown()
 	var n := shown.size()
-	if n == 0:
-		return
-	var total := n * TRAY_CARD.y + (n - 1) * (TRAY_PITCH - TRAY_CARD.y)
-	var top := TRAY_CENTRE_Y - total * 0.5
+	var spots := tray_layout(CardDefs.SLOTS)
 	if _tray_tween != null:
 		_tray_tween.kill()
 	_tray_tween = create_tween().set_parallel(true) if animate else null
 	for k in n:
 		var i: int = shown[k]
-		var pos := Vector2(TRAY_POS.x, top + (n - 1 - k) * TRAY_PITCH)
+		var pos: Vector2 = spots[k]
 		if animate:
 			_tray_tween.tween_property(_tray[i], "position", pos, 0.25).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 		else:
 			_tray[i].position = pos
+	for k in _empties.size():
+		var slot := n + k
+		_empties[k].visible = slot < CardDefs.SLOTS
+		if slot < CardDefs.SLOTS:
+			_empties[k].position = spots[slot]
 
 
 ## Positions of the cards still in the tray, lowest slot first (for probes).
@@ -388,39 +411,9 @@ func _refresh_tray() -> void:
 ## OVERTIME big with the dithered shadow, the period's note — while the heat
 ## holds (Heat.OT_BREAK_S), before the countdown. Touches pass through
 ## (nothing is pickable during the break), so the pause button still works.
-var _ot_layer: CanvasLayer
-var _ot_title: Label
-var _ot_sub: Label
-var _ot_note: Label
 
 
-func _build_ot_break() -> void:
-	_ot_layer = CanvasLayer.new()
-	_ot_layer.name = "OtBreakUi"
-	_ot_layer.layer = 25
-	_ot_layer.visible = false
-	add_child(_ot_layer)
-	var dim := ColorRect.new()
-	dim.color = Color("#1B1815", 0.62)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ot_layer.add_child(dim)
-	var vb := VBoxContainer.new()
-	vb.set_anchors_preset(Control.PRESET_TOP_WIDE)
-	vb.offset_top = 500
-	vb.offset_bottom = 700
-	vb.add_theme_constant_override("separation", 26)
-	vb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ot_layer.add_child(vb)
-	_ot_sub = _ot_text("", 24)
-	vb.add_child(_ot_sub)
-	_ot_title = _ot_text("OVERTIME", 56, Color("#F0B84A"), true)
-	RetroTheme.dithered(_ot_title)
-	vb.add_child(_ot_title)
-	_ot_note = _ot_text("", 16)
-	vb.add_child(_ot_note)
-
-
+## A centred label over the court (the PiP chrome, the deal caption).
 func _ot_text(text: String, size_: int, color := RetroTheme.SCENE_TEXT, display := false) -> Label:
 	var l := UiFont.label(text, size_, color, UiFont.display() if display else UiFont.body_bold())
 	RetroTheme.on_scene(l)
@@ -429,24 +422,20 @@ func _ot_text(text: String, size_: int, color := RetroTheme.SCENE_TEXT, display 
 	return l
 
 
+## The overtime break (design 4a): the gold OVERTIME · 20S toast with the
+## stopwatch, up for the break — no dim, no TIED line (the boards marquee it).
 func _show_ot_break(n: int) -> void:
-	if _ot_layer == null:
-		return
-	var copy := HudCopy.ot_break(heat.player.score, heat.ai.score, n, int(round(heat.ot_seconds)), _spots.size() > 1)
-	_ot_sub.text = str(copy["sub"])
-	_ot_title.text = str(copy["title"])
-	_ot_note.text = str(copy["note"])
-	_ot_layer.visible = true
+	var copy := HudCopy.ot_toast(n, int(round(heat.ot_seconds)))
+	_hud.toast(str(copy["title"]), str(copy["sub"]), "icon_stopwatch", Hud.GOLD)
 	Sfx.score_pop(true)
 
 
 func _hide_ot_break() -> void:
-	if _ot_layer != null:
-		_ot_layer.visible = false
+	_hud.hide_toast()
 
 
 func ot_break_shown() -> bool:
-	return _ot_layer != null and _ot_layer.visible
+	return _hud.toast_shown()
 
 
 ## Card play "deal": the card slides out of its tray slot, grows to the middle
@@ -768,10 +757,17 @@ func _refresh_opp_chips() -> void:
 	for c in _opp_chips.get_children():
 		_opp_chips.remove_child(c)
 		c.free()
+	var shown := 0
 	for id in hand:
 		var card := CardDefs.get_card(str(id))
 		if not card.is_empty():
 			_opp_chips.add_child(ModeCards.chip(card))
+			shown += 1
+	# Dashed empties for the opponent's unused slots (design 4a).
+	for k in maxi(0, CardDefs.SLOTS - shown):
+		var e := ModeCards.Dashed.new(Vector2.ONE * ModeCards.CHIP, 2.0, 3.0)
+		e.name = "OppEmpty%d" % k
+		_opp_chips.add_child(e)
 
 
 ## The opponent's frame: camera behind their spot, ball rest pose, board facing them.
@@ -815,14 +811,13 @@ func _handle_event(ev: Dictionary) -> void:
 		"done":
 			return  # the heat decides when it is over (overtime may follow)
 		"go":
+			# GO is the league's orange toast (design 4a), not the solo banner;
+			# an OT tip-off keeps the carried score on the board.
 			_court.arcade_chase()
-			if heat.ot > 0:
-				# OT tip-off: keep the carried score on the board, flash GO.
-				_hud.banner("GO!", Color(0.4, 0.9, 0.55))
-				_court.led.show_score(heat.player.score)
-				_court.info.flash("GO!", 2, _court.info.accent_color)
-			else:
-				super(ev)
+			_hud.go_toast()
+			_court.info.set_text("")
+			_court.led.show_score(heat.player.score if heat.ot > 0 else 0)
+			_court.info.flash("GO!", 2, _court.info.accent_color)
 		"ot_start":
 			_hud.set_ot(int(ev["n"]))
 			_show_ot_break(int(ev["n"]))

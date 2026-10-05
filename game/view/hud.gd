@@ -28,8 +28,14 @@ const WAIT_Y := 860.0
 const COUNTDOWN_Y := 300.0
 const BANNER_Y := 450.0
 const BANNER_HOLD_S := 0.7
+## The league HUD's toasts (design 4a): the countdown chip and the notice chip.
+const TOAST_BIG_Y := 300.0
+const TOAST_SMALL_Y := 196.0
+const GO_TOAST_S := 0.9
 
 var _clock_card: ShadowPanel
+var _toast_big: Toast
+var _toast_small: Toast
 var _clock: Label
 var _ot_tag: Label
 var _score_card: ShadowPanel
@@ -144,6 +150,13 @@ func _ready() -> void:
 	RetroTheme.dithered(_countdown)
 	_countdown.visible = false
 	add_child(_countdown)
+	# The league's toasts (design 4a): the countdown / GO chip and the notice chip.
+	_toast_big = Toast.new(CREAM, TOAST_BIG_Y)
+	_toast_big.name = "CountdownToast"
+	add_child(_toast_big)
+	_toast_small = Toast.new(GOLD, TOAST_SMALL_Y)
+	_toast_small.name = "Toast"
+	add_child(_toast_small)
 	# The banner: two dithered lines.
 	_banner = VBoxContainer.new()
 	_banner.name = "Banner"
@@ -286,16 +299,67 @@ func update_clock(time_left: float, countdown: float, phase: String) -> void:
 	_clock.text = HudCopy.clock_text(time_left)
 	_clock.add_theme_color_override("font_color", GOLD if HudCopy.clock_hot(time_left) and phase != TimeTrial.PHASE_COUNTDOWN else CREAM)
 	if phase == TimeTrial.PHASE_COUNTDOWN:
-		_countdown.text = str(ceili(countdown))
-		_countdown.visible = true
-	elif _countdown.visible and phase == TimeTrial.PHASE_RUNNING:
-		# GO! flashes via banner; hide the big digits.
+		if _heat:
+			# The league's countdown is the toast chip: STARTS IN over the digit.
+			_countdown.visible = false
+			countdown_toast(str(ceili(countdown)), HudCopy.countdown_pre(), CREAM)
+		else:
+			_countdown.text = str(ceili(countdown))
+			_countdown.visible = true
+	elif phase == TimeTrial.PHASE_RUNNING:
+		# GO! flashes via banner (solo) or the GO toast (league); hide the digits.
 		_countdown.visible = false
+		if _heat and _toast_big.visible and _toast_big.title_text() != "GO":
+			_toast_big.hide_now()
 
 
 func set_score(score: int) -> void:
 	_score_spring.target = float(score)
 	_refresh_best()
+
+
+# ---- toasts (league HUD, design 4a) --------------------------------------------------
+
+
+## The big chip at y 300: `pre` (may be "") over the digit/word; slides in
+## once and then only swaps its text while it stays up.
+func countdown_toast(title: String, pre: String, color: Color) -> void:
+	var fresh := not _toast_big.visible or _toast_big.color != color
+	_toast_big.color = color
+	_toast_big.set_big(pre, title)
+	if fresh:
+		_toast_big.show_stay()
+
+
+func hide_countdown_toast() -> void:
+	_toast_big.hide_now()
+
+
+## GO in orange, up for GO_TOAST_S then gone.
+func go_toast() -> void:
+	_toast_big.hide_now()
+	_toast_big.color = RetroTheme.LIGHT["orange"]
+	_toast_big.set_big("", "GO")
+	_toast_big.show_once(GO_TOAST_S)
+
+
+## The small notice chip at y 196 (OVERTIME · 20S with the stopwatch); stays until hidden.
+func toast(title: String, sub := "", icon_name := "", color := GOLD) -> void:
+	_toast_small.color = color
+	_toast_small.set_small(title, sub, icon_name)
+	_toast_small.show_stay()
+
+
+func hide_toast() -> void:
+	_toast_small.hide_now()
+
+
+func toast_shown() -> bool:
+	return _toast_small.visible
+
+
+func countdown_toast_text() -> String:
+	return _toast_big.title_text() if _toast_big.visible else ""
 
 
 ## A centre banner: two dithered lines from HudCopy.split_banner, scaled in

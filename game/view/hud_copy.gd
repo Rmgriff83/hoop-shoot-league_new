@@ -92,6 +92,16 @@ static func deal_caption(card_name: String, on_you: bool, opp_short: String) -> 
 	return [card_name.to_upper(), "YOU" if on_you else opp_short.to_upper()]
 
 
+## The countdown toast's small line (design 4a: "STARTS IN" over the digit).
+static func countdown_pre() -> String:
+	return "STARTS IN"
+
+
+## The overtime toast: {title, sub} — OVERTIME (or OVERTIME n) and the period's seconds.
+static func ot_toast(n: int, seconds: int) -> Dictionary:
+	return {"title": "OVERTIME" if n <= 1 else "OVERTIME %d" % n, "sub": "%dS" % seconds}
+
+
 ## The overtime break card: {sub, title, note}.
 static func ot_break(you: int, opp: int, n: int, seconds: int, spots: bool) -> Dictionary:
 	return {"sub": "TIED %d-%d" % [you, opp], "title": "OVERTIME" if n <= 1 else "OVERTIME %d" % n,
