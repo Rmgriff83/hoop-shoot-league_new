@@ -158,6 +158,28 @@ orange buttons rise in 0.15 s apart: CONTINUE (NEW GAME on a fresh install,
 SETTINGS → the home's sheet. Discord and Reddit icons sit top-left (the
 links come later). Title music starts here and carries into the title.
 
+## Area unlock (design "Area Unlock" 18a, 2026-10-05)
+
+`game/ui/area_unlock_page.gd` (`AreaUnlockPage`, layer 45; copy
+`game/ui/area_unlock_copy.gd`; `tests/test_area_unlock.gd`; QA `--qa-unlock`):
+the page that plays the moment a league match's XP reaches an area's level
+(beach 3, city 5 — `AreaUnlockCopy.crossed(before, after)`, the first area
+in archive order whose level the rise passed). `App._apply_league_heat` queues
+it (`App.pending_unlock`) unless `settings.unlocksSeen` already lists the
+area; the heat screen shows it after the match-end page and before the
+post-match page. Over a snapshot of the real 3D area (`area_<id>_tall.png`,
+the portrait render `--qa-area-snaps` now writes beside the card's), darkened:
+a `LEVEL 03 REACHED` chip, the area's picture (the card's render) in a cream
+frame under a near-opaque dotted veil with the gold lock in its centre; the
+lock rattles, the shackle springs open on a flash and a ring (1.55 s), the
+veil fades off the picture, the lock flies away and rays in the area's colour
+turn behind it; confetti in the area's colours; NEW AREA slams in, then the
+stars and the name, then chips for what opens there (LEAGUE / TIME TRIAL /
+PRACTICE), then GO THERE (that area's home: `home_card`, no archive) or LATER
+(the post-match page). Either marks it seen, so it plays once per area. The
+lock sprites `assets/ui/lock_closed.png` / `lock_open.png` are the design's
+14×17 px art drawn at 12×.
+
 ## Area archive (design "Area Archive" 17a, 2026-10-02)
 
 `game/ui/area_archive_page.gd` (`AreaArchivePage`, a layer-30 page; copy

@@ -14,7 +14,7 @@ var _outcomes: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-unlock") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# The splash is the main scene now: every other pass starts from the title.
@@ -22,6 +22,8 @@ func _ready() -> void:
 		App.to_title.call_deferred()
 	if args.has("--qa-splash"):
 		_run_splash.call_deferred()
+	elif args.has("--qa-unlock"):
+		_run_unlock.call_deferred()
 	elif args.has("--qa-title"):
 		_run_title.call_deferred()
 	elif args.has("--qa-results"):
@@ -649,6 +651,7 @@ func _run_peggy() -> void:
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-area-snaps
 const SNAP_SIZE := Vector2i(1328, 640)
 const SNAP_FOV_SCALE := 0.78
+const SNAP_TALL := Vector2i(720, 1280)
 const SNAP_SETTLE_S := 1.4
 
 
@@ -692,6 +695,14 @@ func _run_area_snaps() -> void:
 		img.save_png(out_dir + "/area_%s.png" % area)
 		img.save_png("user://qa/area_%s.png" % area)
 		print("QA area snap %s (%dx%d)" % [area, img.get_width(), img.get_height()])
+		# The portrait render behind the Area Unlock page (the full title pose).
+		vp.size = SNAP_TALL
+		cam.fov = float(spec["fov"])
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		var tall := vp.get_texture().get_image()
+		tall.save_png(out_dir + "/area_%s_tall.png" % area)
+		print("QA area snap %s tall (%dx%d)" % [area, tall.get_width(), tall.get_height()])
 		vp.queue_free()
 		await _sleep(0.2)
 	print("QA area snaps: done")
@@ -794,6 +805,28 @@ func _pick_area(id: String) -> void:
 ## the chain down, the first blink, warming, lit with the buttons up; then
 ## CONTINUE / NEW GAME into the archive.
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-splash
+## The Area Unlock page (docs/HOME.md → Area unlock), staged for the beach
+## and the city: the lock on the veiled picture, the shackle sprung on the lit
+## picture, NEW AREA with the chips, the buttons.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-unlock
+func _run_unlock() -> void:
+	await _sleep(0.8)
+	for pair in [["beach", 3], ["city", 5]]:
+		var page := AreaUnlockPage.new()
+		page.build(AreaUnlockCopy.state(str(pair[0]), int(pair[1])))
+		add_child(page)
+		var marks := [0.5, 1.7, 2.6, 3.6]
+		var at := 0.0
+		for i in marks.size():
+			await _sleep(float(marks[i]) - at)
+			at = float(marks[i])
+			await _snap("unlock_%s_%02d" % [pair[0], i])
+		page.queue_free()
+		await _sleep(0.3)
+	print("QA unlock: done")
+	get_tree().quit(0)
+
+
 func _run_splash() -> void:
 	var marks := [0.2, 0.8, 1.5, 3.0, 5.2]
 	var at := 0.0

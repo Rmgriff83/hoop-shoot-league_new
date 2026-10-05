@@ -988,6 +988,29 @@ func _finish() -> void:
 		var overlay := MatchEndOverlay.new()
 		overlay.name = "MatchEnd"
 		overlay.build(MatchEndCopy.state(heat_doc))
-		overlay.continued.connect(App.to_heat_result)
+		overlay.continued.connect(_after_match_end)
 		add_child(overlay)
 	)
+
+
+## After the match-end page: the Area Unlock page when this match's XP
+## reached an area's level (docs/HOME.md → Area unlock), else the post-match
+## page. GO THERE lands on that area's home; LATER goes on to the post-match
+## page. Either way the page is seen once.
+func _after_match_end() -> void:
+	var area := App.take_pending_unlock()
+	if area == "":
+		App.to_heat_result()
+		return
+	var page := AreaUnlockPage.new()
+	page.name = "AreaUnlock"
+	page.build(AreaUnlockCopy.state(area, App.level()))
+	page.go_there.connect(func(id: String) -> void:
+		App.mark_unlock_seen(id)
+		App.home_card = maxi(0, AreaArchiveCopy.index_of(id))
+		App.show_archive = false
+		App.to_title())
+	page.later.connect(func() -> void:
+		App.mark_unlock_seen(area)
+		App.to_heat_result())
+	add_child(page)

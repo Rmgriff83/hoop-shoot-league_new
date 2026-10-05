@@ -333,6 +333,32 @@ func grant_cosmetic(kind: String, id: String) -> bool:
 	return true
 
 
+## The area whose unlock page is due (set when a match's XP reaches its
+## level; "" when none). The heat screen takes it after the match-end page.
+var pending_unlock := ""
+
+
+func take_pending_unlock() -> String:
+	var id := pending_unlock
+	pending_unlock = ""
+	return id
+
+
+## Has the player seen an area's unlock page? (settings.unlocksSeen)
+func unlock_seen(area: String) -> bool:
+	return Array(SaveService.get_settings().get("unlocksSeen", [])).has(area)
+
+
+func mark_unlock_seen(area: String) -> void:
+	var st := SaveService.get_settings()
+	var seen: Array = Array(st.get("unlocksSeen", [])).duplicate()
+	if seen.has(area):
+		return
+	seen.push_back(area)
+	st["unlocksSeen"] = seen
+	SaveService.put_settings(st)
+
+
 ## Balls won but not yet looked at on the BALLS tab (the locker icon's dot).
 func unseen_balls() -> Array:
 	var out := []
@@ -721,6 +747,11 @@ func _apply_league_heat(result: Dictionary) -> void:
 		xp_info["title"] = true
 	SaveService.put_progress(prog)
 	last_heat["xp"] = xp_info
+	# A level that opens an area queues the Area Unlock page (docs/HOME.md →
+	# Area unlock); the heat screen shows it after the match-end page.
+	var opened := AreaUnlockCopy.crossed(int(xp_info["level_before"]), int(xp_info["level_after"]))
+	if opened != "" and not unlock_seen(opened):
+		pending_unlock = opened
 	# Card drop, seeded by the campaign so a replayed season rolls the same;
 	# it lands in this league's inventory.
 	var league: Dictionary = result.get("league", {})
