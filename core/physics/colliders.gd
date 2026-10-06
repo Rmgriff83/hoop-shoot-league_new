@@ -215,7 +215,7 @@ static func lip_contact(p: SimVec3, geo: SimGeometry) -> Contact:
 	return Contact.new(KIND_WALL, SimConstants.R_BALL - d, ex / d, ey / d, 0.0, qx, qy, p.z)
 
 
-## The court's solid props (geo.props: speakers, the scoreboard): the deepest
+## The court's solid props (geo.props: the speaker, the scoreboard): the deepest
 ## box the ball overlaps, contact with its nearest point so faces, edges and
 ## corners all push the right way. A centre caught inside a box is pushed
 ## out through its nearest face. Null without props or clear of them.

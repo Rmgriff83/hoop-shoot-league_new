@@ -23,7 +23,7 @@ the street's centre line) gives CityFx the lane line; every `Building*` mesh
 gets the facade shader (dusk + lit panes switching on and off); `FloodHead*` quads
 are unshaded; `TreeRig*` billboards turn to the camera; `ScoreboardRig` /
 `ReaderRig` is the tabletop scoreboard on the ground by the fence (ScoreClock + digit windows); `Speakers` + `SpeakerLed`
-the floor speakers' radio. `City` is the static root / shake handle.
+the floor speaker's radio. `City` is the static root / shake handle.
 
 CREATOR script: refuses to overwrite an existing city.blend unless run with
 `-- --force`. Never touches the other arenas.
@@ -479,8 +479,8 @@ def build():
     window("ScorePeriod", 99 / 224.0, 125 / 224.0, 1.0 - 140 / 160.0, 1.0 - 104 / 160.0)   # 1 digit
     window("ScoreVisitor", 132 / 224.0, 220 / 224.0, 1.0 - 146 / 160.0, 1.0 - 97 / 160.0)
 
-    # ---- Two big floor speakers to the shooter's left of the hoop's base, the
-    # city's radio (ArenaSet.interactables kind "radio" on `Speakers`, its LED
+    # ---- One big floor speaker to the shooter's left of the hoop's base, the
+    # city's radio (a pair until 2026-10-05, when Ross cut it to one) (ArenaSet.interactables kind "radio" on `Speakers`, its LED
     # `SpeakerLed`): a lo-fi beats playlist Ross will pick.
     #
     # Polished 2026-10-03 to Ross's reference (a walnut bookshelf speaker): a
@@ -525,7 +525,7 @@ def build():
             spk_part("Speaker%sScrew%d" % (tag, k), bpy.context.active_object, spk_screw,
                      (fx - 0.012, cy + (r + 0.012) * math.sin(a), cz + (r + 0.012) * math.cos(a)))
 
-    for i, dz in enumerate((-0.42, 0.42)):
+    for i, dz in enumerate((0.0,)):
         w, h, d = 0.52, 0.92, 0.46
         fx = -d / 2.0
         cage.add_box("SpeakerBox%d" % i, (d, h, w), (0.0, h / 2.0, dz), wood, c_props, speakers)

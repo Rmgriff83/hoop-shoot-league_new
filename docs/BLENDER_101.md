@@ -700,9 +700,9 @@ and takes every message in the time area, and `ScoreHome` / `ScoreVisitor` /
 `CourtGeometry` as the city's `led`/`info`; the screens tick
 `CourtGeometry.set_clock/set_visitor/set_period`; `tests/test_scoreboard.gd`;
 `--qa-city` snaps `city_scoreboard`; the ball bounces off it and the
-speakers: `SimGeometry.city()` carries their boxes as `props`,
+speaker: `SimGeometry.city()` carries their boxes as `props`,
 `Colliders.prop_contact`, kind `prop`, `prop_e 0.5`, the board's thud —
-move a prop in Blender and in `city()` together; `tests/test_props.gd`), two floor speakers left of the hoop's base as the city's radio
+move a prop in Blender and in `city()` together; `tests/test_props.gd`), one floor speaker left of the hoop's base as the city's radio (a pair until 2026-10-05)
 (`Speakers`, `SpeakerLed`, `ArenaSet.interactables`; polished 2026-10-03 to
 Ross's walnut-bookshelf reference: a veneered cabinet (`city_speaker_wood.png`)
 whose lip frames a black textured baffle (`city_speaker_baffle.png`), a big

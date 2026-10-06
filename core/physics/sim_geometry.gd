@@ -95,7 +95,7 @@ var floor_log_impact: float = 0.0
 var lip_x: float = -INF
 var lip_h: float = 0.0
 ## Solid props on the court: axis-aligned boxes the ball bounces off (the
-## city's floor speakers and tabletop scoreboard). Each is a Dictionary
+## city's floor speaker and tabletop scoreboard). Each is a Dictionary
 ## {x0, x1, y0, y1, z0, z1} in sim metres (scalars only — no Vector3 under
 ## core/). Empty everywhere but the city (golden fixtures). prop_e is their
 ## restitution (wood / plastic: duller than a backboard, livelier than foam).
@@ -334,14 +334,14 @@ static func city(dist := CITY_DIST) -> SimGeometry:
 	g.pole_r = 0.06
 	g.pole_off = 0.3
 	g.pole_top = g.board_top + 0.05
-	# The props the ball can hit (2026-10-03): the two floor speakers to the
+	# The props the ball can hit (2026-10-03): the floor speaker to the
 	# shooter's left of the pole's base and the tabletop scoreboard on the
 	# ground to its right, against the fence — the boxes build_city.py draws
-	# (Speakers at ENC_X1 − 1.15 / z −1.75 ± 0.42, 0.46 × 0.92 × 0.52;
+	# (Speakers at ENC_X1 − 1.15 / z −1.75, 0.46 × 0.92 × 0.52 — one cabinet
+	# since 2026-10-05;
 	# ReaderRig at ENC_X1 − 0.45 / z 1.45, plate + wedge 0.45 deep, 0.56 tall,
 	# 0.76 wide). Move them there and here together.
-	for dz in [-0.42, 0.42]:
-		g.props.push_back(_box(4.32, 4.78, 0.0, 0.92, -1.75 + dz - 0.26, -1.75 + dz + 0.26))
+	g.props.push_back(_box(4.32, 4.78, 0.0, 0.92, -1.75 - 0.26, -1.75 + 0.26))
 	g.props.push_back(_box(5.20, 5.65, 0.0, 0.56, 1.45 - 0.38, 1.45 + 0.38))
 	return g
 
