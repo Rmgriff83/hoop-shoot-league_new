@@ -14,7 +14,7 @@ var _outcomes: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-unlock") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# The splash is the main scene now: every other pass starts from the title.
@@ -24,6 +24,8 @@ func _ready() -> void:
 		_run_splash.call_deferred()
 	elif args.has("--qa-unlock"):
 		_run_unlock.call_deferred()
+	elif args.has("--qa-spots"):
+		_run_spots.call_deferred()
 	elif args.has("--qa-title"):
 		_run_title.call_deferred()
 	elif args.has("--qa-results"):
@@ -491,6 +493,35 @@ func _run_beach() -> void:
 		await _sleep(0.6)
 		await _snap("beach_pelican")
 	print("QA beach: done")
+	get_tree().quit(0)
+
+
+## Spot rail QA (design "Solo Modes HUD" 5a): beach practice with its column
+## of spot chips, a different spot picked, then the rail slid away.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-spots
+func _run_spots() -> void:
+	await _sleep(1.2)
+	await _pick_area("beach")
+	await _click_button_named("PRACTICE")
+	await _sleep(1.4)
+	await _snap("spots_00")
+	var second: Button = get_tree().root.find_child("Spot1", true, false)
+	if second != null:
+		var c := (second.global_position + second.size / 2.0) * 0.5
+		_mouse_button(c, true)
+		await _sleep(0.08)
+		_mouse_button(c, false)
+		await _sleep(0.6)
+		await _snap("spots_01")
+	var chev: Button = get_tree().root.find_child("SpotChevron", true, false)
+	if chev != null:
+		var c2 := (chev.global_position + chev.size / 2.0) * 0.5
+		_mouse_button(c2, true)
+		await _sleep(0.08)
+		_mouse_button(c2, false)
+		await _sleep(0.5)
+		await _snap("spots_02")
+	print("QA spots: done")
 	get_tree().quit(0)
 
 

@@ -286,8 +286,11 @@ so `+2` and `ON FIRE` no longer overwrite each other. The copy lives in
 `HudCopy.rim_pop/heat_pop/fire_pop/in_out_pop`. The league opponent's PiP
 court spawns the same pops at `pop_scale 2.4` so they read at a third of
 the width. Practice adds
-the 30S MODE row (`ToggleSwitch`) under PAUSE and the beach's spot picker
-under that. The pause menu is shared (`game/ui/pause_menu.gd`, `PauseMenu`):
+the 30S MODE row (`ToggleSwitch`) under PAUSE and, under that, the spot rail
+(design 5a, 2026-10-05): a column of 150 × 56 `ShadowCard` chips at x 36 / y 200,
+the spot you stand on in orange, with a 44 × 56 chevron beside the column that
+slides the whole rail 200 px off the left edge and back (`--qa-spots` snaps
+`spots_00..02`). The pause menu is shared (`game/ui/pause_menu.gd`, `PauseMenu`):
 PAUSED, RESUME, SHOT HELP (taps cycle the value), QUIT TO TITLE — the old
 BACK button lives there now.
 

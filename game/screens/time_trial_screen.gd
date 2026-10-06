@@ -296,6 +296,19 @@ var _spot := Vector3.ZERO
 var _fwd := Vector3.RIGHT
 var _right := Vector3.BACK
 var _spot_buttons: Array[Button] = []
+## The practice spot rail (design "Solo Modes HUD" 5a, 2026-10-05): a column
+## of chips under the 30S MODE row with a chevron beside it that slides the
+## rail off the left edge and back.
+const SPOT_RAIL_X := 36.0
+const SPOT_RAIL_Y := 200.0
+const SPOT_RAIL_HIDE := -200.0
+const SPOT_RAIL_SLIDE := 0.28
+const SPOT_CHIP := Vector2(150, 56)
+const SPOT_GAP := 18
+const SPOT_CHEVRON := Vector2(44, 56)
+var _spot_rail: HBoxContainer
+var _spot_chevron: ShadowCard
+var _spots_hidden := false
 
 ## Spot shuffle (the beach's "last 30 s"): with SHUFFLE_MARKS seconds left the
 ## game walks the shooter to a random other spot, each move announced for
@@ -372,8 +385,32 @@ func picker_free() -> bool:
 
 func _refresh_picker() -> void:
 	for k in _spot_buttons.size():
-		_spot_buttons[k].disabled = _picker_locked or not _picker_free or (k == _spot_index)
-		_spot_buttons[k].modulate = Color.WHITE
+		var b := _spot_buttons[k]
+		b.disabled = _picker_locked or not _picker_free
+		b.modulate = Color.WHITE
+		if b is ShadowCard:
+			# The spot you stand on is the orange chip; the rest are cream.
+			(b as ShadowCard).color = RetroTheme.LIGHT["orange"] if k == _spot_index else RetroTheme.SCENE_TEXT
+			b.queue_redraw()
+
+
+func _pick_spot(k: int) -> void:
+	if k != _spot_index:
+		_set_spot(k)
+
+
+## Slide the rail off the left edge (the chevron turns into `>`) and back.
+func _toggle_spot_rail() -> void:
+	_spots_hidden = not _spots_hidden
+	if _spot_chevron != null:
+		_spot_chevron.text = ">" if _spots_hidden else "<"
+	if _spot_rail != null:
+		var tw := create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw.tween_property(_spot_rail, "position:x", SPOT_RAIL_X + (SPOT_RAIL_HIDE if _spots_hidden else 0.0), SPOT_RAIL_SLIDE)
+
+
+func spots_hidden() -> bool:
+	return _spots_hidden
 
 
 ## Seconds until the next spot move: the trial reads the clock's marks, practice
@@ -539,30 +576,51 @@ func _toggle_thirty() -> void:
 			_hud.banner("30s mode off", Color(0.85, 0.88, 0.95))
 
 
-## Spot picker: one small button per spot in the top UI zone (below the tuning
-## strip when that is on), well above the grab line.
+## Spot picker (design "Solo Modes HUD" 5a): a column of 150 × 56 chips
+## down the left under the 30S MODE row, the spot you stand on in orange, with
+## a 44 × 56 chevron beside the column that slides the whole rail 200 px off
+## the left edge and back (the tuning strip pushes it lower).
 func _add_spot_picker() -> void:
 	var layer := CanvasLayer.new()
 	layer.name = "SpotUi"
 	layer.layer = 11
 	add_child(layer)
-	var row := HBoxContainer.new()
-	row.position = Vector2(36, 330 if App.tuning_mode else (176 if _practice else 84))
-	row.size = Vector2(648, 44)
-	row.add_theme_constant_override("separation", 6)
-	layer.add_child(row)
+	var rail := HBoxContainer.new()
+	rail.name = "SpotRail"
+	rail.position = Vector2(SPOT_RAIL_X, 330.0 if App.tuning_mode else (SPOT_RAIL_Y if _practice else 84.0))
+	rail.add_theme_constant_override("separation", 14)
+	rail.alignment = BoxContainer.ALIGNMENT_BEGIN
+	layer.add_child(rail)
+	_spot_rail = rail
+	var col := VBoxContainer.new()
+	col.name = "Spots"
+	col.add_theme_constant_override("separation", SPOT_GAP)
+	col.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	rail.add_child(col)
 	for k in _spots.size():
-		var b := Button.new()
-		b.text = _spots[k]["name"]
-		b.add_theme_font_size_override("font_size", 18)
-		b.custom_minimum_size = Vector2(0, 44)
-		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		b.focus_mode = Control.FOCUS_NONE
-		b.pressed.connect(_set_spot.bind(k))
-		row.add_child(b)
+		var b := _spot_chip(str(_spots[k]["name"]), 16, SPOT_CHIP)
+		b.name = "Spot%d" % k
+		b.pressed.connect(_pick_spot.bind(k))
+		col.add_child(b)
 		_spot_buttons.push_back(b)
-	for k in _spot_buttons.size():
-		_spot_buttons[k].disabled = (k == _spot_index)
+	var chev := _spot_chip("<", 24, SPOT_CHEVRON)
+	chev.name = "SpotChevron"
+	chev.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	chev.pressed.connect(_toggle_spot_rail)
+	rail.add_child(chev)
+	_spot_chevron = chev
+	_refresh_picker()
+
+
+func _spot_chip(text: String, font_size: int, min_size: Vector2) -> ShadowCard:
+	var b := ShadowCard.new(RetroTheme.SCENE_TEXT)
+	b.text = text
+	b.custom_minimum_size = min_size
+	b.add_theme_font_override("font", UiFont.display())
+	b.add_theme_font_size_override("font_size", font_size)
+	RetroTheme.on_scene(b)
+	b.add_theme_color_override("font_disabled_color", RetroTheme.SCENE_DIM)
+	return b
 
 
 ## Screen point → world point on the vertical plane through the spot, via the
