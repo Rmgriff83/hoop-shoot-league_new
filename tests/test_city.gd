@@ -25,7 +25,8 @@ func _geometry(t) -> void:
 	t.ok(g.hoop_z == 0.0, "city hoop is centred")
 	var a := SimGeometry.arcade()
 	var b := SimGeometry.beach()
-	t.close(g.rim_e, SimGeometry.BEACH_RIM_E, 1e-12, "city iron is the beach's unforgiving ring")
+	t.close(g.rim_e, SimGeometry.CITY_RIM_E, 1e-12, "city iron has its own restitution")
+	t.close(g.rim_e, SimGeometry.BEACH_RIM_E * 1.15, 1e-12, "15 % bouncier than the beach ring")
 	t.ok(g.rim_mu == a.rim_mu and g.rim_spin_decay == a.rim_spin_decay, "city grip and spin decay match the cage")
 	t.ok(g.neck_is_rim == a.neck_is_rim and g.net_catch_depth == a.net_catch_depth and g.rim_log_impact == a.rim_log_impact, "city gym-rim fields = arcade")
 	# The chain net: the only sim fields the city does not share with the beach.

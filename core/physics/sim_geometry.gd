@@ -138,6 +138,8 @@ const ARCADE_RIM_LOG_IMPACT := 0.2
 ## kicks bricks out further and drops fewer rattles. Everything you see and
 ## hear follows from this one number — see rim_rigidity().
 const BEACH_RIM_E := ARCADE_RIM_E * 1.33
+## The city park ring is bouncier still: 15 % over the beach's (Ross, 2026-10-05).
+const CITY_RIM_E := BEACH_RIM_E * 1.15
 ## Beach practice hoop distance: 17.5 % farther than the arcade base pose.
 const BEACH_DIST := 2.9 * 1.175
 ## Chain net (the city court): steel links weigh ~10x nylon and neither drape
@@ -319,13 +321,13 @@ static func beach(dist := BEACH_DIST) -> SimGeometry:
 
 
 ## City court: the beach's street geometry (8 ft rim, arcade release, a
-## regulation board, the unforgiving beach iron) 25 % out, inside a fence,
-## with a CHAIN net.
+## regulation board, iron 15 % livelier than the beach's) 25 % out, inside a
+## fence, with a CHAIN net.
 static func city(dist := CITY_DIST) -> SimGeometry:
 	var rim_h := 2.44
 	var b_bottom := rim_h - 0.15
 	var g := _chain_feel(_arcade_feel(SimGeometry.new(dist, rim_h, 1.85, SimConstants.BOARD_HALF_W, b_bottom, b_bottom + 1.05)))
-	g.rim_e = BEACH_RIM_E
+	g.rim_e = CITY_RIM_E
 	# The fence enclosure (tools/blender/build_city.py) and the in-ground pole.
 	g.wall_x_min = -11.2
 	g.wall_x_max = 5.7

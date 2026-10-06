@@ -24,6 +24,7 @@ func run(t) -> void:
 func _rigidity(t) -> void:
 	t.close(SimGeometry.arcade().rim_rigidity(), 1.0, 1e-12, "the cage is the 1.0 anchor")
 	t.close(SimGeometry.beach().rim_rigidity(), 1.33, 1e-12, "the beach ring is 33 % more rigid")
+	t.close(SimGeometry.city().rim_rigidity(), 1.33 * 1.15, 1e-12, "the city ring is 15 % more rigid again")
 	t.ok(SimGeometry.regulation().rim_rigidity() < 1.0, "the regulation rim is the softest")
 	t.close(SimGeometry.BEACH_RIM_E, SimGeometry.ARCADE_RIM_E * 1.33, 1e-12, "beach restitution is +33 %")
 
