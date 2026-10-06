@@ -148,6 +148,9 @@ func _ready() -> void:
 	dark_mode = bool(SaveService.get_settings().get("darkMode", false))
 	tuning.apply_dict(saved.get("fields", {}))
 	_resolve_cosmetics()
+	# The device account (docs/BACKEND.md): minted locally now, registered
+	# with the server when the net allows; nothing waits on it.
+	Net.ensure_account.call_deferred()
 
 
 func _resolve_cosmetics() -> void:
@@ -838,4 +841,7 @@ func finish_run(run: Dictionary) -> void:
 	var earned := Economy.trial_tickets(run, last_run_was_best)
 	grant_tickets(earned)
 	last_run["tickets"] = earned
+	# The global board (docs/BACKEND.md): queued in the outbox, sent when the
+	# net allows — the results page never waits on it.
+	Net.queue_run(last_run)
 	get_tree().change_scene_to_file(RESULTS_SCENE)

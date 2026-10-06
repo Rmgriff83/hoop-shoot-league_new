@@ -1,0 +1,56 @@
+# Hoop Shoot API — Cloudflare Workers + D1 (docs/BACKEND.md).
+# Top level = local dev + the Vitest pool. `wrangler deploy --env production`
+# ships the real thing; its D1 id is filled in after `wrangler d1 create`.
+name = "hoop-shoot-api"
+main = "src/index.ts"
+compatibility_date = "2026-08-22"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+FEATURE_SUBMIT = "on"
+FEATURE_BOARD = "on"
+FEATURE_TRANSFER = "on"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "hoop_shoot"
+database_id = "local"
+migrations_dir = "migrations"
+
+[env.production]
+name = "hoop-shoot-api"
+
+[env.production.vars]
+FEATURE_SUBMIT = "on"
+FEATURE_BOARD = "on"
+FEATURE_TRANSFER = "on"
+
+[[env.production.d1_databases]]
+binding = "DB"
+database_name = "hoop_shoot"
+database_id = "REPLACE_WITH_wrangler_d1_create_OUTPUT"
+migrations_dir = "migrations"
+
+# Per-player token buckets at the edge (the Workers Rate Limiting binding:
+# periods of 10 or 60 s only; longer windows live in the D1 `rl` table).
+# Missing bindings (local dev, tests) fall back to an in-isolate window.
+[[env.production.unsafe.bindings]]
+name = "RL_SCORES"
+type = "ratelimit"
+namespace_id = "1001"
+simple = { limit = 6, period = 60 }
+
+[[env.production.unsafe.bindings]]
+name = "RL_BOARD"
+type = "ratelimit"
+namespace_id = "1002"
+simple = { limit = 20, period = 60 }
+
+[[env.production.unsafe.bindings]]
+name = "RL_ME"
+type = "ratelimit"
+namespace_id = "1003"
+simple = { limit = 5, period = 60 }
+
+[triggers]
+crons = ["17 4 * * *"]

@@ -1,9 +1,10 @@
 extends Node
 ## Local-first persistence. File-per-part under user://save/ — each file maps
-## 1:1 onto a future cloud sync "part" (see docs/SYNC.md). The three things the
+## 1:1 onto a cloud sync "part" (docs/BACKEND.md). The three things the
 ## old game's cloud audit found missing exist here from the first byte written:
 ## UUIDv4 ids, updatedAt stamps, and a persisted dirty-part outbox.
-## M1 writes the outbox but never drains it — the network layer is M3+.
+## The outbox's dirty parts wait for the cloud-save mirror (docs/BACKEND.md,
+## phase 2); its pending scores are drained by the Net autoload today.
 
 const SAVE_DIR := "user://save"
 const META_PART := "meta"
@@ -21,7 +22,12 @@ const LIVE_GAMES_PART := "liveGames"
 const CARDS_PART := "cards"
 ## The player's level: XP from league matches (docs/PROGRESSION.md).
 const PROGRESS_PART := "progress"
+## The anonymous device account (docs/BACKEND.md → Identity): {playerId,
+## secret, name, tag, registered}. Device-local: the secret never syncs.
+const ACCOUNT_PART := "account"
 const LIVE_GAMES_KEEP := 50
+## Leaderboard submissions waiting for the server; the oldest fall off.
+const PENDING_SCORES_KEEP := 20
 const SCHEMA_VERSION := 1
 
 var _meta: Dictionary = {}
@@ -34,6 +40,7 @@ var _cards: Dictionary = {}
 var _progress: Dictionary = {}
 var _cosmetics: Dictionary = {}
 var _settings: Dictionary = {}
+var _account: Dictionary = {}
 
 
 func _ready() -> void:
@@ -57,7 +64,8 @@ func load_all() -> void:
 		_scores = {"updatedAt": 0, "docs": []}
 	_outbox = _read_json("outbox")
 	if _outbox.is_empty():
-		_outbox = {"dirtyParts": [], "lastSyncAt": null, "lastError": null}
+		_outbox = {"dirtyParts": [], "pendingScores": [], "lastSyncAt": null, "lastError": null}
+	_account = _read_json(ACCOUNT_PART)
 	_tuning = _read_json(TUNING_PART)
 	if _tuning.is_empty():
 		_tuning = {"updatedAt": 0, "tuningMode": false, "fields": {}}
@@ -258,6 +266,18 @@ func get_client_id() -> String:
 	return str(_meta.get("clientId", ""))
 
 
+## The device account, {} before the first launch minted one.
+func get_account() -> Dictionary:
+	return _account.duplicate(true)
+
+
+## Persist the account. Device-local: never marked dirty (the secret stays here).
+func put_account(doc: Dictionary) -> void:
+	_account = doc.duplicate(true)
+	_account["updatedAt"] = _now_ms()
+	_write_json(ACCOUNT_PART, _account)
+
+
 ## Record a finished time-trial run. Stamps id/updatedAt, persists, marks dirty.
 func put_score(doc: Dictionary) -> Dictionary:
 	var now := _now_ms()
@@ -313,6 +333,38 @@ func mark_dirty(part: String) -> void:
 
 func dirty_parts() -> Array:
 	return _outbox["dirtyParts"].duplicate()
+
+
+# ---- leaderboard outbox (docs/BACKEND.md → Scores; drained by Net) -----------
+
+
+## Queue a ScorePayload for the server. Newest last; past the cap the oldest
+## go (a phone that was offline for a month sends its last twenty runs).
+func queue_score(payload: Dictionary) -> void:
+	var pending: Array = _outbox.get("pendingScores", [])
+	for i in pending.size():
+		if str(pending[i].get("runId", "")) == str(payload.get("runId", "")):
+			return
+	pending.push_back(payload.duplicate(true))
+	while pending.size() > PENDING_SCORES_KEEP:
+		pending.pop_front()
+	_outbox["pendingScores"] = pending
+	_write_json("outbox", _outbox)
+
+
+func pending_scores() -> Array:
+	return Array(_outbox.get("pendingScores", [])).duplicate(true)
+
+
+## The server took (or refused for good) this run: forget it.
+func drop_score(run_id: String) -> void:
+	var pending: Array = _outbox.get("pendingScores", [])
+	var kept := []
+	for p in pending:
+		if str(p.get("runId", "")) != run_id:
+			kept.push_back(p)
+	_outbox["pendingScores"] = kept
+	_write_json("outbox", _outbox)
 
 
 # ---- helpers ------------------------------------------------------------------

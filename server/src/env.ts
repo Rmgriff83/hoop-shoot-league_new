@@ -1,0 +1,27 @@
+/** The Workers Rate Limiting binding (periods of 10 or 60 s). */
+export interface RateLimiter {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
+
+export interface Env {
+  DB: D1Database;
+  /** Kill switches: anything but "on" answers 503 and the game treats it as offline. */
+  FEATURE_SUBMIT?: string;
+  FEATURE_BOARD?: string;
+  FEATURE_TRANSFER?: string;
+  /** Per-player minute buckets; absent locally, where limits.ts falls back to memory. */
+  RL_SCORES?: RateLimiter;
+  RL_BOARD?: RateLimiter;
+  RL_ME?: RateLimiter;
+}
+
+export interface PlayerRow {
+  id: string;
+  secret_hash: string;
+  name: string;
+  tag: string;
+  client_id: string;
+  created_at: number;
+  last_seen: number;
+  flags: number;
+}

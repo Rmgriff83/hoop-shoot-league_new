@@ -85,6 +85,7 @@ var _season_chip: ShadowPanel
 var _chip_a: Label
 var _chip_b: Label
 var _settings: SettingsPanel
+var _ranks: RanksPage
 var _switching := false
 
 
@@ -260,7 +261,7 @@ func rebuild_chrome() -> void:
 		var tw := create_tween()
 		tw.tween_interval(0.8)
 		tw.tween_callback(func() -> void: soon.visible = false)
-	ranks.pressed.connect(flash)
+	ranks.pressed.connect(_open_ranks)
 	multi.pressed.connect(flash)
 	# `▾ ALL AREAS · 2/3 OPEN`: the archive's door.
 	_all_areas = Button.new()
@@ -885,7 +886,7 @@ var _locker: LockerPanel
 
 
 func _open_locker() -> void:
-	if _locker != null or _settings != null or _switching:
+	if _locker != null or _settings != null or _ranks != null or _switching:
 		return
 	_locker = LockerPanel.new()
 	_locker.name = "LockerPanel"
@@ -899,7 +900,7 @@ func _open_locker() -> void:
 
 
 func _open_settings() -> void:
-	if _settings != null or _switching:
+	if _settings != null or _ranks != null or _switching:
 		return
 	_settings = SettingsPanel.new()
 	_settings.name = "SettingsPanel"
@@ -918,7 +919,7 @@ func _archive_rows() -> Array:
 ## The page before an area's home (docs/HOME.md → Area archive). `instant`
 ## on a cold launch: no slide, and no `<` when the area behind is locked.
 func _open_archive(instant := false) -> void:
-	if _archive != null or _locker != null or _settings != null or _switching:
+	if _archive != null or _locker != null or _settings != null or _ranks != null or _switching:
 		return
 	var rows := _archive_rows()
 	_archive = AreaArchivePage.new()
@@ -941,6 +942,41 @@ func _open_archive(instant := false) -> void:
 
 func archive() -> AreaArchivePage:
 	return _archive
+
+
+# ---- ranks (docs/HOME.md → Ranks) ------------------------------------------------------
+
+
+## The global boards, opened on this area's tab and THIS WEEK. The page asks
+## for data through `request`; Net answers with a board or a failure, and a
+## failure shows the device's own board for the area.
+func _open_ranks() -> void:
+	if _ranks != null or _archive != null or _locker != null or _settings != null or _switching:
+		return
+	_ranks = RanksPage.new()
+	_ranks.name = "RanksPage"
+	_ranks.build(RanksCopy.tabs(App.level(), App.league_gating), Net.handle())
+	var on_board := func(area: String, period: String, data: Dictionary) -> void:
+		if _ranks != null:
+			_ranks.set_board(area, period, data)
+	var on_fail := func(area: String, period: String) -> void:
+		if _ranks != null:
+			_ranks.set_offline(area, period, SaveService.top_scores(RanksCopy.BOARD_SIZE, area))
+	Net.board_loaded.connect(on_board)
+	Net.board_failed.connect(on_fail)
+	_ranks.request.connect(func(area: String, period: String) -> void: Net.load_board(area, period))
+	_ranks.closed.connect(func() -> void:
+		Net.board_loaded.disconnect(on_board)
+		Net.board_failed.disconnect(on_fail)
+		_ranks = null
+	)
+	add_child(_ranks)
+	_ranks.slide_in()
+	_ranks.select(str(CARDS[_index]["area"]), "week")
+
+
+func ranks() -> RanksPage:
+	return _ranks
 
 
 ## Land on an area's home from the archive: the page's ink hands over to

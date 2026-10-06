@@ -138,4 +138,4 @@ keeps an in-app purchase from buying power.
   `CardDefs.migrate`. Dev saves only, by decision.
 - `progress` (the level: `{xp, seasonXp, seasonKey}`) needs no migration;
   new keys default on read.
-- `docs/SYNC.md` lists the parts.
+- `docs/BACKEND.md` (and the old `docs/SYNC.md`) list the parts.

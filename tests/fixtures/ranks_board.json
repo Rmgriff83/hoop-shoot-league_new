@@ -1,0 +1,109 @@
+{
+ "area": "beach",
+ "period": "week",
+ "week": 2960,
+ "rows": [
+  {
+   "rank": 1,
+   "name": "GLASS WIZARD",
+   "tag": "07",
+   "score": 41,
+   "playedAt": 1791300000000,
+   "me": false
+  },
+  {
+   "rank": 2,
+   "name": "SWISH KID",
+   "tag": "42",
+   "score": 38,
+   "playedAt": 1791296400000,
+   "me": false
+  },
+  {
+   "rank": 3,
+   "name": "CORNER FOX",
+   "tag": "11",
+   "score": 36,
+   "playedAt": 1791292800000,
+   "me": false
+  },
+  {
+   "rank": 4,
+   "name": "BUZZER BARON",
+   "tag": "88",
+   "score": 36,
+   "playedAt": 1791289200000,
+   "me": false
+  },
+  {
+   "rank": 5,
+   "name": "NEON OTTER",
+   "tag": "03",
+   "score": 33,
+   "playedAt": 1791285600000,
+   "me": false
+  },
+  {
+   "rank": 6,
+   "name": "RIM ROCKET",
+   "tag": "59",
+   "score": 31,
+   "playedAt": 1791282000000,
+   "me": false
+  },
+  {
+   "rank": 7,
+   "name": "BRICK BARON",
+   "tag": "42",
+   "score": 29,
+   "playedAt": 1791278400000,
+   "me": true
+  },
+  {
+   "rank": 8,
+   "name": "ALLEY HAWK",
+   "tag": "27",
+   "score": 27,
+   "playedAt": 1791274800000,
+   "me": false
+  },
+  {
+   "rank": 9,
+   "name": "TURBO POET",
+   "tag": "64",
+   "score": 25,
+   "playedAt": 1791271200000,
+   "me": false
+  },
+  {
+   "rank": 10,
+   "name": "HALFCOURT DUKE",
+   "tag": "19",
+   "score": 22,
+   "playedAt": 1791267600000,
+   "me": false
+  },
+  {
+   "rank": 11,
+   "name": "PIXEL SAILOR",
+   "tag": "75",
+   "score": 20,
+   "playedAt": 1791264000000,
+   "me": false
+  },
+  {
+   "rank": 12,
+   "name": "COSMIC CHEF",
+   "tag": "31",
+   "score": 17,
+   "playedAt": 1791260400000,
+   "me": false
+  }
+ ],
+ "me": {
+  "rank": 7,
+  "score": 29,
+  "name": "BRICK BARON",
+  "tag": "42"
+ }
+}

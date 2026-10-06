@@ -18,6 +18,7 @@ config/features=PackedStringArray("4.7")
 
 SaveService="*res://game/autoload/save_service.gd"
 Sfx="*res://game/autoload/sfx.gd"
+Net="*res://game/net/net_client.gd"
 App="*res://game/autoload/app.gd"
 QaDriver="*res://tools/qa_driver.gd"
 

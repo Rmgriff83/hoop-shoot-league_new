@@ -14,7 +14,7 @@ var _outcomes: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-ranks")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# The splash is the main scene now: every other pass starts from the title.
@@ -52,6 +52,8 @@ func _ready() -> void:
 		_run_archive.call_deferred()
 	elif args.has("--qa-net"):
 		_run_net.call_deferred()
+	elif args.has("--qa-ranks"):
+		_run_ranks.call_deferred()
 	elif args.has("--qa-aim"):
 		_run_aim.call_deferred()
 	else:
@@ -769,6 +771,53 @@ func _run_archive() -> void:
 		staged.queue_free()
 		await _sleep(0.3)
 	print("QA archive: done")
+	get_tree().quit()
+
+
+## The Ranks page (docs/HOME.md → Ranks) with the net off: LOADING, a
+## fixture board (THIS WEEK), the no-signal fallback after a period switch,
+## the fixture again as ALL TIME, then the city tab.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-ranks
+func _run_ranks() -> void:
+	Net.enabled = false
+	await _sleep(1.2)
+	var archive: AreaArchivePage = get_tree().root.find_child("AreaArchive", true, false)
+	if archive != null:
+		archive.pick("cage")   # closing the front door leads back to the splash
+		await _sleep(1.0)
+	await _click_named("Ranks")
+	await _sleep(0.05)
+	await _snap("ranks_loading")
+	await _sleep(0.5)
+	var page: RanksPage = get_tree().root.find_child("RanksPage", true, false)
+	if page == null:
+		print("QA ranks: no page")
+		get_tree().quit()
+		return
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/ranks_board.json"))
+	var data: Dictionary = parsed if parsed is Dictionary else {}
+	page.set_board(page.area(), page.period(), data)
+	await _sleep(0.3)
+	await _snap("ranks_week")
+	await _click_named("PeriodAll")
+	await _sleep(0.5)
+	await _snap("ranks_offline")
+	page.set_board(page.area(), page.period(), data)
+	await _sleep(0.3)
+	await _snap("ranks_all")
+	await _click_named("Tab_city")
+	await _sleep(0.5)
+	await _snap("ranks_city")
+	print("QA ranks: done (%s / %s, %d rows)" % [page.area(), page.period(), page.row_count()])
+	page.close()
+	await _sleep(0.4)
+	# The settings sheet's PLAYER section.
+	await _click_named("Menu")
+	await _sleep(0.5)
+	await _snap("settings_player")
+	await _click_named("EnterCode")
+	await _sleep(0.3)
+	await _snap("settings_code")
 	get_tree().quit()
 
 

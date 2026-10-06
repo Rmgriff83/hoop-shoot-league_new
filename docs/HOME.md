@@ -24,7 +24,7 @@ the cards. **Locker** (`game/ui/locker_panel.gd`, docs/LOCKER.md): two tabs —
 PEGGY, the ticket-fed drop machine that wins balls, and BALLS, the collection
 (owned equip via `App.select`, the rest show their rarity) with the hoops
 under it (unowned buy via `App.try_buy`). The locker icon carries a gold dot
-while a won ball has not been looked at. **Ranks** is an icon beside the area name (SOON for now).
+while a won ball has not been looked at. **Ranks** is an icon beside the area name: the global boards (below).
 **Shop is not on the home page**: it will live inside each league, selling
 cards usable only in that league (so the easy league can't farm cards for the
 hard one); the pill shows TICKETS, the locker money.
@@ -114,16 +114,26 @@ chevron (the footer says START INSIDE).
   states, coins, next_up)` → `ARCADE CAGE BEST 29 · ARCADE LEAGUE · SEASON 2
   · DAY 4 · 3RD PLACE · NEXT UP: PRUDENCE CHIME · 1,240 TICKETS`, laid twice
   around a `★` seam and scrolled at 80 px/s.
-- **Settings** (`game/ui/settings_panel.gd`): SHOT HELP, DARK MODE, TUNING
-  (debug builds only), CREDITS, CLOSE.
+- **Settings** (`game/ui/settings_panel.gd`): SHOT HELP, DARK MODE, the
+  PLAYER section (your handle + SAVE, MOVE TO NEW PHONE, ENTER CODE —
+  docs/BACKEND.md → Identity), TUNING (debug builds only), CREDITS, CLOSE.
+- **Ranks** (`game/ui/ranks_page.gd` `RanksPage`, copy in `ranks_copy.gd`):
+  the global time-trial boards (docs/BACKEND.md). `<` RANKS and your handle;
+  CAGE / BEACH / CITY tabs (a locked area's tab greyed with `LVL n`); THIS
+  WEEK / ALL TIME; a status line (`TOP 12 · THIS WEEK`, `NO RUNS YET · BE
+  FIRST`, or `NO SIGNAL · DEVICE BOARD` when the server is out of reach,
+  with the device's own runs as rows); the top 50 as rows, ranks 1–3 in gold,
+  your row on orange; `YOU · #7 · 29` pinned under the list. Opens on the
+  current area's tab; the page only emits `request(area, period)` and the
+  title feeds it from `Net`. QA: `--qa-ranks`.
 
 ## Placeholders (present, not wired)
 
 - ~~Level element~~ — real now (docs/PROGRESSION.md): `LVL0n` is
   `App.level()`, the meter the progress inside the level; the beach page is
   locked below level 3 (every card disabled with `LOCKED · LEVEL 3`).
-- **Ranks** — the icon beside the area name flashes SOON. The league hub's
-  RECORDS tab and `results_screen` hold the leaderboard logic to lift.
+- **Multiplayer** — the icon beside Ranks flashes SOON (docs/BACKEND.md →
+  Phase 3).
 - **Shop** — off the home page by design; to be built into the league view
   with league-scoped cards.
 - **Tickets** (the pill) are real (`App.tickets()`): time trials and league heats award them (docs/ECONOMY.md).
