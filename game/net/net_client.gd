@@ -53,12 +53,14 @@ func _ready() -> void:
 	_rng.randomize()
 
 
+## Focus changes arrive mid-notification, when the tree may refuse a new
+## child (the HTTPRequest node): the work waits for the next frame.
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
-		flush()
-		pull_save()
+		flush.call_deferred()
+		pull_save.call_deferred()
 	elif what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED:
-		push_save(true)
+		push_save.call_deferred(true)
 
 
 # ---- account -----------------------------------------------------------------------
@@ -461,6 +463,16 @@ func _request(key: String, method: int, path: String, body: Variant = null, auth
 	req.timeout = TIMEOUT_S
 	req.accept_gzip = false
 	add_child(req)
+	if not req.is_inside_tree():
+		# The tree was busy (a notification mid-setup): one frame, then again.
+		await get_tree().process_frame
+		if is_instance_valid(req) and not req.is_inside_tree():
+			add_child(req)
+	if not is_instance_valid(req) or not req.is_inside_tree():
+		if is_instance_valid(req):
+			req.queue_free()
+		_busy[key] = false
+		return out   # skipped, not a network failure: no backoff
 	var headers := PackedStringArray(["Accept: application/json"])
 	if raw.is_empty():
 		headers.append("Content-Type: application/json")
@@ -475,9 +487,9 @@ func _request(key: String, method: int, path: String, body: Variant = null, auth
 	else:
 		err = req.request(NetConfig.base_url() + path, headers, method, JSON.stringify(body) if body != null else "")
 	if err != OK:
+		# Could not even send (a local error): skipped, never a backoff.
 		req.queue_free()
 		_busy[key] = false
-		out["code"] = 0
 		return out
 	var res: Array = await req.request_completed
 	req.queue_free()
