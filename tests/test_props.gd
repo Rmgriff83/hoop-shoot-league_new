@@ -5,25 +5,8 @@ extends RefCounted
 
 
 func run(t) -> void:
-	for pair in [["regulation", SimGeometry.regulation()], ["beach", SimGeometry.beach()]]:
+	for pair in [["regulation", SimGeometry.regulation()], ["arcade", SimGeometry.arcade()], ["beach", SimGeometry.beach()]]:
 		t.ok(not (pair[1] as SimGeometry).has_props(), "%s: no props" % pair[0])
-	# The cage's front console (2026-10-04): past the release point, chest high,
-	# full width; the held ball starts above it and a roll-out passes under it.
-	var a := SimGeometry.arcade()
-	t.eq(a.props.size(), 1, "the arcade: the front console")
-	var con: Dictionary = a.props[0]
-	t.ok(float(con["x0"]) > 0.0 and float(con["y1"]) < 1.85 - SimConstants.R_BALL and float(con["y0"]) > 2.0 * SimConstants.R_BALL, "in front of the release, under the held ball, above a rolling ball")
-	t.ok(Colliders.prop_contact(SimVec3.new(0.5, 1.0 + 0.05, 0.0), a) != null, "a ball dropping onto its top is caught")
-	t.ok(Colliders.prop_contact(SimVec3.new(0.5, SimConstants.R_BALL, 0.0), a) == null, "…and one rolling home underneath is not")
-	var low := ShotSim.create_shot({"angle_deg": 10.0, "speed": 2.0, "rx": 0.0, "ry": 1.3, "rz": 0.0, "bx": 1.0, "bz": 0.0}, a)
-	var kinds := []
-	for i in int(1.5 / SimConstants.SIM_DT):
-		if low.settled:
-			break
-		ShotSim.step_shot(low)
-	for ev in low.events:
-		kinds.push_back(ev["kind"])
-	t.ok(kinds.has("prop"), "a dribbled flick bounces off the console (%s)" % str(kinds))
 	var g := SimGeometry.city()
 	t.eq(g.props.size(), 2, "the city: the speaker and the scoreboard")
 	t.ok(g.with_pose(4.0, 0.2).props.size() == 2, "with_pose keeps them")

@@ -71,15 +71,6 @@ ARROW_XS = (4.2, 3.9, 3.62, 3.2, 2.75, 2.3, 1.85, 1.4, 0.95)
 ARROW_LEN = 0.22
 ARROW_HALF_W = 0.18
 ARROW_ROW_Z = 0.42
-# The front console (2026-10-04): the bit of the machine the shooter leans
-# on — a dark cabinet across the lane just past the release point, its top at
-# chest height, with a padded rail along its far edge, two buttons, a coin
-# plate, a ticket dispenser on the right and a couple of balls waiting in the
-# gutter on the left. Returning balls roll under it (it starts 0.3 m up) and
-# out of sight: that is the ball return. Mirrored by SimGeometry.arcade's
-# console prop box (ARCADE_CONSOLE_*) so a low flick bounces off it.
-CONSOLE_X0, CONSOLE_X1 = 0.2, 0.8
-CONSOLE_Y0, CONSOLE_Y1 = 0.3, 1.0
 PAD_CELL = 0.12
 PAD_DEPTH = 0.07
 PAD_FACE_X = CAGE_X1 - 0.02         # the panel box is 4 cm thick, centred on CAGE_X1
@@ -424,56 +415,6 @@ def build():
         add_box("DeckCurb%d" % j, (RAMP_X0 - DECK_X0, 0.08, 0.08),
                 ((DECK_X0 + RAMP_X0) / 2.0, 0.04, z), accent, c_deck, cage)
     add_box("TrayLip", (0.06, 0.45, 2.0 * w), (DECK_X0, 0.225, 0.0), lip, c_deck, cage)
-    # ---- The front console -------------------------------------------------
-    console = add_empty("Console", c_deck, cage, (0.0, 0.0, 0.0))
-    con_mat = mat_flat("Cage_Console", (30, 28, 30), roughness=0.9)
-    con_top = mat_flat("Cage_ConsoleTop", (44, 42, 46), roughness=0.85)
-    btn_green = mat_flat("Cage_ButtonGreen", (70, 200, 90), roughness=0.4)
-    btn_red = mat_flat("Cage_ButtonRed", (220, 60, 50), roughness=0.4)
-    bezel = mat_flat("Cage_Bezel", (120, 118, 124), roughness=0.5)
-    ticket = mat_flat("Cage_Ticket", (241, 232, 208), roughness=0.9)
-    ball = mat_flat("Cage_IdleBall", (206, 110, 50), roughness=0.7)
-    cw = w - 0.06
-    cx = (CONSOLE_X0 + CONSOLE_X1) / 2.0
-    cd = CONSOLE_X1 - CONSOLE_X0
-    ch = CONSOLE_Y1 - CONSOLE_Y0
-    add_box("ConsoleBody", (cd, ch, 2.0 * cw), (cx, CONSOLE_Y0 + ch / 2.0, 0.0), con_mat, c_deck, console)
-    add_box("ConsoleTop", (cd, 0.02, 2.0 * cw), (cx, CONSOLE_Y1 + 0.01, 0.0), con_top, c_deck, console)
-    # The padded rail along the far edge (orange, the cage's trim family).
-    bpy.ops.mesh.primitive_cylinder_add(vertices=12, radius=0.035, depth=2.0 * cw, location=(0, 0, 0))
-    rail = bpy.context.active_object
-    rail.name = rail.data.name = "ConsoleRail"
-    rail.rotation_euler = (math.pi / 2, 0.0, 0.0)   # along z
-    rail.data.materials.append(accent)
-    link_obj(rail, c_deck, console, s2b((CONSOLE_X1 - 0.03, CONSOLE_Y1 + 0.045, 0.0)))
-    # Buttons: START (green) and a red one, bezelled, near the far edge, right of centre.
-    for i, (bz, mat) in enumerate(((0.2, btn_green), (0.4, btn_red))):
-        bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=0.055, depth=0.012, location=(0, 0, 0))
-        bz_ring = bpy.context.active_object
-        bz_ring.name = bz_ring.data.name = "ConsoleBezel%d" % i
-        bz_ring.data.materials.append(bezel)
-        link_obj(bz_ring, c_deck, console, s2b((CONSOLE_X1 - 0.16, CONSOLE_Y1 + 0.026, bz)))
-        bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=0.04, depth=0.03, location=(0, 0, 0))
-        btn = bpy.context.active_object
-        btn.name = btn.data.name = "ConsoleButton%d" % i
-        btn.data.materials.append(mat)
-        link_obj(btn, c_deck, console, s2b((CONSOLE_X1 - 0.16, CONSOLE_Y1 + 0.045, bz)))
-    # Coin plate between them and the rail.
-    add_box("ConsoleCoinPlate", (0.08, 0.008, 0.12), (CONSOLE_X1 - 0.16, CONSOLE_Y1 + 0.024, -0.04), bezel, c_deck, console)
-    add_box("ConsoleCoinSlot", (0.03, 0.01, 0.004), (CONSOLE_X1 - 0.16, CONSOLE_Y1 + 0.026, -0.04), con_mat, c_deck, console)
-    # Ticket dispenser on the right: a box on the top with a slot and a stub poking out toward the shooter.
-    add_box("ConsoleTicketBox", (0.18, 0.14, 0.16), (CONSOLE_X1 - 0.2, CONSOLE_Y1 + 0.09, 0.64), con_mat, c_deck, console)
-    add_box("ConsoleTicketSlot", (0.004, 0.012, 0.09), (CONSOLE_X1 - 0.291, CONSOLE_Y1 + 0.11, 0.64), bezel, c_deck, console)
-    stub = add_box("ConsoleTicketStub", (0.09, 0.004, 0.07), (CONSOLE_X1 - 0.33, CONSOLE_Y1 + 0.10, 0.64), ticket, c_deck, console)
-    stub.rotation_euler = (0.0, math.radians(-12.0), 0.0)
-    # Two balls waiting in the gutter at the far-left corner of the top (the
-    # outer one half out of the frame from the key).
-    for i, bz in enumerate((-0.98, -0.72)):
-        bpy.ops.mesh.primitive_uv_sphere_add(segments=16, ring_count=10, radius=0.121, location=(0, 0, 0))
-        b = bpy.context.active_object
-        b.name = b.data.name = "ConsoleBall%d" % i
-        b.data.materials.append(ball)
-        link_obj(b, c_deck, console, s2b((CONSOLE_X1 - 0.2, CONSOLE_Y1 + 0.02 + 0.121, bz)))
     # Return arrows down the centre lane (DeckArrow00 at the top of the ramp,
     # numbered toward the shooter): decals a few mm above the surface, the ones
     # on the ramp laid along its slope. ArcadeFx lights them in succession when

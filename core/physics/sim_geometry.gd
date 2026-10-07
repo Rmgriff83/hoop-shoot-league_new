@@ -122,11 +122,6 @@ const ARCADE_FLOOR_LOG_IMPACT := 0.35
 ## roll-out at the shooter's feet.
 const ARCADE_LIP_X := -0.4
 const ARCADE_LIP_H := 0.45
-## The front console the shooter leans on (build_cage.py CONSOLE_X0/X1/Y0/Y1).
-const ARCADE_CONSOLE_X0 := 0.2
-const ARCADE_CONSOLE_X1 := 0.8
-const ARCADE_CONSOLE_Y0 := 0.3
-const ARCADE_CONSOLE_Y1 := 1.0
 const ARCADE_RIM_E := 0.38
 const ARCADE_RIM_MU := 0.08
 const ARCADE_RIM_SPIN_DECAY := 0.70
@@ -295,9 +290,6 @@ static func arcade(dist := 2.6) -> SimGeometry:
 	g.floor_log_impact = ARCADE_FLOOR_LOG_IMPACT
 	g.lip_x = ARCADE_LIP_X
 	g.lip_h = ARCADE_LIP_H
-	# The front console (build_cage.py CONSOLE_*): a low flick bounces off its
-	# top; returning balls roll under it (it starts 0.3 m up).
-	g.props.push_back(_box(ARCADE_CONSOLE_X0, ARCADE_CONSOLE_X1, ARCADE_CONSOLE_Y0, ARCADE_CONSOLE_Y1, -1.2, 1.2))
 	return g
 
 
