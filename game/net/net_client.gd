@@ -90,9 +90,11 @@ func ensure_account() -> void:
 	if not bool(a.get("registered", false)):
 		await _register()
 	else:
-		# A launch: anything newer on the mirror first, then anything we owe it.
+		# A launch: anything newer on the mirror first, then anything we owe it,
+		# and the level the online card cap should hold us to.
 		await pull_save(true)
 		push_save(true)
+		report_level(App.level())
 
 
 func _register() -> bool:
