@@ -805,16 +805,39 @@ func _run_multi() -> void:
 	lobby.show_failed("expired")
 	await _sleep(0.2)
 	await _snap("multi_failed")
+	lobby.show_menu()
+	# The online deck: a seeded cache (coins + a spare), LOADOUT then SHOP.
+	var cd: Dictionary = SaveService.get_cards()
+	var ob := CardDefs.league_doc(cd, "online")
+	ob["coins"] = 260
+	ob["inventory"] = {"ice": 1}
+	ob["loadout"] = ["fire7", null, null]
+	SaveService.put_cards(cd)
+	lobby.refresh_strip()
+	await _sleep(0.2)
+	await _snap("multi_strip")
+	var deck := CardDeckSheet.new()
+	deck.name = "OnlineDeck"
+	deck.build("online", "ONLINE CARDS")
+	add_child(deck)
+	await _sleep(0.3)
+	await _snap("deck_loadout")
+	deck.build("online", "ONLINE CARDS", "SHOP")
+	await _sleep(0.3)
+	await _snap("deck_shop")
+	deck.queue_free()
 	lobby.close()
 	await _sleep(0.4)
-	# The staged match: a 20 s beach heat against the fake peer.
-	var start := {"t": "start", "seed": 4242, "area": "beach", "seconds": 20.0, "ot_seconds": 6.0, "ball_return_s": 1.0}
+	# The staged match: a 20 s beach heat against the fake peer, hands dealt
+	# both ways (ours from the cache above; theirs an ice they play on us).
+	var start := {"t": "start", "seed": 4242, "area": "beach", "seconds": 20.0, "ot_seconds": 6.0, "ball_return_s": 1.0,
+		"hands": {"a": ["fire7", "", "ice"], "b": ["ice", "", ""]}, "levels": {"a": 1, "b": 4}}
 	var fake := QaFakePeer.new()
 	fake.name = "Match"
 	App.add_child(fake)
 	App.room = fake
 	App.match_how = "create"
-	var cfg := MatchProtocol.heat_cfg(start, fake.peer)
+	var cfg := MatchProtocol.heat_cfg(start, fake.peer, "a")
 	App.start_heat(str(cfg["mode"]), cfg)
 	await _sleep(1.0)
 	var screen := get_tree().current_scene

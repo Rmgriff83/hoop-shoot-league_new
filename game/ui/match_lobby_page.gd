@@ -12,6 +12,8 @@ signal quick
 signal create
 signal join(code: String)
 signal cancel
+## Open the online deck (docs/BACKEND.md → Cards online).
+signal cards
 
 const PAD := Vector2(28, 44)
 const BTN := Vector2(664, 112)
@@ -20,6 +22,7 @@ var _root: Control
 var _menu: VBoxContainer
 var _wait: VBoxContainer
 var _code_edit: LineEdit
+var _strip: HBoxContainer
 var _big: Label
 var _status: Label
 var _cancel: Button
@@ -66,10 +69,18 @@ func build(area: String) -> Control:
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	head.add_child(title)
+	# Your online cards: coins, the three slots, CARDS >.
+	_strip = HBoxContainer.new()
+	_strip.name = "CardStrip"
+	_strip.position = Vector2(PAD.x, PAD.y + 56 + 24)
+	_strip.size = Vector2(720 - PAD.x * 2, 56)
+	_strip.add_theme_constant_override("separation", 16)
+	_root.add_child(_strip)
+	refresh_strip()
 	# The menu.
 	_menu = VBoxContainer.new()
 	_menu.name = "Menu"
-	_menu.position = Vector2(PAD.x, 200)
+	_menu.position = Vector2(PAD.x, 220)
 	_menu.size = Vector2(720 - PAD.x * 2, 0)
 	_menu.add_theme_constant_override("separation", 28)
 	_root.add_child(_menu)
@@ -123,6 +134,38 @@ func build(area: String) -> Control:
 		show_menu())
 	_wait.add_child(_cancel)
 	return _root
+
+
+## The strip from the online bucket's cache: `120 COINS`, the chips, CARDS >.
+func refresh_strip() -> void:
+	if _strip == null:
+		return
+	for c in _strip.get_children():
+		_strip.remove_child(c)
+		c.queue_free()
+	var coins := RetroTheme.display("%d COINS" % App.league_coins(Net.ONLINE_BUCKET), 14, RetroTheme.c("gold"))
+	coins.name = "OnlineCoins"
+	coins.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_strip.add_child(coins)
+	var chips := ModeCards.chip_row(App.loadout_slots(Net.ONLINE_BUCKET), true)
+	chips.name = "Loadout"
+	chips.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_strip.add_child(chips)
+	var spacer := Control.new()
+	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_strip.add_child(spacer)
+	var open_cards := ShadowCard.new(RetroTheme.c("ink"))
+	open_cards.name = "Cards"
+	open_cards.custom_minimum_size = Vector2(150 + ShadowStyle.OFFSET, 46 + ShadowStyle.OFFSET)
+	var l := RetroTheme.display("CARDS >", 14, RetroTheme.c("text"))
+	l.position = Vector2.ZERO
+	l.size = Vector2(150, 46)
+	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	open_cards.add_child(l)
+	open_cards.pressed.connect(func() -> void: cards.emit())
+	_strip.add_child(open_cards)
 
 
 func _button(name_: String, text: String, sub: String, fill: Color, on_press: Callable, size_ := BTN) -> ShadowCard:

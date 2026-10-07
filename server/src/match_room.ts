@@ -11,6 +11,7 @@
  */
 import { DurableObject } from "cloudflare:workers";
 import type { Env } from "./env";
+import { onlineCoins, payStatements } from "./cards";
 
 export const MAX_PER_S = 5;
 export const MAX_BYTES = 2048;
@@ -23,7 +24,7 @@ export const OT_SECONDS = 20;
 export const BALL_RETURN_S = 1.0;
 
 type Side = "a" | "b";
-interface Player { id: string; name: string; tag: string }
+interface Player { id: string; name: string; tag: string; level: number }
 interface Meta {
   area: string;
   created: number;
@@ -34,6 +35,8 @@ interface Meta {
   a: Player | null;
   b: Player | null;
   ends: Record<Side, Record<string, { score: number; totals: unknown }>>;
+  /** Each side's validated hand (card ids; a played card leaves it). */
+  hands: Record<Side, string[]>;
   reason: string;
   recorded: boolean;
 }
@@ -73,22 +76,26 @@ export class MatchRoom extends DurableObject<Env> {
       id: request.headers.get("x-player-id") ?? "",
       name: request.headers.get("x-player-name") ?? "THEM",
       tag: request.headers.get("x-player-tag") ?? "",
+      level: Number.parseInt(request.headers.get("x-player-level") ?? "1", 10) || 1,
     };
+    let hand: string[] = [];
+    try { hand = JSON.parse(request.headers.get("x-hand") ?? "[]"); } catch { hand = []; }
+    hand = Array.isArray(hand) ? hand.filter((h) => typeof h === "string" && h !== "") : [];
     const area = request.headers.get("x-area") ?? "cage";
     const room = request.headers.get("x-room") ?? "";
     if (!player.id) return new Response("who", { status: 400 });
     const now = Date.now();
     let m = await this.meta();
     if (!m) {
-      m = { area, created: now, status: "waiting", seed: 0, started: 0, last: now, a: null, b: null, ends: { a: {}, b: {} }, reason: "", recorded: false };
+      m = { area, created: now, status: "waiting", seed: 0, started: 0, last: now, a: null, b: null, ends: { a: {}, b: {} }, hands: { a: [], b: [] }, reason: "", recorded: false };
       await this.ctx.storage.setAlarm(now + WAIT_MS);
     }
     if (m.status === "done") return new Response("over", { status: 410 });
     let side: Side;
     if (m.a?.id === player.id) side = "a";
     else if (m.b?.id === player.id) side = "b";
-    else if (!m.a) { side = "a"; m.a = player; }
-    else if (!m.b) { side = "b"; m.b = player; }
+    else if (!m.a) { side = "a"; m.a = player; m.hands.a = hand; }
+    else if (!m.b) { side = "b"; m.b = player; m.hands.b = hand; }
     else return new Response("full", { status: 409 });
     // A reconnect replaces the old socket.
     for (const old of this.sockets(side)) { try { old.close(1000, "replaced"); } catch { /* gone */ } }
@@ -105,11 +112,11 @@ export class MatchRoom extends DurableObject<Env> {
       m.seed = Math.floor(Math.random() * 2_147_483_647) + 1;
       m.started = now;
       await this.ctx.storage.setAlarm(now + LIFETIME_MS);
-      const start = { t: "start", seed: m.seed, area: m.area, seconds: HEAT_SECONDS, ot_seconds: OT_SECONDS, ball_return_s: BALL_RETURN_S };
+      const start = { t: "start", seed: m.seed, area: m.area, seconds: HEAT_SECONDS, ot_seconds: OT_SECONDS, ball_return_s: BALL_RETURN_S, hands: m.hands, levels: { a: m.a.level, b: m.b.level } };
       for (const ws of this.sockets()) this.send(ws, start);
     } else if (m.status === "playing" && m.seed) {
       // A reconnect mid-match gets the start again (the phone decides what to do with it).
-      this.send(server, { t: "start", seed: m.seed, area: m.area, seconds: HEAT_SECONDS, ot_seconds: OT_SECONDS, ball_return_s: BALL_RETURN_S, resumed: true });
+      this.send(server, { t: "start", seed: m.seed, area: m.area, seconds: HEAT_SECONDS, ot_seconds: OT_SECONDS, ball_return_s: BALL_RETURN_S, hands: m.hands, resumed: true });
     }
     await this.put(m);
     return new Response(null, { status: 101, webSocket: client });
@@ -136,6 +143,26 @@ export class MatchRoom extends DurableObject<Env> {
       case "outcome":
         this.sendSide(other(att.side), { ...msg, from: att.side });
         break;
+      case "card": {
+        // Only a card the ledger put in this hand, once; the copy leaves the ledger now.
+        const id = typeof msg.id === "string" ? msg.id : "";
+        const hand = m.hands[att.side];
+        const at = hand.indexOf(id);
+        if (at < 0) { this.send(ws, { t: "error", code: "card", id }); break; }
+        hand.splice(at, 1);
+        const pid = att.side === "a" ? m.a?.id : m.b?.id;
+        try {
+          await this.env.DB.batch([
+            this.env.DB.prepare("UPDATE online_cards SET n = n - 1 WHERE player_id = ?1 AND card_id = ?2 AND n > 0").bind(pid, id),
+            this.env.DB.prepare("INSERT INTO online_ledger (player_id, kind, card_id, coins, room, at) VALUES (?1, 'play', ?2, 0, ?3, ?4)").bind(pid, id, this.ctx.id.toString(), now),
+          ]);
+        } catch (e) {
+          console.error("card ledger", e);
+        }
+        this.send(ws, { t: "card_ok", id });
+        this.sendSide(other(att.side), { t: "card", id, from: att.side });
+        break;
+      }
       case "period_end": {
         const period = Number.isInteger(msg.period) ? msg.period : 0;
         const score = Number.isInteger(msg.score) ? msg.score : 0;
@@ -146,7 +173,7 @@ export class MatchRoom extends DurableObject<Env> {
         if (a && b && a.score !== b.score) {
           m.status = "done";
           m.reason = "played";
-          await this.record(m, a.score, b.score, period, msg.desync ? 1 : 0);
+          await this.record(m, a.score, b.score, period, msg.desync ? 1 : 0, a.score > b.score ? "a" : "b");
           await this.ctx.storage.setAlarm(now + CLOSE_AFTER_MS);
         }
         break;
@@ -178,21 +205,44 @@ export class MatchRoom extends DurableObject<Env> {
       const played = Date.now() - m.started;
       m.reason = played >= 30_000 ? "forfeit" : "void";
       const latest = (s: Side) => { const ks = Object.keys(m.ends[s]).map(Number); return ks.length ? m.ends[s][String(Math.max(...ks))].score : 0; };
-      await this.record(m, latest("a"), latest("b"), 0, 0);
+      await this.record(m, latest("a"), latest("b"), 0, 0, m.reason === "forfeit" ? other(att.side) : null);
       await this.ctx.storage.setAlarm(Date.now() + CLOSE_AFTER_MS);
       await this.put(m);
     }
   }
 
-  private async record(m: Meta, a: number, b: number, period: number, desync: number): Promise<void> {
+  /**
+   * The match is decided: write it, pay both sides in online coins (the
+   * winner's base scaled by the upset, the loser's flat, nothing on a void)
+   * and tell each phone what it earned.
+   */
+  private async record(m: Meta, a: number, b: number, period: number, desync: number, winner: Side | null): Promise<void> {
     if (m.recorded || !m.a || !m.b) return;
     m.recorded = true;
+    const now = Date.now();
+    const room = this.ctx.id.toString();
+    const pay: Record<Side, { coins: number; mult: number }> = { a: { coins: 0, mult: 1 }, b: { coins: 0, mult: 1 } };
+    if (winner) {
+      const loser = other(winner);
+      const w = m[winner]!;
+      const l = m[loser]!;
+      pay[winner] = onlineCoins(true, w.level, l.level);
+      if (m.reason === "played") pay[loser] = onlineCoins(false, l.level, w.level);
+    }
     try {
-      await this.env.DB.prepare(
-        "INSERT OR IGNORE INTO matches (room, area, a_id, b_id, a_score, b_score, ot, reason, desync, ended_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
-      ).bind(this.ctx.id.toString(), m.area, m.a.id, m.b.id, a, b, period, m.reason, desync, Date.now()).run();
+      await this.env.DB.batch([
+        this.env.DB.prepare(
+          "INSERT OR IGNORE INTO matches (room, area, a_id, b_id, a_score, b_score, ot, reason, desync, ended_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
+        ).bind(room, m.area, m.a.id, m.b.id, a, b, period, m.reason, desync, now),
+        ...payStatements(this.env.DB, m.a.id, pay.a.coins, room, now),
+        ...payStatements(this.env.DB, m.b.id, pay.b.coins, room, now),
+      ]);
     } catch (e) {
       console.error("record", e);
+    }
+    for (const side of ["a", "b"] as Side[]) {
+      const wallet = await this.env.DB.prepare("SELECT coins FROM online_wallet WHERE player_id = ?1").bind(m[side]!.id).first<{ coins: number }>().catch(() => null);
+      this.sendSide(side, { t: "settled", coins: pay[side].coins, mult: pay[side].mult, won: winner === side, reason: m.reason, wallet: wallet?.coins ?? 0 });
     }
   }
 

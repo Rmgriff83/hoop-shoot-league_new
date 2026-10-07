@@ -139,3 +139,9 @@ keeps an in-app purchase from buying power.
 - `progress` (the level: `{xp, seasonXp, seasonKey}`) needs no migration;
   new keys default on read.
 - `docs/BACKEND.md` (and the old `docs/SYNC.md`) list the parts.
+- **Online coins** (2026-10-07, docs/BACKEND.md → Cards online): a third
+  wallet, held on the server. An online match pays the winner 50 × an upset
+  multiplier (1 + 0.15 per level the loser outranks the winner, clamped
+  0.5–2.5) and the loser 20 flat; nothing on a void; no tickets, no XP, no
+  card drops. Spent only in the online shop (`data/economy.json` → `online`,
+  `Economy.online_coins`).

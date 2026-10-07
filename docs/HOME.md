@@ -128,11 +128,13 @@ chevron (the footer says START INSIDE).
   title feeds it from `Net`. QA: `--qa-ranks`.
 - **1v1** (`game/ui/match_lobby_page.gd` `MatchLobbyPage`, copy in
   `match_copy.gd`; docs/BACKEND.md → Phase 3): the multiplayer icon beside
-  Ranks opens the lobby for the current area — QUICK MATCH, CREATE CODE,
-  ENTER CODE + GO — then the wait (`CODE AB CDE · TELL YOUR FRIEND` /
+  Ranks opens the lobby for the current area — a card strip (`120 COINS`,
+  your three online slots, `CARDS >` into `CardDeckSheet`: slots, LOADOUT,
+  SHOP), QUICK MATCH, CREATE CODE, ENTER CODE + GO — then the wait (`CODE AB CDE · TELL YOUR FRIEND` /
   `FINDING A PLAYER...`), FOUND and the failure lines. `App.start_online`
   arranges the room and tips off into a heat with the other phone in the
-  opponent slot; the post-match page reads `ONLINE MATCH · BEACH`. QA:
+  opponent slot; the post-match page reads `ONLINE MATCH · BEACH` with the
+  online coins card (`+110 · ONLINE COINS · WIN · UPSET · X2.2`). QA:
   `--qa-multi`.
 
 ## Placeholders (present, not wired)

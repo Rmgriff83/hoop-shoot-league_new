@@ -8,5 +8,6 @@
   },
   "coins": {
     "heats_to_afford": {"common": [1.5, 4.5], "rare": [3.0, 8.0], "epic": [6.0, 14.0]}
-  }
+  },
+  "online": {"win_coins": 50, "loss_coins": 20, "upset_per_level": 0.15, "mult_min": 0.5, "mult_max": 2.5}
 }

@@ -343,6 +343,15 @@ func remote_forfeit(min_played_s := 30.0) -> void:
 	_events.push_back({"kind": "heat_done", "result": _result})
 
 
+## Their card, out of the hand the room dealt them: the same play_card the
+## bot would make (ice lands on our rim — our sim, our report; fire and
+## vortex light our replay of theirs). False when it is not in their hand.
+func remote_card(id: String) -> bool:
+	if not remote or done:
+		return false
+	return play_card(AI, id)
+
+
 ## Online: does the replay disagree with what they reported?
 func desync() -> bool:
 	return remote and ai.score != remote_score

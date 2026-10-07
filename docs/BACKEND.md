@@ -209,5 +209,57 @@ build at any server.
   or two Mac windows — pair through QUICK MATCH or a code. `--qa-multi` stages
   the lobby and a whole match offline against `QaFakePeer`
   (`tools/qa_fake_peer.gd`), a seeded bot behind the wire.
-- **Later**: a ranked ladder from `matches`, cards in 1v1, rejoin after a drop
-  (the room already re-sends `start` to a reconnect).
+- **Later**: a ranked ladder from `matches`, rejoin after a drop (the room
+  already re-sends `start` to a reconnect), an online card-drop system.
+
+## Cards online (phase 3b, built 2026-10-07)
+
+The same power-up cards as leagues, from an **online-only inventory that
+lives on the server** — the save can be edited, the ledger cannot, and the
+other phone must trust what hits its rim.
+
+- **Ledger** (`migrations/0004_online_cards.sql`, `server/src/cards.ts`):
+  `online_wallet(player_id, coins)`, `online_cards(player_id, card_id, n)`,
+  `online_ledger` (buy / reward / play rows, pruned after 90 days), and
+  `players.level` — the game's level, reported at register and whenever a
+  league match raises it (`Net.report_level` → `PATCH /v1/me {level}`), so
+  the card cap holds server-side too. The card list and prices come from
+  `data/cards.json`, the payout rule from `data/economy.json` → `online`
+  (one data file, two readers).
+- **Shop**: `GET /v1/cards` → `{coins, inventory, level}`; `POST
+  /v1/cards/buy {id}` → the price from `cards.json`, 400 `level` under the
+  card's level (`Progression.can_use` on both sides), 402 `coins` when short.
+  `RL_CARDS` 20/min + 200/day, `FEATURE_CARDS` kill switch.
+- **The phone's cache**: the `online` bucket in `cards.json` is a read-only
+  mirror of the ledger (`Net.refresh_cards` / `_apply_cards`: spares =
+  copies owned − the ones in the loadout; a slot the ledger no longer covers
+  empties), so every card API and view renders it unchanged. The loadout is
+  the phone's; `App.try_buy_card` refuses the online bucket and
+  `App.buy_online_card` asks the server instead.
+- **Into the room**: the WebSocket upgrade carries `?slots=ice,,fire7`; the
+  Worker keeps only what the ledger holds under the level (`validHand`) and
+  the room deals both validated hands in `start.hands` (+ `levels`), so each
+  tray and each opponent chip row show real cards.
+- **A play**: `card {id}` phone → room; the room checks the id is still in
+  that side's dealt hand, removes it, decrements `online_cards` (ledger
+  `play`), relays `card {from, id}` and echoes `card_ok {id}`; a card not in
+  hand → `error {code: card}`. The tray marks the slot `...` until the receipt
+  (then `Heat.play_card`, the deal animation), or restores it on a refusal.
+  The other phone's `card` lands through `Heat.remote_card` — their ice
+  freezes *our* rim in our sim (we own our side and report it), their fire
+  or vortex lights our replay of theirs.
+- **Payout** (coins only; no card drops, tickets or XP online — Ross will
+  design an online drop system later): at the decision the room pays the
+  winner `round(win_coins × clamp(1 + upset_per_level × (loser_level −
+  winner_level), mult_min, mult_max))` and the loser `loss_coins` flat (50 /
+  20, 0.15 per level, 0.5–2.5: level 1 beating 9 → 110, 9 beating 1 → 25,
+  even → 50), writes wallets + ledger rows and sends `settled {coins, mult,
+  won, reason, wallet}`. A forfeit pays the stayer by the same rule and the
+  leaver nothing; a void pays nothing. `Economy.online_coins` is the game's
+  copy of the rule (the post-match page's `+110 · ONLINE COINS · WIN ·
+  UPSET · X2.2`).
+- **Game**: the lobby's card strip (`120 COINS`, the three slots, `CARDS >`)
+  opens `CardDeckSheet` on the online bucket — slots (tap to unequip),
+  LOADOUT (tap a spare to equip), SHOP (rarity, the level chip gold once
+  reached, OWNED, BUY). `--qa-multi` seeds the cache, snaps the deck, and the
+  fake peer brings an ice it plays on us.

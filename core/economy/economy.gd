@@ -59,6 +59,19 @@ static func heat_rewards(league: Dictionary, won: bool, title: bool) -> Dictiona
 	return {"coins": coins, "tickets": tickets}
 
 
+## The online match payout (docs/BACKEND.md → Cards online; the server's
+## cards.ts runs the same rule): online coins only — the winner's base scaled
+## by the upset (a lower level beating a higher one earns more), the loser's
+## flat. {coins, mult}.
+static func online_coins(won: bool, my_level: int, their_level: int) -> Dictionary:
+	var o: Dictionary = doc().get("online", {})
+	if not won:
+		return {"coins": int(o.get("loss_coins", 20)), "mult": 1.0}
+	var raw := 1.0 + float(o.get("upset_per_level", 0.15)) * float(their_level - my_level)
+	var mult := clampf(raw, float(o.get("mult_min", 0.5)), float(o.get("mult_max", 2.5)))
+	return {"coins": int(roundf(float(o.get("win_coins", 50)) * mult)), "mult": roundf(mult * 100.0) / 100.0}
+
+
 ## Expected coins per heat at the reference win rate.
 static func expected_coins_per_heat(league: Dictionary, p_win := -1.0) -> float:
 	var r: Dictionary = league.get("rewards", {})

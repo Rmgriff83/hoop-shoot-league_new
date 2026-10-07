@@ -95,6 +95,7 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chrome.add_child(scrim)
 	var in_league := not HeatCopy.league_of(heat).is_empty()
+	var online := bool(heat.get("online", false))
 
 	# Header: the league line, the result, the score (+ OT), the opponent.
 	var head := _vbox(26)
@@ -174,8 +175,9 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	for r in HeatCopy.box(heat):
 		bcol.add_child(_box_row(r))
 
-	# Coins beside the card drop, CONTINUE SEASON, HOME.
-	if in_league:
+	# Coins beside the card drop, CONTINUE SEASON, HOME. An online match has
+	# the coins card alone (docs/BACKEND.md → Cards online) and HOME.
+	if in_league or online:
 		var cards := _hbox(26 - int(ShadowStyle.OFFSET))
 		cards.name = "Cards"
 		cards.position = Vector2(MARGIN, CARDS_Y + shift)
@@ -196,11 +198,24 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 		var big := _text(str(ck.get("big", "+0")), 32, CREAM, true)
 		big.name = "CoinsBig"
 		cc.add_child(big)
-		cc.add_child(_text(str(ck.get("sub", ""))))
-		if str(ck.get("sub2", "")) != "":
-			var t2 := _text(str(ck["sub2"]))
-			t2.name = "TicketsLine"
-			cc.add_child(t2)
+		var sub_l := _text(str(ck.get("sub", "")))
+		sub_l.name = "CoinsSub"
+		cc.add_child(sub_l)
+		var t2 := _text(str(ck.get("sub2", "")))
+		t2.name = "TicketsLine"
+		t2.visible = str(ck.get("sub2", "")) != ""
+		cc.add_child(t2)
+		if online:
+			# The room's word may land after this page is up.
+			App.online_settled.connect(func(_s: Dictionary) -> void:
+				if not is_instance_valid(big):
+					return
+				var now := HeatCopy.coins(App.last_heat)
+				big.text = str(now.get("big", ""))
+				sub_l.text = str(now.get("sub", ""))
+				t2.text = str(now.get("sub2", ""))
+				t2.visible = t2.text != ""
+			, CONNECT_ONE_SHOT)
 		cr.add_child(cc)
 		coins.add_child(cr)
 		cards.add_child(coins)
@@ -225,27 +240,28 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 			dr.add_child(dc)
 			dp.add_child(dr)
 			cards.add_child(dp)
-		var cont := ShadowCard.new(RetroTheme.c("orange"))
-		cont.name = "ContinueSeason"
-		cont.position = Vector2(MARGIN, CONT_Y + shift)
-		cont.size = Vector2(RIGHT - MARGIN + ShadowStyle.OFFSET, CONT_H + ShadowStyle.OFFSET)
-		var cm := _margin(0, 24)
-		cont.add_child(cm)
-		var crow := _hbox(16)
-		cm.add_child(crow)
-		var ccol := _vbox(14)
-		ccol.alignment = BoxContainer.ALIGNMENT_CENTER
-		ccol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		ccol.add_child(_text("CONTINUE SEASON", 24, CREAM, true))
-		var sub := _text(HeatCopy.continue_sub(doc, cfg))
-		sub.name = "ContinueSub"
-		ccol.add_child(sub)
-		crow.add_child(ccol)
-		var ch := _text(">", 32, CREAM, true)
-		ch.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		crow.add_child(ch)
-		cont.pressed.connect(App.to_league_hub)
-		chrome.add_child(cont)
+		if in_league:
+			var cont := ShadowCard.new(RetroTheme.c("orange"))
+			cont.name = "ContinueSeason"
+			cont.position = Vector2(MARGIN, CONT_Y + shift)
+			cont.size = Vector2(RIGHT - MARGIN + ShadowStyle.OFFSET, CONT_H + ShadowStyle.OFFSET)
+			var cm := _margin(0, 24)
+			cont.add_child(cm)
+			var crow := _hbox(16)
+			cm.add_child(crow)
+			var ccol := _vbox(14)
+			ccol.alignment = BoxContainer.ALIGNMENT_CENTER
+			ccol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			ccol.add_child(_text("CONTINUE SEASON", 24, CREAM, true))
+			var sub := _text(HeatCopy.continue_sub(doc, cfg))
+			sub.name = "ContinueSub"
+			ccol.add_child(sub)
+			crow.add_child(ccol)
+			var ch := _text(">", 32, CREAM, true)
+			ch.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			crow.add_child(ch)
+			cont.pressed.connect(App.to_league_hub)
+			chrome.add_child(cont)
 	var home := ShadowCard.new(CREAM)
 	home.name = "Home"
 	home.position = Vector2(MARGIN, HOME_Y + shift)

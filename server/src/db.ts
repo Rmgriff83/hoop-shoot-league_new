@@ -105,5 +105,6 @@ export async function prune(db: D1Database, now: number): Promise<void> {
     db.prepare("DELETE FROM transfer_codes WHERE expires_at < ?1").bind(now),
     db.prepare("DELETE FROM rl WHERE win < ?1").bind(Math.floor(now / 1000 / 86_400) - 2),
     db.prepare("DELETE FROM tt_week_best WHERE played_at < ?1").bind(now - 8 * 7 * day),
+    db.prepare("DELETE FROM online_ledger WHERE at < ?1").bind(now - 90 * day),
   ]);
 }

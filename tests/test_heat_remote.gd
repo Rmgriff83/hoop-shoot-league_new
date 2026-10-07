@@ -121,6 +121,23 @@ func run(t) -> void:
 	t.ok(wait.done, "their report decides it")
 	t.eq(int(wait.result()["sides"]["ai"]["attempts"]), 3, "with their totals")
 	t.ok(not bool(wait.result()["won"]), "0–2: lost")
+	# Their cards: out of the hand the room dealt them, through play_card.
+	var carded := Heat.new(_cfg({"remote": true, "ai_cards": ["ice"], "player_cards": ["fire7"]}))
+	for i in 60 * 5:
+		carded.tick(1.0 / 60.0)
+	carded.drain_events()
+	t.ok(carded.play_card(Heat.PLAYER, "fire7"), "our own card plays as ever")
+	t.ok(not carded.remote_card("fire7"), "a card not in their hand is refused")
+	t.ok(carded.remote_card("ice"), "their ice plays")
+	t.ok(carded.player.iced, "…and lands on our rim")
+	var seen := false
+	for ev in carded.drain_events():
+		if ev["kind"] == "card_played" and ev["side"] == Heat.AI and bool(ev["ok"]):
+			seen = true
+	t.ok(seen, "the card_played event shows it")
+	t.ok(not carded.remote_card("ice"), "a second ice: the hand is empty")
+	t.eq(carded.cards_played[Heat.AI], ["ice"], "on their record")
+	t.eq(carded.cards_played[Heat.PLAYER], ["fire7"], "…and ours on ours")
 	# Forfeits.
 	var early := Heat.new(_cfg({"remote": true}))
 	for i in 60 * 6:

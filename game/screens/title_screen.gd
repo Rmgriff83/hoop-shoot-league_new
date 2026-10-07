@@ -1003,9 +1003,32 @@ func _open_lobby() -> void:
 	_lobby.create.connect(func() -> void: App.start_online(area, "create", "", on_state))
 	_lobby.join.connect(func(code: String) -> void: App.start_online(area, "join", code, on_state))
 	_lobby.cancel.connect(App.cancel_online)
-	_lobby.closed.connect(func() -> void: _lobby = null)
+	_lobby.cards.connect(_open_online_deck)
+	var on_cards := func() -> void:
+		if _lobby != null:
+			_lobby.refresh_strip()
+	Net.cards_changed.connect(on_cards)
+	_lobby.closed.connect(func() -> void:
+		Net.cards_changed.disconnect(on_cards)
+		_lobby = null
+	)
 	add_child(_lobby)
 	_lobby.slide_in()
+	Net.refresh_cards()   # the ledger's word on coins and cards
+
+
+## The online deck over the lobby (docs/BACKEND.md → Cards online).
+func _open_online_deck() -> void:
+	if _lobby == null or get_node_or_null("OnlineDeck") != null:
+		return
+	var sheet := CardDeckSheet.new()
+	sheet.name = "OnlineDeck"
+	sheet.build(Net.ONLINE_BUCKET, "ONLINE CARDS")
+	sheet.changed.connect(func() -> void:
+		if _lobby != null:
+			_lobby.refresh_strip()
+	)
+	add_child(sheet)
 
 
 func lobby() -> MatchLobbyPage:

@@ -96,6 +96,7 @@ func _ai_id() -> String:
 var _online: Node = null
 var _shot_n := 0
 var _period_sent := -1
+var _pending_card: Dictionary = {}
 
 
 ## The room client App opened: their messages drive heat's remote side; our
@@ -119,6 +120,22 @@ func _on_online_message(msg: Dictionary) -> void:
 			_hud.set_opponent_score(heat.score(Heat.AI))
 		MatchProtocol.PERIOD_END:
 			heat.remote_period_end(int(msg["period"]), int(msg["score"]), Dictionary(msg.get("totals", {})))
+		MatchProtocol.CARD:
+			heat.remote_card(str(msg["id"]))   # their play; the card_played event shows it
+		MatchProtocol.CARD_OK:
+			if not _pending_card.is_empty() and str(_pending_card["id"]) == str(msg["id"]):
+				var slot := int(_pending_card["slot"])
+				_pending_card = {}
+				_deploy(slot, str(msg["id"]))
+		MatchProtocol.ERROR:
+			if str(msg.get("code", "")) == "card" and not _pending_card.is_empty():
+				var slot := int(_pending_card["slot"])
+				var id := str(_pending_card["id"])
+				_pending_card = {}
+				_restore_slot(slot, id)
+				_court.info.flash("CARD REFUSED", 2, _court.info.accent_color)
+		MatchProtocol.SETTLED:
+			App.settled_online(msg)
 		MatchProtocol.PEER_LEFT, MatchProtocol.EXPIRED:
 			if not heat.done:
 				_court.info.marquee("THEY LEFT", 24.0, _court.info.accent_color)
@@ -308,8 +325,6 @@ class TrayCard extends Control:
 
 
 func _build_tray() -> void:
-	if heat.remote:
-		return   # no cards online (v1): no tray, no empties
 	var layer := CanvasLayer.new()
 	layer.name = "CardUi"
 	layer.layer = 11
@@ -435,9 +450,22 @@ func _on_card_tapped(i: int) -> void:
 		return   # owned early: playable once the level is reached (docs/PROGRESSION.md)
 	# One-time use: the slot leaves the loadout first; a card the save no longer
 	# holds (played from another device, say) is not deployed.
-	if not App.consume_slot(i, id):
+	if not App.consume_slot(i, id, _bucket()):
 		_tray_ids[i] = "used"
 		return
+	if heat.remote:
+		# Online the room owns the ledger: the card goes out, the slot waits
+		# for the receipt (card_ok → deploy; error → the slot comes back).
+		_pending_card = {"slot": i, "id": id}
+		_tray_ids[i] = "used"
+		_tray[i].set_state("wait", "...")
+		_online_send(MatchProtocol.card(id))
+		return
+	_deploy(i, id)
+
+
+## The card leaves the tray and takes effect (or comes back if the effect refused).
+func _deploy(i: int, id: String) -> void:
 	_dealt_slot = i
 	_dealt_from = Rect2(_tray[i].position, TRAY_CARD)
 	if heat.play_card(Heat.PLAYER, id):
@@ -450,12 +478,23 @@ func _on_card_tapped(i: int) -> void:
 		else:
 			_remove_from_tray(i)
 	else:
-		# The effect refused after all: put the copy back in its slot.
-		var d := App.cards_doc()
-		var b := CardDefs.league_doc(d, App.current_league if App.current_league != "" else "cage")
-		CardDefs.add(b, id)
-		CardDefs.equip(b, i, id)
-		SaveService.put_cards(d)
+		_restore_slot(i, id)
+
+
+## The copy back in its slot (the effect refused, or the room did).
+func _restore_slot(i: int, id: String) -> void:
+	var d := App.cards_doc()
+	var b := CardDefs.league_doc(d, _bucket())
+	CardDefs.add(b, id)
+	CardDefs.equip(b, i, id)
+	SaveService.put_cards(d)
+	_tray_ids[i] = id
+	_tray[i].set_state("", "")
+
+
+## Whose cards these are: the league's bucket, or `online` for a room.
+func _bucket() -> String:
+	return str(_heat_cfg.get("bucket", App.current_league if App.current_league != "" else "cage"))
 
 
 func _refresh_tray() -> void:
@@ -820,9 +859,6 @@ class RestoreGlyph extends Control:
 
 ## The opponent's loadout as chips under their window (rebuilt when it changes).
 func _refresh_opp_chips() -> void:
-	if heat.remote:
-		_opp_chips.visible = false   # no cards online (v1)
-		return
 	var hand: Array = heat.hands[Heat.AI]
 	if hand.size() == _opp_hand_n:
 		return

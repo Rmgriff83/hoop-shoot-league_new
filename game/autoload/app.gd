@@ -494,7 +494,7 @@ func start_online(area: String, how: String, code: String, on_state: Callable) -
 	client.name = "Match"
 	add_child(client)
 	room = client
-	if not client.open(room_id, area):
+	if not client.open(room_id, area, loadout_slots(Net.ONLINE_BUCKET)):
 		cancel_online()
 		on_state.call("failed", "offline")
 		return
@@ -530,8 +530,29 @@ func start_online(area: String, how: String, code: String, on_state: Callable) -
 func _tip_off(client: MatchClient, start: Dictionary) -> void:
 	if match_how == "quick":
 		Net.request_json("match", HTTPClient.METHOD_POST, "/v1/match/leave", {"area": match_area})
-	var cfg := MatchProtocol.heat_cfg(start, client.peer)
+	online_settle = {}
+	var cfg := MatchProtocol.heat_cfg(start, client.peer, client.side)
 	start_heat(str(cfg["mode"]), cfg)
+
+
+## The room's payout for the match just played ({coins, mult, won, reason,
+## wallet}); {} until it lands. The post-match page reads it and listens.
+signal online_settled(settle: Dictionary)
+var online_settle: Dictionary = {}
+
+
+func settled_online(msg: Dictionary) -> void:
+	online_settle = msg.duplicate(true)
+	if bool(last_heat.get("online", false)):
+		last_heat["coins"] = int(msg.get("coins", 0))
+		last_heat["mult"] = float(msg.get("mult", 1.0))
+	Net.refresh_cards()
+	online_settled.emit(online_settle)
+
+
+## Buy a card for online play: the server's ledger decides; the cache follows.
+func buy_online_card(id: String) -> Dictionary:
+	return await Net.buy_card(id)
 
 
 ## Leave the lobby / the room (a cancel, a back, a finished match).
@@ -611,6 +632,11 @@ func settle_heat(result: Dictionary) -> Dictionary:
 	last_heat["location"] = mode_config(next_mode).get("location", "cage")
 	last_heat["league"] = next_heat.get("league", null)
 	last_heat["online"] = bool(next_heat.get("remote", false))
+	if last_heat["online"]:
+		last_heat["their_level"] = int(next_heat.get("their_level", 1))
+		if not online_settle.is_empty():
+			last_heat["coins"] = int(online_settle.get("coins", 0))
+			last_heat["mult"] = float(online_settle.get("mult", 1.0))
 	if last_heat["league"] != null:
 		_apply_league_heat(last_heat)
 		Net.push_save()
@@ -703,10 +729,11 @@ func consume_slot(slot: int, id: String, league := "") -> bool:
 	return true
 
 
-## Buy a card with the league's coins. False if unknown or unaffordable.
+## Buy a card with the league's coins. False if unknown or unaffordable. The
+## online bucket is the server's: buy_online_card instead.
 func try_buy_card(id: String, league := "") -> bool:
 	var card := CardDefs.get_card(id)
-	if card.is_empty():
+	if card.is_empty() or _league_for(league) == Net.ONLINE_BUCKET:
 		return false
 	var d := cards_doc()
 	var b := CardDefs.league_doc(d, _league_for(league))
@@ -858,6 +885,8 @@ func _apply_league_heat(result: Dictionary) -> void:
 	last_heat["xp"] = xp_info
 	# A level that opens an area queues the Area Unlock page (docs/HOME.md →
 	# Area unlock); the heat screen shows it after the match-end page.
+	if int(xp_info["level_after"]) > int(xp_info["level_before"]):
+		Net.report_level(int(xp_info["level_after"]))   # the online card cap follows the level
 	var opened := AreaUnlockCopy.crossed(int(xp_info["level_before"]), int(xp_info["level_after"]))
 	if opened != "" and not unlock_seen(opened):
 		pending_unlock = opened

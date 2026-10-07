@@ -8,11 +8,14 @@ extends RefCounted
 const SHOT := "shot"           # {t, n, launch}            one per release
 const OUTCOME := "outcome"     # {t, n, score}             the sender's running score after it landed
 const PERIOD_END := "period_end"  # {t, period, score, totals}
+const CARD := "card"           # {t, id}                   a card out of the hand the room dealt
 const PING := "ping"
 ## Messages the room sends.
 const JOINED := "joined"       # {t, side, room, area, peer|null}
 const PEER := "peer"           # {t, peer}                 the other phone arrived
-const START := "start"         # {t, seed, area, seconds, ot_seconds, ball_return_s}
+const START := "start"         # {t, seed, area, seconds, ot_seconds, ball_return_s, hands: {a, b}, levels: {a, b}}
+const CARD_OK := "card_ok"     # {t, id}                   the room took our card
+const SETTLED := "settled"     # {t, coins, mult, won, reason, wallet}  the payout
 const PEER_LEFT := "peer_left"
 const EXPIRED := "expired"     # nobody came
 const ERROR := "error"
@@ -43,6 +46,10 @@ static func outcome(n: int, score: int) -> Dictionary:
 
 static func period_end(period: int, score: int, totals: Dictionary) -> Dictionary:
 	return {"t": PERIOD_END, "period": period, "score": score, "totals": totals.duplicate(true)}
+
+
+static func card(id: String) -> Dictionary:
+	return {"t": CARD, "id": id}
 
 
 static func encode(msg: Dictionary) -> String:
@@ -76,6 +83,12 @@ static func parse(text: String) -> Dictionary:
 		START:
 			if not _num(m.get("seed")) or not (m.get("area") is String):
 				return {}
+		CARD, CARD_OK:
+			if not (m.get("id") is String) or CardDefs.get_card(str(m["id"])).is_empty():
+				return {}
+		SETTLED:
+			if not _num(m.get("coins")):
+				return {}
 		JOINED, PEER, PEER_LEFT, EXPIRED, ERROR, PONG, PING:
 			pass
 		_:
@@ -87,12 +100,36 @@ static func _num(v: Variant) -> bool:
 	return v is int or v is float
 
 
+## The hand the room dealt a side, as the tray's three slots (null = blank).
+static func hand_slots(start: Dictionary, side: String) -> Array:
+	var hands: Dictionary = start.get("hands", {}) if start.get("hands") is Dictionary else {}
+	var raw: Array = hands.get(side, []) if hands.get(side) is Array else []
+	var out := [null, null, null]
+	for i in mini(raw.size(), CardDefs.SLOTS):
+		var id := str(raw[i])
+		if id != "" and not CardDefs.get_card(id).is_empty():
+			out[i] = id
+	return out
+
+
+static func _ids(slots: Array) -> Array:
+	var out := []
+	for s in slots:
+		if s != null:
+			out.push_back(str(s))
+	return out
+
+
 ## The heat config two phones derive from the same `start` (App.start_heat's
-## shape): the area's heat mode, the room's seed, no cards, the other phone
-## as the opponent.
-static func heat_cfg(start: Dictionary, peer: Dictionary) -> Dictionary:
+## shape): the area's heat mode, the room's seed, each side's dealt hand
+## (ours in the tray, theirs on the opponent's chips), the other phone as the
+## opponent. Cards online come from the `online` bucket.
+static func heat_cfg(start: Dictionary, peer: Dictionary, side := "a") -> Dictionary:
 	var area := str(start.get("area", "cage"))
 	var mode_id := "heat" if area == "cage" else "heat_" + area
+	var mine := hand_slots(start, side)
+	var theirs := hand_slots(start, "b" if side == "a" else "a")
+	var levels: Dictionary = start.get("levels", {}) if start.get("levels") is Dictionary else {}
 	return {
 		"mode": mode_id,
 		"seconds": float(start.get("seconds", Heat.DEFAULT_SECONDS)),
@@ -102,8 +139,9 @@ static func heat_cfg(start: Dictionary, peer: Dictionary) -> Dictionary:
 		"seed": int(start.get("seed", 1)),
 		"opponent": opponent(peer),
 		"calib_key": area if area != "cage" else "arcade",
-		"league": null, "remote": true,
-		"player_cards": [], "player_slots": [null, null, null], "ai_cards": [],
+		"league": null, "remote": true, "online": true, "bucket": "online",
+		"player_cards": _ids(mine), "player_slots": mine, "ai_cards": _ids(theirs),
+		"their_level": int(levels.get("b" if side == "a" else "a", 1)),
 	}
 
 

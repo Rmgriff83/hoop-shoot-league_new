@@ -207,6 +207,17 @@ BANK. The window ends on the clock (after the last pending ball lands) or
 when the rim ices; a miss does not end it. Ice has precedence: an iced,
 spinning rim catches.
 
+## Online matches (2026-10-07)
+
+Cards play in online 1v1 too, from a separate **online** bucket that lives on
+the server (docs/BACKEND.md → Cards online): only cards bought in the online
+shop with online coins (earned by online matches, weighted to the upset) can
+be brought into a room, the server deals both validated hands, and a play is a
+relayed, receipted message. The level rule is the leagues' (`Progression.can_use`),
+checked on the phone and again on the server. There is no card-drop path and
+no parity envelope online yet; `card_parity` and `CardBudget` remain per
+league. AI cards never meet online hands.
+
 ## Adding a card
 
 1. **Row** in `data/cards.json`: `id, name, target, effect {kind, …}, art,

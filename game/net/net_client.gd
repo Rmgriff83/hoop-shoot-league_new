@@ -14,6 +14,8 @@ signal board_failed(area: String, period: String)
 ## The mirror brought newer copies of these parts; App re-reads what it caches.
 signal save_pulled(parts: Array)
 signal save_pushed(parts: Array)
+## The online card cache changed (a refresh, a buy, a settle).
+signal cards_changed
 
 const FLUSH_GAP_S := 30.0
 const BOARD_TTL_S := 60.0
@@ -40,6 +42,9 @@ var _board_cache: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
 var _pushing := false
 var _pulling := false
+var _level_reported := -1
+## The server's view of the level, from the last cards refresh.
+var online_level := 1
 var _last_push := -1.0
 var _last_pull := -1.0
 
@@ -96,7 +101,7 @@ func _register() -> bool:
 	_registering = true
 	var a := account()
 	var r := await _request("register", HTTPClient.METHOD_POST, "/v1/register",
-		{"playerId": a["playerId"], "secret": a["secret"], "clientId": SaveService.get_client_id(), "name": a["name"], "tag": a["tag"]}, false)
+		{"playerId": a["playerId"], "secret": a["secret"], "clientId": SaveService.get_client_id(), "name": a["name"], "tag": a["tag"], "level": App.level()}, false)
 	_registering = false
 	if r["ok"]:
 		a["registered"] = true
@@ -162,6 +167,81 @@ func claim_transfer(code: String) -> bool:
 	account_ready.emit(a["name"], a["tag"])
 	await pull_save(true)   # their progress, onto this phone
 	return true
+
+
+# ---- cards online (docs/BACKEND.md → Cards online) ----------------------------------------
+
+const ONLINE_BUCKET := "online"
+
+
+## The server's wallet + inventory into the `online` bucket of cards.json (a
+## read-only cache: spares = copies owned minus the ones in the loadout; a
+## loadout slot the ledger no longer covers is emptied).
+func _apply_cards(json: Dictionary) -> void:
+	var d := SaveService.get_cards()
+	CardDefs.migrate(d)   # a stale doc would be wiped on save anyway; wipe it first
+	var b := CardDefs.league_doc(d, ONLINE_BUCKET)
+	b["coins"] = int(json.get("coins", 0))
+	var owned: Dictionary = json.get("inventory", {}) if json.get("inventory") is Dictionary else {}
+	var left := {}
+	for id in owned:
+		left[str(id)] = int(owned[id])
+	var loadout: Array = b.get("loadout", [null, null, null])
+	for i in loadout.size():
+		if loadout[i] == null:
+			continue
+		var id := str(loadout[i])
+		if int(left.get(id, 0)) > 0:
+			left[id] = int(left[id]) - 1
+		else:
+			loadout[i] = null
+	var inv := {}
+	for id in left:
+		if int(left[id]) > 0:
+			inv[id] = int(left[id])
+	b["inventory"] = inv
+	b["loadout"] = loadout
+	SaveService.put_cards(d)
+	online_level = int(json.get("level", online_level))
+	cards_changed.emit()
+
+
+## Pull the ledger (the lobby opens, a match settled). False when it could not.
+func refresh_cards() -> bool:
+	if not _can_call() or not registered():
+		return false
+	var r := await _request("cards", HTTPClient.METHOD_GET, "/v1/cards")
+	if r["ok"]:
+		_apply_cards(r["json"])
+		return true
+	if r["code"] != -1:
+		_back_off(r)
+	return false
+
+
+## Buy one card with online coins; the cache follows the server's answer.
+## {ok, why}: why = "" | level | coins | offline.
+func buy_card(id: String) -> Dictionary:
+	if not _can_call() or not registered():
+		return {"ok": false, "why": "offline"}
+	var r := await _request("cards", HTTPClient.METHOD_POST, "/v1/cards/buy", {"id": id})
+	if r["ok"]:
+		_apply_cards(r["json"])
+		return {"ok": true, "why": ""}
+	var why := str(r["json"].get("error", "offline")) if r["code"] > 0 else "offline"
+	if r["code"] != 400 and r["code"] != 402 and r["code"] != -1:
+		_back_off(r)
+	return {"ok": false, "why": why}
+
+
+## The game's level, for the online card cap (sent once per change).
+func report_level(level: int) -> void:
+	if level == _level_reported or not _can_call() or not registered():
+		return
+	_level_reported = level
+	var r := await _request("me", HTTPClient.METHOD_PATCH, "/v1/me", {"level": level})
+	if not r["ok"]:
+		_level_reported = -1
 
 
 # ---- scores -----------------------------------------------------------------------------

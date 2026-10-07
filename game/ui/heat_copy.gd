@@ -130,6 +130,8 @@ static func pct_text(side: Dictionary) -> String:
 ## The coins card: {big, sub, sub2} — the league's coins and the global
 ## tickets the heat paid; {} for a heat outside a league.
 static func coins(heat: Dictionary) -> Dictionary:
+	if bool(heat.get("online", false)):
+		return online_coins(heat)
 	if league_of(heat).is_empty():
 		return {}
 	var out := {"big": "+%d" % int(heat.get("coins", 0)), "sub": "COINS · %s" % ("WIN" if bool(heat.get("won", false)) else "LOSS"), "sub2": ""}
@@ -141,6 +143,35 @@ static func coins(heat: Dictionary) -> Dictionary:
 		parts.push_back("+%d XP" % int(xp["gained"]))
 	out["sub2"] = " · ".join(parts)
 	return out
+
+
+## The online payout card (docs/BACKEND.md → Cards online): `+110 · ONLINE
+## COINS · WIN` with `UPSET · X2.2` / `EVEN MATCH` / `FAVOURITE · X0.5`; a
+## loss `+20`; `SETTLING...` until the room's word lands; a void pays nothing.
+static func online_coins(heat: Dictionary) -> Dictionary:
+	if str(heat.get("reason", "")) == "void":
+		return {"big": "+0", "sub": "ONLINE COINS · VOID", "sub2": ""}
+	if not heat.has("coins"):
+		return {"big": "...", "sub": "ONLINE COINS · SETTLING", "sub2": ""}
+	var won := bool(heat.get("won", false))
+	var mult := float(heat.get("mult", 1.0))
+	var sub2 := ""
+	if won:
+		if mult > 1.0 + 1e-6:
+			sub2 = "UPSET · X%s" % mult_text(mult)
+		elif mult < 1.0 - 1e-6:
+			sub2 = "FAVOURITE · X%s" % mult_text(mult)
+		else:
+			sub2 = "EVEN MATCH"
+	return {"big": "+%d" % int(heat.get("coins", 0)), "sub": "ONLINE COINS · %s" % ("WIN" if won else "LOSS"), "sub2": sub2}
+
+
+## 2.2 → "2.2", 1.0 → "1", 0.5 → "0.5".
+static func mult_text(mult: float) -> String:
+	var t := "%.2f" % mult
+	while t.ends_with("0"):
+		t = t.substr(0, t.length() - 1)
+	return t.trim_suffix(".")
 
 
 ## The level line under the opponent (docs/PROGRESSION.md): `LEVEL UP · LEVEL

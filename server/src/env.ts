@@ -11,6 +11,7 @@ export interface Env {
   FEATURE_TRANSFER?: string;
   FEATURE_SAVE?: string;
   FEATURE_MATCH?: string;
+  FEATURE_CARDS?: string;
   /** Per-IP wall on every /v1 route (layer 2: a workers.dev host has no WAF). */
   RL_IP?: RateLimiter;
   /** Per-player minute buckets; absent locally, where limits.ts falls back to memory. */
@@ -19,6 +20,7 @@ export interface Env {
   RL_ME?: RateLimiter;
   RL_SAVE?: RateLimiter;
   RL_MATCH?: RateLimiter;
+  RL_CARDS?: RateLimiter;
   /** Phase 3: one MatchRoom per 1v1, one Lobby for the game. */
   ROOM: DurableObjectNamespace;
   LOBBY: DurableObjectNamespace;
@@ -33,4 +35,5 @@ export interface PlayerRow {
   created_at: number;
   last_seen: number;
   flags: number;
+  level: number;
 }

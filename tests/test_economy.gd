@@ -8,9 +8,30 @@ extends RefCounted
 
 func run(t) -> void:
 	_trial(t)
+	_online(t)
 	_heats(t)
 	_envelope(t)
 	_drift(t)
+
+
+## The online payout (docs/BACKEND.md → Cards online): a win scaled by the
+## upset, a loss flat, the clamps; the server's cards.ts asserts the same.
+func _online(t) -> void:
+	t.eq(Economy.online_coins(true, 1, 9), {"coins": 110, "mult": 2.2}, "level 1 beats level 9: 50 × 2.2")
+	t.eq(Economy.online_coins(true, 9, 1), {"coins": 25, "mult": 0.5}, "level 9 beats level 1: the floor")
+	t.eq(Economy.online_coins(true, 4, 4), {"coins": 50, "mult": 1.0}, "even: the base")
+	t.eq(Economy.online_coins(true, 1, 40), {"coins": 125, "mult": 2.5}, "the cap")
+	t.eq(Economy.online_coins(false, 1, 9), {"coins": 20, "mult": 1.0}, "a loss pays flat")
+	t.eq(HeatCopy.online_coins({"online": true, "won": true, "coins": 110, "mult": 2.2}), {"big": "+110", "sub": "ONLINE COINS · WIN", "sub2": "UPSET · X2.2"}, "the upset card")
+	t.eq(HeatCopy.online_coins({"online": true, "won": true, "coins": 25, "mult": 0.5})["sub2"], "FAVOURITE · X0.5", "the favourite's card")
+	t.eq(HeatCopy.online_coins({"online": true, "won": true, "coins": 50, "mult": 1.0})["sub2"], "EVEN MATCH", "an even match")
+	t.eq(HeatCopy.online_coins({"online": true, "won": false, "coins": 20})["sub"], "ONLINE COINS · LOSS", "a loss")
+	t.eq(HeatCopy.online_coins({"online": true})["sub"], "ONLINE COINS · SETTLING", "before the room's word")
+	t.eq(HeatCopy.online_coins({"online": true, "reason": "void"})["big"], "+0", "a void pays nothing")
+	t.eq(HeatCopy.coins({"online": true, "won": true, "coins": 50, "mult": 1.0})["big"], "+50", "HeatCopy.coins hands online heats over")
+	t.eq(HeatCopy.mult_text(2.2), "2.2", "2.2")
+	t.eq(HeatCopy.mult_text(1.0), "1", "1")
+	t.eq(HeatCopy.mult_text(2.25), "2.25", "2.25")
 
 
 func _trial(t) -> void:

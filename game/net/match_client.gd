@@ -30,14 +30,18 @@ var _connect_at := 0.0
 var _done := false
 
 
-## Open the room. False when the net is off or the URL is empty.
-func open(p_room: String, p_area: String) -> bool:
+## Open the room with the three loadout slots we want to bring (null = blank;
+## the server keeps only what the ledger covers). False when the net is off.
+func open(p_room: String, p_area: String, slots: Array = []) -> bool:
 	room = p_room
 	area = p_area
 	var base := NetConfig.base_url()
 	if base == "" or not Net.enabled or not Net.registered():
 		return false
-	var url := base.replace("https://", "wss://").replace("http://", "ws://") + "/v1/match/room/%s?area=%s" % [room, area]
+	var ids := PackedStringArray()
+	for i in CardDefs.SLOTS:
+		ids.append("" if i >= slots.size() or slots[i] == null else str(slots[i]).uri_encode())
+	var url := base.replace("https://", "wss://").replace("http://", "ws://") + "/v1/match/room/%s?area=%s&slots=%s" % [room, area, ",".join(ids)]
 	_ws = WebSocketPeer.new()
 	var a: Dictionary = Net.account()
 	_ws.handshake_headers = PackedStringArray(["Authorization: Bearer %s.%s" % [str(a.get("playerId", "")), str(a.get("secret", ""))]])
