@@ -37,6 +37,8 @@ interface Meta {
   ends: Record<Side, Record<string, { score: number; totals: unknown }>>;
   /** Each side's validated hand (card ids; a played card leaves it). */
   hands: Record<Side, string[]>;
+  /** A side that reported its period and then dropped: finished, not forfeiting. */
+  leftWaiting: Side | null;
   reason: string;
   recorded: boolean;
 }
@@ -87,7 +89,7 @@ export class MatchRoom extends DurableObject<Env> {
     const now = Date.now();
     let m = await this.meta();
     if (!m) {
-      m = { area, created: now, status: "waiting", seed: 0, started: 0, last: now, a: null, b: null, ends: { a: {}, b: {} }, hands: { a: [], b: [] }, reason: "", recorded: false };
+      m = { area, created: now, status: "waiting", seed: 0, started: 0, last: now, a: null, b: null, ends: { a: {}, b: {} }, hands: { a: [], b: [] }, leftWaiting: null, reason: "", recorded: false };
       await this.ctx.storage.setAlarm(now + WAIT_MS);
     }
     if (m.status === "done") return new Response("over", { status: 410 });
@@ -175,6 +177,12 @@ export class MatchRoom extends DurableObject<Env> {
           m.reason = "played";
           await this.record(m, a.score, b.score, period, msg.desync ? 1 : 0, a.score > b.score ? "a" : "b");
           await this.ctx.storage.setAlarm(now + CLOSE_AFTER_MS);
+        } else if (a && b && m.leftWaiting) {
+          // A tie, and one of them already left: no overtime to play — the one who stayed takes it.
+          m.status = "done";
+          m.reason = "forfeit";
+          await this.record(m, a.score, b.score, period, 0, other(m.leftWaiting));
+          await this.ctx.storage.setAlarm(now + CLOSE_AFTER_MS);
         }
         break;
       }
@@ -199,6 +207,18 @@ export class MatchRoom extends DurableObject<Env> {
     const m = await this.meta();
     if (!att || !m || m.status === "done") return;
     if (this.sockets(att.side).some((s) => s !== ws)) return; // they reconnected already
+    if (m.status === "playing") {
+      // Reported this period and then went? They are finished, not forfeiting:
+      // the other phone's report still decides it.
+      const mine = Object.keys(m.ends[att.side]).length;
+      const theirs = Object.keys(m.ends[other(att.side)]).length;
+      if (mine > theirs) {
+        m.leftWaiting = att.side;
+        m.last = Date.now();
+        await this.put(m);
+        return;
+      }
+    }
     this.sendSide(other(att.side), { t: "peer_left", side: att.side });
     if (m.status === "playing") {
       m.status = "done";

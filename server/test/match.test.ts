@@ -174,14 +174,45 @@ describe("match room", () => {
     const A = await join(a, room);
     const B = await join(b, room);
     await A.until((m) => m.t === "start");
-    B.send({ t: "period_end", period: 0, score: 3, totals: {} });
-    await A.until((m) => m.t === "period_end");
-    B.ws.close(1000, "bye");
+    A.send({ t: "outcome", n: 1, score: 3 });
+    await B.until((m) => m.t === "outcome");
+    B.ws.close(1000, "bye"); // gone before any report
     const left = await A.until((m) => m.t === "peer_left");
     expect(left.side).toBe("b");
     await A.settle();
     const row = await env.DB.prepare("SELECT * FROM matches WHERE a_id = ?1").bind(a.playerId).first<any>();
-    expect(row).toMatchObject({ reason: "void", a_score: 0, b_score: 3 }); // seconds in → void
+    expect(row).toMatchObject({ reason: "void", a_score: 0, b_score: 0 }); // seconds in → void
+  });
+  it("a phone that reported its buzzer and then left is finished, not a forfeit", async () => {
+    const a = await register();
+    const b = await register();
+    const room = uuid();
+    const A = await join(a, room);
+    const B = await join(b, room);
+    await A.until((m) => m.t === "start");
+    A.send({ t: "period_end", period: 0, score: 12, totals: {} });
+    await B.until((m) => m.t === "period_end");
+    A.ws.close(1000, "bye"); // the winner's phone goes home
+    await new Promise((r) => setTimeout(r, 80));
+    expect(B.inbox.filter((m) => m.t === "peer_left")).toHaveLength(0); // no false forfeit
+    B.send({ t: "period_end", period: 0, score: 9, totals: {} });
+    const settled = await B.until((m) => m.t === "settled");
+    expect(settled).toMatchObject({ won: false, reason: "played" });
+    const row = await env.DB.prepare("SELECT * FROM matches WHERE a_id = ?1").bind(a.playerId).first<any>();
+    expect(row).toMatchObject({ a_score: 12, b_score: 9, reason: "played" });
+    // A tie with the reporter gone: no overtime to play, the stayer takes it.
+    const c = await register();
+    const d = await register();
+    const room2 = uuid();
+    const C = await join(c, room2);
+    const D = await join(d, room2);
+    await C.until((m) => m.t === "start");
+    C.send({ t: "period_end", period: 0, score: 5, totals: {} });
+    await D.until((m) => m.t === "period_end");
+    C.ws.close(1000, "bye");
+    await new Promise((r) => setTimeout(r, 80));
+    D.send({ t: "period_end", period: 0, score: 5, totals: {} });
+    expect(await D.until((m) => m.t === "settled")).toMatchObject({ won: true, reason: "forfeit" });
   });
   it("closes a room nobody joined when the alarm fires", async () => {
     const a = await register();

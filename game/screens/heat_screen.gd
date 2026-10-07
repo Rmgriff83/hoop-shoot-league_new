@@ -135,10 +135,16 @@ func _on_online_message(msg: Dictionary) -> void:
 				_restore_slot(slot, id)
 				_court.info.flash("CARD REFUSED", 2, _court.info.accent_color)
 		MatchProtocol.SETTLED:
-			App.settled_online(msg)
-		MatchProtocol.PEER_LEFT, MatchProtocol.EXPIRED:
-			if not heat.done:
+			App.settled_online(msg)   # App hears it too; settled_online runs once
+		MatchProtocol.PEER_LEFT:
+			# Gone before their buzzer: a forfeit. Gone after reporting: they
+			# are simply finished, and our own buzzer decides it.
+			if not heat.done and not heat.remote_reported():
 				_court.info.marquee("THEY LEFT", 24.0, _court.info.accent_color)
+				heat.remote_forfeit()
+		MatchProtocol.EXPIRED:
+			if not heat.done:
+				_court.info.marquee("ROOM CLOSED", 24.0, _court.info.accent_color)
 				heat.remote_forfeit()
 
 
@@ -1088,8 +1094,8 @@ func _finish() -> void:
 	_ai_court.set_fire(false)
 	_ai_court.set_ice(false)
 	var result := heat.result()
-	if heat.remote:
-		App.cancel_online()   # the room is done with us
+	# Online the room stays open through the result page: the payout
+	# (`settled`) still has to land, and our last report has to go out.
 	# The match-end page (docs/HOME.md → Results): settle the heat at the
 	# buzzer and play the moment; a tap goes on to the post-match page. A
 	# heat outside a league skips straight there.

@@ -28,6 +28,10 @@ var _last_ping := 0.0
 var _opened := false
 var _connect_at := 0.0
 var _done := false
+var _closing := ""
+var _close_deadline := 0.0
+## Grace for the queue to drain on close (a period report must not be lost).
+const CLOSE_DRAIN_S := 2.0
 
 
 ## Open the room with the three loadout slots we want to bring (null = blank;
@@ -67,13 +71,26 @@ func is_open() -> bool:
 	return _opened and not _done
 
 
+## Close — after anything still queued has gone out (a buzzer report closed
+## away was read as a forfeit). The node frees itself once closed.
 func close(reason := "bye") -> void:
+	if _done or _closing != "":
+		return
+	if _ws != null and _ws.get_ready_state() == WebSocketPeer.STATE_OPEN and not _queue.is_empty():
+		_closing = reason
+		_close_deadline = _now() + CLOSE_DRAIN_S
+		return
+	_finish_close(reason)
+
+
+func _finish_close(reason: String) -> void:
 	if _done:
 		return
 	_done = true
 	if _ws != null and _ws.get_ready_state() in [WebSocketPeer.STATE_OPEN, WebSocketPeer.STATE_CONNECTING]:
 		_ws.close(1000, reason)
 	closed.emit(reason)
+	queue_free()
 
 
 func _process(_dt: float) -> void:
@@ -97,12 +114,15 @@ func _process(_dt: float) -> void:
 				_absorb(msg)
 				message.emit(msg)
 			_pump()
+			if _closing != "" and (_queue.is_empty() or _now() > _close_deadline):
+				_finish_close(_closing)
 		WebSocketPeer.STATE_CLOSED:
 			var reason := _ws.get_close_reason()
 			_ws = null
 			if not _done:
 				_done = true
 				closed.emit(reason if reason != "" else "closed")
+				queue_free()
 
 
 ## The room's bookkeeping messages, kept for whoever asks later.

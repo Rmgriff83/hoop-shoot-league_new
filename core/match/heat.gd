@@ -329,6 +329,12 @@ func remote_period_end(period: int, score: int, totals: Dictionary) -> void:
 	_remote_period = {"period": period, "score": score, "totals": totals.duplicate(true)}
 
 
+## Has their report for the current period arrived? (A phone that reported
+## and then dropped is finished, not a forfeit.)
+func remote_reported() -> bool:
+	return remote and int(_remote_period.get("period", -1)) == ot
+
+
 ## They left: a win by forfeit once the match has been on long enough to
 ## count (`min_played_s` of regulation), otherwise a void. Ends the heat now.
 func remote_forfeit(min_played_s := 30.0) -> void:

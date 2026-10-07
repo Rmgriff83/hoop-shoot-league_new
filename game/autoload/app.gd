@@ -510,6 +510,8 @@ func start_online(area: String, how: String, code: String, on_state: Callable) -
 					on_state.call("found", Dictionary(msg["peer"]))
 			MatchProtocol.START:
 				_tip_off(client, msg)
+			MatchProtocol.SETTLED:
+				settled_online(msg)
 			MatchProtocol.EXPIRED:
 				cancel_online()
 				on_state.call("failed", "expired")
@@ -542,6 +544,8 @@ var online_settle: Dictionary = {}
 
 
 func settled_online(msg: Dictionary) -> void:
+	if not online_settle.is_empty():
+		return   # once (the screen and this autoload both hear the room)
 	online_settle = msg.duplicate(true)
 	if bool(last_heat.get("online", false)):
 		last_heat["coins"] = int(msg.get("coins", 0))
@@ -559,8 +563,9 @@ func buy_online_card(id: String) -> Dictionary:
 func cancel_online() -> void:
 	if room != null:
 		if room.has_method("close"):
-			room.close("bye")
-		room.queue_free()
+			room.close("bye")   # a MatchClient drains its queue and frees itself
+		if not (room is MatchClient):
+			room.queue_free()
 		room = null
 	if match_how == "quick" and match_area != "" and Net.enabled and Net.registered():
 		Net.request_json("match", HTTPClient.METHOD_POST, "/v1/match/leave", {"area": match_area})
@@ -572,6 +577,7 @@ func cancel_online() -> void:
 
 func to_title() -> void:
 	get_tree().paused = false
+	cancel_online()   # leaving a post-match page closes the room
 	get_tree().change_scene_to_file(TITLE_SCENE)
 
 
