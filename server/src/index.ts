@@ -15,6 +15,9 @@ import {
 import { BLOCKED, randomHandle } from "./handles";
 import * as db from "./db";
 import { save } from "./save";
+import { AREAS as MATCH_AREAS } from "./rules";
+export { MatchRoom } from "./match_room";
+export { Lobby } from "./lobby";
 
 type Vars = { Bindings: Env; Variables: { player: PlayerRow } };
 export const app = new Hono<Vars>();
@@ -212,6 +215,58 @@ app.post("/v1/transfer/claim", async (c) => {
 
 // ---- the cloud save mirror (save.ts) ----------------------------------------------------
 app.route("/v1/save", save);
+
+// ---- 1v1 rooms (match_room.ts, lobby.ts) ---------------------------------------------------
+
+const MATCH_PER_MINUTE = 20;
+const MATCH_PER_DAY = 200;
+const ROOM_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+
+app.use("/v1/match/*", authenticate, async (c, next) => {
+  if (!on(c.env.FEATURE_MATCH)) return off(c);
+  const p = c.get("player");
+  const minute = await minuteLimit(c.env.RL_MATCH, `match:${p.id}`, MATCH_PER_MINUTE);
+  if (!minute.allowed) return throttled(c, minute);
+  const day = await longLimit(c.env.DB, `match:day:${p.id}`, MATCH_PER_DAY, 86_400);
+  if (!day.allowed) return throttled(c, day);
+  await next();
+});
+
+/** Quick match / make a code / join a code / leave the queue: the Lobby decides. */
+app.post("/v1/match/:action{quick|code|join|leave}", async (c) => {
+  const p = c.get("player");
+  const b = await body(c, ["area", "code"]);
+  if (!b) return c.json({ error: "bad_request" }, 400);
+  const area = typeof b.area === "string" ? b.area : "cage";
+  if (!(MATCH_AREAS as readonly string[]).includes(area)) return c.json({ error: "area" }, 400);
+  const action = c.req.param("action");
+  if (action === "join" && typeof b.code !== "string") return c.json({ error: "code" }, 400);
+  const stub = c.env.LOBBY.get(c.env.LOBBY.idFromName("lobby"));
+  const res = await stub.fetch(`https://lobby/${action}`, {
+    method: "POST",
+    body: JSON.stringify({ playerId: p.id, area, code: b.code ?? "" }),
+  });
+  return new Response(res.body, { status: res.status, headers: { "content-type": "application/json" } });
+});
+
+/** The room's WebSocket: authenticated here, the player handed on in headers. */
+app.get("/v1/match/room/:id", async (c) => {
+  if (c.req.header("upgrade")?.toLowerCase() !== "websocket") return c.json({ error: "websocket" }, 426);
+  const id = c.req.param("id");
+  if (!ROOM_RE.test(id)) return c.json({ error: "room" }, 400);
+  const p = c.get("player");
+  const area = c.req.query("area") ?? "cage";
+  if (!(MATCH_AREAS as readonly string[]).includes(area)) return c.json({ error: "area" }, 400);
+  const headers = new Headers(c.req.raw.headers);
+  headers.set("x-player-id", p.id);
+  headers.set("x-player-name", p.name);
+  headers.set("x-player-tag", p.tag);
+  headers.set("x-area", area);
+  headers.set("x-room", id);
+  headers.delete("authorization");
+  const stub = c.env.ROOM.get(c.env.ROOM.idFromName(id));
+  return stub.fetch(new Request(c.req.raw.url, { headers, method: "GET" }));
+});
 
 app.notFound((c) => c.json({ error: "not_found" }, 404));
 app.onError((err, c) => {

@@ -14,7 +14,7 @@ var _outcomes: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-ranks")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-ranks") or args.has("--qa-multi")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# The splash is the main scene now: every other pass starts from the title.
@@ -54,6 +54,8 @@ func _ready() -> void:
 		_run_net.call_deferred()
 	elif args.has("--qa-ranks"):
 		_run_ranks.call_deferred()
+	elif args.has("--qa-multi"):
+		_run_multi.call_deferred()
 	elif args.has("--qa-aim"):
 		_run_aim.call_deferred()
 	else:
@@ -771,6 +773,63 @@ func _run_archive() -> void:
 		staged.queue_free()
 		await _sleep(0.3)
 	print("QA archive: done")
+	get_tree().quit()
+
+
+## Online 1v1 (docs/BACKEND.md → Phase 3) with the net off: the lobby's
+## menu, the code to pass on, FOUND and NOBODY CAME; then a staged online
+## heat on the beach against QaFakePeer (a seeded bot behind the wire),
+## snapped early, mid-way and at the post-match page.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-multi
+func _run_multi() -> void:
+	Net.enabled = false
+	await _sleep(1.2)
+	var archive: AreaArchivePage = get_tree().root.find_child("AreaArchive", true, false)
+	if archive != null:
+		archive.pick("beach")
+		await _sleep(1.0)
+	await _click_named("Multi")
+	await _sleep(0.5)
+	var lobby: MatchLobbyPage = get_tree().root.find_child("MatchLobby", true, false)
+	if lobby == null:
+		print("QA multi: no lobby")
+		get_tree().quit()
+		return
+	await _snap("multi_menu")
+	lobby.show_waiting("create", "ABCDE")
+	await _sleep(0.2)
+	await _snap("multi_code")
+	lobby.show_found({"name": "GLASS WIZARD", "tag": "07"})
+	await _sleep(0.2)
+	await _snap("multi_found")
+	lobby.show_failed("expired")
+	await _sleep(0.2)
+	await _snap("multi_failed")
+	lobby.close()
+	await _sleep(0.4)
+	# The staged match: a 20 s beach heat against the fake peer.
+	var start := {"t": "start", "seed": 4242, "area": "beach", "seconds": 20.0, "ot_seconds": 6.0, "ball_return_s": 1.0}
+	var fake := QaFakePeer.new()
+	fake.name = "Match"
+	App.add_child(fake)
+	App.room = fake
+	App.match_how = "create"
+	var cfg := MatchProtocol.heat_cfg(start, fake.peer)
+	App.start_heat(str(cfg["mode"]), cfg)
+	await _sleep(1.0)
+	var screen := get_tree().current_scene
+	var spots := []
+	if screen != null and screen.get("heat") != null:
+		spots = (screen.get("heat") as Heat).spots
+	fake.stage(start, App.geo_for_mode(str(cfg["mode"])), spots, true)
+	await _sleep(7.0)
+	await _snap("online_heat_early")
+	await _sleep(9.0)
+	await _snap("online_heat_late")
+	await _sleep(9.0)
+	await _snap("online_result")
+	# The finished heat has already closed and freed the room.
+	print("QA multi: done (peer %s)" % ("still here" if is_instance_valid(fake) else "freed with the room"))
 	get_tree().quit()
 
 

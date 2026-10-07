@@ -126,14 +126,20 @@ chevron (the footer says START INSIDE).
   your row on orange; `YOU · #7 · 29` pinned under the list. Opens on the
   current area's tab; the page only emits `request(area, period)` and the
   title feeds it from `Net`. QA: `--qa-ranks`.
+- **1v1** (`game/ui/match_lobby_page.gd` `MatchLobbyPage`, copy in
+  `match_copy.gd`; docs/BACKEND.md → Phase 3): the multiplayer icon beside
+  Ranks opens the lobby for the current area — QUICK MATCH, CREATE CODE,
+  ENTER CODE + GO — then the wait (`CODE AB CDE · TELL YOUR FRIEND` /
+  `FINDING A PLAYER...`), FOUND and the failure lines. `App.start_online`
+  arranges the room and tips off into a heat with the other phone in the
+  opponent slot; the post-match page reads `ONLINE MATCH · BEACH`. QA:
+  `--qa-multi`.
 
 ## Placeholders (present, not wired)
 
 - ~~Level element~~ — real now (docs/PROGRESSION.md): `LVL0n` is
   `App.level()`, the meter the progress inside the level; the beach page is
   locked below level 3 (every card disabled with `LOCKED · LEVEL 3`).
-- **Multiplayer** — the icon beside Ranks flashes SOON (docs/BACKEND.md →
-  Phase 3).
 - **Shop** — off the home page by design; to be built into the league view
   with league-scoped cards.
 - **Tickets** (the pill) are real (`App.tickets()`): time trials and league heats award them (docs/ECONOMY.md).

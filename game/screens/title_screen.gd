@@ -86,6 +86,7 @@ var _chip_a: Label
 var _chip_b: Label
 var _settings: SettingsPanel
 var _ranks: RanksPage
+var _lobby: MatchLobbyPage
 var _switching := false
 
 
@@ -262,7 +263,7 @@ func rebuild_chrome() -> void:
 		tw.tween_interval(0.8)
 		tw.tween_callback(func() -> void: soon.visible = false)
 	ranks.pressed.connect(_open_ranks)
-	multi.pressed.connect(flash)
+	multi.pressed.connect(_open_lobby)
 	# `▾ ALL AREAS · 2/3 OPEN`: the archive's door.
 	_all_areas = Button.new()
 	_all_areas.name = "AllAreas"
@@ -886,7 +887,7 @@ var _locker: LockerPanel
 
 
 func _open_locker() -> void:
-	if _locker != null or _settings != null or _ranks != null or _switching:
+	if _locker != null or _settings != null or _ranks != null or _lobby != null or _switching:
 		return
 	_locker = LockerPanel.new()
 	_locker.name = "LockerPanel"
@@ -900,7 +901,7 @@ func _open_locker() -> void:
 
 
 func _open_settings() -> void:
-	if _settings != null or _ranks != null or _switching:
+	if _settings != null or _ranks != null or _lobby != null or _switching:
 		return
 	_settings = SettingsPanel.new()
 	_settings.name = "SettingsPanel"
@@ -919,7 +920,7 @@ func _archive_rows() -> Array:
 ## The page before an area's home (docs/HOME.md → Area archive). `instant`
 ## on a cold launch: no slide, and no `<` when the area behind is locked.
 func _open_archive(instant := false) -> void:
-	if _archive != null or _locker != null or _settings != null or _ranks != null or _switching:
+	if _archive != null or _locker != null or _settings != null or _ranks != null or _lobby != null or _switching:
 		return
 	var rows := _archive_rows()
 	_archive = AreaArchivePage.new()
@@ -977,6 +978,38 @@ func _open_ranks() -> void:
 
 func ranks() -> RanksPage:
 	return _ranks
+
+
+# ---- 1v1 (docs/BACKEND.md → Phase 3) -------------------------------------------------------
+
+
+## The lobby for this area: quick match, a code for a friend, or a friend's
+## code. App arranges the room and starts the heat; the page shows the way.
+func _open_lobby() -> void:
+	if _lobby != null or _ranks != null or _archive != null or _locker != null or _settings != null or _switching:
+		return
+	var area := str(CARDS[_index]["area"])
+	_lobby = MatchLobbyPage.new()
+	_lobby.name = "MatchLobby"
+	_lobby.build(area)
+	var on_state := func(kind: String, a: Variant = null, b: Variant = null) -> void:
+		if _lobby == null:
+			return
+		match kind:
+			"waiting": _lobby.show_waiting(str(a), str(b) if b != null else "")
+			"found": _lobby.show_found(Dictionary(a) if a is Dictionary else {})
+			"failed": _lobby.show_failed(str(a))
+	_lobby.quick.connect(func() -> void: App.start_online(area, "quick", "", on_state))
+	_lobby.create.connect(func() -> void: App.start_online(area, "create", "", on_state))
+	_lobby.join.connect(func(code: String) -> void: App.start_online(area, "join", code, on_state))
+	_lobby.cancel.connect(App.cancel_online)
+	_lobby.closed.connect(func() -> void: _lobby = null)
+	add_child(_lobby)
+	_lobby.slide_in()
+
+
+func lobby() -> MatchLobbyPage:
+	return _lobby
 
 
 ## Land on an area's home from the archive: the page's ink hands over to

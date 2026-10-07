@@ -354,6 +354,14 @@ func cached_board(area: String, period: String) -> Dictionary:
 	return Dictionary(_board_cache.get("%s:%s" % [area, period], {})).get("data", {})
 
 
+## A plain authenticated JSON call for the match lobby ({ok, code, json}).
+func request_json(key: String, method: int, path: String, body: Variant = null) -> Dictionary:
+	var r := await _request(key, method, path, body)
+	if not r["ok"] and r["code"] != -1 and r["code"] != 404 and r["code"] != 400:
+		_back_off(r)
+	return r
+
+
 # ---- the wire ---------------------------------------------------------------------------
 
 

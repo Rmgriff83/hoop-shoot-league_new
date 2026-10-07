@@ -22,7 +22,7 @@ static func league_of(heat: Dictionary) -> Dictionary:
 static func header(heat: Dictionary, doc: Dictionary) -> String:
 	var league := league_of(heat)
 	if league.is_empty():
-		return "QUICK HEAT"
+		return MatchCopy.header(heat) if bool(heat.get("online", false)) else "QUICK HEAT"
 	var cfg := LeagueData.league(str(league.get("id", "")))
 	var name_ := str(cfg.get("name", "LEAGUE")).to_upper()
 	if doc.is_empty():

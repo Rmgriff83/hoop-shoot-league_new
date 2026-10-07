@@ -62,8 +62,11 @@ func _make_rules() -> void:
 		"player_cards": Array(_heat_cfg.get("player_cards", [])),
 		"ai_cards": Array(_heat_cfg.get("ai_cards", [])),
 		"board_motion": bool(_mode.get("board_motion", false)),
+		"remote": bool(_heat_cfg.get("remote", false)),
 	})
 	trial = heat.player
+	if heat.remote:
+		_wire_online()
 
 
 func _after_ready() -> void:
@@ -76,7 +79,7 @@ func _after_ready() -> void:
 		var pos: Vector3 = sp["pos"]
 		list.push_back({"x": float(pos.x), "y": float(pos.y), "z": float(pos.z)})
 	heat.set_spots(list, _shuffle_enabled)
-	if _heat_cfg.get("league", null) != null:
+	if _heat_cfg.get("league", null) != null or heat.remote:
 		lock_spot_picker()
 	_build_pip()
 	_build_tray()
@@ -86,6 +89,71 @@ func _after_ready() -> void:
 
 func _ai_id() -> String:
 	return str(_heat_cfg.get("opponent", {}).get("id", ""))
+
+
+# ---- online (docs/BACKEND.md → Phase 3) ------------------------------------------------------
+
+var _online: Node = null
+var _shot_n := 0
+var _period_sent := -1
+
+
+## The room client App opened: their messages drive heat's remote side; our
+## releases, outcomes and buzzers go out as MatchProtocol messages.
+func _wire_online() -> void:
+	_online = App.room
+	if _online == null:
+		return
+	_online.message.connect(_on_online_message)
+	_online.closed.connect(_on_online_closed)
+
+
+func _on_online_message(msg: Dictionary) -> void:
+	if heat == null or not heat.remote:
+		return
+	match str(msg["t"]):
+		MatchProtocol.SHOT:
+			heat.remote_release(Dictionary(msg["launch"]))
+		MatchProtocol.OUTCOME:
+			heat.remote_outcome(int(msg["score"]))
+			_hud.set_opponent_score(heat.score(Heat.AI))
+		MatchProtocol.PERIOD_END:
+			heat.remote_period_end(int(msg["period"]), int(msg["score"]), Dictionary(msg.get("totals", {})))
+		MatchProtocol.PEER_LEFT, MatchProtocol.EXPIRED:
+			if not heat.done:
+				_court.info.marquee("THEY LEFT", 24.0, _court.info.accent_color)
+				heat.remote_forfeit()
+
+
+## Our own socket died: the match cannot go on. A void unless it was far
+## enough along to stand as a forfeit in our favour.
+func _on_online_closed(_reason: String) -> void:
+	if heat != null and heat.remote and not heat.done:
+		_court.info.marquee("CONNECTION LOST", 24.0, _court.info.accent_color)
+		heat.remote_forfeit()
+
+
+func _online_send(msg: Dictionary) -> void:
+	if _online != null and _online.has_method("send"):
+		_online.send(msg)
+
+
+## Our side's events, as the wire sees them.
+func _online_player_event(ev: Dictionary) -> void:
+	match ev["kind"]:
+		"release":
+			_shot_n += 1
+			_online_send(MatchProtocol.shot(_shot_n, ev["launch"]))
+		"outcome":
+			_online_send(MatchProtocol.outcome(_shot_n, heat.player.score))
+		"done":
+			if _period_sent != heat.ot:
+				_period_sent = heat.ot
+				_online_send(MatchProtocol.period_end(heat.ot, heat.player.score, Heat.totals_of(heat.player)))
+
+
+func online() -> bool:
+	return heat != null and heat.remote
 
 
 func _build_league_banner() -> void:
@@ -240,6 +308,8 @@ class TrayCard extends Control:
 
 
 func _build_tray() -> void:
+	if heat.remote:
+		return   # no cards online (v1): no tray, no empties
 	var layer := CanvasLayer.new()
 	layer.name = "CardUi"
 	layer.layer = 11
@@ -750,6 +820,9 @@ class RestoreGlyph extends Control:
 
 ## The opponent's loadout as chips under their window (rebuilt when it changes).
 func _refresh_opp_chips() -> void:
+	if heat.remote:
+		_opp_chips.visible = false   # no cards online (v1)
+		return
 	var hand: Array = heat.hands[Heat.AI]
 	if hand.size() == _opp_hand_n:
 		return
@@ -803,6 +876,8 @@ func _step_rules(dt: float) -> void:
 		if ev.get("side", "") == Heat.AI:
 			_handle_ai_event(ev)
 		else:
+			if heat.remote and ev.get("side", "") == Heat.PLAYER:
+				_online_player_event(ev)
 			_handle_event(ev)
 
 
@@ -848,7 +923,7 @@ func _handle_ai_event(ev: Dictionary) -> void:
 		"go":
 			_ai_court.arcade_chase()
 			if heat.ot > 0:
-				_ai_court.led.show_score(heat.ai.score)
+				_ai_court.led.show_score(heat.score(Heat.AI))
 			else:
 				_ai_court.info.set_text("")
 				_ai_court.led.show_score(0)
@@ -894,14 +969,14 @@ func _handle_ai_event(ev: Dictionary) -> void:
 			_ai_court.info.marquee("ON FIRE", 24.0, _ai_court.info.accent_color)
 		"fire_off":
 			_ai_tier_shown = 1
-			_ai_court.led.show_score(heat.ai.score)
+			_ai_court.led.show_score(heat.score(Heat.AI))
 			if _ai_court.fire_lit():
 				_ai_court.set_fire(false)
 				_ai_court.info.marquee("BURNED OUT" if str(ev.get("reason", "")) == "time" else "COOLED OFF", 24.0, _ai_court.info.accent_color)
 		"vortex_on":
 			_ai_court.info.marquee("VORTEX", 24.0, _ai_court.info.accent_color)
 		"vortex_off":
-			_ai_court.led.show_score(heat.ai.score)
+			_ai_court.led.show_score(heat.score(Heat.AI))
 			_ai_court.info.marquee("VORTEX SPENT" if str(ev.get("reason", "")) == "time" else "VORTEX ICED", 24.0, _ai_court.info.accent_color)
 		"card_played":
 			if ev.get("ok", false):
@@ -921,8 +996,8 @@ func _on_ai_outcome(outcome: Dictionary) -> void:
 	if outcome["made"]:
 		var tier := StreakRules.base_points(streak)
 		var lit := StreakRules.is_lit(streak)
-		_hud.set_opponent_score(heat.ai.score)
-		_ai_court.led.show_score(heat.ai.score, tier)
+		_hud.set_opponent_score(heat.score(Heat.AI))
+		_ai_court.led.show_score(heat.score(Heat.AI), tier)
 		_ai_court.rim_nudge()
 		_ai_court.play_make()
 		# Their scoring pop in the PiP (design 5a: every mode).
@@ -947,7 +1022,7 @@ func _process(dt: float) -> void:
 	# The city scoreboards: VISITOR is the other side, PER the period (OT 2+),
 	# and the opponent's own clock in the PiP. After super: the heat's period
 	# outranks the base trial's regulation/overtime pair.
-	_court.set_visitor(heat.ai.score)
+	_court.set_visitor(heat.score(Heat.AI))
 	_court.set_period(heat.ot + 1)
 	if _ai_court != null:
 		_ai_court.set_visitor(heat.player.score)
@@ -962,7 +1037,7 @@ func _process(dt: float) -> void:
 	_ai_court.step_net(dt, heat.balls(Heat.AI))
 	if heat.ai.phase == TimeTrial.PHASE_RUNNING:
 		_ai_court.led.band_flash(_ai_court.led.band_flash_color, LedBoard.band_hz_for(heat.ai.time_left))
-	_pip_chip_label.text = "OPP %d" % heat.ai.score
+	_pip_chip_label.text = "OPP %d" % heat.score(Heat.AI)
 	_refresh_opp_chips()
 	_refresh_tray()
 	_hud.set_ball_wait(heat.ball_wait() if heat.player.phase == TimeTrial.PHASE_RUNNING and not heat.player.holding else 0.0)
@@ -977,6 +1052,8 @@ func _finish() -> void:
 	_ai_court.set_fire(false)
 	_ai_court.set_ice(false)
 	var result := heat.result()
+	if heat.remote:
+		App.cancel_online()   # the room is done with us
 	# The match-end page (docs/HOME.md → Results): settle the heat at the
 	# buzzer and play the moment; a tap goes on to the post-match page. A
 	# heat outside a league skips straight there.

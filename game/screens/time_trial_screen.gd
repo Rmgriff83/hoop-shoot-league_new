@@ -222,6 +222,8 @@ func is_paused() -> bool:
 ## Leaving a mode that swapped the hoop's sounds restores the player's set,
 ## and never leaves the tree paused behind us.
 func _exit_tree() -> void:
+	if App.room != null and bool(App.next_heat.get("remote", false)) and not _finished_handed_off:
+		App.cancel_online()   # quitting an online heat forfeits it
 	get_tree().paused = false
 	if _court != null:
 		_court.leave_interactables()

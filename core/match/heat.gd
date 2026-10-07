@@ -10,6 +10,13 @@ extends RefCounted
 ## Renderer contract, same shape as TimeTrial: tick(dt) → drain_events() →
 ## balls(side). Every relayed event carries "side": "player" | "ai"; the heat
 ## adds ot_start {n} and heat_done {result}.
+##
+## Online (docs/BACKEND.md → Phase 3): `remote: true` drives the AI side from
+## the other phone instead of a bot. Their launches replay through the AI
+## TimeTrial for the picture (the same float64 sim, the same arc); their
+## scoreboard, period ends and totals come from their own messages and are
+## authoritative — each side owns its own shots. The local replay's score is
+## only compared against theirs to flag a desync.
 
 const PLAYER := "player"
 const AI := "ai"
@@ -57,6 +64,16 @@ var cards_played: Dictionary = {PLAYER: [], AI: []}
 ## the numbers it always did and every seeded replay stays valid.
 var player_bot: AiRatings = null
 
+## Online: the AI side is the other phone (no bot). Their authoritative
+## running score, their period-end report, launches that arrived before our
+## replay of their clock was running, and a forfeit.
+var remote := false
+var remote_score := 0
+var remote_shots := 0
+var _remote_period: Dictionary = {}
+var _remote_queue: Array = []
+var _forfeit := ""
+
 var _events: Array[Dictionary] = []
 ## side → {ratings, mood, rng, state (wait | aiming), timer, launch}
 var _bots: Dictionary = {}
@@ -88,7 +105,9 @@ func _init(config: Dictionary = {}) -> void:
 		side.ball_return_s = ball_return_s
 		side.board_motion = bool(config.get("board_motion", false))
 	_sides = {PLAYER: player, AI: ai}
-	_bots[AI] = _bot_entry(ai_ratings, ai_mood, rng)
+	remote = bool(config.get("remote", false))
+	if not remote:
+		_bots[AI] = _bot_entry(ai_ratings, ai_mood, rng)
 	player_bot = config.get("player_bot", null)
 	if player_bot != null:
 		var brng := rng.fork("player_bot")
@@ -149,7 +168,7 @@ func _ai_origin() -> Dictionary:
 ## At each mark inside the last 30 s the AI walks to a random other spot
 ## (seeded). A held ball is put down; the next pickup shoots from there.
 func _step_ai_shuffle() -> void:
-	if not spot_shuffle or ai.phase != TimeTrial.PHASE_RUNNING or ai.overtime or _shuffle_next >= SHUFFLE_MARKS.size():
+	if remote or not spot_shuffle or ai.phase != TimeTrial.PHASE_RUNNING or ai.overtime or _shuffle_next >= SHUFFLE_MARKS.size():
 		return
 	if ai.time_left > float(SHUFFLE_MARKS[_shuffle_next]):
 		return
@@ -172,7 +191,10 @@ func balls(name_: String) -> Array[BallState]:
 	return side(name_).balls()
 
 
+## A side's score for the board: online, the other phone's own count.
 func score(name_: String) -> int:
+	if remote and name_ == AI:
+		return remote_score
 	return side(name_).score
 
 
@@ -229,14 +251,105 @@ func tick(dt: float) -> void:
 			_start_ot_period()
 		return
 	_step_ai_shuffle()
-	# The AI first (its draws come off the shared stream in the order they
-	# always did), then the player bot on its own stream.
-	_drive_bot(AI, dt)
-	_drive_bot_cards(AI)
+	if remote:
+		_replay_queued()
+	else:
+		# The AI first (its draws come off the shared stream in the order they
+		# always did), then the player bot on its own stream.
+		_drive_bot(AI, dt)
+		_drive_bot_cards(AI)
 	if _bots.has(PLAYER):
 		_drive_bot(PLAYER, dt)
 		_drive_bot_cards(PLAYER)
 	_check_period_end()
+
+
+# ---- the other phone (online) -----------------------------------------------------
+
+
+## Their shot: replay it through the AI TimeTrial for the picture. Arrives
+## before our copy of their clock runs (latency at a period's open) → queued.
+## Returns true when it went in flight now.
+func remote_release(launch: Dictionary) -> bool:
+	if not remote or done or launch.is_empty():
+		return false
+	remote_shots += 1
+	_place_remote_from(launch)
+	if ai.phase != TimeTrial.PHASE_RUNNING:
+		_remote_queue.push_back(launch)
+		return false
+	return _replay(launch)
+
+
+func _replay(launch: Dictionary) -> bool:
+	# Their ball-return wait is theirs to keep; the replay never refuses.
+	ai.holding = true
+	return ai.release(launch)
+
+
+func _replay_queued() -> void:
+	if _remote_queue.is_empty() or ai.phase != TimeTrial.PHASE_RUNNING:
+		return
+	for launch in _remote_queue:
+		_replay(launch)
+	_remote_queue.clear()
+
+
+## The spot they shot from, by the launch's origin: the PiP frame follows.
+func _place_remote_from(launch: Dictionary) -> void:
+	if spots.size() < 2 or not launch.has("rx"):
+		return
+	var best := ai_spot_index
+	var best_d := INF
+	for i in spots.size():
+		var sp: Dictionary = spots[i]
+		var dx := float(sp["x"]) - float(launch["rx"])
+		var dz := float(sp["z"]) - float(launch.get("rz", 0.0))
+		var d := dx * dx + dz * dz
+		if d < best_d:
+			best_d = d
+			best = i
+	if best != ai_spot_index:
+		ai_spot_index = best
+		_events.push_back({"kind": "ai_spot", "side": AI, "index": ai_spot_index, "spot": ai_spot()})
+
+
+## Their running score after a shot (authoritative; the replay only pictures it).
+func remote_outcome(score: int) -> void:
+	if remote and not done:
+		remote_score = maxi(remote_score, score)
+
+
+## Their period is over: `totals` as Heat.totals_of, `score` final for the
+## period. The heat decides (OT or done) once ours is over too.
+func remote_period_end(period: int, score: int, totals: Dictionary) -> void:
+	if not remote or done:
+		return
+	remote_score = score
+	_remote_period = {"period": period, "score": score, "totals": totals.duplicate(true)}
+
+
+## They left: a win by forfeit once the match has been on long enough to
+## count (`min_played_s` of regulation), otherwise a void. Ends the heat now.
+func remote_forfeit(min_played_s := 30.0) -> void:
+	if not remote or done:
+		return
+	var played := seconds - player.time_left if ot == 0 else seconds
+	_forfeit = "forfeit" if played >= min_played_s else "void"
+	done = true
+	_result = _build_result()
+	_result["reason"] = _forfeit
+	_result["won"] = _forfeit == "forfeit"
+	_events.push_back({"kind": "heat_done", "result": _result})
+
+
+## Online: does the replay disagree with what they reported?
+func desync() -> bool:
+	return remote and ai.score != remote_score
+
+
+func forfeit_reason() -> String:
+	return _forfeit
 
 
 ## Deploy a card from `side`'s hand against the other side. The card leaves
@@ -276,7 +389,7 @@ func can_play(side_name: String, card_id: String) -> bool:
 
 func _drive_bot_cards(side_name: String) -> void:
 	var tt: TimeTrial = _sides[side_name]
-	if done or hands[side_name].is_empty() or tt.phase != TimeTrial.PHASE_RUNNING:
+	if done or not _bots.has(side_name) or hands[side_name].is_empty() or tt.phase != TimeTrial.PHASE_RUNNING:
 		return
 	var pick := CardPolicy.choose_for(side_name, hands[side_name], self, _bots[side_name]["card_rng"])
 	if pick != "":
@@ -353,9 +466,12 @@ func _check_period_end() -> void:
 		return
 	if player.phase != TimeTrial.PHASE_DONE or ai.phase != TimeTrial.PHASE_DONE:
 		return
-	if player.score == ai.score:
+	if remote and int(_remote_period.get("period", -1)) != ot:
+		return   # waiting on their report for this period
+	if player.score == score(AI):
 		ot += 1
 		_ot_break = OT_BREAK_S
+		_remote_queue.clear()
 		_events.push_back({"kind": "ot_start", "n": ot})
 		return
 	done = true
@@ -378,12 +494,23 @@ func _build_result() -> Dictionary:
 	var p := totals_of(player)
 	p["cardsPlayed"] = cards_played[PLAYER].duplicate()
 	var a := totals_of(ai)
+	if remote:
+		# Their own numbers, not our replay's.
+		var theirs: Dictionary = _remote_period.get("totals", {})
+		for k in a:
+			if theirs.has(k):
+				a[k] = theirs[k]
+		a["score"] = remote_score
 	a["cardsPlayed"] = cards_played[AI].duplicate()
-	return {
-		"won": player.score > ai.score,
+	var out := {
+		"won": player.score > score(AI),
 		"player_score": player.score,
-		"ai_score": ai.score,
+		"ai_score": score(AI),
 		"ot": ot,
 		"seed": seed_value,
 		"sides": {PLAYER: p, AI: a},
 	}
+	if remote:
+		out["online"] = true
+		out["desync"] = desync()
+	return out

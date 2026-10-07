@@ -157,26 +157,57 @@ build at any server.
 - **Settings → PLAYER** shows `CLOUD SAVE · SAVED 3 MIN AGO` / `2 PARTS
   WAITING` / `OFF` (`Net.cloud_line`).
 
-## Phase 3: live 1v1 league matches
+## Phase 3: live 1v1 matches (built 2026-10-06)
 
-- **Transport**: `WebSocketPeer.connect_to_url("wss://…/v1/match/{room}")`
-  polled in `_process`; one `MatchRoom` Durable Object per match (WebSocket
-  Hibernation API); a `Matchmaker` object holds the quick-match queue (area +
-  level band) and mints 5-letter room codes for playing a friend — the same
-  path across the table or across the world.
-- **Each side is authoritative over its own shots.** Per shot: `{t: sim_step,
-  launch: {angle_deg, speed, vz, backspin, rx, ry, rz, bx, bz}, outcome:
-  {type, points, streak, iced}}`. The receiver plays the launch through its
-  own `TimeTrial` for the PiP picture (`heat_screen` already renders the
-  opponent with the real sim) and takes the scoreboard from the sender's
-  outcome; a disagreement flags the match. No rewinds; latency only delays the
-  PiP a few hundred ms.
-- **Agreement at `start`**: seed (`DetRng.hash_seed(room)`), mode geometry
-  (`App.geo_for_mode`), `heat_seconds / ot_seconds / ball_return_s`, the spot
-  list, the server start time (3 s countdown). Board motion is a pure function
-  of elapsed time; spot shuffles travel as `spot` events. Each side sends
-  `period_end {score}`; the room waits for both and decides tie → `ot_start`.
-  Disconnect > 10 s after the first 30 s is a forfeit, before it a void.
-- **Engine**: `Heat` gets a remote-driven side (no `_bots[AI]`,
-  `remote_pickup()` / `remote_release(launch)`); the human opponent fills the
-  existing slot as `{id, name, colors.primary}`. Cards: v1 self-only.
+- **Transport**: `MatchClient` (`game/net/match_client.gd`) holds a
+  `WebSocketPeer` to `wss://…/v1/match/room/{id}?area=`, bearer in the
+  handshake, polled every frame, outgoing messages gated to 5 a second, a
+  ping every 30 s. The room is a `MatchRoom` Durable Object
+  (`server/src/match_room.ts`, WebSocket Hibernation); the Worker
+  authenticates the upgrade and hands the player on in headers.
+- **Matchmaking**: one `Lobby` Durable Object (`server/src/lobby.ts`).
+  `POST /v1/match/quick {area}` pairs the next two players in an area into one
+  room id (a 60 s wait, `leave` to step out); `POST /v1/match/code {area}`
+  mints a 5-letter code (10 min) and `POST /v1/match/join {code}` cashes it,
+  so a friend across the table or across the world takes the same path.
+- **Protocol** (`core/net/match_protocol.gd`, pure, tested): phone → room
+  `shot {n, launch}` on release, `outcome {n, score}` when it lands,
+  `period_end {period, score, totals}` at the buzzer, `ping`; room → phone
+  `joined {side, area, peer}`, `peer`, `start {seed, area, seconds, ot_seconds,
+  ball_return_s}` once both are in (no clocks to agree on: each phone starts
+  on receipt, latency apart), relayed messages tagged `from`, `peer_left`,
+  `expired`, `pong`. A shot is ~250 bytes; a match is ~60 messages a side.
+- **Sync model — each side owns its own shots.** `Heat` with `remote: true`
+  (`core/match/heat.gd`) has no bot: their launches replay through the AI
+  `TimeTrial` for the picture-in-picture (the same float64 sim, so the same
+  arc; shots that arrive before our copy of their clock runs queue), while
+  the scoreboard, the period decision and the box score come from their own
+  `outcome` / `period_end` messages. Both phones hold the same two
+  authoritative scores, so both decide the tie → OT and the winner
+  identically; the room records the match when both reports for a period
+  differ. A disagreement between the replay and their report flags `desync`
+  on the result (recorded on the match). `tests/test_heat_remote.gd` proves a
+  seeded bot's run replays to the identical score.
+- **Leaving**: a dropped socket tells the other phone `peer_left`; a match 30 s
+  in is a forfeit win for them, earlier a void (`Heat.remote_forfeit`). Quitting
+  the heat screen closes the room. Rooms that nobody joins expire after 60 s;
+  idle rooms after 2 min; every room after 10 min; a finished room closes
+  60 s after the decision.
+- **Throttles**: `/v1/match/*` 20/min per player + 200/day, `FEATURE_MATCH`
+  kill switch; per socket ≤ 5 messages/s and ≤ 2 KB (over → close 1008, which
+  counts as leaving).
+- **Game**: the home's multiplayer icon opens `MatchLobbyPage` (QUICK MATCH /
+  CREATE CODE / ENTER CODE + GO, then the waiting, found and failed states);
+  `App.start_online` talks to the Lobby, opens the room and tips off into
+  `start_heat` with `MatchProtocol.heat_cfg` (the area's heat mode, the room's
+  seed, no cards, the other phone's handle in the opponent slot with a palette
+  colour). The post-match header reads `ONLINE MATCH · BEACH` (`MatchCopy`).
+  No league, no XP, no cards in v1; opponent-affecting cards would need
+  relayed `card` events.
+- **Testing without a second phone**: two clients on the same server — the
+  phone and the Mac with `-- --api=https://hoop-shoot-api.rmgriffus.workers.dev`,
+  or two Mac windows — pair through QUICK MATCH or a code. `--qa-multi` stages
+  the lobby and a whole match offline against `QaFakePeer`
+  (`tools/qa_fake_peer.gd`), a seeded bot behind the wire.
+- **Later**: a ranked ladder from `matches`, cards in 1v1, rejoin after a drop
+  (the room already re-sends `start` to a reconnect).

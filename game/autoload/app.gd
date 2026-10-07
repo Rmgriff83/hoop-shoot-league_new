@@ -456,6 +456,96 @@ func peggy_drop(aim_x: float) -> Dictionary:
 	return last_prize
 
 
+# ---- online 1v1 (docs/BACKEND.md → Phase 3) -------------------------------------------
+
+## The live room while a match is being arranged or played (a MatchClient,
+## or the QA driver's fake peer: anything with `message`/`closed` signals
+## and `send`/`close`/`is_open`). Null between matches. (`match` is a
+## GDScript keyword, hence `room`.)
+var room: Node = null
+## How the current lobby attempt was started: quick | create | join.
+var match_how := ""
+var match_area := ""
+
+
+## Ask the Lobby, open the room, and play when the other phone arrives.
+## `on_state` is told the way: waiting(how, code) / found(peer) / failed(reason).
+func start_online(area: String, how: String, code: String, on_state: Callable) -> void:
+	cancel_online()
+	match_how = how
+	match_area = area
+	if not Net.enabled or not Net.registered():
+		on_state.call("failed", "offline")
+		return
+	var path := "/v1/match/" + ("quick" if how == "quick" else ("code" if how == "create" else "join"))
+	var r: Dictionary = await Net.request_json("match", HTTPClient.METHOD_POST, path, {"area": area, "code": code} if how == "join" else {"area": area})
+	if not r["ok"]:
+		var why := "offline"
+		if r["code"] == 404:
+			why = "not_found"
+		elif r["code"] == 400 and str(r["json"].get("error", "")) == "own_code":
+			why = "own_code"
+		elif r["code"] == 429:
+			why = "throttled"
+		on_state.call("failed", why)
+		return
+	var room_id := str(r["json"].get("room", ""))
+	var client := MatchClient.new()
+	client.name = "Match"
+	add_child(client)
+	room = client
+	if not client.open(room_id, area):
+		cancel_online()
+		on_state.call("failed", "offline")
+		return
+	on_state.call("waiting", how, str(r["json"].get("code", "")))
+	client.message.connect(func(msg: Dictionary) -> void:
+		if room != client:
+			return
+		match str(msg["t"]):
+			MatchProtocol.PEER:
+				on_state.call("found", Dictionary(msg.get("peer", {})))
+			MatchProtocol.JOINED:
+				if msg.get("peer", null) is Dictionary:
+					on_state.call("found", Dictionary(msg["peer"]))
+			MatchProtocol.START:
+				_tip_off(client, msg)
+			MatchProtocol.EXPIRED:
+				cancel_online()
+				on_state.call("failed", "expired")
+			MatchProtocol.PEER_LEFT:
+				if client.start.is_empty():   # they left before the tip-off
+					cancel_online()
+					on_state.call("failed", "peer_left")
+	)
+	client.closed.connect(func(reason: String) -> void:
+		if room == client and client.start.is_empty():
+			cancel_online()
+			on_state.call("failed", "expired" if reason == "expired" else "offline")
+	)
+
+
+## Both phones are in: the heat on the room's seed, the other phone in the
+## opponent slot. The screen takes the client from `room`.
+func _tip_off(client: MatchClient, start: Dictionary) -> void:
+	if match_how == "quick":
+		Net.request_json("match", HTTPClient.METHOD_POST, "/v1/match/leave", {"area": match_area})
+	var cfg := MatchProtocol.heat_cfg(start, client.peer)
+	start_heat(str(cfg["mode"]), cfg)
+
+
+## Leave the lobby / the room (a cancel, a back, a finished match).
+func cancel_online() -> void:
+	if room != null:
+		if room.has_method("close"):
+			room.close("bye")
+		room.queue_free()
+		room = null
+	if match_how == "quick" and match_area != "" and Net.enabled and Net.registered():
+		Net.request_json("match", HTTPClient.METHOD_POST, "/v1/match/leave", {"area": match_area})
+	match_how = ""
+
+
 # ---- routing -------------------------------------------------------------------
 
 
@@ -520,6 +610,7 @@ func settle_heat(result: Dictionary) -> Dictionary:
 	last_heat["mode"] = next_mode
 	last_heat["location"] = mode_config(next_mode).get("location", "cage")
 	last_heat["league"] = next_heat.get("league", null)
+	last_heat["online"] = bool(next_heat.get("remote", false))
 	if last_heat["league"] != null:
 		_apply_league_heat(last_heat)
 		Net.push_save()
