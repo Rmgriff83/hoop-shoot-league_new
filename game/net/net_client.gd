@@ -84,6 +84,10 @@ func ensure_account() -> void:
 		SaveService.put_account(a)
 	if not bool(a.get("registered", false)):
 		await _register()
+	else:
+		# A launch: anything newer on the mirror first, then anything we owe it.
+		await pull_save(true)
+		push_save(true)
 
 
 func _register() -> bool:
@@ -102,7 +106,8 @@ func _register() -> bool:
 		_fails = 0
 		account_ready.emit(a["name"], a["tag"])
 		flush(true)
-		pull_save(true)
+		await pull_save(true)
+		push_save(true)
 		return true
 	if r["code"] == 403:
 		# Someone registered this id with another secret (a restored backup
