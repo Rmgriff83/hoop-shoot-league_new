@@ -7,21 +7,25 @@ import { plausible, weekOf, normalizeName, validName } from "../src/rules";
 const uuid = () => crypto.randomUUID();
 const secret = () => [...crypto.getRandomValues(new Uint8Array(40))].map((b) => "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[b % 62]).join("");
 
-interface Player { playerId: string; secret: string; name: string; tag: string }
+interface Player { playerId: string; secret: string; name: string; tag: string; ip: string }
 
-async function register(ip = "10.0.0." + Math.floor(Math.random() * 250), extra: Record<string, unknown> = {}): Promise<Player> {
-  const p = { playerId: uuid(), secret: secret() };
+let ipCounter = 0;
+const freshIp = () => `10.${Math.floor(ipCounter / 65536) % 256}.${Math.floor(ipCounter / 256) % 256}.${ipCounter++ % 256}`;
+
+async function register(ip = freshIp(), extra: Record<string, unknown> = {}): Promise<Player> {
+  const p = { playerId: uuid(), secret: secret(), ip };
   const res = await SELF.fetch("https://api/v1/register", {
     method: "POST",
     headers: { "content-type": "application/json", "cf-connecting-ip": ip },
-    body: JSON.stringify({ ...p, clientId: uuid(), ...extra }),
+    body: JSON.stringify({ playerId: p.playerId, secret: p.secret, clientId: uuid(), ...extra }),
   });
   expect(res.status).toBe(200);
   const j = (await res.json()) as { name: string; tag: string };
   return { ...p, name: j.name, tag: j.tag };
 }
 
-const auth = (p: Player) => ({ authorization: `Bearer ${p.playerId}.${p.secret}`, "content-type": "application/json" });
+// Every call carries its player's IP so the per-IP wall judges each test alone.
+const auth = (p: Player) => ({ authorization: `Bearer ${p.playerId}.${p.secret}`, "content-type": "application/json", "cf-connecting-ip": p.ip });
 
 function run(area = "cage", score = 20, over: Record<string, unknown> = {}) {
   return {
@@ -223,6 +227,14 @@ describe("scores + boards", () => {
     const seventh = await submit(p, run());
     expect(seventh.status).toBe(429);
     expect(Number(seventh.retry)).toBeGreaterThan(0);
+  });
+  it("walls an IP at 60 requests a minute before any route", async () => {
+    const ip = "10.250.0.1";
+    for (let i = 0; i < 60; i++) expect((await SELF.fetch("https://api/v1/health", { headers: { "cf-connecting-ip": ip } })).status).toBe(200);
+    const res = await SELF.fetch("https://api/v1/health", { headers: { "cf-connecting-ip": ip } });
+    expect(res.status).toBe(429);
+    expect(Number(res.headers.get("Retry-After"))).toBeGreaterThan(0);
+    expect((await SELF.fetch("https://api/v1/health", { headers: { "cf-connecting-ip": "10.250.0.2" } })).status).toBe(200);
   });
   it("throttles board reads to 20 a minute", async () => {
     const p = await register();

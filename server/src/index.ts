@@ -48,6 +48,14 @@ async function body(c: any, allowed: readonly string[]): Promise<Record<string, 
   return onlyFields(obj, allowed) ? obj : null;
 }
 
+/** Layer 2: IP_PER_MINUTE requests a minute per IP, before any route runs. */
+export const IP_PER_MINUTE = 60;
+app.use("/v1/*", async (c, next) => {
+  const lim = await minuteLimit(c.env.RL_IP, `ip:${ip(c)}`, IP_PER_MINUTE);
+  if (!lim.allowed) return throttled(c, lim);
+  await next();
+});
+
 app.get("/v1/health", (c) => c.json({ ok: true }));
 
 // ---- accounts --------------------------------------------------------------------

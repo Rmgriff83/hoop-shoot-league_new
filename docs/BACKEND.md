@@ -83,9 +83,12 @@ Every request has a budget and a hit degrades to the device board.
    transfer code every 10 min; 429 / 5xx / timeouts back off 2, 4, 8 … s
    (±25 % jitter, cap 5 min, `Retry-After` wins — `core/net/backoff.gd`);
    nothing headless or under `-- --no-net`.
-2. **Edge** — a Cloudflare WAF rate-limiting rule (included free) on `/v1/*`,
-   e.g. 60 requests/min per IP with a 10 s block. Set in the dashboard
-   (Security → WAF → Rate limiting rules) so bots cannot burn the daily budget.
+2. **Edge** — a per-IP wall in front of every `/v1/*` route: 60 requests a
+   minute (`RL_IP`, the Workers Rate Limiting binding; `IP_PER_MINUTE`), answered
+   before any handler runs, so bots cannot burn the daily budget. A
+   `workers.dev` host has no WAF rules (those attach to a domain on a zone,
+   and the account-wide ones are Enterprise); if the API ever moves to a
+   domain Ross owns, the zone's one free rate-limiting rule is a bonus layer.
 3. **Worker** — per-player buckets: `scores` 6/min (binding) + 120/day (D1),
    `leaderboard` 20/min, `me` 5/min, `register` 5/hour per IP,
    `transfer/code` 3/hour, `transfer/claim` 5/hour per IP. Minute buckets use
@@ -120,8 +123,9 @@ First deploy (Ross, once): `npx wrangler login`, `npx wrangler d1 create
 hoop_shoot` → paste the id into `wrangler.toml` `[env.production]`,
 `npx wrangler d1 migrations apply hoop_shoot --env production --remote`,
 `npx wrangler deploy --env production`, then put the printed URL in
-`game/net/net_config.gd` `PROD_URL`. Until then phones stay on their device
-boards. `-- --api=URL` points any build at any server.
+`game/net/net_config.gd` `PROD_URL`. Done 2026-10-06: the API lives at
+`https://hoop-shoot-api.rmgriffus.workers.dev`. `-- --api=URL` points any
+build at any server.
 
 ## Phase 2: cloud save mirror
 

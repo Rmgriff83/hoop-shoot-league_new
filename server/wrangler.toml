@@ -31,9 +31,16 @@ database_name = "hoop_shoot"
 database_id = "33bd05b6-ab7f-49d6-b5f1-7e8115a5265e"
 migrations_dir = "migrations"
 
-# Per-player token buckets at the edge (the Workers Rate Limiting binding:
-# periods of 10 or 60 s only; longer windows live in the D1 `rl` table).
+# Token buckets at the edge (the Workers Rate Limiting binding: periods of
+# 10 or 60 s only; longer windows live in the D1 `rl` table). RL_IP is the
+# per-IP wall in front of everything — a workers.dev host has no WAF rules.
 # Missing bindings (local dev, tests) fall back to an in-isolate window.
+[[env.production.unsafe.bindings]]
+name = "RL_IP"
+type = "ratelimit"
+namespace_id = "1004"
+simple = { limit = 60, period = 60 }
+
 [[env.production.unsafe.bindings]]
 name = "RL_SCORES"
 type = "ratelimit"
