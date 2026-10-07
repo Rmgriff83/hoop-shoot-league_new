@@ -3,8 +3,8 @@ extends CanvasLayer
 ## The locker sheet (the top-left locker icon), docs/LOCKER.md. Two tabs:
 ## PEGGY — the drop machine (PeggyMachine) that wins balls for tickets — and
 ## BALLS — the collection grid (owned balls equip on tap, the rest show their
-## rarity) with the hoops under it (owned → equip, unowned → buy for tickets,
-## as before). A win pops the prize card over the sheet: SET AS YOUR BALL?
+## rarity). The hoop counter under it (buy for tickets, swap) is closed for
+## now (App.HOOPS_IN_LOCKER). A win pops the prize card over the sheet: SET AS YOUR BALL?
 ## EQUIP / KEEP, AGAIN; an epic or legend pull gets the rays. Opening BALLS
 ## clears App.unseen_balls(), which the title's locker icon badges.
 
@@ -485,6 +485,8 @@ func _build_balls() -> void:
 				_fill()
 		)
 		grid.add_child(tile)
+	if not App.HOOPS_IN_LOCKER:
+		return
 	var hhead := RetroTheme.caps("HOOPS", 16, RetroTheme.c("muted"))
 	hhead.name = "Head_hoop"
 	_list.add_child(hhead)

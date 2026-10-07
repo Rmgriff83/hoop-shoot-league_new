@@ -22,8 +22,8 @@ Ticker      flat strip at the very bottom, scrolling copy from the save
 No bottom nav: the phone's safe area would push one up, and the space goes to
 the cards. **Locker** (`game/ui/locker_panel.gd`, docs/LOCKER.md): two tabs —
 PEGGY, the ticket-fed drop machine that wins balls, and BALLS, the collection
-(owned equip via `App.select`, the rest show their rarity) with the hoops
-under it (unowned buy via `App.try_buy`). The locker icon carries a gold dot
+(owned equip via `App.select`, the rest show their rarity); the hoop counter
+under it is closed for now (`App.HOOPS_IN_LOCKER`). The locker icon carries a gold dot
 while a won ball has not been looked at. **Ranks** is an icon beside the area name: the global boards (below).
 **Shop is not on the home page**: it will live inside each league, selling
 cards usable only in that league (so the easy league can't farm cards for the

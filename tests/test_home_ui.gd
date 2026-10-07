@@ -296,15 +296,14 @@ func _widgets(t) -> void:
 	locker.show_tab("BALLS")
 	var rows: Array = locker.rows()
 	t.ok(rows.has("Ball_classic"), "the classic ball is in the locker (%s)" % str(rows.slice(0, 4)))
-	t.eq(rows.size(), CosmeticLibrary.balls().size() + CosmeticLibrary.hoops().size(), "every ball and hoop is listed")
-	t.ok(rows.has("Ball_gold") and rows.has("Hoop_street"), "unowned sets are on the counter")
+	t.eq(rows.size(), CosmeticLibrary.balls().size(), "every ball is listed, and nothing else")
+	t.ok(rows.has("Ball_gold") and not rows.has("Hoop_street"), "unowned balls are on the counter; hoops are not (the counter is closed for now)")
+	t.ok(locker.find_child("Head_hoop", true, false) == null, "no HOOPS heading")
+	t.ok(not app.try_buy("hoop", "street"), "a hoop cannot be bought while the counter is closed")
 	var gold: Button = locker.find_child("Ball_gold", true, false)
 	var gold_tag: Label = gold.find_child("Tag", true, false) if gold != null else null
 	t.ok(gold != null and gold.disabled, "an unowned ball cannot be tapped: it is won on PEGGY")
 	t.ok(gold_tag != null and gold_tag.text == "EPIC", "an unowned ball shows its rarity (%s)" % (gold_tag.text if gold_tag != null else "?"))
-	var street: Button = locker.find_child("Hoop_street", true, false)
-	t.ok(street != null and street.text.contains("TICKETS"), "an unowned hoop shows its ticket price")
-	t.ok(street != null and street.disabled == (app.tickets() < 300), "buying a hoop is gated on tickets")
 	if app.ball_set != null:
 		t.eq(locker.in_use_row(), "Ball_" + str(app.ball_set.id), "the ball in use is tagged")
 		var before: String = app.ball_set.id

@@ -278,9 +278,18 @@ func select_ball(id: String) -> bool:
 
 
 ## Spend tickets on a set. False if unknown, already owned, or unaffordable.
+## Hoops in the locker (buy for tickets, swap) are off for now (Ross,
+## 2026-10-07): the player's hoop stays the starter; modes still mandate
+## their own (the beach's street hoop, the city's chain). One flag to bring
+## the counter back.
+const HOOPS_IN_LOCKER := false
+
+
 func try_buy(kind: String, id: String) -> bool:
 	if kind == "ball":
 		return false   # balls are PEGGY prizes (docs/LOCKER.md), never bought
+	if kind == "hoop" and not HOOPS_IN_LOCKER:
+		return false   # the hoop counter is closed for now
 	var set: CosmeticSet = CosmeticLibrary.get_hoop(id) if kind == "hoop" else CosmeticLibrary.get_ball(id)
 	if set == null or owns(kind, id):
 		return false

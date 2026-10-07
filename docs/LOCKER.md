@@ -5,9 +5,11 @@ two tabs. **PEGGY** is a ticket-fed drop machine: aim a puck along a rail,
 hold the big red button while a ticket feeds in, and the puck rattles down a
 peg board into one of seven prize slots. Whatever ball sits in that slot is
 yours. **BALLS** is the collection: owned balls equip on tap, the rest show
-their rarity. Hoops are still bought for tickets under the collection
-(`App.try_buy("hoop", id)`); **balls are never bought**, `try_buy("ball", …)`
-refuses. Never call the machine "Plinko" anywhere in the game — it is PEGGY.
+their rarity. The hoop counter that used to sit under it (buy for tickets,
+swap) is **closed for now** (`App.HOOPS_IN_LOCKER = false`, 2026-10-07):
+`try_buy("hoop", …)` refuses and the locker lists balls only; the player's
+hoop stays the starter and the beach / city mandate their own. **Balls are
+never bought**, `try_buy("ball", …)` refuses. Never call the machine "Plinko" anywhere in the game — it is PEGGY.
 
 ## The rules
 
