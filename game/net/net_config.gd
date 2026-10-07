@@ -8,7 +8,7 @@ extends RefCounted
 const DEV_URL := "http://127.0.0.1:8787"
 ## The deployed Worker (`cd server && npx wrangler deploy --env production`
 ## prints it). Empty = no server yet: the game stays on its device boards.
-const PROD_URL := ""
+const PROD_URL := "https://hoop-shoot-api.rmgriffus.workers.dev"
 
 
 static func base_url() -> String:

@@ -28,7 +28,7 @@ FEATURE_TRANSFER = "on"
 [[env.production.d1_databases]]
 binding = "DB"
 database_name = "hoop_shoot"
-database_id = "REPLACE_WITH_wrangler_d1_create_OUTPUT"
+database_id = "33bd05b6-ab7f-49d6-b5f1-7e8115a5265e"
 migrations_dir = "migrations"
 
 # Per-player token buckets at the edge (the Workers Rate Limiting binding:
