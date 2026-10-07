@@ -521,7 +521,7 @@ func _open_room(room_id: String, area: String, on_state: Callable) -> bool:
 			MatchProtocol.SETTLED:
 				settled_online(msg)
 			MatchProtocol.REMATCH:
-				_set_rematch("both" if rematch_state == "offered" else "wanted")
+				_set_rematch("both" if rematch_state in ["offered", "both"] else "wanted")
 			MatchProtocol.REMATCH_GO:
 				_rematch_go(str(msg["room"]), str(msg.get("area", area)), on_state)
 			MatchProtocol.EXPIRED:

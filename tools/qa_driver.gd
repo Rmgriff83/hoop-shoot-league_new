@@ -837,6 +837,12 @@ func _run_multi() -> void:
 	App.add_child(fake)
 	App.room = fake
 	App.match_how = "create"
+	# App's room handler is wired in _open_room; the staged peer gets the one
+	# line of it the rematch card needs.
+	fake.message.connect(func(m: Dictionary) -> void:
+		if str(m.get("t", "")) == MatchProtocol.REMATCH:
+			App._set_rematch("both" if App.rematch_state in ["offered", "both"] else "wanted")
+	)
 	var cfg := MatchProtocol.heat_cfg(start, fake.peer, "a")
 	App.start_heat(str(cfg["mode"]), cfg)
 	await _sleep(1.0)
