@@ -115,8 +115,8 @@ chevron (the footer says START INSIDE).
   · DAY 4 · 3RD PLACE · NEXT UP: PRUDENCE CHIME · 1,240 TICKETS`, laid twice
   around a `★` seam and scrolled at 80 px/s.
 - **Settings** (`game/ui/settings_panel.gd`): SHOT HELP, DARK MODE, the
-  PLAYER section (your handle + SAVE, MOVE TO NEW PHONE, ENTER CODE —
-  docs/BACKEND.md → Identity), TUNING (debug builds only), CREDITS, CLOSE.
+  PLAYER section (your handle + SAVE, the cloud-save line, MOVE TO NEW
+  PHONE, ENTER CODE — docs/BACKEND.md → Identity / Phase 2), TUNING (debug builds only), CREDITS, CLOSE.
 - **Ranks** (`game/ui/ranks_page.gd` `RanksPage`, copy in `ranks_copy.gd`):
   the global time-trial boards (docs/BACKEND.md). `<` RANKS and your handle;
   CAGE / BEACH / CITY tabs (a locked area's tab greyed with `LVL n`); THIS

@@ -9,12 +9,14 @@ export interface Env {
   FEATURE_SUBMIT?: string;
   FEATURE_BOARD?: string;
   FEATURE_TRANSFER?: string;
+  FEATURE_SAVE?: string;
   /** Per-IP wall on every /v1 route (layer 2: a workers.dev host has no WAF). */
   RL_IP?: RateLimiter;
   /** Per-player minute buckets; absent locally, where limits.ts falls back to memory. */
   RL_SCORES?: RateLimiter;
   RL_BOARD?: RateLimiter;
   RL_ME?: RateLimiter;
+  RL_SAVE?: RateLimiter;
 }
 
 export interface PlayerRow {

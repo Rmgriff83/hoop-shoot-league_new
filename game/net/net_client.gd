@@ -11,11 +11,18 @@ signal account_ready(name: String, tag: String)
 signal score_accepted(area: String, reply: Dictionary)
 signal board_loaded(area: String, period: String, data: Dictionary)
 signal board_failed(area: String, period: String)
+## The mirror brought newer copies of these parts; App re-reads what it caches.
+signal save_pulled(parts: Array)
+signal save_pushed(parts: Array)
 
 const FLUSH_GAP_S := 30.0
 const BOARD_TTL_S := 60.0
 const TIMEOUT_S := 8.0
 const TRANSFER_GAP_S := 600.0
+## The mirror: a push of dirty parts at most this often (focus-out and a
+## transfer code force one), a pull of newer parts at most this often.
+const PUSH_GAP_S := 300.0
+const PULL_GAP_S := 60.0
 
 ## Off headless (the suite) and under --no-net (QA); the QA driver may flip it.
 var enabled := DisplayServer.get_name() != "headless" and not NetConfig.disabled_by_args()
@@ -31,6 +38,10 @@ var _blocked_until := 0.0
 var _fails := 0
 var _board_cache: Dictionary = {}
 var _rng := RandomNumberGenerator.new()
+var _pushing := false
+var _pulling := false
+var _last_push := -1.0
+var _last_pull := -1.0
 
 
 func _ready() -> void:
@@ -40,6 +51,9 @@ func _ready() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
 		flush()
+		pull_save()
+	elif what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED:
+		push_save(true)
 
 
 # ---- account -----------------------------------------------------------------------
@@ -88,6 +102,7 @@ func _register() -> bool:
 		_fails = 0
 		account_ready.emit(a["name"], a["tag"])
 		flush(true)
+		pull_save(true)
 		return true
 	if r["code"] == 403:
 		# Someone registered this id with another secret (a restored backup
@@ -120,6 +135,7 @@ func transfer_code() -> Dictionary:
 	if not registered() or not Backoff.can_fire(_now(), _last_transfer, TRANSFER_GAP_S):
 		return {}
 	_last_transfer = _now()
+	await push_save(true)   # the new phone should find everything
 	var r := await _request("transfer", HTTPClient.METHOD_POST, "/v1/transfer/code", {})
 	if r["ok"]:
 		return r["json"]
@@ -139,6 +155,7 @@ func claim_transfer(code: String) -> bool:
 	SaveService.put_account(a)
 	_board_cache.clear()
 	account_ready.emit(a["name"], a["tag"])
+	await pull_save(true)   # their progress, onto this phone
 	return true
 
 
@@ -184,6 +201,122 @@ func flush(force := false) -> void:
 	_flushing = false
 
 
+# ---- the cloud save mirror (docs/BACKEND.md → Phase 2) -------------------------------------
+
+
+## Push every dirty sync part the server does not already hold newer: PUT its
+## gzipped JSON with its own updatedAt. Taken or already-newer (409) both
+## clear the dirty flag; a 409 also queues a pull. Stops at the first failure.
+func push_save(force := false) -> void:
+	if _pushing or not _can_call() or not registered():
+		return
+	if not force and not Backoff.can_fire(_now(), _last_push, PUSH_GAP_S):
+		return
+	var dirty := []
+	for part in SaveService.dirty_parts():
+		if SaveCodec.is_sync_part(part):
+			dirty.push_back(part)
+	if dirty.is_empty():
+		return
+	_pushing = true
+	_last_push = _now()
+	var pushed := []
+	var stale := false
+	for part in dirty:
+		var doc := SaveService.part_doc(part)
+		var stamp := int(doc.get("updatedAt", 0))
+		if stamp <= 0:
+			SaveService.clear_dirty(part)
+			continue
+		var bytes := SaveCodec.encode(doc)
+		if bytes.size() > SaveCodec.PART_MAX_BYTES:
+			push_warning("Net: %s too large to mirror (%d bytes)" % [part, bytes.size()])
+			SaveService.clear_dirty(part)
+			continue
+		var r := await _request("save", HTTPClient.METHOD_PUT, "/v1/save/" + part, null, true,
+			bytes, PackedStringArray(["Content-Type: application/gzip", "X-Updated-At: %d" % stamp]))
+		if r["ok"]:
+			SaveService.clear_dirty(part)
+			pushed.push_back(part)
+			_fails = 0
+		elif r["code"] == 409:
+			SaveService.clear_dirty(part)
+			stale = true
+		elif r["code"] == 400 or r["code"] == 413:
+			push_warning("Net: %s refused by the mirror (%d)" % [part, r["code"]])
+			SaveService.clear_dirty(part)
+		else:
+			_back_off(r)
+			break
+	if not pushed.is_empty():
+		SaveService.set_last_sync(_now_ms())
+		save_pushed.emit(pushed)
+	_pushing = false
+	if stale:
+		pull_save(true)
+
+
+## Pull every part the server holds newer than ours: the manifest, then each
+## newer part's bytes into SaveService.restore_part. `save_pulled` names them.
+func pull_save(force := false) -> void:
+	if _pulling or not _can_call() or not registered():
+		return
+	if not force and not Backoff.can_fire(_now(), _last_pull, PULL_GAP_S):
+		return
+	_pulling = true
+	_last_pull = _now()
+	var m := await _request("save", HTTPClient.METHOD_GET, "/v1/save")
+	var pulled := []
+	if m["ok"]:
+		_fails = 0
+		var parts: Dictionary = m["json"].get("parts", {})
+		for part in parts:
+			if not SaveCodec.is_sync_part(str(part)):
+				continue
+			var remote := int(Dictionary(parts[part]).get("updatedAt", 0))
+			if remote <= SaveService.part_updated_at(str(part)):
+				continue
+			var r := await _request("save", HTTPClient.METHOD_GET, "/v1/save/" + str(part), null, true, PackedByteArray(), PackedStringArray(), true)
+			if not r["ok"]:
+				_back_off(r)
+				break
+			var doc := SaveCodec.decode(r["bytes"])
+			if doc.is_empty():
+				push_warning("Net: %s from the mirror did not decode" % part)
+				continue
+			if SaveService.restore_part(str(part), doc):
+				pulled.push_back(str(part))
+	elif m["code"] != -1:
+		_back_off(m)
+	if not pulled.is_empty():
+		SaveService.set_last_sync(_now_ms())
+		save_pulled.emit(pulled)
+	_pulling = false
+
+
+## One line for the settings sheet: CLOUD · SAVED 3 MIN AGO / 2 PARTS WAITING / OFF.
+func cloud_line() -> String:
+	if not enabled or NetConfig.base_url() == "":
+		return "CLOUD SAVE · OFF"
+	if not registered():
+		return "CLOUD SAVE · WAITING FOR SIGNAL"
+	var waiting := 0
+	for part in SaveService.dirty_parts():
+		if SaveCodec.is_sync_part(part):
+			waiting += 1
+	if waiting > 0:
+		return "CLOUD SAVE · %d PART%s WAITING" % [waiting, "" if waiting == 1 else "S"]
+	var last := SaveService.last_sync_at()
+	if last <= 0:
+		return "CLOUD SAVE · NOTHING TO SEND YET"
+	var ago := maxi(0, (_now_ms() - last) / 60000)
+	if ago < 1:
+		return "CLOUD SAVE · SAVED JUST NOW"
+	if ago < 60:
+		return "CLOUD SAVE · SAVED %d MIN AGO" % ago
+	return "CLOUD SAVE · SAVED %d H AGO" % (ago / 60)
+
+
 # ---- boards -----------------------------------------------------------------------------
 
 
@@ -219,10 +352,13 @@ func cached_board(area: String, period: String) -> Dictionary:
 # ---- the wire ---------------------------------------------------------------------------
 
 
-## One HTTP call. {ok, code, json, retry_after}: code 0 = no answer at all,
-## -1 = skipped (disabled, blocked, or that endpoint is already in flight).
-func _request(key: String, method: int, path: String, body: Variant = null, auth := true) -> Dictionary:
-	var out := {"ok": false, "code": -1, "json": {}, "retry_after": -1.0}
+## One HTTP call. {ok, code, json, bytes, retry_after}: code 0 = no answer at
+## all, -1 = skipped (disabled, blocked, or that endpoint is already in
+## flight). `raw` (with `raw_headers`) sends bytes instead of JSON; `want_bytes`
+## keeps the answer's bytes (a gzipped save part) instead of parsing JSON.
+func _request(key: String, method: int, path: String, body: Variant = null, auth := true,
+		raw := PackedByteArray(), raw_headers := PackedStringArray(), want_bytes := false) -> Dictionary:
+	var out := {"ok": false, "code": -1, "json": {}, "bytes": PackedByteArray(), "retry_after": -1.0}
 	if not _can_call() or _busy.get(key, false):
 		return out
 	_busy[key] = true
@@ -230,12 +366,19 @@ func _request(key: String, method: int, path: String, body: Variant = null, auth
 	req.timeout = TIMEOUT_S
 	req.accept_gzip = false
 	add_child(req)
-	var headers := PackedStringArray(["Content-Type: application/json", "Accept: application/json"])
+	var headers := PackedStringArray(["Accept: application/json"])
+	if raw.is_empty():
+		headers.append("Content-Type: application/json")
+	for h in raw_headers:
+		headers.append(h)
 	if auth:
 		var a := account()
 		headers.append("Authorization: Bearer %s.%s" % [str(a.get("playerId", "")), str(a.get("secret", ""))])
-	var payload := JSON.stringify(body) if body != null else ""
-	var err := req.request(NetConfig.base_url() + path, headers, method, payload)
+	var err: int
+	if not raw.is_empty():
+		err = req.request_raw(NetConfig.base_url() + path, headers, method, raw)
+	else:
+		err = req.request(NetConfig.base_url() + path, headers, method, JSON.stringify(body) if body != null else "")
 	if err != OK:
 		req.queue_free()
 		_busy[key] = false
@@ -253,9 +396,12 @@ func _request(key: String, method: int, path: String, body: Variant = null, auth
 		out["code"] = 0
 		return out
 	online = true
-	var parsed: Variant = JSON.parse_string(bytes.get_string_from_utf8())
-	out["json"] = parsed if parsed is Dictionary else {}
 	out["code"] = code
+	if want_bytes and code >= 200 and code < 300:
+		out["bytes"] = bytes
+	else:
+		var parsed: Variant = JSON.parse_string(bytes.get_string_from_utf8())
+		out["json"] = parsed if parsed is Dictionary else {}
 	out["ok"] = code >= 200 and code < 300
 	for h in hdrs:
 		if str(h).to_lower().begins_with("retry-after:"):

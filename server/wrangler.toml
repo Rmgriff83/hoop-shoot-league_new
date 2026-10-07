@@ -10,6 +10,7 @@ compatibility_flags = ["nodejs_compat"]
 FEATURE_SUBMIT = "on"
 FEATURE_BOARD = "on"
 FEATURE_TRANSFER = "on"
+FEATURE_SAVE = "on"
 
 [[d1_databases]]
 binding = "DB"
@@ -24,6 +25,7 @@ name = "hoop-shoot-api"
 FEATURE_SUBMIT = "on"
 FEATURE_BOARD = "on"
 FEATURE_TRANSFER = "on"
+FEATURE_SAVE = "on"
 
 [[env.production.d1_databases]]
 binding = "DB"
@@ -58,6 +60,12 @@ name = "RL_ME"
 type = "ratelimit"
 namespace_id = "1003"
 simple = { limit = 5, period = 60 }
+
+[[env.production.unsafe.bindings]]
+name = "RL_SAVE"
+type = "ratelimit"
+namespace_id = "1005"
+simple = { limit = 30, period = 60 }
 
 [triggers]
 crons = ["17 4 * * *"]

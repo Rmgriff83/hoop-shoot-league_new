@@ -127,13 +127,35 @@ hoop_shoot` → paste the id into `wrangler.toml` `[env.production]`,
 `https://hoop-shoot-api.rmgriffus.workers.dev`. `-- --api=URL` points any
 build at any server.
 
-## Phase 2: cloud save mirror
+## Phase 2: cloud save mirror (built 2026-10-06)
 
-`docs/SYNC.md`'s part push/pull onto `PUT/GET /v1/save/{part}` with a D1
-`save_parts(player_id, part, updated_at, body BLOB)`: gzipped whole parts,
-last-writer-wins on `updatedAt`, `tuning` and `account` never synced.
-Triggered by `SaveService.dirty_parts()` on run end / focus out, pulled on
-foreground. This is what makes a transfer code restore progress.
+`docs/SYNC.md`'s part push/pull, on `server/src/save.ts` and `Net.push_save` /
+`pull_save`:
+
+- **Wire**: a part is its JSON gzipped whole (`SaveCodec`, pure, tested).
+  `GET /v1/save` → the manifest `{parts: {part: {updatedAt, size}}, now}`;
+  `GET /v1/save/{part}` → the bytes with `X-Updated-At`; `PUT /v1/save/{part}`
+  with `X-Updated-At` stores when newer than what is held, else 409 with the
+  held stamp. Cap 256 KB gzipped per part; gzip magic checked; the server never
+  reads inside.
+- **Parts**: `time_trial_scores, cosmetics, settings, campaign, liveGames,
+  cards, progress` (`SaveCodec.SYNC_PARTS`, mirrored in `save.ts`). `account`
+  (the secret), `tuning` (a dev scratchpad) and `meta` (the device) never sync.
+- **Merge**: part-level last-writer-wins on the part's own `updatedAt`. Two
+  phones playing the same account in parallel keep the newer copy of each
+  part; the scores part is one list, so a run made on the older copy can lose
+  (accepted in SYNC.md).
+- **Triggers**: push of dirty parts after a run or a heat (5 min gap), forced
+  on focus-out / pause and before a transfer code; pull on launch after
+  registration, on focus-in (1 min gap), and forced after a claimed transfer
+  code — which is what makes the code restore progress. A 409 on push clears
+  the flag and pulls. `App._on_save_pulled` re-reads what it caches
+  (settings, cosmetics) and the home page redraws.
+- **Throttles**: `RL_SAVE` 30/min per player, `save:day` 400/day in D1,
+  `FEATURE_SAVE` kill switch; D1 free storage (5 GB) holds a few thousand
+  heavy players (7 parts × ≤ 256 KB, real parts a few KB).
+- **Settings → PLAYER** shows `CLOUD SAVE · SAVED 3 MIN AGO` / `2 PARTS
+  WAITING` / `OFF` (`Net.cloud_line`).
 
 ## Phase 3: live 1v1 league matches
 

@@ -335,6 +335,70 @@ func dirty_parts() -> Array:
 	return _outbox["dirtyParts"].duplicate()
 
 
+# ---- the cloud save mirror (docs/BACKEND.md → Phase 2; driven by Net) ---------
+
+
+## A part's whole doc as it sits on disk ({} for an unknown part).
+func part_doc(part: String) -> Dictionary:
+	match part:
+		SCORES_PART: return _scores.duplicate(true)
+		COSMETICS_PART: return _cosmetics.duplicate(true)
+		SETTINGS_PART: return _settings.duplicate(true)
+		CAMPAIGN_PART: return _campaign.duplicate(true)
+		LIVE_GAMES_PART: return _live_games.duplicate(true)
+		CARDS_PART: return _cards.duplicate(true)
+		PROGRESS_PART: return _progress.duplicate(true)
+	return {}
+
+
+func part_updated_at(part: String) -> int:
+	return int(part_doc(part).get("updatedAt", 0))
+
+
+## A newer copy of a part from the mirror: on disk and in memory, migrated
+## like a loaded one, and no longer dirty (the mirror is what we just read).
+## False for an unknown part or a doc without a stamp.
+func restore_part(part: String, doc: Dictionary) -> bool:
+	if not doc.has("updatedAt") or part_doc(part).is_empty() and not SaveCodec.is_sync_part(part):
+		return false
+	var d := doc.duplicate(true)
+	match part:
+		SCORES_PART:
+			if not (d.get("docs") is Array):
+				return false
+			_scores = d
+		COSMETICS_PART: _cosmetics = d
+		SETTINGS_PART: _settings = d
+		CAMPAIGN_PART: _campaign = d
+		LIVE_GAMES_PART: _live_games = d
+		CARDS_PART:
+			_cards = d
+			CardDefs.migrate(_cards)
+		PROGRESS_PART: _progress = d
+		_: return false
+	_write_json(part, part_doc(part))
+	clear_dirty(part)
+	return true
+
+
+## The mirror took this part: it is clean until the next write.
+func clear_dirty(part: String) -> void:
+	var parts: Array = _outbox.get("dirtyParts", [])
+	parts.erase(part)
+	_outbox["dirtyParts"] = parts
+	_write_json("outbox", _outbox)
+
+
+func set_last_sync(ms: int) -> void:
+	_outbox["lastSyncAt"] = ms
+	_write_json("outbox", _outbox)
+
+
+func last_sync_at() -> int:
+	var v: Variant = _outbox.get("lastSyncAt", null)
+	return int(v) if v != null else 0
+
+
 # ---- leaderboard outbox (docs/BACKEND.md → Scores; drained by Net) -----------
 
 

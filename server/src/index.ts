@@ -14,6 +14,7 @@ import {
 } from "./rules";
 import { BLOCKED, randomHandle } from "./handles";
 import * as db from "./db";
+import { save } from "./save";
 
 type Vars = { Bindings: Env; Variables: { player: PlayerRow } };
 export const app = new Hono<Vars>();
@@ -208,6 +209,9 @@ app.post("/v1/transfer/claim", async (c) => {
   if (!p) return c.json({ error: "not_found" }, 404);
   return c.json({ playerId: p.id, name: p.name, tag: p.tag });
 });
+
+// ---- the cloud save mirror (save.ts) ----------------------------------------------------
+app.route("/v1/save", save);
 
 app.notFound((c) => c.json({ error: "not_found" }, 404));
 app.onError((err, c) => {

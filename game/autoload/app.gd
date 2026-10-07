@@ -151,6 +151,20 @@ func _ready() -> void:
 	# The device account (docs/BACKEND.md): minted locally now, registered
 	# with the server when the net allows; nothing waits on it.
 	Net.ensure_account.call_deferred()
+	Net.save_pulled.connect(_on_save_pulled)
+
+
+## The cloud mirror brought newer parts (a new phone, or play elsewhere):
+## re-read what this autoload caches and let the home page redraw.
+func _on_save_pulled(parts: Array) -> void:
+	if parts.has(SaveService.SETTINGS_PART):
+		shot_help = shot_help_from_saved(SaveService.get_settings().get("shotHelp", SHOT_HELP_OFF))
+		dark_mode = bool(SaveService.get_settings().get("darkMode", false))
+	if parts.has(SaveService.COSMETICS_PART):
+		_resolve_cosmetics()
+	var scene := get_tree().current_scene
+	if scene != null and scene.has_method("rebuild_chrome"):
+		scene.call("rebuild_chrome")
 
 
 func _resolve_cosmetics() -> void:
@@ -508,6 +522,7 @@ func settle_heat(result: Dictionary) -> Dictionary:
 	last_heat["league"] = next_heat.get("league", null)
 	if last_heat["league"] != null:
 		_apply_league_heat(last_heat)
+		Net.push_save()
 	return last_heat
 
 
@@ -844,4 +859,5 @@ func finish_run(run: Dictionary) -> void:
 	# The global board (docs/BACKEND.md): queued in the outbox, sent when the
 	# net allows — the results page never waits on it.
 	Net.queue_run(last_run)
+	Net.push_save()
 	get_tree().change_scene_to_file(RESULTS_SCENE)

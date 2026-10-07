@@ -12,7 +12,7 @@ signal closed
 signal dark_mode_changed(on: bool)
 
 const DIM := Color(0.02, 0.02, 0.05, 0.72)
-const SHEET := Vector2(600, 880)
+const SHEET := Vector2(600, 910)
 
 var _shot_help: Button
 var _dark: Button
@@ -125,6 +125,10 @@ func _build_player(vbox: VBoxContainer) -> void:
 	_player_status.name = "PlayerStatus"
 	_player_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_player_status)
+	var cloud := RetroTheme.caps(Net.cloud_line(), 14, RetroTheme.c("muted"))
+	cloud.name = "CloudLine"
+	cloud.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	vbox.add_child(cloud)
 	_move = _row("MoveToPhone", "MOVE TO NEW PHONE", RetroTheme.c("teal"))
 	_move.pressed.connect(_move_to_phone)
 	vbox.add_child(_move)
