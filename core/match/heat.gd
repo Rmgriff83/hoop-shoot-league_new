@@ -237,6 +237,10 @@ func tick(dt: float) -> void:
 	ai.tick(dt)
 	for ev in player.drain_events():
 		ev["side"] = PLAYER
+		# The period this event belongs to, stamped now: when the other side's
+		# report is already in, the tie below rolls `ot` on in this same tick,
+		# and a buzzer report numbered at drain time would name the next period.
+		ev["period"] = ot
 		_events.push_back(ev)
 		if ev["kind"] == "outcome" and _bots.has(PLAYER):
 			_bots[PLAYER]["mood"].update(player_bot, _bots[PLAYER]["rng"])
@@ -481,7 +485,7 @@ func _check_period_end() -> void:
 		return
 	if player.phase != TimeTrial.PHASE_DONE or ai.phase != TimeTrial.PHASE_DONE:
 		return
-	if remote and int(_remote_period.get("period", -1)) != ot:
+	if remote and int(_remote_period.get("period", -1)) < ot:
 		return   # waiting on their report for this period
 	if player.score == score(AI):
 		ot += 1

@@ -12,7 +12,8 @@ signal message(msg: Dictionary)
 signal closed(reason: String)
 
 const PING_EVERY_S := 30.0
-const SEND_GAP_S := 1.0 / float(MatchProtocol.MAX_PER_S)
+## A touch under the room's cap, so jitter never lands six in one of its seconds.
+const SEND_GAP_S := 1.25 / float(MatchProtocol.MAX_PER_S)
 const CONNECT_TIMEOUT_S := 10.0
 
 var room := ""

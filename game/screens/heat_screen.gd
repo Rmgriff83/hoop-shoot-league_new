@@ -170,9 +170,12 @@ func _online_player_event(ev: Dictionary) -> void:
 		"outcome":
 			_online_send(MatchProtocol.outcome(_shot_n, heat.player.score))
 		"done":
-			if _period_sent != heat.ot:
-				_period_sent = heat.ot
-				_online_send(MatchProtocol.period_end(heat.ot, heat.player.score, Heat.totals_of(heat.player)))
+			# The period the buzzer belonged to (stamped by Heat.tick; heat.ot may
+			# already have rolled on when their report beat our buzzer).
+			var period := int(ev.get("period", heat.ot))
+			if _period_sent != period:
+				_period_sent = period
+				_online_send(MatchProtocol.period_end(period, heat.player.score, Heat.totals_of(heat.player)))
 
 
 func online() -> bool:
