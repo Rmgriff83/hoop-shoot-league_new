@@ -489,16 +489,24 @@ func start_online(area: String, how: String, code: String, on_state: Callable) -
 			why = "throttled"
 		on_state.call("failed", why)
 		return
-	var room_id := str(r["json"].get("room", ""))
+	if _open_room(str(r["json"].get("room", "")), area, on_state):
+		on_state.call("waiting", how, str(r["json"].get("code", "")))
+	else:
+		on_state.call("failed", "offline")
+
+
+## Open a room and route its messages for the life of the client: the lobby
+## states before the tip-off, the payout and the rematch after. False when
+## the socket could not open.
+func _open_room(room_id: String, area: String, on_state: Callable) -> bool:
 	var client := MatchClient.new()
 	client.name = "Match"
 	add_child(client)
 	room = client
+	rematch_state = ""
 	if not client.open(room_id, area, loadout_slots(Net.ONLINE_BUCKET)):
 		cancel_online()
-		on_state.call("failed", "offline")
-		return
-	on_state.call("waiting", how, str(r["json"].get("code", "")))
+		return false
 	client.message.connect(func(msg: Dictionary) -> void:
 		if room != client:
 			return
@@ -512,6 +520,10 @@ func start_online(area: String, how: String, code: String, on_state: Callable) -
 				_tip_off(client, msg)
 			MatchProtocol.SETTLED:
 				settled_online(msg)
+			MatchProtocol.REMATCH:
+				_set_rematch("both" if rematch_state == "offered" else "wanted")
+			MatchProtocol.REMATCH_GO:
+				_rematch_go(str(msg["room"]), str(msg.get("area", area)), on_state)
 			MatchProtocol.EXPIRED:
 				cancel_online()
 				on_state.call("failed", "expired")
@@ -519,12 +531,49 @@ func start_online(area: String, how: String, code: String, on_state: Callable) -
 				if client.start.is_empty():   # they left before the tip-off
 					cancel_online()
 					on_state.call("failed", "peer_left")
+				else:
+					_set_rematch("gone")
 	)
 	client.closed.connect(func(reason: String) -> void:
 		if room == client and client.start.is_empty():
 			cancel_online()
 			on_state.call("failed", "expired" if reason == "expired" else "offline")
 	)
+	return true
+
+
+# ---- rematch (docs/BACKEND.md → Phase 3, Rematch) ----------------------------------------------------
+
+## "" | offered | wanted | both | gone — the post-match REMATCH card reads it.
+signal rematch_changed(state: String)
+var rematch_state := ""
+
+
+func _set_rematch(state: String) -> void:
+	rematch_state = state
+	rematch_changed.emit(state)
+
+
+## Ask the other phone for another go (or accept their ask).
+func offer_rematch() -> void:
+	if room == null or not room.has_method("send") or not MatchCopy.rematch_active(rematch_state):
+		return
+	room.send(MatchProtocol.rematch())
+	_set_rematch("both" if rematch_state == "wanted" else "offered")
+
+
+## Both asked: the old room hands us a fresh one; the lobby path from here.
+func _rematch_go(room_id: String, area: String, on_state: Callable) -> void:
+	var old: Node = room
+	room = null
+	if old != null and old.has_method("close"):
+		old.close("rematch")
+	if not (old is MatchClient) and old != null:
+		old.queue_free()
+	match_how = "rematch"
+	match_area = area
+	if not _open_room(room_id, area, on_state):
+		_set_rematch("gone")
 
 
 ## Both phones are in: the heat on the room's seed, the other phone in the
@@ -533,6 +582,7 @@ func _tip_off(client: MatchClient, start: Dictionary) -> void:
 	if match_how == "quick":
 		Net.request_json("match", HTTPClient.METHOD_POST, "/v1/match/leave", {"area": match_area})
 	online_settle = {}
+	rematch_state = ""
 	var cfg := MatchProtocol.heat_cfg(start, client.peer, client.side)
 	start_heat(str(cfg["mode"]), cfg)
 
@@ -567,6 +617,7 @@ func cancel_online() -> void:
 		if not (room is MatchClient):
 			room.queue_free()
 		room = null
+	rematch_state = ""
 	if match_how == "quick" and match_area != "" and Net.enabled and Net.registered():
 		Net.request_json("match", HTTPClient.METHOD_POST, "/v1/match/leave", {"area": match_area})
 	match_how = ""

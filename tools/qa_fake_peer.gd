@@ -51,6 +51,9 @@ func send(msg: Dictionary) -> void:
 	match str(msg.get("t", "")):
 		MatchProtocol.CARD:
 			message.emit.call_deferred({"t": MatchProtocol.CARD_OK, "id": str(msg["id"])})
+		MatchProtocol.REMATCH:
+			# The fake always wants another go; a real room would then send rematch_go.
+			message.emit.call_deferred({"t": MatchProtocol.REMATCH, "from": "b"})
 		MatchProtocol.OUTCOME:
 			_our_score = int(msg.get("score", 0))
 		MatchProtocol.PERIOD_END:
@@ -68,6 +71,11 @@ func _maybe_settle() -> void:
 	var won := _our_score > _heat.ai.score
 	var pay := Economy.online_coins(won, 1, 4)
 	message.emit.call_deferred({"t": MatchProtocol.SETTLED, "coins": int(pay["coins"]), "mult": float(pay["mult"]), "won": won, "reason": "played", "wallet": 120 + int(pay["coins"])})
+
+
+## Their side asks first (the QA driver stages the wanted state).
+func ask_rematch() -> void:
+	message.emit({"t": MatchProtocol.REMATCH, "from": "b"})
 
 
 func is_open() -> bool:

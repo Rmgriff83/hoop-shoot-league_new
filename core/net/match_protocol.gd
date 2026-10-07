@@ -9,6 +9,7 @@ const SHOT := "shot"           # {t, n, launch}            one per release
 const OUTCOME := "outcome"     # {t, n, score}             the sender's running score after it landed
 const PERIOD_END := "period_end"  # {t, period, score, totals}
 const CARD := "card"           # {t, id}                   a card out of the hand the room dealt
+const REMATCH := "rematch"     # {t}                       on the post-match page: another go?
 const PING := "ping"
 ## Messages the room sends.
 const JOINED := "joined"       # {t, side, room, area, peer|null}
@@ -16,6 +17,7 @@ const PEER := "peer"           # {t, peer}                 the other phone arriv
 const START := "start"         # {t, seed, area, seconds, ot_seconds, ball_return_s, hands: {a, b}, levels: {a, b}}
 const CARD_OK := "card_ok"     # {t, id}                   the room took our card
 const SETTLED := "settled"     # {t, coins, mult, won, reason, wallet}  the payout
+const REMATCH_GO := "rematch_go"  # {t, room, area}        both asked: the fresh room
 const PEER_LEFT := "peer_left"
 const EXPIRED := "expired"     # nobody came
 const ERROR := "error"
@@ -50,6 +52,10 @@ static func period_end(period: int, score: int, totals: Dictionary) -> Dictionar
 
 static func card(id: String) -> Dictionary:
 	return {"t": CARD, "id": id}
+
+
+static func rematch() -> Dictionary:
+	return {"t": REMATCH}
 
 
 static func encode(msg: Dictionary) -> String:
@@ -89,6 +95,11 @@ static func parse(text: String) -> Dictionary:
 		SETTLED:
 			if not _num(m.get("coins")):
 				return {}
+		REMATCH_GO:
+			if not (m.get("room") is String) or not _is_uuid(str(m["room"])) or not (m.get("area") is String):
+				return {}
+		REMATCH:
+			pass
 		JOINED, PEER, PEER_LEFT, EXPIRED, ERROR, PONG, PING:
 			pass
 		_:
@@ -98,6 +109,10 @@ static func parse(text: String) -> Dictionary:
 
 static func _num(v: Variant) -> bool:
 	return v is int or v is float
+
+
+static func _is_uuid(s: String) -> bool:
+	return RegEx.create_from_string("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$").search(s) != null
 
 
 ## The hand the room dealt a side, as the tray's three slots (null = blank).

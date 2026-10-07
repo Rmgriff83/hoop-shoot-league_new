@@ -54,12 +54,42 @@ static func header(heat: Dictionary) -> String:
 	return "ONLINE MATCH · %s" % area
 
 
+## The post-match REMATCH card by state: "" (nothing yet), offered (we
+## asked), wanted (they asked), both (tipping off), gone (they left).
+static func rematch_title(state: String) -> String:
+	match state:
+		"wanted": return "THEY WANT A REMATCH"
+		"both": return "REMATCH ON"
+		"gone": return "THEY LEFT"
+	return "REMATCH?"
+
+
+static func rematch_sub(state: String) -> String:
+	match state:
+		"offered": return "WAITING FOR THEM..."
+		"wanted": return "TAP TO ACCEPT"
+		"both": return "TIPPING OFF..."
+		"gone": return "BACK HOME FOR ANOTHER"
+	return "ASK FOR ANOTHER"
+
+
+## Can the card be tapped in this state?
+static func rematch_active(state: String) -> bool:
+	return state == "" or state == "wanted"
+
+
+const REMATCH_STATES := ["", "offered", "wanted", "both", "gone"]
+
+
 static func strings() -> Array:
-	var out := ["QUICK MATCH", "CREATE CODE", "ENTER CODE", "GO", "CANCEL", "<", quick_sub(), code_sub(), join_sub(),
+	var out := ["QUICK MATCH", "CREATE CODE", "ENTER CODE", "GO", "CANCEL", "<", ">", quick_sub(), code_sub(), join_sub(),
 		code_line("ABCDE"), waiting_line("quick"), waiting_line("code"), found_line({"name": "GLASS WIZARD", "tag": "07"}),
 		header({"location": "beach"}), header({"location": "city", "reason": "forfeit"}), header({"location": "cage", "reason": "void"})]
 	for a in RanksCopy.AREAS:
 		out.push_back(title(a))
 	for r in ["expired", "not_found", "own_code", "offline", "peer_left", "throttled", "x"]:
 		out.push_back(failed_line(r))
+	for st in REMATCH_STATES:
+		out.push_back(rematch_title(st))
+		out.push_back(rematch_sub(st))
 	return out

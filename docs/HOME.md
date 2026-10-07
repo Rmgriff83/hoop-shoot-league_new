@@ -134,8 +134,9 @@ chevron (the footer says START INSIDE).
   `FINDING A PLAYER...`), FOUND and the failure lines. `App.start_online`
   arranges the room and tips off into a heat with the other phone in the
   opponent slot; the post-match page reads `ONLINE MATCH · BEACH` with the
-  online coins card (`+110 · ONLINE COINS · WIN · UPSET · X2.2`). QA:
-  `--qa-multi`.
+  online coins card (`+110 · ONLINE COINS · WIN · UPSET · X2.2`) and the
+  REMATCH? card (orange to ask, gold when they asked, teal once both have,
+  THEY LEFT when the other phone went home). QA: `--qa-multi`.
 
 ## Placeholders (present, not wired)
 

@@ -851,8 +851,15 @@ func _run_multi() -> void:
 	await _snap("online_heat_late")
 	await _sleep(9.0)
 	await _snap("online_result")
-	# The finished heat has already closed and freed the room.
-	print("QA multi: done (peer %s)" % ("still here" if is_instance_valid(fake) else "freed with the room"))
+	# The rematch card: they ask (gold), we accept (teal).
+	if is_instance_valid(fake):
+		fake.ask_rematch()
+		await _sleep(0.3)
+		await _snap("online_rematch_wanted")
+		App.offer_rematch()
+		await _sleep(0.3)
+		await _snap("online_rematch_both")
+	print("QA multi: done (rematch %s)" % App.rematch_state)
 	get_tree().quit()
 
 

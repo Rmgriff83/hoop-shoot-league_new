@@ -262,6 +262,8 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 			crow.add_child(ch)
 			cont.pressed.connect(App.to_league_hub)
 			chrome.add_child(cont)
+	if online and App.room != null:
+		chrome.add_child(_rematch_card(shift))
 	var home := ShadowCard.new(CREAM)
 	home.name = "Home"
 	home.position = Vector2(MARGIN, HOME_Y + shift)
@@ -273,6 +275,56 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	home.pressed.connect(App.to_title)
 	chrome.add_child(home)
 	return chrome
+
+
+## REMATCH? (docs/BACKEND.md → Phase 3, Rematch): only here, only while the
+## room is still open. Orange to ask, gold when they asked (tap to accept),
+## teal once both have, cream and dead when they left. Restyles on
+## App.rematch_changed.
+func _rematch_card(shift: float) -> Control:
+	var card := ShadowCard.new(RetroTheme.c("orange"))
+	card.name = "Rematch"
+	card.position = Vector2(MARGIN, CONT_Y + shift)
+	card.size = Vector2(RIGHT - MARGIN + ShadowStyle.OFFSET, CONT_H + ShadowStyle.OFFSET)
+	var cm := _margin(0, 24)
+	card.add_child(cm)
+	var row := _hbox(16)
+	cm.add_child(row)
+	var col := _vbox(14)
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var title := _text("", 24, CREAM, true)
+	title.name = "RematchTitle"
+	col.add_child(title)
+	var sub := _text("")
+	sub.name = "RematchSub"
+	col.add_child(sub)
+	row.add_child(col)
+	var ch := _text(">", 32, CREAM, true)
+	ch.name = "RematchChevron"
+	ch.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(ch)
+	var style := func(state: String) -> void:
+		if not is_instance_valid(card):
+			return
+		title.text = MatchCopy.rematch_title(state)
+		sub.text = MatchCopy.rematch_sub(state)
+		card.disabled = not MatchCopy.rematch_active(state)
+		ch.visible = MatchCopy.rematch_active(state)
+		match state:
+			"wanted": card.color = RetroTheme.c("gold")
+			"both": card.color = RetroTheme.c("teal")
+			"gone": card.color = CREAM
+			_: card.color = RetroTheme.c("orange")
+		card.queue_redraw()
+	style.call(App.rematch_state)
+	App.rematch_changed.connect(style)
+	card.tree_exited.connect(func() -> void:
+		if App.rematch_changed.is_connected(style):
+			App.rematch_changed.disconnect(style)
+	)
+	card.pressed.connect(App.offer_rematch)
+	return card
 
 
 ## A box row: the label, then you / them in 150-px columns, the better in gold.

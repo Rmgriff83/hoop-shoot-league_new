@@ -209,6 +209,15 @@ build at any server.
   or two Mac windows — pair through QUICK MATCH or a code. `--qa-multi` stages
   the lobby and a whole match offline against `QaFakePeer`
   (`tools/qa_fake_peer.gd`), a seeded bot behind the wire.
+- **Rematch** (2026-10-07): only on the post-match page, while the finished
+  room is still open (it lives 60 s after the decision, another minute per
+  offer). `REMATCH?` sends `rematch`; the other phone's card turns gold
+  (`THEY WANT A REMATCH · TAP TO ACCEPT`); when both have asked the old room
+  mints a fresh room id and sends `rematch_go {room, area}`, each phone opens
+  it with its current loadout (revalidated by the Worker) and the new
+  `start` tips off. Leaving the page (HOME) closes the socket and the other
+  phone's card reads `THEY LEFT`. `App.offer_rematch`, `App.rematch_state`,
+  `MatchCopy.rematch_*`.
 - **Later**: a ranked ladder from `matches`, rejoin after a drop (the room
   already re-sends `start` to a reconnect), an online card-drop system.
 

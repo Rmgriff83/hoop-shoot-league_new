@@ -55,6 +55,43 @@ func run(t) -> void:
 	(root.find_child("Cancel", true, false) as Button).pressed.emit()
 	t.eq(cancels[0], 1, "cancel emits")
 	t.eq(page.state(), "menu", "…and goes back to the menu")
+	# The rematch card's words and the page that carries it.
+	t.eq([MatchCopy.rematch_title(""), MatchCopy.rematch_sub("")], ["REMATCH?", "ASK FOR ANOTHER"], "nothing yet")
+	t.eq([MatchCopy.rematch_title("offered"), MatchCopy.rematch_sub("offered")], ["REMATCH?", "WAITING FOR THEM..."], "we asked")
+	t.eq([MatchCopy.rematch_title("wanted"), MatchCopy.rematch_sub("wanted")], ["THEY WANT A REMATCH", "TAP TO ACCEPT"], "they asked")
+	t.eq([MatchCopy.rematch_title("both"), MatchCopy.rematch_sub("both")], ["REMATCH ON", "TIPPING OFF..."], "both")
+	t.eq([MatchCopy.rematch_title("gone"), MatchCopy.rematch_sub("gone")], ["THEY LEFT", "BACK HOME FOR ANOTHER"], "they left")
+	t.ok(MatchCopy.rematch_active("") and MatchCopy.rematch_active("wanted"), "ask and accept are taps")
+	t.ok(not MatchCopy.rematch_active("offered") and not MatchCopy.rematch_active("both") and not MatchCopy.rematch_active("gone"), "the rest are not")
+	var heat := {"online": true, "won": false, "location": "beach", "player_score": 3, "ai_score": 7, "ot": 0, "coins": 20, "mult": 1.0,
+		"opponent": MatchProtocol.opponent({"name": "GLASS WIZARD", "tag": "07"}), "sides": {"player": {}, "ai": {}}}
+	var screen_script: GDScript = load("res://game/screens/heat_result_screen.gd")
+	var screen: Node = screen_script.new()
+	App.room = null
+	App.rematch_state = ""
+	var chrome_off: Control = screen.build_chrome(heat, {}, {})
+	t.ok(chrome_off.find_child("Rematch", true, false) == null, "no REMATCH once the room is gone")
+	chrome_off.free()
+	var stub := QaFakePeer.new()
+	App.room = stub
+	var chrome: Control = screen.build_chrome(heat, {}, {})
+	var rematch: Button = chrome.find_child("Rematch", true, false)
+	t.ok(rematch != null and not rematch.disabled, "REMATCH? on an online post-match page with the room open")
+	t.eq((chrome.find_child("RematchTitle", true, false) as Label).text, "REMATCH?", "…reads REMATCH?")
+	rematch.pressed.emit()
+	t.eq(App.rematch_state, "offered", "tapping asks")
+	t.eq(stub.sent[-1]["t"], "rematch", "…over the wire")
+	t.ok(rematch.disabled, "…and the card waits")
+	t.eq((chrome.find_child("RematchSub", true, false) as Label).text, "WAITING FOR THEM...", "…saying so")
+	App._set_rematch("both")
+	t.eq((chrome.find_child("RematchTitle", true, false) as Label).text, "REMATCH ON", "both: REMATCH ON")
+	App._set_rematch("gone")
+	t.eq((chrome.find_child("RematchTitle", true, false) as Label).text, "THEY LEFT", "gone: THEY LEFT")
+	chrome.free()
+	screen.free()
+	App.room = null
+	App.rematch_state = ""
+	stub.free()
 	# The fake peer speaks the protocol.
 	var fake := QaFakePeer.new()
 	fake.stage({"seed": 5, "area": "beach", "seconds": 4.0}, SimGeometry.beach(SimGeometry.BEACH_DIST))

@@ -214,6 +214,53 @@ describe("match room", () => {
     D.send({ t: "period_end", period: 0, score: 5, totals: {} });
     expect(await D.until((m) => m.t === "settled")).toMatchObject({ won: true, reason: "forfeit" });
   });
+  it("brokers a rematch into a fresh room once both have asked", async () => {
+    const a = await register();
+    const b = await register();
+    const room = uuid();
+    const A = await join(a, room, "beach");
+    const B = await join(b, room, "beach");
+    await A.until((m) => m.t === "start");
+    A.send({ t: "rematch" });
+    expect((await A.until((m) => m.t === "error")).code).toBe("not_done"); // not during play
+    A.send({ t: "period_end", period: 0, score: 10, totals: {} });
+    B.send({ t: "period_end", period: 0, score: 4, totals: {} });
+    await A.until((m) => m.t === "settled");
+    await B.until((m) => m.t === "settled");
+    B.send({ t: "rematch" });
+    expect((await A.until((m) => m.t === "rematch")).from).toBe("b");
+    await A.settle();
+    expect(A.inbox.filter((m) => m.t === "rematch_go")).toHaveLength(0); // one side is not enough
+    A.send({ t: "rematch" });
+    const goA = await A.until((m) => m.t === "rematch_go");
+    const goB = await B.until((m) => m.t === "rematch_go");
+    expect(goA.room).toBe(goB.room);
+    expect(goA.room).toMatch(/^[0-9a-f-]{36}$/);
+    expect(goA.room).not.toBe(room);
+    expect(goA.area).toBe("beach");
+    // The fresh room seats them both and tips off.
+    const A2 = await join(a, goA.room, "beach");
+    const B2 = await join(b, goB.room, "beach");
+    const s2 = await A2.until((m) => m.t === "start");
+    expect(s2.area).toBe("beach");
+    await B2.until((m) => m.t === "start");
+  });
+  it("tells the stayer when the other phone leaves the post-match page", async () => {
+    const a = await register();
+    const b = await register();
+    const room = uuid();
+    const A = await join(a, room);
+    const B = await join(b, room);
+    await A.until((m) => m.t === "start");
+    A.send({ t: "period_end", period: 0, score: 10, totals: {} });
+    B.send({ t: "period_end", period: 0, score: 4, totals: {} });
+    await A.until((m) => m.t === "settled");
+    await B.until((m) => m.t === "settled");
+    B.ws.close(1000, "bye");
+    expect((await A.until((m) => m.t === "peer_left")).side).toBe("b");
+    const row = await env.DB.prepare("SELECT reason FROM matches WHERE a_id = ?1").bind(a.playerId).first<any>();
+    expect(row.reason).toBe("played"); // the record stands
+  });
   it("closes a room nobody joined when the alarm fires", async () => {
     const a = await register();
     const room = uuid();

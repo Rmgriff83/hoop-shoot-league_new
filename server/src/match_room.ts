@@ -39,6 +39,8 @@ interface Meta {
   hands: Record<Side, string[]>;
   /** A side that reported its period and then dropped: finished, not forfeiting. */
   leftWaiting: Side | null;
+  /** Rematch offers after the decision; both → a fresh room for the pair. */
+  rematch: Record<Side, boolean>;
   reason: string;
   recorded: boolean;
 }
@@ -89,7 +91,7 @@ export class MatchRoom extends DurableObject<Env> {
     const now = Date.now();
     let m = await this.meta();
     if (!m) {
-      m = { area, created: now, status: "waiting", seed: 0, started: 0, last: now, a: null, b: null, ends: { a: {}, b: {} }, hands: { a: [], b: [] }, leftWaiting: null, reason: "", recorded: false };
+      m = { area, created: now, status: "waiting", seed: 0, started: 0, last: now, a: null, b: null, ends: { a: {}, b: {} }, hands: { a: [], b: [] }, leftWaiting: null, rematch: { a: false, b: false }, reason: "", recorded: false };
       await this.ctx.storage.setAlarm(now + WAIT_MS);
     }
     if (m.status === "done") return new Response("over", { status: 410 });
@@ -138,7 +140,25 @@ export class MatchRoom extends DurableObject<Env> {
     if (!msg || typeof msg.t !== "string") return this.send(ws, { t: "error", code: "shape" });
     if (msg.t === "ping") return this.send(ws, { t: "pong", now });
     const m = await this.meta();
-    if (!m || m.status !== "playing") return this.send(ws, { t: "error", code: "not_playing" });
+    if (!m) return this.send(ws, { t: "error", code: "not_playing" });
+    if (msg.t === "rematch") {
+      // Only on the post-match page: both offers → a fresh room for the same pair.
+      if (m.status !== "done") return this.send(ws, { t: "error", code: "not_done" });
+      if (!m.rematch) m.rematch = { a: false, b: false };
+      m.rematch[att.side] = true;
+      m.last = now;
+      this.sendSide(other(att.side), { t: "rematch", from: att.side });
+      if (m.rematch.a && m.rematch.b) {
+        const room = crypto.randomUUID();
+        for (const s of this.sockets()) this.send(s, { t: "rematch_go", room, area: m.area });
+        await this.ctx.storage.setAlarm(now + 5_000);
+      } else {
+        await this.ctx.storage.setAlarm(now + CLOSE_AFTER_MS); // the offer buys another minute
+      }
+      await this.put(m);
+      return;
+    }
+    if (m.status !== "playing") return this.send(ws, { t: "error", code: "not_playing" });
     m.last = now;
     switch (msg.t) {
       case "shot":
@@ -205,8 +225,13 @@ export class MatchRoom extends DurableObject<Env> {
     if (reason === "replaced") return;
     const att = ws.deserializeAttachment() as Attachment | null;
     const m = await this.meta();
-    if (!att || !m || m.status === "done") return;
+    if (!att || !m) return;
     if (this.sockets(att.side).some((s) => s !== ws)) return; // they reconnected already
+    if (m.status === "done") {
+      // Off the post-match page: the other phone's REMATCH reads THEY LEFT.
+      this.sendSide(other(att.side), { t: "peer_left", side: att.side });
+      return;
+    }
     if (m.status === "playing") {
       // Reported this period and then went? They are finished, not forfeiting:
       // the other phone's report still decides it.
