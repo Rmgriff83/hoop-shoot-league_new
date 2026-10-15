@@ -267,6 +267,25 @@ func _run_net() -> void:
 			snapped += 1
 			next_snap = t + 0.08
 		await get_tree().process_frame
+	# Close-ups of the cotton net at rest: the hook loops from just above and
+	# in front of the rim (nothing may show above the tube), then the diamonds
+	# and knots from the player's side.
+	for i in 120:
+		net.step(1.0 / 60.0, [])
+		await get_tree().process_frame
+	var ccam: Camera3D = get_viewport().get_camera_3d()
+	if ccam != null:
+		ccam.global_position = hoop + Vector3(-0.62, 0.16, 0.30)
+		ccam.look_at(hoop + Vector3(0.0, -0.03, 0.0))
+		await _sleep(0.3)
+		await _snap("net_hooks")
+		ccam.global_position = hoop + Vector3(-0.75, -0.08, 0.45)
+		ccam.look_at(hoop + Vector3(0.0, -0.2, 0.0))
+		await _sleep(0.3)
+		await _snap("net_close")
+	var cotton: Node = get_tree().root.find_child("CottonNet", true, false)
+	if cotton != null:
+		print("QA net: cotton %d bones, %d surfaces, %d tris" % [cotton.bone_count(), cotton.surface_count(), cotton.tri_count()])
 	print("QA net: done")
 	get_tree().quit(0)
 

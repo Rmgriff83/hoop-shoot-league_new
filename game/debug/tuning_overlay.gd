@@ -48,7 +48,7 @@ const NET_FIELDS := [
 ]
 const NET_LIMITS := {
 	"rest_spring": [0.0, 400.0], "damping": [0.98, 0.9999], "stiffness": [0.02, 1.0], "ball_friction": [0.0, 1.0],
-	"tail_mass": [0.5, 4.0], "kick_speed": [0.0, 5.0], "rest_pull": [0.0, 0.1], "grab_band": [0.0, 0.15], "grab_pull": [0.0, 1.0],
+	"tail_mass": [0.2, 4.0], "kick_speed": [0.0, 8.0], "rest_pull": [0.0, 0.1], "grab_band": [0.0, 0.15], "grab_pull": [0.0, 1.0],
 }
 ## Hard rails per field: [min, max].
 const LIMITS := {

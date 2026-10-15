@@ -53,11 +53,21 @@ func run(t) -> void:
 
 	# Net feel: set defaults match NetSim defaults; configure applies.
 	var ns := NetSim.new()
-	t.close(HoopSet.new().net_stiffness, ns.stiffness, 0.0, "set default stiffness = NetSim default")
-	t.close(HoopSet.new().net_damping, ns.damping, 0.0, "set default damping = NetSim default")
-	t.close(HoopSet.new().net_rest_spring, ns.rest_spring, 0.0, "set default rest spring = NetSim default")
-	t.close(HoopSet.new().net_friction, ns.ball_friction, 0.0, "set default friction = NetSim default")
-	t.close(HoopSet.new().net_kick, ns.kick_speed, 0.0, "set default kick = NetSim default")
+	var hs := HoopSet.new()
+	t.close(hs.net_stiffness, ns.stiffness, 0.0, "set default stiffness = NetSim default")
+	t.close(hs.net_damping, ns.damping, 0.0, "set default damping = NetSim default")
+	t.close(hs.net_rest_spring, ns.rest_spring, 0.0, "set default rest spring = NetSim default")
+	t.close(hs.net_rest_pull, ns.rest_pull, 0.0, "set default rest pull = NetSim default")
+	t.close(hs.net_tail_mass, ns.tail_mass, 0.0, "set default tail mass = NetSim default")
+	t.close(hs.net_friction, ns.ball_friction, 0.0, "set default friction = NetSim default")
+	t.close(hs.net_kick, ns.kick_speed, 0.0, "set default kick = NetSim default")
+	t.close(hs.net_grab_band, ns.grab_band, 0.0, "set default grab band = NetSim default")
+	t.close(hs.net_grab_pull, ns.grab_pull, 0.0, "set default grab pull = NetSim default")
+	# Ross's 2026-10-14 cotton set (docs/BLENDER_101.md §28).
+	t.close(hs.net_rest_spring, 0.0, 0.0, "cotton: no rest spring")
+	t.close(hs.net_tail_mass, 0.5, 0.0, "cotton: light tail")
+	t.close(hs.net_kick, 4.7, 0.0, "cotton: hard kick")
+	t.close(hs.net_friction, 0.09, 0.0, "cotton: little spin grab")
 	var soft := HoopSet.new()
 	soft.net_stiffness = 0.5
 	soft.net_friction = 0.2

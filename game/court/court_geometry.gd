@@ -64,6 +64,7 @@ var _model_board: Node3D
 var _anim: AnimationPlayer      # the glb's animations, null on fallback
 ## Runtime cord-lattice net driven by the sim's balls (null on fallback).
 var net_sim: NetSim
+var _cotton: CottonNet          # the nylon net's body (null for chain / primitives)
 var _board: MeshInstance3D
 var _face: MeshInstance3D
 var _pole: MeshInstance3D
@@ -316,7 +317,26 @@ func _build_hoop_model() -> bool:
 		if (hoop_set.net_kind == "chain") != (geo.net_rigidity() > 1.0):
 			push_warning("CourtGeometry: hoop %s hangs a %s net on a geometry whose net rigidity is %.2f" % [hoop_set.id, hoop_set.net_kind, geo.net_rigidity()])
 		add_child(net_sim)
-		if not net_sim.setup(net_mi):
+		if hoop_set.net_kind == "nylon":
+			# The cotton net (docs/BLENDER_101.md §28): the glb's Net surface is
+			# hidden (kept so its animation tracks still resolve) and a knotted
+			# cord net skinned to the sim's particles hangs from the rim centre.
+			net_mi.visible = false
+			_cotton = CottonNet.new()
+			_cotton.name = "CottonNet"
+			_cotton.position = _rim_centre()
+			rim_pivot.add_child(_cotton)
+			if net_sim.setup_cotton(_cotton, SimConstants.R_RIM, SimConstants.R_TUBE):
+				_cotton.build(NetSim.cotton_layout(SimConstants.R_RIM, SimConstants.R_TUBE))
+				_cotton.sync(net_sim)
+				_strip_blend_shape_tracks()
+			else:
+				_cotton.queue_free()
+				_cotton = null
+				net_sim.queue_free()
+				net_sim = null
+				net_mi.visible = true
+		elif not net_sim.setup(net_mi):
 			net_sim.queue_free()
 			net_sim = null
 		else:
@@ -389,6 +409,8 @@ func step_net(dt: float, balls: Array[BallState]) -> void:
 	for s in balls:
 		descs.push_back(NetSim.ball_from_state(s))
 	net_sim.step(dt, descs)
+	if _cotton != null:
+		_cotton.sync(net_sim)
 
 
 ## NetSim swaps the Net for a dynamic ArrayMesh with no blend shapes, which
@@ -463,6 +485,14 @@ func play_make() -> void:
 ## Play the set's streak flourish (hoop_set.streak_anim), if it names one.
 func play_streak() -> void:
 	_play_anim(hoop_set.streak_anim if hoop_set != null else "")
+
+
+## The ring's centre under the pivot (the glb's Rim node, else the constant).
+func _rim_centre() -> Vector3:
+	var rim_mi: MeshInstance3D = (_hoop.find_child("Rim", true, false) if _hoop != null else rim_pivot.find_child("Rim", true, false)) as MeshInstance3D
+	if rim_mi != null and rim_mi.get_parent() == rim_pivot:
+		return rim_mi.position
+	return Vector3(-SimConstants.R_RIM, 0.0, 0.0)
 
 
 ## Flames/smoke/glow rig on the ring, under the pivot so it rides with the rim.

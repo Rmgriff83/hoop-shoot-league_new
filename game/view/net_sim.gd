@@ -16,6 +16,12 @@ extends Node
 ## ball is sub-sampled between frames, the sim's rim-plane `enter` event
 ## kicks the cords (kick()), the net eases to sleep rather than jumping, and
 ## the normals follow the cords so the light does too.
+##
+## Two structure sources feed the one solver. setup(mi) takes a mesh (the
+## chain hoop, the primitive fallback, the tests' cylinder). setup_cotton()
+## takes no mesh: the particles are the 84 knots and 12 pinned hooks of a net
+## tied the way a real one is (cotton_layout(), docs/BLENDER_101.md §28) and
+## a CottonNet skins its cords to them, so nothing is rebuilt per frame.
 
 ## Fixed internal step (s). Position-based springs settle differently per step
 ## size, so the net always integrates at exactly this rate (frame-rate
@@ -33,22 +39,22 @@ var stiffness := 0.14
 ## Shape memory, two parts: a SPRING toward the rest shape (an acceleration,
 ## /s², so the cords carry momentum through rest and overshoot) and a faint
 ## per-substep positional pull that kills the last millimetres of drift.
-var rest_spring := 90.0
-var rest_pull := 0.003
+var rest_spring := 0.0     # the cotton net: no memory (2026-10-14; the mesh net ran 90 / 0.003)
+var rest_pull := 0.0
 ## The bottom ring's share of gravity (×): heavier, it lags the ball and
 ## whips back up after it.
-var tail_mass := 1.6
+var tail_mass := 0.5       # 2026-10-14 (was 1.6)
 ## The swish kick (m/s) kick() hands the cords under an entering ball.
-var kick_speed := 1.6
+var kick_speed := 4.7      # 2026-10-14 (was 1.6)
 const CORD_R := 0.012
 ## Cords within this band outside the ball's surface are drawn onto it (the net
 ## drapes and grips the ball rather than merely being pushed).
-var grab_band := 0.05
+var grab_band := 0.06
 var grab_pull := 0.0    # Ross, on-device 2026-10-03: no drape-grab on nylon
 ## Fraction of the ball's surface velocity handed to cords it grips. This is
 ## the backspin grab: the spinning surface drags the front cords down as it
 ## passes, and the stretched cords whip them back up afterwards.
-var ball_friction := 0.55
+var ball_friction := 0.09  # 2026-10-14 (was 0.55)
 const WAKE_RANGE := 0.7
 const SLEEP_POS_EPS := 0.004   # gravity sags the cords ~2 mm below rest
 const SLEEP_VEL_EPS := 0.002
@@ -56,7 +62,10 @@ const SLEEP_EASE_S := 0.3      # near rest this long, eased home, then asleep
 const SLEEP_EASE := 0.1        # per-frame lerp toward rest while easing
 const KICK_REACH := 0.08       # m beyond the ball's radius that the kick reaches
 
+## "mesh" (setup) or "cotton" (setup_cotton).
+var structure := "mesh"
 var _mi: MeshInstance3D
+var _space: Node3D               # the node whose local space the particles live in
 var _mesh: ArrayMesh
 var _arrays: Array = []
 var _material: Material
@@ -112,10 +121,8 @@ func configure(set: HoopSet) -> void:
 	grab_pull = set.net_grab_pull
 	ball_friction = set.net_friction
 	if _ready_ok:
-		_pos = _rest.duplicate()
-		_prev = _rest.duplicate()
-		_settle_rest()
-		_upload()
+		_weigh_tail()
+		resettle()
 
 
 ## The knobs the tuning strip turns, by name (docs/BLENDER_101.md §23).
@@ -137,12 +144,20 @@ func set_knob(name_: String, value: float) -> void:
 		return
 	set(name_, value)
 	if name_ == "tail_mass":
-		var y_min := INF
-		for p in _rest:
-			y_min = minf(y_min, p.y)
-		for i in _rest.size():
-			_g_scale[i] = tail_mass if _rest[i].y <= y_min + 1e-4 else 1.0
+		_weigh_tail()
 	resettle()
+
+
+## The bottom ring's share of gravity (tail_mass); the rest weigh 1.
+func _weigh_tail() -> void:
+	if _rest.is_empty():
+		return
+	var y_min := INF
+	for p in _rest:
+		y_min = minf(y_min, p.y)
+	_g_scale.resize(_rest.size())
+	for i in _rest.size():
+		_g_scale[i] = tail_mass if _rest[i].y <= y_min + 1e-4 else 1.0
 
 
 ## On-device overrides over the hoop set's values ({knob: value}).
@@ -151,6 +166,7 @@ func apply_overrides(d: Dictionary) -> void:
 		if KNOBS.has(str(k)) and (d[k] is float or d[k] is int):
 			set(str(k), float(d[k]))
 	if _ready_ok:
+		_weigh_tail()
 		resettle()
 
 
@@ -169,6 +185,8 @@ func setup(mi: MeshInstance3D) -> bool:
 	if mi == null or mi.mesh == null or mi.mesh.get_surface_count() == 0:
 		return false
 	_mi = mi
+	_space = mi
+	structure = "mesh"
 	var src: Mesh = mi.mesh
 	_arrays = src.surface_get_arrays(0)
 	var verts: PackedVector3Array = _arrays[Mesh.ARRAY_VERTEX]
@@ -203,13 +221,7 @@ func setup(mi: MeshInstance3D) -> bool:
 	_pinned.resize(_rest.size())
 	for i in _rest.size():
 		_pinned[i] = 1 if _rest[i].y >= y_max - 1e-4 else 0
-	# The bottom ring hangs heavier.
-	var y_min := INF
-	for p in _rest:
-		y_min = minf(y_min, p.y)
-	_g_scale.resize(_rest.size())
-	for i in _rest.size():
-		_g_scale[i] = tail_mass if _rest[i].y <= y_min + 1e-4 else 1.0
+	_weigh_tail()   # the bottom ring hangs heavier
 	_index = index
 
 	# Springs = mesh edges (structural + the triangle diagonals), deduplicated.
@@ -245,6 +257,132 @@ func setup(mi: MeshInstance3D) -> bool:
 	return true
 
 
+
+## ---- The cotton net (2026-10-14): twelve continuous knotted cords ----
+## No ring cords. Cord i climbs a left diagonal from the bottom
+## (Knot_k_((i−k) mod 12), k = 6…1), rises through its top knot Knot_0_i,
+## turns over Hook_i and comes back down the right diagonal (Knot_k_i,
+## k = 1…6); neighbouring cords are knotted where they cross, which makes
+## the diamonds. Ross's design model (26a, Cotton Net Model.html) with one
+## change: the hooks sit UNDER the rim tube (radius rim_r + HOOK_OUT, height
+## −tube_r × HOOK_DROP) so no loop shows above the rim line.
+const COTTON_COLS := 12
+const COTTON_ROWS := 6                # 7 rings of knots, the top one included
+const COTTON_LEN := 0.42              # rim centre line → bottom ring (m)
+const COTTON_BOTTOM_R := 0.10
+const COTTON_TOP_GAP := 0.028         # ring 0 hangs this far below the tube's underside
+const HOOK_DROP := 0.9                # hook height = −tube_r × this (inside the tube)
+const HOOK_OUT := 0.002               # hook radius = rim_r + this
+var _bottom := PackedInt32Array()     # particle indices of the bottom ring
+
+
+## Ring k's radius at t = k / ROWS: tapers fast near the rim, gently below.
+static func cotton_ring_radius(t: float, rim_r := SimConstants.R_RIM) -> float:
+	return rim_r + (COTTON_BOTTOM_R - rim_r) * (1.0 - pow(1.0 - t, 1.7))
+
+
+## The rest layout, in rim space (origin = rim centre, y up, metres):
+## {knots: PackedVector3Array (84, ring-major: ring k, knot i at k×12+i),
+##  hooks: PackedVector3Array (12), springs: [[a, b, rest_len]] (156, particle
+##  indices with the hooks FIRST: hook i = i, knot (k, i) = 12 + k×12 + i),
+##  cords: [{left: [7 idx, ring 0…6], right: [7 idx], hook, k0}],
+##  bottom: [12 particle indices], ring_y: [7 heights]}.
+static func cotton_layout(rim_r := SimConstants.R_RIM, tube_r := SimConstants.R_TUBE) -> Dictionary:
+	var knots := PackedVector3Array()
+	var hooks := PackedVector3Array()
+	var ring_y := PackedFloat32Array()
+	var y0 := -(tube_r + COTTON_TOP_GAP)
+	for k in COTTON_ROWS + 1:
+		var t := float(k) / float(COTTON_ROWS)
+		var r := cotton_ring_radius(t, rim_r)
+		var y := y0 + (-COTTON_LEN - y0) * t
+		ring_y.push_back(y)
+		for i in COTTON_COLS:
+			var a := (float(i) + float(k) * 0.5) / float(COTTON_COLS) * TAU
+			knots.push_back(Vector3(r * cos(a), y, r * sin(a)))
+	for i in COTTON_COLS:
+		var a := float(i) / float(COTTON_COLS) * TAU
+		hooks.push_back(Vector3((rim_r + HOOK_OUT) * cos(a), -tube_r * HOOK_DROP, (rim_r + HOOK_OUT) * sin(a)))
+	var knot_idx := func(k: int, i: int) -> int:
+		return COTTON_COLS + k * COTTON_COLS + posmod(i, COTTON_COLS)
+	var springs: Array = []
+	var cords: Array = []
+	var seen := {}
+	var add_spring := func(a: int, b: int) -> void:
+		var key := Vector2i(mini(a, b), maxi(a, b))
+		if seen.has(key):
+			return
+		seen[key] = true
+		var pa: Vector3 = hooks[a] if a < COTTON_COLS else knots[a - COTTON_COLS]
+		var pb: Vector3 = hooks[b] if b < COTTON_COLS else knots[b - COTTON_COLS]
+		springs.push_back([a, b, pa.distance_to(pb)])
+	for i in COTTON_COLS:
+		var left: Array = []
+		var right: Array = []
+		for k in COTTON_ROWS + 1:
+			left.push_back(knot_idx.call(k, i - k))
+			right.push_back(knot_idx.call(k, i))
+		for k in COTTON_ROWS:
+			add_spring.call(left[k], left[k + 1])
+			add_spring.call(right[k], right[k + 1])
+		add_spring.call(knot_idx.call(0, i), i)
+		cords.push_back({"left": left, "right": right, "hook": i, "k0": knot_idx.call(0, i)})
+	var bottom: Array = []
+	for i in COTTON_COLS:
+		bottom.push_back(knot_idx.call(COTTON_ROWS, i))
+	return {"knots": knots, "hooks": hooks, "springs": springs, "cords": cords, "bottom": bottom, "ring_y": ring_y}
+
+
+## Build the particles from cotton_layout(): hooks first (pinned), then the
+## 84 knots; springs = the cord pieces; the bottom ring weighs tail_mass.
+## `space` is the node whose local space the layout lives in (the CottonNet
+## at the rim centre). No mesh: a CottonNet reads the particles each frame.
+func setup_cotton(space: Node3D, rim_r := SimConstants.R_RIM, tube_r := SimConstants.R_TUBE) -> bool:
+	if space == null:
+		return false
+	var layout := cotton_layout(rim_r, tube_r)
+	_space = space
+	_mi = null
+	structure = "cotton"
+	var hooks: PackedVector3Array = layout["hooks"]
+	var knots: PackedVector3Array = layout["knots"]
+	_rest = PackedVector3Array()
+	_pinned = PackedByteArray()
+	for h in hooks:
+		_rest.push_back(h)
+		_pinned.push_back(1)
+	for k in knots:
+		_rest.push_back(k)
+		_pinned.push_back(0)
+	_pos = _rest.duplicate()
+	_prev = _rest.duplicate()
+	_bottom = PackedInt32Array(layout["bottom"])
+	_weigh_tail()
+	_spring_a = PackedInt32Array()
+	_spring_b = PackedInt32Array()
+	_spring_len = PackedFloat32Array()
+	for s in layout["springs"]:
+		_spring_a.push_back(int(s[0]))
+		_spring_b.push_back(int(s[1]))
+		_spring_len.push_back(float(s[2]))
+	_vert_to_particle = PackedInt32Array()
+	_index = PackedInt32Array()
+	_arrays = []
+	_ready_ok = true
+	_settle_rest()
+	_awake = false
+	return true
+
+
+## The cotton net's cords ({left, right, hook, k0} per cord; empty for a mesh).
+func cotton_cords() -> Array:
+	return cotton_layout()["cords"] if structure == "cotton" else []
+
+
+func is_pinned(i: int) -> bool:
+	return _pinned[i] == 1
+
+
 ## Let the cords sag under gravity and adopt that as the rest pose, so the
 ## idle net hangs naturally and "at rest" really is at rest (sleep works).
 func _settle_rest() -> void:
@@ -259,7 +397,7 @@ func _settle_rest() -> void:
 ## every spring that runs between rings (the chains), re-placed whenever the
 ## particles move. Off: the surface shows again.
 func set_chain(on: bool) -> void:
-	if not _ready_ok:
+	if not _ready_ok or structure != "mesh":
 		return
 	if _chain != null:
 		_chain.queue_free()
@@ -425,7 +563,7 @@ func step(dt: float, balls: Array) -> void:
 	if not _ready_ok:
 		return
 	# Balls in the net's local space (the pivot wobbles and the board slides).
-	var xf := _mi.global_transform if _mi.is_inside_tree() else _mi.transform
+	var xf := _space.global_transform if _space.is_inside_tree() else _space.transform
 	var inv := xf.affine_inverse()
 	var local_balls: Array = []
 	var near := false
@@ -561,7 +699,7 @@ func kick(world_pos: Vector3, world_vel: Vector3, strength := -1.0) -> void:
 	var v_kick := kick_speed if strength < 0.0 else strength
 	if v_kick <= 0.0:
 		return
-	var xf := _mi.global_transform if _mi.is_inside_tree() else _mi.transform
+	var xf := _space.global_transform if _space.is_inside_tree() else _space.transform
 	var inv := xf.affine_inverse()
 	var c: Vector3 = inv * world_pos
 	var dir: Vector3 = (inv.basis * world_vel)
@@ -605,6 +743,8 @@ func _recompute_normals(verts: PackedVector3Array) -> void:
 
 
 func _upload() -> void:
+	if structure != "mesh":
+		return   # a CottonNet reads the particles itself (sync)
 	var verts: PackedVector3Array = _arrays[Mesh.ARRAY_VERTEX]
 	for i in verts.size():
 		verts[i] = _pos[_vert_to_particle[i]]

@@ -997,7 +997,10 @@ by every court that hangs that kind; RESET there returns the kind to its
 hoop set; LOG prints `NET <kind> {json}` for logcat. The nylon mesh
 stays 5 rings × 12: the shipped hoop glbs carry hand-authored animations
 and hooks that `build_hoop.py -- --force` does not reproduce, so do not
-rebuild them from the script.
+rebuild them from the script. **2026-10-14:** the nylon hoops no longer
+draw that mesh at all — the cotton net (§28) hangs in its place, with its
+own defaults; the mesh path and this section's knob set now describe the
+chain hoop only.
 
 ## 24. The cage ramp has physics (2026-10-03)
 
@@ -1089,3 +1092,57 @@ the art direction (the look, the palette, the scale, what a new area must
 ship) and `docs/geometry.md` generated from `core/physics/sim_geometry.gd`
 and the `arena_set.tres` files. No audio, no `.import` sidecars, no
 `.blend1`. Re-run it after a new area lands; the zip is never committed.
+
+## 28. The cotton net (2026-10-14)
+
+Ross modelled the nylon net in the design project the way a real one is
+tied (26a, *Cotton Net Model*) and asked for that structure in the game.
+There are no ring cords. The net is **twelve continuous cords**: cord `i`
+climbs a left diagonal from the bottom (`Knot_k_((i−k) mod 12)`, k = 6…1),
+rises through its top knot `Knot_0_i`, turns over `Hook_i` and comes back
+down the right diagonal (`Knot_k_i`, k = 1…6). Neighbouring cords are
+knotted where they cross, which makes the diamonds: 7 rings × 12 = 84
+knots, free, and 12 hooks, pinned to the rim.
+
+**The layout** (`NetSim.cotton_layout(rim_r, tube_r)`, rim space, y up):
+ring `k` at `t = k/6` has radius `rim_r + (0.10 − rim_r) × (1 − (1 − t)^1.7)`
+(tapers fast under the rim, gently below) and is turned half a step
+(`angle = (i + k/2)/12 × 2π`); ring 0 hangs `tube_r + 0.028` below the rim's
+centre line, ring 6 at −0.42. Springs = the 144 diagonal pieces + the 12
+hook loops, rest lengths from the layout. **The hooks sit under the rim
+tube** (radius `rim_r + 0.002`, height `−tube_r × HOOK_DROP`, 0.9): Ross's
+model showed the loops above the rim line and he wants them behind the
+front of the rim, so nothing of a loop rises above the tube
+(`tests/test_cotton_net.gd` pins it; `--qa-net` → `net_hooks.png`).
+
+**The sim** is the same `NetSim` (one solver, two structure sources):
+`setup_cotton(space, rim_r, tube_r)` builds the particles — hooks first
+(pinned), then the 84 knots — and the springs, with no mesh; `structure`
+reads `"cotton"` and `_upload()` does nothing. `setup(mi)` (mesh-fed) stays
+for the chain hoop, the primitive fallback and the tests' cylinder.
+
+**The body** is `game/view/cotton_net.gd` (`CottonNet`): one `Skeleton3D`
+"NetRoot" with 97 bones (`Hook_0…11`, `Knot_k_i`) and three skinned
+`ArrayMesh`es — `Net_Cords` (5-sided tubes r 4 mm, 4 segments per diagonal
+sagging 1.5 mm, 6 per loop half; each vertex blends between the two bones
+its piece joins, so the cords bend along their real paths), `Net_Knots`
+(84 flattened octahedra r 8.5 mm, rigid on their bone) and `Net_Tails` (24
+frayed stubs under the bottom ring). Flat shaded, roughness 1, the design's
+16×16 nearest-filtered pixel twist (cord `#EDE6D4/#B9AE96/#FFFBF0`, knot
+`#DDD3BC/#A99D84/#F4EEDD`, seeded speckle). 8352 tris, 3 draws, no mesh
+rebuilt per frame: `CourtGeometry.step_net()` steps the sim and
+`CottonNet.sync()` moves the knot bones onto the particles. The glb's `Net`
+node is hidden, not removed (its animation tracks still resolve; the glbs
+are not rebuilt). The chain hoop is untouched — its own pass comes next.
+
+**The defaults** (`HoopSet`, Ross's 2026-10-14 lab set; the 2026-10-03 mesh
+set in brackets): stiffness 0.14 [0.14], damping 0.9864 [0.9864],
+rest_spring 0 [90], rest_pull 0 [0.003], tail_mass 0.5 [1.6], kick 4.7
+[1.6], grab_band 0.06 [0.06], grab_pull 0 [0], friction 0.09 [0.55]. No
+shape memory: gravity and the cords bring the net back; the light bottom
+ring flares and falls; the hard kick snaps the net down with the ball. The
+NET page's rails widened to fit (tail_mass 0.2–4, kick 0–8) and RESET now
+refreshes the tail weight too. `tests/test_net_sim.gd` runs its mesh
+sections under the old set (`MESH_KNOBS`) and a `_cotton` section under
+the new.
+
