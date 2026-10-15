@@ -984,8 +984,10 @@ the cords' momentum under the ball; the bottom ring hangs `net_tail_mass`
 kicks the cords (`net_kick` 1.6 m/s, `NetSim.kick`, `CourtGeometry.net_kick`)
 and plays the nylon rustle under the make clip; the ball is sub-sampled
 across the substeps; sleep eases home over 0.3 s; normals follow the
-cords. The chain hoop keeps its heavy, quick-stopping feel (`rest_spring
-160`, `kick 0.6`, `tail_mass 1.2`). Every knob is a `HoopSet` export.
+cords. The chain hoop's feel is Ross's 2026-10-14 phone set, baked:
+`damping 0.98`, `rest_spring 25`, `tail_mass 1.0`, `grab_pull 1.0` (it was
+`rest_spring 160`, `tail_mass 1.2`, `grab_pull 0.3`; `kick 0.6` stays). Every
+knob is a `HoopSet` export.
 Check it with `--qa-net` (a synthetic swish, 14 frames). **On the device**
 the tuning strip (App.tuning_mode) has a NET page (the NET button; N on a
 keyboard): the live net's knobs for the hoop in play, nylon on the cage

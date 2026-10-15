@@ -49,7 +49,7 @@ func run(t) -> void:
 	# 3. Arc is set by the pull, not by speed or release height.
 	var origin := {"rx": 0.0, "ry": 1.6, "rz": 0.3}
 	var slow := FlickMap.map_windup(_sample(up.x, up.y, full_pull * 0.5), tuning, geo, origin)
-	var fast_v := _tilted(0.0, 2.8)
+	var fast_v := _tilted(0.0, lerpf(tuning.flick_min_sh, tuning.flick_max_sh, 0.6))   # inside the band, whatever the bake
 	var fast := FlickMap.map_windup(_sample(fast_v.x, fast_v.y, full_pull * 0.5), tuning, geo, origin)
 	t.close(slow["angle_deg"], fast["angle_deg"], 1e-9, "same pull → same arc regardless of speed")
 	t.close(slow["pull"], 0.5, 1e-9, "launch carries the pull fraction")

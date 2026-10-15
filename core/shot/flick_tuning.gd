@@ -22,20 +22,21 @@ const FIELDS: Array[String] = [
 
 ## Arc with NO wind-up: a quick flick straight from the pickup. Kept usable so
 ## a hurried shot is a shot, not a line drive.
-@export var angle_low := 19.0
+@export var angle_low := 21.0
 ## Arc at a full pull-back.
-@export var angle_high := 69.0
+@export var angle_high := 65.0
 ## Pull-back distance (fraction of viewport height) that reaches angle_high.
-@export var pull_full_frac := 0.46
+## (Defaults = Ross's phone set, baked 2026-10-14; the 2026-09-14 set before.)
+@export var pull_full_frac := 0.44
 ## Flick speed (screen-heights/sec) that maps to u=0 on the power curve.
-@export var flick_min_sh := 2.15
+@export var flick_min_sh := 2.85
 ## Flick speed (screen-heights/sec) that maps to u=1 (V_MAX).
-@export var flick_max_sh := 4.6
+@export var flick_max_sh := 4.5
 ## Sideways forgiveness: the release tilt off vertical is reduced — tilts within
 ## side_dead_deg are ignored as thumb wobble; beyond that, side_gain of the
 ## remainder carries (1.0 = full physical carry, which QA found unforgiving).
-@export var side_dead_deg := 1.0
-@export var side_gain := 0.7
+@export var side_dead_deg := 2.0
+@export var side_gain := 0.8
 ## Backspin (rad/s) = backspin_per_mps × launch speed (m/s): a harder throw
 ## spins faster. 2.5 × the ideal arcade speed ≈ the reference's fixed 15 rad/s.
 @export var backspin_per_mps := 3.7
@@ -44,10 +45,10 @@ const FIELDS: Array[String] = [
 ## remainder × roll_gain, clamped to roll_max. Keeps a slightly hooked flick
 ## from corkscrewing the ball.
 @export var roll_dead := 3.0
-@export var roll_gain := 0.4
+@export var roll_gain := 0.5
 @export var roll_max := 12.0
 ## Minimum total finger travel (px) before a release counts as a gesture.
-@export var dead_zone_px := 15.0
+@export var dead_zone_px := 20.0
 
 ## ---- Legacy drag-length model only (flick lab, tests) -------------------------
 
