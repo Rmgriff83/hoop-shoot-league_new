@@ -287,7 +287,7 @@ func _run_net_thumbs() -> void:
 		rm.roughness = 0.6
 		rim.material_override = rm
 		rig.add_child(rim)
-		var body := NetBodies.for_style(ns.body_style())
+		var body := NetBodies.for_set(ns)
 		rig.add_child(body)
 		var sim := NetSim.new()
 		rig.add_child(sim)

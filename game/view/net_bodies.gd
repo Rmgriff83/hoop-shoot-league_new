@@ -22,6 +22,14 @@ static func stock_style(kind: String) -> String:
 	return "chain" if kind == "chain" else "cotton"
 
 
+## The body a NetSet hangs: its style's body, tinted when the set says so.
+static func for_set(ns: NetSet) -> NetRig:
+	var body := for_style(ns.body_style() if ns != null else "cotton")
+	if ns != null and body is CottonNet:
+		(body as CottonNet).tint = ns.tint
+	return body
+
+
 static func for_style(style: String) -> NetRig:
 	match style:
 		"chain":

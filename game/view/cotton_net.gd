@@ -20,6 +20,9 @@ const LOOP_SEGS := 6
 const CORD_COLORS := ["#EDE6D4", "#B9AE96", "#FFFBF0"]
 const KNOT_COLORS := ["#DDD3BC", "#A99D84", "#F4EEDD"]
 
+## A colour over the cords and knots (NetSet.tint; white = plain cotton).
+var tint := Color.WHITE
+
 
 ## The style's rest layout (NetSim.cotton_layout for the stock cotton).
 static func layout(rim_r := SimConstants.R_RIM, tube_r := SimConstants.R_TUBE) -> Dictionary:
@@ -85,18 +88,27 @@ func _knot_y_scale() -> float:
 	return 0.8
 
 
-## [cord material, knot material].
+## [cord material, knot material]. A tinted cotton (the neons) also glows
+## a little in its colour, so it reads neon in the cage's dusk.
 func _materials() -> Array:
-	return [_material(twist_texture(CORD_COLORS)), _material(twist_texture(KNOT_COLORS))]
+	var tinted := tint != Color.WHITE
+	var cord := _material(twist_texture(CORD_COLORS), 1.0, 0.0, tinted)
+	var knot := _material(twist_texture(KNOT_COLORS), 1.0, 0.0, tinted)
+	if tinted:
+		for m in [cord, knot]:
+			m.emission_enabled = true
+			m.emission = tint
+			m.emission_energy_multiplier = 0.35
+	return [cord, knot]
 
 
 ## Vertex colour of cord i (white = the texture alone).
 func _cord_color(_i: int) -> Color:
-	return Color.WHITE
+	return tint
 
 
 func _knot_color(_k: int, _i: int) -> Color:
-	return Color.WHITE
+	return tint
 
 
 ## Texture repeats along a diagonal piece / a loop half.

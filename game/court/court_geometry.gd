@@ -487,7 +487,7 @@ func _build_net() -> void:
 		net_sim.apply_overrides(Dictionary(save.call("get_tuning_net")).get(hoop_set.net_kind, {}))
 	add_child(net_sim)
 	_net_mi.visible = false
-	_net_body = NetBodies.for_style(net_style)
+	_net_body = NetBodies.for_set(net_set) if net_set != null and net_set.body_style() == net_style else NetBodies.for_style(net_style)
 	_net_body.name = "NetBody"
 	_net_body.position = _rim_centre()
 	rim_pivot.add_child(_net_body)

@@ -79,4 +79,24 @@ func run(t) -> void:
 	court.set_net(null)
 	t.eq(court.net_style, "chain", "no net set: the stock chain")
 	court.free()
+	# A tinted cotton: the cotton body with the set's colour on its cords.
+	var cage := CourtGeometry.new()
+	cage.geo = SimGeometry.arcade()
+	cage.arena_set = CosmeticLibrary.get_arena("cage")
+	cage.hoop_set = CosmeticLibrary.get_hoop("classic")
+	cage.net_set = CosmeticLibrary.get_net("neon_yellow")
+	cage._ready()
+	t.eq(cage.net_style, "cotton", "a neon cotton hangs the cotton body")
+	var body := cage.net_body()
+	t.ok(body is CottonNet and (body as CottonNet).tint == CosmeticLibrary.get_net("neon_yellow").tint, "…tinted by the set")
+	var cords := (body as CottonNet).skeleton.get_node("Net_Cords") as MeshInstance3D
+	var arr: Array = cords.mesh.surface_get_arrays(0)
+	var want: Color = CosmeticLibrary.get_net("neon_yellow").tint
+	var got: Color = (arr[Mesh.ARRAY_COLOR] as PackedColorArray)[0] if arr[Mesh.ARRAY_COLOR] != null else Color.BLACK
+	t.ok(absf(got.r - want.r) < 0.01 and absf(got.g - want.g) < 0.01 and absf(got.b - want.b) < 0.01, "the cords carry the neon colour (8-bit on the mesh)")
+	cage.set_net(CosmeticLibrary.get_net("cotton"))
+	var plain := cage.net_body() as CottonNet
+	var parr: Array = (plain.skeleton.get_node("Net_Cords") as MeshInstance3D).mesh.surface_get_arrays(0)
+	t.ok(plain.tint == Color.WHITE and parr[Mesh.ARRAY_COLOR] == null, "back to plain cotton: no vertex colours")
+	cage.free()
 	SaveService.put_cosmetics(cos_before)

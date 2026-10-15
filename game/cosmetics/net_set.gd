@@ -11,6 +11,9 @@ const KINDS := ["cotton", "chain"]
 @export var kind := "cotton"
 ## The body NetBodies builds (defaults to the id).
 @export var style := ""
+## A colour over the body's cords and knots (white = the body's own look):
+## the neon cottons are the cotton body tinted.
+@export var tint := Color.WHITE
 
 
 func body_style() -> String:
