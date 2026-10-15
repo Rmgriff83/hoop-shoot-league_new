@@ -183,19 +183,19 @@ static func nets_of_kind(kind: String) -> Array[NetSet]:
 	return out
 
 
-## The free net of a kind (the first priced 0; else the first of the kind).
+## The stock net of a kind (the `stock` flag; else the first of the kind).
 static func stock_net(kind: String) -> NetSet:
 	var all := nets_of_kind(kind)
 	for s in all:
-		if s.price_coins == 0:
+		if s.stock:
 			return s
 	return all[0] if not all.is_empty() else null
 
 
-## Every free net: owned by every save.
+## Every stock net: owned by every save. Every other net is a PEGGY prize.
 static func stock_nets() -> Array[NetSet]:
 	var out: Array[NetSet] = []
 	for s in nets():
-		if s.price_coins == 0:
+		if s.stock:
 			out.push_back(s)
 	return out

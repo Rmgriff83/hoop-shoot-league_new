@@ -721,9 +721,10 @@ func _run_city() -> void:
 ## 28 s truck), then a page turn to the beach card.
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-title
 ## PEGGY (docs/LOCKER.md): open the locker from the title, PEGGY from the
-## locker, aim, hold the button through a drop, the prize card, the short
-## hint, CLOSE back to the locker, the BALLS tab, the badge. Grants tickets
-## first and restores the save's cosmetics/settings after.
+## locker, PLAY (the ticket flight, the credit), the joystick, DROP, the
+## prize card, AGAIN, the staged epic and net cards, the short state, `<`
+## back to the locker, the badge, the NETS tab. Grants tickets first and
+## restores the save's cosmetics/settings after.
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-peggy
 func _run_peggy() -> void:
 	await _sleep(1.0)
@@ -751,31 +752,40 @@ func _run_peggy() -> void:
 	if m == null:
 		print("QA: no machine")
 		return
-	m.set_aim(-0.8)
-	await _sleep(0.6)
+	# PLAY: the ticket flies in and credits the machine.
+	await _click_button_named("PLAY")
+	await _sleep(0.5)
+	await _snap("peggy_feed_a")
+	await _sleep(0.9)
+	await _snap("peggy_feed_b")
+	await _sleep(1.0)
+	await _snap("peggy_credited")
+	# The joystick drives the crane to the left wall.
+	m.tilt = -1.0
+	await _sleep(0.7)
+	m.tilt = 0.0
+	await _sleep(0.3)
 	await _snap("peggy_aim")
 	m.press()
-	await _sleep(0.35)
-	await _snap("peggy_hold")
-	await _sleep(0.5)
+	await _sleep(0.6)
 	await _snap("peggy_drop_a")
-	await _sleep(0.9)
+	await _sleep(1.2)
 	await _snap("peggy_drop_b")
 	var waited := 0.0
-	while panel.prize_card() == null and waited < 8.0:
+	while panel.prize_card() == null and waited < 10.0:
 		await _sleep(0.2)
 		waited += 0.2
 	await _sleep(0.3)
 	await _snap("peggy_card")
+	# AGAIN: another ticket in, a drop from the centre.
 	var again: Button = get_tree().root.find_child("Again", true, false)
 	if again != null:
 		again.pressed.emit()
-	await _sleep(0.4)
-	# A second drop from the centre, then the BALLS tab and the title badge.
+	await _sleep(PeggyMachine.FEED_S + 0.4)
 	m.set_aim(0.0)
 	m.press()
 	waited = 0.0
-	while panel.prize_card() == null and waited < 8.0:
+	while panel.prize_card() == null and waited < 10.0:
 		await _sleep(0.2)
 		waited += 0.2
 	await _snap("peggy_card_2")
@@ -783,25 +793,35 @@ func _run_peggy() -> void:
 	if keep != null:
 		keep.pressed.emit()
 	await _sleep(0.3)
-	# The epic page, staged (a real epic needs level 3 and luck).
-	panel._show_card({"slot": 0, "base": "epic", "rarity": "epic", "ball_id": "tiger", "refund": 0,
-		"owned_after": 4, "result": {}})
+	# The epic page and a net card, staged (a real one needs luck).
+	panel._show_card({"slot": 0, "base": "epic", "rarity": "epic", "kind": "ball", "id": "tiger", "refund": 0,
+		"owned_after": 4, "roster_size": 47, "result": {}})
 	await _sleep(0.6)
 	await _snap("peggy_epic")
 	panel._dismiss_card()
+	panel._show_card({"slot": 2, "base": "common", "rarity": "common", "kind": "net", "id": "wool", "refund": 0,
+		"owned_after": 3, "roster_size": 8, "result": {}})
+	await _sleep(0.4)
+	await _snap("peggy_net_card")
+	panel._dismiss_card()
 	await _sleep(0.2)
-	# Short of a drop: the one line under the frame.
+	# Short of a drop: PLAY greyed, the cap's X.
 	var cos_rich: Dictionary = SaveService.get_cosmetics()
 	var cos_poor: Dictionary = cos_rich.duplicate(true)
 	cos_poor["tickets"] = 180
 	SaveService.put_cosmetics(cos_poor)
 	panel._refresh_machine()
-	await _sleep(0.3)
+	await _sleep(0.5)
 	await _snap("peggy_short")
 	SaveService.put_cosmetics(cos_rich)
 	panel._refresh_machine()
-	# CLOSE: back to the locker, then CLOSE: home with the badge.
-	await _click_button_named("CLOSE")
+	# `<`: back to the locker, then CLOSE: home with the badge.
+	var back: Button = panel.find_child("Back", true, false)
+	if back != null:
+		var bc := (back.global_position + back.size / 2.0) * 0.5
+		_mouse_button(bc, true)
+		await _sleep(0.08)
+		_mouse_button(bc, false)
 	await _sleep(0.8)
 	await _snap("peggy_back_locker")
 	await _click_button_named("CLOSE")
@@ -813,9 +833,9 @@ func _run_peggy() -> void:
 	await _sleep(0.8)
 	var locker_page: LockerPanel = get_tree().root.find_child("LockerPanel", true, false)
 	if locker_page != null:
-		locker_page.show_tab("BALLS")
+		locker_page.show_tab("NETS")
 	await _sleep(0.5)
-	await _snap("peggy_balls")
+	await _snap("peggy_nets")
 	await _click_button_named("CLOSE")
 	await _sleep(0.6)
 	# Dark mode: both tabs must stay readable.
@@ -833,7 +853,9 @@ func _run_peggy() -> void:
 		await _click_button_named("PEGGY")
 		await _sleep(0.8)
 		await _snap("peggy_dark")
-		await _click_button_named("CLOSE")
+		var pg: PeggyPage = get_tree().root.find_child("PeggyPage", true, false)
+		if pg != null:
+			pg.close()
 		await _sleep(0.6)
 		await _click_button_named("CLOSE")
 		await _sleep(0.6)

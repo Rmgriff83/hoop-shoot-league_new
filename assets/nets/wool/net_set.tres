@@ -6,6 +6,6 @@
 script = ExtResource("1")
 id = "wool"
 display_name = "Wool"
-price_coins = 700
+price_coins = 0
 kind = "cotton"
 style = "wool"

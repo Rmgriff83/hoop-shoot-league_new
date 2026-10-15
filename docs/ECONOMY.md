@@ -8,9 +8,9 @@ reward. Cards' own balance (power, rarity, AI parity) is `docs/CARDS.md`.
 |---|---|---|
 | Scope | global | **one wallet per league** |
 | Earned by | time trials (never practice), league heats, a league title | that league's heats and title |
-| Spent on | PEGGY drops (the locker's drop machine wins balls, docs/LOCKER.md) and nets (and, when the counter reopens, hoops) at the **locker** (home page) | that league's power-up cards in its **shop** (league hub) |
+| Spent on | **PEGGY plays only** (the drop machine wins balls AND nets, docs/LOCKER.md; nothing is bought outright — hoops only when that counter reopens) | that league's power-up cards in its **shop** (league hub) |
 | Lives in | save part `cosmetics` → `tickets` | save part `cards` v3 → `leagues[id].coins`, beside that league's `inventory` / `loadout` |
-| Code | `App.tickets()`, `grant_tickets`, `spend_tickets`, `peggy_drop(aim)`, `try_buy("net" | "hoop", id)` | `App.league_coins(id)`, `grant_league_coins(n, id)`, `try_buy_card(card, id)` |
+| Code | `App.tickets()`, `grant_tickets`, `spend_tickets`, `peggy_insert_ticket()` → `peggy_drop(aim)`, `try_buy("hoop", id)` (balls and nets refuse) | `App.league_coins(id)`, `grant_league_coins(n, id)`, `try_buy_card(card, id)` |
 
 **Why segmented:** coins earned in the easy league can never buy cards for
 the hard league, and cards dropped or bought in a league play only there.
@@ -49,8 +49,8 @@ coin-flip win rate. From that:
   against;
 - **minutes to afford** = price ÷ grind rate, and the **tier** whose minutes
   band holds it (`entry`, `mid`, `premium`, `grail`);
-- the **catalog hours**: every priced locker item (the hoops and the nets)
-  plus PEGGY's expected tickets to win every ball (`peggy_tickets()`);
+- the **catalog hours**: every priced locker item (the hoops) plus PEGGY's
+  expected tickets to win every ball and every net (`peggy_tickets()`);
 - **heats to afford** each card in each league = price ÷ expected coins per
   heat.
 
@@ -61,8 +61,9 @@ Rules the suite enforces (`EconomyBudget.problems()`, `tests/test_economy.gd`):
 2. every priced item's minutes fall inside some tier band, and none passes
    the grail ceiling;
 3. the whole catalog's hours sit inside `catalog_hours`;
-3b. PEGGY: a drop is an *entry* purchase, the roster is payable, a ball
-   costs at most 1.35 drops, every ball is rated and priced 0 (docs/LOCKER.md);
+3b. PEGGY: a drop is an *entry* purchase, the roster (balls and nets) is
+   payable, a prize costs at most 1.35 drops, every ball is rated and priced
+   0, every net is priced 0 with one stock net per kind (docs/LOCKER.md);
 4. each card rarity's heats-to-afford is inside its band, in every league;
 5. every league row carries all six reward keys (`LeagueData.validate`);
 6. (cards' own power / price curve: `CardBudget`, `docs/CARDS.md`).
@@ -82,15 +83,15 @@ The ledger prints all of it and exits non-zero on a break:
 
 Rate band 6–14/min. Tiers in minutes of trials: entry 15–40, mid 40–70,
 premium 70–115, grail 115–170. At the ~12/min grind rate a PEGGY drop
-(300 tickets) is an entry purchase, the 46 winnable balls cost ~13,800
-tickets (~19 h, no drop wasted), the jack chain (600) is a mid purchase and
-the ladder chain (1000) a premium one, and the whole catalog with the hoops
-and the nets is ~22 hours — something new every few sessions, the legends
-behind level 5.
+(300 tickets) is an entry purchase, the 52 winnable prizes (46 balls, 6
+nets) cost ~15,600 tickets (~21 h, no drop wasted), and the whole catalog
+with the hoops is ~22 hours — something new every few sessions, the
+legends behind level 5. Nets were priced 400–1000 on a counter until
+2026-10-15; now they are prizes.
 Cards: a common (100 coins) every ~3 cage heats, a rare (150) every ~4.5,
 plus the drops.
 
-## Adding an item (a hoop or a net)
+## Adding an item (a hoop)
 
 1. Author its `.tres` with `price_coins` (the field name is historical; it
    is tickets).
@@ -99,7 +100,9 @@ plus the drops.
 3. The suite (`test_economy.gd` covers every registered set automatically;
    `test_cosmetics.gd` checks the set loads).
 
-A ball is a PEGGY prize, not a priced item: docs/LOCKER.md → Adding a ball.
+A ball or a net is a PEGGY prize, not a priced item (price 0; a net's
+`stock` flag marks the free pair): docs/LOCKER.md → Adding a ball. The
+ledger's roster line and `peggy_tickets()` pick a new one up automatically.
 
 ## Adding a mode
 

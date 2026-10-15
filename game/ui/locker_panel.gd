@@ -7,7 +7,7 @@ extends HomePage
 ## the pause menu swaps per court). Nothing unowned is listed: balls are won
 ## on PEGGY (the PEGGY button beside the ticket chip opens its page) and the
 ## net store is a later page. The hoop counter is closed
-## (App.HOOPS_IN_LOCKER). Opening BALLS clears App.unseen_balls(), which the
+## (App.HOOPS_IN_LOCKER). Opening the locker clears App.unseen_prizes(), which the
 ## title's locker icon badges.
 
 signal peggy_requested
@@ -29,6 +29,7 @@ func _row_gap() -> int:
 
 
 func _build() -> void:
+	App.mark_prizes_seen()   # the collection is open: every won prize is seen
 	var h := head("LOCKER")
 	var peggy := button("PEGGY", RetroTheme.LIGHT["orange"], 16, 48)
 	peggy.name = "Peggy"
@@ -79,8 +80,7 @@ func show_tab(tab: String) -> void:
 	if not TABS.has(tab):
 		return
 	_tab = tab
-	if tab == "BALLS":
-		App.mark_balls_seen()
+	App.mark_prizes_seen()
 	_fill()
 
 

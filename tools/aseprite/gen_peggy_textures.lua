@@ -1,6 +1,7 @@
--- PEGGY, the locker's drop machine (docs/LOCKER.md): the cabinet's skins for
--- tools/blender/build_peggy.py, plus the UI's ticket icon. Deterministic hash
--- noise (no math.random) so rebuilds are byte-identical.
+-- PEGGY, the drop machine (docs/LOCKER.md): the v2 carnival cabinet's skins
+-- for tools/blender/build_peggy.py, plus the UI's ticket icon. Deterministic
+-- hash noise (no math.random) so rebuilds are byte-identical. Every texture
+-- is drawn per pixel from the design's canvas recipes (peggy-cabinet-v2.js).
 -- Run: /Applications/Aseprite.app/Contents/MacOS/aseprite -b --script tools/aseprite/gen_peggy_textures.lua
 
 local ROOT = app.fs.filePath(app.fs.filePath(app.fs.filePath(debug.getinfo(1).source:sub(2))))
@@ -21,6 +22,9 @@ end
 
 local function clamp(v) return math.max(0, math.min(255, math.floor(v + 0.5))) end
 local function rgb(r, g, b, a) return pc.rgba(clamp(r), clamp(g), clamp(b), a or 255) end
+local function hex(h, a)
+  return rgb(tonumber(h:sub(2, 3), 16), tonumber(h:sub(4, 5), 16), tonumber(h:sub(6, 7), 16), a)
+end
 
 local function fill(img, x0, y0, x1, y1, c)
   for y = math.max(0, y0), math.min(img.height - 1, y1) do
@@ -35,33 +39,36 @@ local function save(spr, dir, name)
   print("wrote " .. name)
 end
 
-local RED = {179, 38, 30}
-local RED_DK = {128, 24, 20}
-local CREAM = {241, 232, 208}
-local INK = {26, 22, 24}
-local GOLD = {240, 184, 74}
-local NAVY = {27, 36, 64}
-local TIER = {
-  common = {184, 174, 150}, rare = {127, 174, 198}, epic = {232, 112, 58}, legend = {240, 184, 74},
-}
+local CLEAR = pc.rgba(0, 0, 0, 0)
+local INK = "#221C18"
+local INK2 = "#1A1618"
+local CREAM = "#F1E8D0"
+local GOLD = "#F0B84A"
+local ORANGE = "#E8703A"
+local TEAL = "#3F8C7A"
+local RAR = { common = "#8FC1E3", rare = "#3F8C7A", epic = "#E0457B", legend = "#F0B84A", refund = "#5A514A" }
 
 -- A 3x5 pixel font for the few words the cabinet carries.
 local FONT = {
   A = {"010", "101", "111", "101", "101"}, C = {"011", "100", "100", "100", "011"},
   D = {"110", "101", "101", "101", "110"}, E = {"111", "100", "110", "100", "111"},
-  G = {"011", "100", "101", "101", "011"}, I = {"111", "010", "010", "010", "111"},
+  G = {"011", "100", "101", "101", "011"}, H = {"101", "101", "111", "101", "101"},
+  I = {"111", "010", "010", "010", "111"}, K = {"101", "101", "110", "101", "101"},
   L = {"100", "100", "100", "100", "111"}, M = {"101", "111", "111", "101", "101"},
   N = {"110", "101", "101", "101", "101"}, O = {"010", "101", "101", "101", "010"},
   P = {"110", "101", "110", "100", "100"}, R = {"110", "101", "110", "101", "101"},
-  Y = {"101", "101", "010", "010", "010"}, T = {"111", "010", "010", "010", "010"},
-  K = {"101", "101", "110", "101", "101"}, S = {"011", "100", "010", "001", "110"},
+  S = {"011", "100", "010", "001", "110"}, T = {"111", "010", "010", "010", "010"},
+  U = {"101", "101", "101", "101", "111"}, V = {"101", "101", "101", "101", "010"},
+  Y = {"101", "101", "010", "010", "010"}, ["?"] = {"110", "001", "010", "000", "010"},
+  ["0"] = {"111", "101", "101", "101", "111"}, ["2"] = {"111", "001", "111", "100", "111"},
+  ["4"] = {"101", "101", "111", "001", "001"}, ["6"] = {"111", "100", "111", "101", "111"},
+  [" "] = {"000", "000", "000", "000", "000"},
 }
 
 local function text(img, s, x0, y0, scale, c)
   local x = x0
   for i = 1, #s do
-    local ch = s:sub(i, i)
-    local g = FONT[ch]
+    local g = FONT[s:sub(i, i)]
     if g then
       for row = 1, 5 do
         for col = 1, 3 do
@@ -79,155 +86,261 @@ end
 
 local function text_w(s, scale) return #s * 4 * scale - scale end
 
--- peggy_cabinet.png 128x256 — red panels with a cream trim band, a little grain.
-do
-  local W, H = 128, 256
-  local spr, img = newImage(W, H)
-  for y = 0, H - 1 do
-    for x = 0, W - 1 do
-      local n = noise(x, y, 501) * 14 - 7
-      local v = (y % 64 < 4 or x % 64 < 4) and 1 or 0
-      local c = v == 1 and CREAM or RED
-      img:drawPixel(x, y, rgb(c[1] + n, c[2] + n * 0.8, c[3] + n * 0.6))
-    end
-  end
-  save(spr, OUT, "peggy_cabinet.png")
+local function text_c(img, s, cx, y0, scale, c)
+  text(img, s, math.floor(cx - text_w(s, scale) / 2), y0, scale, c)
 end
 
--- peggy_marquee.png 256x64 — PEGGY in cream pixel caps on red, a gold bulb border.
-do
-  local W, H = 256, 64
-  local spr, img = newImage(W, H)
-  for y = 0, H - 1 do
-    for x = 0, W - 1 do
-      local n = noise(x, y, 511) * 10 - 5
-      img:drawPixel(x, y, rgb(RED[1] + n, RED[2] + n * 0.6, RED[3] + n * 0.6))
-    end
+-- Outlined text: the word in `c` with a one-scale ring of `o` around it.
+local function text_o(img, s, cx, y0, scale, c, o)
+  local x0 = math.floor(cx - text_w(s, scale) / 2)
+  for _, d in ipairs({{-1, 0}, {1, 0}, {0, -1}, {0, 1}, {-1, -1}, {1, -1}, {-1, 1}, {1, 1}}) do
+    text(img, s, x0 + d[1] * scale, y0 + d[2] * scale, scale, o)
   end
-  fill(img, 0, 0, W - 1, 3, rgb(CREAM[1], CREAM[2], CREAM[3]))
-  fill(img, 0, H - 4, W - 1, H - 1, rgb(CREAM[1], CREAM[2], CREAM[3]))
-  local s = 8
-  local w = text_w("PEGGY", s)
-  local x0 = math.floor((W - w) / 2)
-  text(img, "PEGGY", x0 + 3, 15, s, rgb(RED_DK[1], RED_DK[2], RED_DK[3]))
-  text(img, "PEGGY", x0, 12, s, rgb(CREAM[1], CREAM[2], CREAM[3]))
-  for x = 10, W - 10, 18 do
-    fill(img, x - 2, 5, x + 1, 8, rgb(GOLD[1], GOLD[2], GOLD[3]))
-    fill(img, x - 2, H - 9, x + 1, H - 6, rgb(GOLD[1], GOLD[2], GOLD[3]))
-  end
-  save(spr, OUT, "peggy_marquee.png")
+  text(img, s, x0, y0, scale, c)
 end
 
--- peggy_board.png 128x128 — navy with a cream dot grid at the peg pitch.
+-- peggy_face.png 176x388 (RGBA) — the cabinet face: wavy sunburst wings
+-- around a dark board window, the orange marquee strip, PEGGY on top.
+-- Alpha-cut in the model; the window and everything outside the wings is
+-- clear. Mirrors the design's canvas recipe (FW 1.12 x FH 2.46 metres).
 do
-  local W, H = 128, 128
+  local W, H = 176, 388
+  local FW, FH = 1.12, 2.46
+  local spr, img = newImage(W, H, true)
+  local cx = W / 2
+  local bx0, bx1 = W * (0.5 - 0.39 / FW), W * (0.5 + 0.39 / FW)
+  local byT, byB = H * (1 - 2.00 / FH), H * (1 - 0.48 / FH)
+  local function edge(yy, side)
+    local t = yy / H
+    if side < 0 then return 6 + 9 * math.sin(t * 7.2 + 0.4) + 6 * t end
+    return W - 6 - 9 * math.sin(t * 6.4 + 1.6) - 4 * t
+  end
+  local function archTop(xx)
+    local u = (xx - cx) / (W / 2)
+    return 10 + 22 * u * u - 8 * math.cos(u * 6.5) * (1 - math.abs(u))
+  end
+  local cols = {ORANGE, INK, TEAL, ORANGE, INK, ORANGE, TEAL, INK}
+  local hubs = {{-1, bx0}, {1, bx1}}
+  local oy = (byT + byB) / 2
+  for y = 0, H - 1 do
+    for x = 0, W - 1 do
+      local px, py = x + 0.5, y + 0.5
+      local inside = px > edge(py, -1) and px < edge(py, 1) and py > archTop(px) and py < H - 4
+      local c = CLEAR
+      if inside then
+        c = hex(INK)
+        -- the sunburst: 8 wedges of 15° from each wing's hub, gold ray lines
+        for _, hub in ipairs(hubs) do
+          local side, ox = hub[1], hub[2]
+          local dx, dy = (px - ox) * side, py - oy
+          local ang = math.deg(math.atan(dy, dx))
+          if dx > 0 and ang >= -60 and ang < 60 then
+            local k = math.floor((ang + 60) / 15)
+            c = hex(cols[k + 1])
+            local a0 = (-60 + k * 15)
+            local d = math.abs(math.rad(ang - a0)) * math.sqrt(dx * dx + dy * dy)
+            if d < 1.5 then c = hex(GOLD) end
+          end
+        end
+        -- the marquee strip over the window, its gold rule
+        if px >= bx0 - 12 and px <= bx1 + 12 and py < byT + 4 then c = hex(ORANGE) end
+        if px >= bx0 - 12 and px <= bx1 + 12 and py >= byT - 6 and py < byT - 3 then c = hex(GOLD) end
+        -- the window
+        if px >= bx0 - 5 and px <= bx1 + 5 and py >= byT - 2 and py <= byB + 2 then c = CLEAR end
+        -- the outline
+        local onEdge = px < edge(py, -1) + 2 or px > edge(py, 1) - 2 or py < archTop(px) + 2 or py > H - 6
+        if onEdge and c ~= CLEAR then c = hex(INK2) end
+      end
+      img:drawPixel(x, y, c)
+    end
+  end
+  -- the title, gold outline on ink
+  text_o(img, "PEGGY", cx, math.floor(byT * 0.62) - 10, 4, hex(INK), hex(GOLD))
+  save(spr, OUT, "peggy_face.png")
+end
+
+-- peggy_board.png 72x124 — the dark speckled board with a gold glow at the top.
+do
+  local W, H = 72, 124
   local spr, img = newImage(W, H)
   for y = 0, H - 1 do
     for x = 0, W - 1 do
-      local n = noise(x, y, 521) * 10 - 5
-      img:drawPixel(x, y, rgb(NAVY[1] + n, NAVY[2] + n, NAVY[3] + n))
-    end
-  end
-  for y = 8, H - 1, 16 do
-    for x = 8, W - 1, 16 do
-      fill(img, x - 1, y - 1, x, y, rgb(96, 104, 140))
+      local n = noise(x, y, 701)
+      local c = n < 0.025 and "#272020" or (n > 0.975 and "#3A302C" or "#2E2624")
+      local col = hex(c)
+      if y < 22 then
+        local g = (1 - y / 22) * 0.45
+        local r = tonumber(c:sub(2, 3), 16) * (1 - g) + 240 * g
+        local gg = tonumber(c:sub(4, 5), 16) * (1 - g) + 184 * g
+        local b = tonumber(c:sub(6, 7), 16) * (1 - g) + 74 * g
+        col = rgb(r, gg, b)
+      end
+      img:drawPixel(x, y, col)
     end
   end
   save(spr, OUT, "peggy_board.png")
 end
 
--- peggy_button_up.png / peggy_button_down.png 32x32 — the red dome's cap.
-for _, state in ipairs({"up", "down"}) do
-  local W, H = 32, 32
+-- peggy_deck.png 160x64 — the console deck: ◀ MOVE ▶ and DROP, a gold frame.
+do
+  local W, H = 160, 64
   local spr, img = newImage(W, H)
   for y = 0, H - 1 do
     for x = 0, W - 1 do
-      local dx, dy = (x + 0.5 - 16) / 16, (y + 0.5 - 16) / 16
-      local d = math.sqrt(dx * dx + dy * dy)
-      local c
-      if d > 0.97 then c = INK
-      elseif d > 0.86 then c = RED_DK
-      else
-        local hl = state == "up" and math.max(0, 1 - math.sqrt((dx + 0.35) ^ 2 + (dy + 0.35) ^ 2) * 2.2) or 0
-        c = {RED[1] + 30 + hl * 60, RED[2] + 10 + hl * 50, RED[3] + 8 + hl * 40}
-        if state == "down" then c = {RED[1] - 20, RED[2] - 6, RED[3] - 4} end
+      img:drawPixel(x, y, noise(x, y, 711) < 0.03 and hex("#3A3036") or hex("#2A2228"))
+    end
+  end
+  fill(img, 3, 3, W - 4, 4, hex(GOLD)); fill(img, 3, H - 5, W - 4, H - 4, hex(GOLD))
+  fill(img, 3, 3, 4, H - 4, hex(GOLD)); fill(img, W - 5, 3, W - 4, H - 4, hex(GOLD))
+  fill(img, W / 2 - 1, 10, W / 2, H - 11, hex(GOLD))
+  local cr = hex(CREAM)
+  text_c(img, "MOVE", W * 0.27, H - 12, 1, cr)
+  -- the arrows
+  local ax = math.floor(W * 0.27 - text_w("MOVE", 1) / 2) - 8
+  for i = 0, 2 do fill(img, ax + i, H - 10 + i, ax + i, H - 10 + 4 - i, cr) end
+  ax = math.floor(W * 0.27 + text_w("MOVE", 1) / 2) + 5
+  for i = 0, 2 do fill(img, ax + 2 - i, H - 10 + i, ax + 2 - i, H - 10 + 4 - i, cr) end
+  text_c(img, "DROP", W * 0.73, H - 12, 1, cr)
+  save(spr, OUT, "peggy_deck.png")
+end
+
+-- peggy_big_ticket.png 160x80 (RGBA) — the roll ticket that flies into the
+-- slot: orange, notched corners, scalloped short edges, an inset frame,
+-- serials up both stubs, HOOP SHOOT / LEAGUE / TICKET.
+do
+  local W, H = 160, 80
+  local spr, img = newImage(W, H, true)
+  local R = 11
+  local function inside(px, py, l, t, r, b, rad, scal)
+    if px < l or px > r or py < t or py > b then return false end
+    -- notched corners
+    for _, cn in ipairs({{l, t}, {r, t}, {l, b}, {r, b}}) do
+      if (px - cn[1]) ^ 2 + (py - cn[2]) ^ 2 < rad * rad then return false end
+    end
+    -- scalloped short edges
+    if scal then
+      for _, ex in ipairs({l, r}) do
+        local yy = t + rad + 3
+        while yy < b - rad do
+          if (px - ex) ^ 2 + (py - yy) ^ 2 < 9 then return false end
+          yy = yy + 6
+        end
       end
-      img:drawPixel(x, y, rgb(c[1], c[2], c[3]))
+    end
+    return true
+  end
+  for y = 0, H - 1 do
+    for x = 0, W - 1 do
+      local px, py = x + 0.5, y + 0.5
+      local c = CLEAR
+      if inside(px, py, 1, 1, W - 1, H - 1, R, true) then
+        local n = noise(x, y, 721)
+        c = hex(ORANGE)
+        if n < 0.1 then c = rgb(242, 150, 92) elseif n > 0.92 then c = rgb(200, 90, 44) end
+        local f = inside(px, py, 24, 8, W - 24, H - 8, 7, false)
+        local f2 = inside(px, py, 26, 10, W - 26, H - 10, 6, false)
+        if f and not f2 then c = hex("#A8421C") end
+      end
+      img:drawPixel(x, y, c)
     end
   end
-  save(spr, OUT, "peggy_button_" .. state .. ".png")
-end
-
--- peggy_ticket.png 48x24 — a cream stub: gold band, perforations, TICKET.
-do
-  local W, H = 48, 24
-  local spr, img = newImage(W, H)
-  fill(img, 0, 0, W - 1, H - 1, rgb(INK[1], INK[2], INK[3]))
-  fill(img, 1, 1, W - 2, H - 2, rgb(CREAM[1], CREAM[2], CREAM[3]))
-  fill(img, 1, 1, W - 2, 4, rgb(GOLD[1], GOLD[2], GOLD[3]))
-  fill(img, 1, H - 5, W - 2, H - 2, rgb(GOLD[1], GOLD[2], GOLD[3]))
-  for y = 2, H - 3, 3 do
-    img:drawPixel(10, y, rgb(INK[1], INK[2], INK[3]))
-    img:drawPixel(W - 11, y, rgb(INK[1], INK[2], INK[3]))
+  local ink = hex(INK)
+  text_c(img, "HOOP SHOOT", W / 2, H / 2 - 21, 2, ink)
+  text_c(img, "LEAGUE", W / 2, H / 2 - 6, 3, ink)
+  text_c(img, "TICKET", W / 2, H / 2 + 13, 2, ink)
+  -- serials up the stubs (rotated: drawn as a column of glyphs)
+  local serial = "466002"
+  local dk = hex("#5A2410")
+  for i = 1, #serial do
+    local ch = serial:sub(i, i)
+    text(img, ch, 9, H - 14 - (i - 1) * 7, 1, dk)
+    text(img, ch, W - 13, 6 + (i - 1) * 7, 1, dk)
   end
-  text(img, "TKT", 14, 9, 2, rgb(INK[1], INK[2], INK[3]))
-  save(spr, OUT, "peggy_ticket.png")
+  save(spr, OUT, "peggy_big_ticket.png")
 end
 
--- peggy_plate_<rarity>.png 48x24 — the slot plate in the tier colour.
-for _, r in ipairs({"common", "rare", "epic", "legend"}) do
-  local W, H = 48, 24
-  local spr, img = newImage(W, H)
-  local c = TIER[r]
-  fill(img, 0, 0, W - 1, H - 1, rgb(INK[1], INK[2], INK[3]))
-  fill(img, 1, 1, W - 2, H - 2, rgb(c[1], c[2], c[3]))
-  fill(img, 1, 1, W - 2, 1, rgb(c[1] + 40, c[2] + 40, c[3] + 40))
-  local label = r:upper()
-  local s = 2
-  local w = text_w(label, s)
-  text(img, label, math.floor((W - w) / 2), 7, s, rgb(INK[1], INK[2], INK[3]))
-  save(spr, OUT, "peggy_plate_" .. r .. ".png")
-end
-
--- peggy_plate_refund.png — the ticket glyph plate ("+150" is drawn in 3D text).
+-- peggy_glow.png 32x32 (RGBA) — a bulb's star glow: radial falloff with a cross.
 do
-  local W, H = 48, 24
-  local spr, img = newImage(W, H)
-  fill(img, 0, 0, W - 1, H - 1, rgb(INK[1], INK[2], INK[3]))
-  fill(img, 1, 1, W - 2, H - 2, rgb(70, 66, 72))
-  text(img, "TKTS", 8, 7, 2, rgb(GOLD[1], GOLD[2], GOLD[3]))
-  save(spr, OUT, "peggy_plate_refund.png")
-end
-
--- peggy_light.png 16x4 — a warm bulb strip over each slot.
-do
-  local spr, img = newImage(16, 4)
-  for y = 0, 3 do
-    for x = 0, 15 do
-      local v = (y == 0 or y == 3) and 0.7 or 1.0
-      img:drawPixel(x, y, rgb(255 * v, 232 * v, 170 * v))
+  local W, H = 32, 32
+  local spr, img = newImage(W, H, true)
+  for y = 0, H - 1 do
+    for x = 0, W - 1 do
+      local dx, dy = x + 0.5 - 16, y + 0.5 - 16
+      local d = math.sqrt(dx * dx + dy * dy) / 16
+      local a = d < 0.25 and 1 - (d / 0.25) * 0.5 or math.max(0, 0.5 * (1 - (d - 0.25) / 0.75))
+      if x == 15 or x == 16 or y == 15 or y == 16 then a = math.max(a, 0.7) end
+      img:drawPixel(x, y, pc.rgba(255, 255, 255, clamp(a * 255)))
     end
   end
-  save(spr, OUT, "peggy_light.png")
+  save(spr, OUT, "peggy_glow.png")
+end
+
+-- peggy_mystery_<ball|net>_<rarity>.png 32x32 (RGBA) — a hidden prize: the
+-- generic ball or net outline, a gold "?" and the rarity dot in the corner.
+for _, kind in ipairs({"ball", "net"}) do
+  for _, rar in ipairs({"common", "rare", "epic", "legend"}) do
+    local W, H = 32, 32
+    local spr, img = newImage(W, H, true)
+    local cream = hex(CREAM)
+    local tint = hex(CREAM, 36)
+    local function inNet(px, py)
+      -- a trapezoid (4,6)-(28,6)-(23,27)-(9,27)
+      if py < 6 or py > 27 then return false end
+      local t = (py - 6) / 21
+      local l, r = 4 + 5 * t, 28 - 5 * t
+      return px >= l and px <= r
+    end
+    for y = 0, H - 1 do
+      for x = 0, W - 1 do
+        local px, py = x + 0.5, y + 0.5
+        local c = CLEAR
+        if kind == "ball" then
+          local d = math.sqrt((px - 16) ^ 2 + (py - 16) ^ 2)
+          if d <= 12 then c = tint end
+          if d > 10.5 and d <= 12 then c = cream end
+          if d < 10.5 and (math.abs(px - 16) < 0.6 or math.abs(py - 16) < 0.6) then c = hex(CREAM, 128) end
+        else
+          if inNet(px, py) then
+            c = tint
+            local t = (py - 6) / 21
+            local l, r = 4 + 5 * t, 28 - 5 * t
+            if px - l < 1.5 or r - px < 1.5 or py < 7.5 or py > 25.5 then c = cream end
+            -- the diagonal cords
+            for k = 0, 3 do
+              local xa, xb = 4 + k * 8, 9 + k * 4.7
+              local xl = xa + (xb - xa) * t
+              if math.abs(px - xl) < 0.6 then c = hex(CREAM, 140) end
+              local xa2, xb2 = 28 - k * 8, 23 - k * 4.7
+              local xr = xa2 + (xb2 - xa2) * t
+              if math.abs(px - xr) < 0.6 then c = hex(CREAM, 140) end
+            end
+            if py >= 5 and py < 7 and px >= 3 and px <= 29 then c = cream end
+          end
+        end
+        img:drawPixel(x, y, c)
+      end
+    end
+    text_o(img, "?", 16, 11, 2, hex(GOLD), hex(INK))
+    fill(img, 23, 1, 30, 8, hex(INK)); fill(img, 24, 2, 29, 7, hex(RAR[rar]))
+    save(spr, OUT, "peggy_mystery_" .. kind .. "_" .. rar .. ".png")
+  end
 end
 
 -- icon_ticket.png 22x14 (RGBA) — the UI's ticket: a gold stub with notches.
 do
   local W, H = 22, 14
   local spr, img = newImage(W, H, true)
-  fill(img, 0, 0, W - 1, H - 1, pc.rgba(0, 0, 0, 0))
-  local ink = rgb(INK[1], INK[2], INK[3])
-  local gold = rgb(GOLD[1], GOLD[2], GOLD[3])
+  fill(img, 0, 0, W - 1, H - 1, CLEAR)
+  local ink = hex(INK)
+  local gold = hex(GOLD)
   local hi = rgb(250, 220, 140)
   fill(img, 1, 1, W - 2, H - 2, ink)
   fill(img, 2, 2, W - 3, H - 3, gold)
   fill(img, 2, 2, W - 3, 2, hi)
-  -- side notches
   for _, x in ipairs({0, 1, W - 2, W - 1}) do
-    fill(img, x, 5, x, 8, pc.rgba(0, 0, 0, 0))
+    fill(img, x, 5, x, 8, CLEAR)
   end
   fill(img, 2, 5, 2, 8, ink); fill(img, W - 3, 5, W - 3, 8, ink)
-  -- perforation
   for y = 3, H - 4, 2 do
     img:drawPixel(7, y, ink); img:drawPixel(W - 8, y, ink)
   end

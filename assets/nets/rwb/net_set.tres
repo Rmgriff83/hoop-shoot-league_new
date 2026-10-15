@@ -6,6 +6,6 @@
 script = ExtResource("1")
 id = "rwb"
 display_name = "Red White Blue"
-price_coins = 500
+price_coins = 0
 kind = "cotton"
 style = "rwb"

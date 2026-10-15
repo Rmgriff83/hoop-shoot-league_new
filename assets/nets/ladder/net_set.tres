@@ -6,6 +6,6 @@
 script = ExtResource("1")
 id = "ladder"
 display_name = "Ladder"
-price_coins = 1000
+price_coins = 0
 kind = "chain"
 style = "ladder"

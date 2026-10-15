@@ -1,7 +1,8 @@
 class_name NetSet
 extends CosmeticSet
 ## A net style (docs/LOCKER.md → NETS): the look of the net a hoop hangs —
-## bought for tickets in the locker, equipped per court from the pause menu.
+## won on PEGGY (never bought; the stock pair comes with every save),
+## equipped per court from the pause menu.
 ## Look only: the feel (the nine net_* knobs, the make sounds) stays on the
 ## court's HoopSet, and a style only fits hoops of its KIND ("cotton" on the
 ## nylon hoops, "chain" on the city's steel rim). Procedural: no model_path.
@@ -9,6 +10,8 @@ extends CosmeticSet
 const KINDS := ["cotton", "chain"]
 
 @export var kind := "cotton"
+## The free net of its kind that every save owns (cotton, chain).
+@export var stock := false
 ## The body NetBodies builds (defaults to the id).
 @export var style := ""
 ## A colour over the body's cords and knots (white = the body's own look):

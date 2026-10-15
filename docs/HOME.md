@@ -24,9 +24,10 @@ the cards. **Locker** (`game/ui/locker_panel.gd`, docs/LOCKER.md): a **page**
 over the area (below) — BALLS, the balls you own (equip via `App.select`),
 and NETS, the nets you own by kind (COTTON / CHAIN sub-tab, equip on every
 court of the kind); nothing unowned is listed. Its PEGGY button opens the
-**PEGGY page** (`game/ui/peggy_page.gd`), the ticket-fed drop machine that
-wins balls; the hoop counter is closed for now (`App.HOOPS_IN_LOCKER`). The
-locker icon carries a gold dot while a won ball has not been looked at.
+**PEGGY page** (`game/ui/peggy_page.gd`), the carnival drop machine that
+wins balls and nets — tickets buy nothing else; the hoop counter is closed
+for now (`App.HOOPS_IN_LOCKER`). The locker icon carries a gold dot while a
+won prize has not been looked at.
 **Ranks** is an icon beside the area name: the global boards (below).
 **Shop is not on the home page**: it will live inside each league, selling
 cards usable only in that league (so the easy league can't farm cards for the

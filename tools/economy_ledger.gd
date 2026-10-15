@@ -31,7 +31,7 @@ func _initialize() -> void:
 	var hours: Array = cfg.get("catalog_hours", [15, 35])
 	print("  PEGGY: %d balls to win at %d a drop (tier %s): expected %.0f tickets, %.0f a ball, %.1f hours" % [
 		EconomyBudget.peggy_roster().size() - 1, PeggyPrizes.DROP_COST, EconomyBudget.tier_of(PeggyPrizes.DROP_COST),
-		EconomyBudget.peggy_tickets(), EconomyBudget.peggy_per_ball(), EconomyBudget.peggy_hours()])
+		EconomyBudget.peggy_tickets(), EconomyBudget.peggy_per_prize(), EconomyBudget.peggy_hours()])
 	print("  whole catalog (hoops + PEGGY): %.1f hours (band %s-%s)" % [EconomyBudget.catalog_hours(), hours[0], hours[1]])
 	print("")
 	print("COINS  (per league; heats to afford each card at the expected coins per heat)")

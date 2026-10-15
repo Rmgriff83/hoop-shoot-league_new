@@ -78,29 +78,27 @@ func _envelope(t) -> void:
 		t.ok(float(r["rate"]) >= float(band[0]) and float(r["rate"]) <= float(band[1]), "%s pays inside the band (%.1f/min)" % [r["mode"], r["rate"]])
 	t.ok(EconomyBudget.trial_rate("cage") > EconomyBudget.heat_rate(LeagueData.league("cage")), "a trial out-earns a heat in tickets (heats also pay coins)")
 	var catalog := EconomyBudget.catalog()
-	t.ok(catalog.size() >= 4, "every priced hoop and net is in the catalog (%d)" % catalog.size())
-	var catalog_ids := []
+	t.ok(catalog.size() >= 2, "the priced hoops are in the catalog (%d)" % catalog.size())
 	for item in catalog:
-		catalog_ids.push_back("%s:%s" % [item["kind"], item["id"]])
-		t.ok(item["kind"] in ["hoop", "net"], "%s is a hoop or a net: balls are PEGGY prizes, never priced" % item["id"])
+		t.eq(item["kind"], "hoop", "%s is a hoop: balls and nets are PEGGY prizes, never priced" % item["id"])
 		t.ok(str(item["tier"]) != "", "%s %s (%d) sits in a tier (%.0f min)" % [item["kind"], item["id"], item["price"], item["minutes"]])
-	t.ok(catalog_ids.has("net:jack") and catalog_ids.has("net:ladder"), "the jack and ladder chains are on the counter")
-	t.eq(EconomyBudget.tier_of(600), "mid", "the jack chain is a mid purchase")
-	t.eq(EconomyBudget.tier_of(1000), "premium", "the ladder chain is a premium purchase")
-	t.ok(catalog_ids.has("net:wool"), "the wool net is on the counter")
-	t.eq(EconomyBudget.tier_of(700), "mid", "the wool net is a mid purchase")
-	t.ok(catalog_ids.has("net:neon_yellow") and catalog_ids.has("net:neon_orange"), "the neon cottons are on the counter")
-	t.eq(EconomyBudget.tier_of(400), "entry", "a neon cotton is an entry purchase")
-	t.ok(catalog_ids.has("net:rwb"), "the red white blue net is on the counter")
-	t.eq(EconomyBudget.tier_of(500), "mid", "…a mid purchase")
+	for n in CosmeticLibrary.nets():
+		t.eq(n.price_coins, 0, "net %s is a PEGGY prize, priced 0" % n.id)
+	var roster := EconomyBudget.peggy_roster()
+	var nets_in := 0
+	for e in roster:
+		if PeggyPrizes.kind_of(e) == "net":
+			nets_in += 1
+	t.eq(nets_in, CosmeticLibrary.nets().size(), "every net is on PEGGY's roster")
+	t.eq(EconomyBudget.peggy_start_owned().size(), 3, "a fresh save owns the starter ball and the stock pair")
 	# PEGGY (docs/LOCKER.md): a drop is an entry purchase, the machine pays
 	# the whole roster out, barely wastes a drop, and the roster's hours are
 	# the bulk of the catalog.
 	t.eq(EconomyBudget.tier_of(PeggyPrizes.DROP_COST), "entry", "a drop is an entry purchase")
 	var pt := EconomyBudget.peggy_tickets()
-	var to_win := EconomyBudget.peggy_roster().size() - 1
-	t.ok(pt >= to_win * PeggyPrizes.DROP_COST, "winning %d balls costs at least %d drops (%.0f tickets)" % [to_win, to_win, pt])
-	t.ok(EconomyBudget.peggy_per_ball() <= PeggyPrizes.DROP_COST * 1.35, "a ball costs about a drop (%.0f tickets)" % EconomyBudget.peggy_per_ball())
+	var to_win := EconomyBudget.peggy_to_win()
+	t.ok(pt >= to_win * PeggyPrizes.DROP_COST, "winning %d prizes costs at least %d drops (%.0f tickets)" % [to_win, to_win, pt])
+	t.ok(EconomyBudget.peggy_per_prize() <= PeggyPrizes.DROP_COST * 1.35, "a prize costs about a drop (%.0f tickets)" % EconomyBudget.peggy_per_prize())
 	t.ok(EconomyBudget.peggy_hours() > EconomyBudget.catalog_hours() * 0.5, "the roster is most of the catalog (%.1f of %.1f h)" % [EconomyBudget.peggy_hours(), EconomyBudget.catalog_hours()])
 	var hours: Array = Economy.tickets_cfg().get("catalog_hours", [15, 35])
 	var h := EconomyBudget.catalog_hours()

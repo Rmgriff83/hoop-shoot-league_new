@@ -1,6 +1,6 @@
 extends RefCounted
 ## Nets as cosmetics (docs/LOCKER.md → NETS): ownership, the per-area
-## selection, the ticket counter, and a court that hangs — and swaps — the
+## selection, no counter (nets are PEGGY prizes), and a court that hangs — and swaps — the
 ## style the player chose.
 
 
@@ -30,14 +30,14 @@ func run(t) -> void:
 	t.eq(app.net_for_mode("trial_city").id, "chain", "a mode resolves its area's net")
 	t.ok(not app.select_net("city", "cotton"), "a cotton net cannot hang on the chain rim")
 	t.ok(not app.select_net("city", "jack"), "an unowned net cannot be hung")
-	t.ok(not app.try_buy("net", "jack"), "no tickets, no jack chain")
-	t.ok(not app.try_buy("net", "cotton"), "a stock net is not for sale")
-	t.ok(not app.try_buy("net", "nope"), "an unknown net is not for sale")
+	t.ok(not app.try_buy("net", "jack"), "nets are never bought (PEGGY prizes)")
 	app.grant_tickets(600)
-	t.ok(app.try_buy("net", "jack"), "600 tickets buy the jack chain")
-	t.eq(app.tickets(), 0, "…and are spent")
-	t.ok(not app.try_buy("net", "jack"), "…once")
+	t.ok(not app.try_buy("net", "jack"), "…not even with the tickets")
+	t.eq(app.tickets(), 600, "…and nothing is spent")
+	t.ok(app.grant_cosmetic("net", "jack"), "PEGGY grants the jack chain")
 	t.ok(app.owns("net", "jack"), "the jack chain is owned")
+	t.ok(app.unseen_prizes().has("jack"), "…and flagged unseen for the locker's dot")
+	app.mark_prizes_seen()
 	t.ok(app.select_net("city", "jack"), "and hangs on the city")
 	t.eq(app.net_set_for("city").id, "jack", "the city shows it")
 	t.eq(app.net_set_for("cage").id, "cotton", "the cage is untouched")

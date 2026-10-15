@@ -63,8 +63,9 @@ static func tier_of(price: int) -> String:
 	return ""
 
 
-## Every priced locker item (the hoops and the nets; balls are PEGGY prizes
-## and priced 0): [{kind, id, name, price, minutes, tier}].
+## Every priced locker item: the hoops, while the counter is closed (balls
+## and nets are PEGGY prizes and priced 0): [{kind, id, name, price,
+## minutes, tier}].
 static func catalog() -> Array:
 	var out := []
 	for kind in ["hoop", "ball", "net"]:
@@ -78,7 +79,7 @@ static func catalog() -> Array:
 
 
 ## Hours to own everything: the priced items plus PEGGY's expected cost of
-## winning every ball.
+## winning every ball and every net.
 static func catalog_hours() -> float:
 	var total := 0
 	for item in catalog():
@@ -92,11 +93,25 @@ static var _peggy_odds := PackedFloat64Array()
 static var _peggy_tickets := -2.0
 
 
-## The roster as PeggyPrizes sees it: [{id, rarity}] in registry order.
+## The roster as PeggyPrizes sees it: the balls [{id, rarity, kind: ball}]
+## then the nets [{id, rarity: "", kind: net}], in registry order.
 static func peggy_roster() -> Array:
 	var out := []
 	for b in CosmeticLibrary.balls():
-		out.push_back({"id": b.id, "rarity": b.rarity})
+		out.push_back({"id": b.id, "rarity": b.rarity, "kind": "ball"})
+	for n in CosmeticLibrary.nets():
+		out.push_back({"id": n.id, "rarity": "", "kind": "net"})
+	return out
+
+
+## What a fresh save already owns: the starter ball and the stock nets.
+static func peggy_start_owned() -> Array:
+	var out := []
+	var starter := CosmeticLibrary.starter_ball()
+	if starter != null:
+		out.push_back(starter.id)
+	for n in CosmeticLibrary.stock_nets():
+		out.push_back(n.id)
 	return out
 
 
@@ -107,12 +122,10 @@ static func peggy_odds() -> PackedFloat64Array:
 	return _peggy_odds
 
 
-## Expected tickets to win every ball from a fresh save (level gates lifted).
+## Expected tickets to win every prize from a fresh save (level gates lifted).
 static func peggy_tickets() -> float:
 	if _peggy_tickets < -1.0:
-		var starter := CosmeticLibrary.starter_ball()
-		var owned := [starter.id] if starter != null else []
-		_peggy_tickets = PeggyPrizes.expected_tickets_to_complete(peggy_odds(), peggy_roster(), owned, 99, 60)
+		_peggy_tickets = PeggyPrizes.expected_tickets_to_complete(peggy_odds(), peggy_roster(), peggy_start_owned(), 99, 60)
 	return _peggy_tickets
 
 
@@ -120,10 +133,14 @@ static func peggy_hours() -> float:
 	return minutes_to_afford(int(peggy_tickets())) / 60.0
 
 
-## Expected tickets per ball won.
-static func peggy_per_ball() -> float:
-	var n := peggy_roster().size() - 1
-	return peggy_tickets() / float(maxi(n, 1))
+## The prizes a fresh save can still win.
+static func peggy_to_win() -> int:
+	return peggy_roster().size() - peggy_start_owned().size()
+
+
+## Expected tickets per prize won.
+static func peggy_per_prize() -> float:
+	return peggy_tickets() / float(maxi(peggy_to_win(), 1))
 
 
 static func heats_to_afford(league: Dictionary, price: int) -> float:
@@ -155,17 +172,20 @@ static func problems() -> PackedStringArray:
 		out.push_back("a PEGGY drop at %d tickets is not an entry purchase (%.0f min)" % [PeggyPrizes.DROP_COST, minutes_to_afford(PeggyPrizes.DROP_COST)])
 	if peggy_tickets() < 0.0:
 		out.push_back("PEGGY cannot pay out the whole roster")
-	var per := peggy_per_ball()
+	var per := peggy_per_prize()
 	if per > PeggyPrizes.DROP_COST * 1.35:
-		out.push_back("PEGGY wastes drops: %.0f tickets a ball against %d a drop" % [per, PeggyPrizes.DROP_COST])
+		out.push_back("PEGGY wastes drops: %.0f tickets a prize against %d a drop" % [per, PeggyPrizes.DROP_COST])
 	for b in CosmeticLibrary.balls():
 		if not PeggyPrizes.RARITIES.has(b.rarity):
 			out.push_back("ball %s has no PEGGY rarity (%s)" % [b.id, b.rarity])
 		if b.price_coins > 0:
 			out.push_back("ball %s is priced %d; balls are won, not bought" % [b.id, b.price_coins])
+	for n in CosmeticLibrary.nets():
+		if n.price_coins > 0:
+			out.push_back("net %s is priced %d; nets are won on PEGGY, not bought" % [n.id, n.price_coins])
 	for kind in NetSet.KINDS:
 		if CosmeticLibrary.stock_net(kind) == null:
-			out.push_back("net kind %s has no stock (free) net" % kind)
+			out.push_back("net kind %s has no stock net" % kind)
 	var bands: Dictionary = Economy.coins_cfg().get("heats_to_afford", {})
 	for l in LeagueData.leagues():
 		for c in CardDefs.all():

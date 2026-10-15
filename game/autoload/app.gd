@@ -286,8 +286,8 @@ const HOOPS_IN_LOCKER := false
 
 
 func try_buy(kind: String, id: String) -> bool:
-	if kind == "ball":
-		return false   # balls are PEGGY prizes (docs/LOCKER.md), never bought
+	if kind == "ball" or kind == "net":
+		return false   # balls and nets are PEGGY prizes (docs/LOCKER.md), never bought
 	if kind == "hoop" and not HOOPS_IN_LOCKER:
 		return false   # the hoop counter is closed for now
 	var set: CosmeticSet = _set_for(kind, id)
@@ -315,7 +315,7 @@ func _set_for(kind: String, id: String) -> CosmeticSet:
 	return null
 
 
-## The sets every save owns for a kind (price 0).
+## The sets every save owns for a kind (the starters, the stock nets).
 func _starters(kind: String) -> Array:
 	match kind:
 		"hoop":
@@ -335,11 +335,37 @@ func _ensure_kind(c: Dictionary, kind: String) -> void:
 
 
 # ---- PEGGY (docs/LOCKER.md) --------------------------------------------------------
-## The locker's drop machine. Tickets buy drops; a drop wins a ball the player
-## does not own yet. The plates shown come from the drop index, so what is on
-## the board is what can be won; the index only moves on a completed drop.
+## The drop machine. Tickets only ever buy plays: PLAY feeds a ticket and
+## CREDITS the machine (saved, so the credit survives leaving the page), DROP
+## spends the credit on a drop that wins a ball or a net the player does not
+## own yet. The plates shown come from the drop index, so what is on the
+## board is what can be won; the index only moves on a completed drop.
 
 var last_prize: Dictionary = {}
+
+
+## A ticket is in the machine, waiting for DROP.
+func peggy_credit() -> bool:
+	return bool(Dictionary(SaveService.get_cosmetics().get("peggy", {})).get("credit", false))
+
+
+## PLAY: spend a drop's worth of tickets and credit the machine. False when
+## a credit is already in or the tickets are short.
+func peggy_insert_ticket() -> bool:
+	if peggy_credit():
+		return false
+	if not spend_tickets(PeggyPrizes.DROP_COST):
+		return false
+	_set_credit(true)
+	return true
+
+
+func _set_credit(on: bool) -> void:
+	var c := SaveService.get_cosmetics()
+	var pg: Dictionary = c.get("peggy", {})
+	pg["credit"] = on
+	c["peggy"] = pg
+	SaveService.put_cosmetics(c)
 
 
 func drop_count() -> int:
@@ -370,8 +396,8 @@ func owned_count(kind: String) -> int:
 	return owned_ids(kind).size()
 
 
-## Hand the player a set without charging (a PEGGY prize). A new ball is
-## flagged unseen until the BALLS tab is opened.
+## Hand the player a set without charging (a PEGGY prize). A new ball or
+## net is flagged unseen until the locker is opened.
 func grant_cosmetic(kind: String, id: String) -> bool:
 	var set: CosmeticSet = _set_for(kind, id)
 	if set == null or owns(kind, id):
@@ -380,7 +406,7 @@ func grant_cosmetic(kind: String, id: String) -> bool:
 	_ensure_kind(c, kind)
 	c[kind]["owned"].push_back(id)
 	SaveService.put_cosmetics(c)
-	if kind == "ball":
+	if kind == "ball" or kind == "net":
 		var st := SaveService.get_settings()
 		var fresh: Array = Array(st.get("newBalls", [])).duplicate()
 		if not fresh.has(id):
@@ -508,16 +534,17 @@ func mark_unlock_seen(area: String) -> void:
 	SaveService.put_settings(st)
 
 
-## Balls won but not yet looked at on the BALLS tab (the locker icon's dot).
-func unseen_balls() -> Array:
+## Prizes (balls and nets) won but not yet looked at in the locker (the
+## locker icon's dot). The save key keeps its old name.
+func unseen_prizes() -> Array:
 	var out := []
 	for id in Array(SaveService.get_settings().get("newBalls", [])):
-		if owns("ball", str(id)) and not out.has(id):
+		if (owns("ball", str(id)) or owns("net", str(id))) and not out.has(id):
 			out.push_back(id)
 	return out
 
 
-func mark_balls_seen() -> void:
+func mark_prizes_seen() -> void:
 	var st := SaveService.get_settings()
 	if Array(st.get("newBalls", [])).is_empty():
 		return
@@ -556,35 +583,42 @@ func peggy_roster() -> Array:
 	return EconomyBudget.peggy_roster()
 
 
-## The seven plates for the NEXT drop: [{base, rarity, ball_id}].
+## The seven plates for the NEXT drop: [{base, rarity, kind, id}].
 func peggy_slots() -> Array:
 	var rng := DetRng.new(peggy_seed(drop_count())).fork("slots")
-	return PeggyPrizes.slots(level(), owned_ids("ball"), peggy_roster(), rng)
+	return PeggyPrizes.slots(level(), owned_ids("ball") + owned_ids("net"), peggy_roster(), rng)
 
 
-## One drop at this aim. {} when the tickets are short; else the prize record
-## {slot, base, rarity, ball_id, refund, drop_index, aim, result, owned_after}.
+## DROP: one drop at this aim, on the credit PLAY put in. {} without a
+## credit; else the prize record {slot, base, rarity, kind, id, refund,
+## drop_index, aim, result, owned_after, roster_size, plates}.
 func peggy_drop(aim_x: float) -> Dictionary:
-	var plates := peggy_slots()
-	if not spend_tickets(PeggyPrizes.DROP_COST):
+	if not peggy_credit():
 		return {}
+	var plates := peggy_slots()
 	var index := drop_count()
 	var result := PeggyBoard.simulate(aim_x, DetRng.new(peggy_seed(index)).fork("drop").state)
 	var plate: Dictionary = plates[int(result["slot"])]
 	var refund := PeggyPrizes.refund(plate)
-	var id := str(plate.get("ball_id", ""))
+	var kind := str(plate.get("kind", "ball"))
+	var id := str(plate.get("id", ""))
 	if id != "":
-		grant_cosmetic("ball", id)
+		grant_cosmetic(kind, id)
 	elif refund > 0:
 		grant_tickets(refund)
 	var c := SaveService.get_cosmetics()
 	var pg: Dictionary = c.get("peggy", {})
 	pg["drops"] = index + 1
+	pg["credit"] = false
 	c["peggy"] = pg
 	SaveService.put_cosmetics(c)
+	var roster_size := 0
+	for e in peggy_roster():
+		if PeggyPrizes.kind_of(e) == kind:
+			roster_size += 1
 	last_prize = {"slot": int(result["slot"]), "base": plate.get("base", ""), "rarity": plate.get("rarity", ""),
-		"ball_id": id, "refund": refund, "drop_index": index, "aim": aim_x, "result": result,
-		"owned_after": owned_count("ball"), "plates": plates}
+		"kind": kind, "id": id, "refund": refund, "drop_index": index, "aim": aim_x, "result": result,
+		"owned_after": owned_count(kind), "roster_size": roster_size, "plates": plates}
 	return last_prize
 
 

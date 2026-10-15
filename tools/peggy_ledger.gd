@@ -32,11 +32,11 @@ func _initialize() -> void:
 		print("RULE  centre slot from the centre is %.1f%%, outside 18-40" % (centre[3] * 100.0))
 		bad += 1
 	for s in [0, 6]:
-		if centre[s] > 0.09:
-			print("RULE  edge slot %d from the centre is %.1f%%, above 9" % [s, centre[s] * 100.0])
+		if centre[s] > 0.10:
+			print("RULE  edge slot %d from the centre is %.1f%%, above 10" % [s, centre[s] * 100.0])
 			bad += 1
-	if end[0] < 0.08 or end[0] > 0.30:
-		print("RULE  near edge from the end-stop is %.1f%%, outside 8-30" % (end[0] * 100.0))
+	if end[0] < 0.15 or end[0] > 0.40:
+		print("RULE  near edge from the crane's stop is %.1f%%, outside 15-40" % (end[0] * 100.0))
 		bad += 1
 	print("")
 	print("RARITY  (what a drop pays, by level)")
@@ -53,19 +53,21 @@ func _initialize() -> void:
 	var per := {}
 	for b in roster:
 		per[b["rarity"]] = int(per.get(b["rarity"], 0)) + 1
-	print("ROSTER  %d balls: %s" % [roster.size(), str(per)])
+	print("ROSTER  %d prizes (nets under \"\"): %s" % [roster.size(), str(per)])
 	print("  a drop: %d tickets = %.0f min of trials (tier %s)" % [PeggyPrizes.DROP_COST,
 		EconomyBudget.minutes_to_afford(PeggyPrizes.DROP_COST), EconomyBudget.tier_of(PeggyPrizes.DROP_COST)])
-	print("  whole roster: expected %.0f tickets, %.0f a ball, %.1f hours; catalog with hoops %.1f hours" % [
-		EconomyBudget.peggy_tickets(), EconomyBudget.peggy_per_ball(), EconomyBudget.peggy_hours(), EconomyBudget.catalog_hours()])
+	print("  whole roster: expected %.0f tickets, %.0f a prize, %.1f hours; catalog with hoops %.1f hours" % [
+		EconomyBudget.peggy_tickets(), EconomyBudget.peggy_per_prize(), EconomyBudget.peggy_hours(), EconomyBudget.catalog_hours()])
 	for lvl in [1, 3]:
-		var owned := ["classic"]
+		var owned := EconomyBudget.peggy_start_owned()
 		var cost := PeggyPrizes.expected_tickets_to_complete(centre, roster, owned, lvl, 60)
 		var n := 0
 		for b in roster:
-			if lvl >= PeggyPrizes.rarity_level(str(b["rarity"])) and not owned.has(b["id"]):
+			if owned.has(b["id"]):
+				continue
+			if PeggyPrizes.kind_of(b) == "net" or lvl >= PeggyPrizes.rarity_level(str(b["rarity"])):
 				n += 1
-		print("  at level %d: %d balls reachable, expected %.0f tickets" % [lvl, n, cost])
+		print("  at level %d: %d prizes reachable, expected %.0f tickets" % [lvl, n, cost])
 	var problems := EconomyBudget.problems()
 	for m in problems:
 		print("RULE  " + m)

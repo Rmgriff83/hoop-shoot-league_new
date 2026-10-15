@@ -6,6 +6,6 @@
 script = ExtResource("1")
 id = "jack"
 display_name = "Jack"
-price_coins = 600
+price_coins = 0
 kind = "chain"
 style = "jack"

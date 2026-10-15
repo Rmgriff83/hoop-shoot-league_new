@@ -171,8 +171,8 @@ func run(t) -> void:
 		sfx.load_ball_set(ball)
 
 
-## The net styles (docs/LOCKER.md → NETS): the stock pair free, the counter
-## priced, every style's body known and of its kind.
+## The net styles (docs/LOCKER.md → NETS): the stock pair flagged, every
+## style a free PEGGY prize with a body of its kind.
 func _nets(t) -> void:
 	var all := CosmeticLibrary.nets()
 	t.eq(all.size(), CosmeticLibrary.NETS.size(), "every net manifest loads (%d)" % all.size())
@@ -187,17 +187,19 @@ func _nets(t) -> void:
 	t.ok(CosmeticLibrary.get_net("rwb").kind == "cotton" and CosmeticLibrary.get_net("rwb").body_style() == "rwb", "the red white blue net is a cotton with its own body")
 	for nid in ["neon_yellow", "neon_orange"]:
 		var neon := CosmeticLibrary.get_net(nid)
-		t.ok(neon.kind == "cotton" and neon.body_style() == "cotton" and neon.tint != Color.WHITE and neon.price_coins > 0, "%s is the cotton body, tinted and priced" % nid)
-	t.ok(CosmeticLibrary.get_net("wool").price_coins > 0 and CosmeticLibrary.get_net("wool").kind == "cotton", "the wool net is a priced cotton")
+		t.ok(neon.kind == "cotton" and neon.body_style() == "cotton" and neon.tint != Color.WHITE and not neon.stock, "%s is the cotton body, tinted, a prize" % nid)
+	t.ok(not CosmeticLibrary.get_net("wool").stock and CosmeticLibrary.get_net("wool").kind == "cotton", "the wool net is a cotton prize")
+	for n2 in all:
+		t.eq(n2.price_coins, 0, "net %s is never bought (price 0)" % n2.id)
 	t.eq(CosmeticLibrary.nets_of_kind("cotton").size(), 5, "five cotton styles")
-	t.eq(CosmeticLibrary.get_net("cotton").price_coins, 0, "cotton is free")
-	t.eq(CosmeticLibrary.get_net("chain").price_coins, 0, "the stock chain is free")
-	t.ok(CosmeticLibrary.get_net("jack").price_coins > 0 and CosmeticLibrary.get_net("jack").kind == "chain", "the jack chain is a priced chain")
-	t.ok(CosmeticLibrary.get_net("ladder").price_coins > 0 and CosmeticLibrary.get_net("ladder").kind == "chain", "the ladder chain is a priced chain")
+	t.ok(CosmeticLibrary.get_net("cotton").stock, "cotton is the stock cotton")
+	t.ok(CosmeticLibrary.get_net("chain").stock, "the stock chain is stock")
+	t.ok(not CosmeticLibrary.get_net("jack").stock and CosmeticLibrary.get_net("jack").kind == "chain", "the jack chain is a chain prize")
+	t.ok(not CosmeticLibrary.get_net("ladder").stock and CosmeticLibrary.get_net("ladder").kind == "chain", "the ladder chain is a chain prize")
 	t.eq(CosmeticLibrary.stock_net("cotton").id, "cotton", "cotton's stock net")
 	t.eq(CosmeticLibrary.stock_net("chain").id, "chain", "chain's stock net")
 	t.eq(CosmeticLibrary.nets_of_kind("chain").size(), 3, "three chain styles")
-	t.eq(CosmeticLibrary.stock_nets().size(), 2, "two free nets")
+	t.eq(CosmeticLibrary.stock_nets().size(), 2, "two stock nets (the flag, not the price)")
 	t.eq(CosmeticLibrary.get_net("cotton").tint, Color.WHITE, "the stock cotton is untinted")
 	t.eq(NetSet.kind_of_hoop(CosmeticLibrary.get_hoop("classic")), "cotton", "a nylon hoop hangs cotton")
 	t.eq(NetSet.kind_of_hoop(CosmeticLibrary.get_hoop("chain")), "chain", "the steel rim hangs chain")

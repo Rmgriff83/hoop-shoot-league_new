@@ -2,29 +2,34 @@ class_name PeggyBoard
 extends RefCounted
 ## PEGGY's peg board (docs/LOCKER.md): the headless physics of one drop.
 ## Board units, 1 u = 0.1 m on the cabinet model; origin at the slot floor's
-## centre, +x right, +y up. A round puck is released at rest from the rail,
-## falls through ten staggered rows of pegs, and lands in one of seven slots.
-## Honest rigid-body contacts (push-out + restitution) with a small seeded
-## per-hit jitter from DetRng, so the same seed always replays the same path
-## while nearby seeds diverge. No nodes, no Vector3, no engine RNG.
+## centre, +x right, +y up. A round puck is released at rest from the crane,
+## falls through twelve staggered rows of pegs (the v2 carnival board,
+## 2026-10-15: even rows five pegs between two wall bumpers, odd rows six
+## pegs that stop short of the walls so no gap is narrower than the puck),
+## and lands in one of seven slots. Honest rigid-body contacts (push-out +
+## restitution) with a small seeded per-hit jitter from DetRng, so the same
+## seed always replays the same path while nearby seeds diverge. No nodes,
+## no Vector3, no engine RNG.
 ##
-## The numbers were measured (tools/peggy_ledger.gd): from the rail's centre
-## the two edge slots take ~4-5 % each, the next pair ~9 %, the middle three
-## ~22-30 %; at the rail's end-stop (AIM_MAX) the near edge rises to ~16 %.
+## The crane runs the rail up to the wall bumpers (Ross chose full travel,
+## 2026-10-15; the bumpers are wide so no straight lane runs down the wall
+## and a release against one would only slam the puck inward). Measured
+## (tools/peggy_ledger.gd, docs/LOCKER.md): from the centre the middle slot
+## takes ~24 %, each edge ~6-8 %; at the crane's stop the near edge ~26 %.
 
 const WALL_X := 3.5                      # inner faces of the side walls
 const SLOTS := 7                         # slot i spans [-3.5 + i, -2.5 + i]
 const SLOT_W := 1.0
 const DIV_H := 1.2                       # divider height; tops are circles
-const DIV_TOP_R := 0.08
-const ROWS := 10
+const DIV_TOP_R := 0.06
+const ROWS := 12
 const ROW_DY := 0.8
-const PEG_R := 0.12
-const BUMP_R := 0.30                     # wall bumpers on every row (a scalloped wall, no V-pocket)
+const PEG_R := 0.12                      # the knob that keeps the odds peaked over twelve rows (9 mm pegs read flat)
+const BUMP_R := 0.45                     # wall bumpers on the even rows, wide enough to close the lane along the wall
 const PUCK_R := 0.25
-const Y_TOP := DIV_H + 1.0 + ROWS * ROW_DY   # row 0's y (10.2)
+const Y_TOP := DIV_H + 1.0 + ROWS * ROW_DY   # row 0's y (11.8)
 const RELEASE_Y := Y_TOP + 1.2
-const AIM_MAX := 1.0                     # rail half-travel (end-stops over the inner edges of the second slots)
+const AIM_MAX := WALL_X - BUMP_R - PUCK_R - 0.02   # the crane's half-travel: up to the wall bumpers (2.78)
 const G := 98.0                          # 9.8 m/s² in board units
 const E_PEG := 0.30
 const E_WALL := 0.50
@@ -34,28 +39,32 @@ const DT := 1.0 / 240.0
 const MAX_T := 6.0
 const HIT_VN := 1.5                      # a contact is a "hit" (sound, flash) above this normal speed
 const SAMPLE_EVERY := 4                  # path samples at 60 Hz
-const STUCK_STEPS := 60
+const STUCK_STEPS := 60                  # steps (a quarter second) slower than KICK_V above the tray before the kick
+const KICK_V := 0.4
+const KICK_VX := 3.0
+const KICK_VY := 1.5
 
 static var _pegs_cache: Array = []
 
 
 ## Every circle on the board, in a FIXED order the cabinet glb mirrors:
-## row by row from the top, each row's left bumper, its pegs left to right,
-## its right bumper; then the six divider tops. [{x, y, r, kind, row}].
+## row by row from the top — an even row's left bumper, its five pegs left
+## to right, its right bumper; an odd row's six pegs — then the six divider
+## tops. [{x, y, r, kind, row}].
 static func pegs() -> Array:
 	if not _pegs_cache.is_empty():
 		return _pegs_cache
 	var out := []
 	for r in ROWS:
 		var y := Y_TOP - r * ROW_DY
-		out.push_back({"x": -WALL_X, "y": y, "r": BUMP_R, "kind": "bumper", "row": r})
 		if r % 2 == 0:
-			for k in 6:
-				out.push_back({"x": -2.5 + k, "y": y, "r": PEG_R, "kind": "peg", "row": r})
-		else:
+			out.push_back({"x": -WALL_X, "y": y, "r": BUMP_R, "kind": "bumper", "row": r})
 			for k in 5:
 				out.push_back({"x": -2.0 + k, "y": y, "r": PEG_R, "kind": "peg", "row": r})
-		out.push_back({"x": WALL_X, "y": y, "r": BUMP_R, "kind": "bumper", "row": r})
+			out.push_back({"x": WALL_X, "y": y, "r": BUMP_R, "kind": "bumper", "row": r})
+		else:
+			for k in 6:
+				out.push_back({"x": -2.5 + k, "y": y, "r": PEG_R, "kind": "peg", "row": r})
 	for k in SLOTS - 1:
 		out.push_back({"x": -2.5 + k, "y": DIV_H, "r": DIV_TOP_R, "kind": "divider", "row": -1})
 	_pegs_cache = out
@@ -154,11 +163,14 @@ static func simulate(aim_x: float, seed_value: int, every_step := false) -> Dict
 			if x + PUCK_R > hi:
 				x = hi - PUCK_R
 				vx = -absf(vx) * E_WALL
-		# Stuck guard (never triggers in the measured geometry; a safety net).
-		if vx * vx + vy * vy < 0.09 and y > PUCK_R + 0.01:
+		# Never rest on the board (the design's kick): a puck that stays slow
+		# above the tray for a quarter second (balanced on a peg) gets a seeded
+		# sideways shove and a hop. A bounce's apex is far shorter than that.
+		if vx * vx + vy * vy < KICK_V * KICK_V and y > DIV_H + 0.5:
 			slow += 1
 			if slow >= STUCK_STEPS:
-				vx += (1.0 if x < 0.0 else -1.0) * rng.randf_range(1.0, 2.0)
+				vx += (-1.0 if rng.next() < 0.5 else 1.0) * KICK_VX
+				vy += KICK_VY
 				slow = 0
 		else:
 			slow = 0

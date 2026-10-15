@@ -6,7 +6,7 @@
 script = ExtResource("1")
 id = "neon_yellow"
 display_name = "Neon Yellow"
-price_coins = 400
+price_coins = 0
 kind = "cotton"
 style = "cotton"
 tint = Color(0.9333, 1.0000, 0.1020, 1)
