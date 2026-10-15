@@ -1262,3 +1262,13 @@ swish swings them (109 bones, 168 springs; the tails weigh `tail_mass` as
 the bottom ring does). The style takes the hoop's cotton feel. QA:
 `--qa-wool` (the cage), `--qa-net-thumbs` → `wool.png`.
 
+**Red White Blue** (design 26c, `game/view/rwb_net.gd`, `RwbNet extends
+WoolNet`, 500 tickets): the classic heavy-duty braided polyester net on
+the knitted family's build (`WoolNet.knitted_layout` with a whisper of
+jitter and 16–24 mm stubs). The colour runs in bands top to bottom —
+red through the hook loops and the first row, white for the next two,
+blue for the bottom three (`RwbNet.band(k)`), every knot matching its
+band — via `CottonNet._diag_color` / `_knot_color` / `_tail_color`; ~10 mm
+cord (r 5.2 mm, knots r 9.5 mm). The neons (`NetSet.tint`) are the plain
+cotton body painted one colour with a faint glow.
+

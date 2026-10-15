@@ -48,8 +48,8 @@ func build(lay: Dictionary) -> void:
 		var right: Array = c["right"]
 		var color := _cord_color(ci)
 		for k in rows:
-			_diagonal(cords, int(left[k]), int(left[k + 1]), color)
-			_diagonal(cords, int(right[k]), int(right[k + 1]), color)
+			_diagonal(cords, int(left[k]), int(left[k + 1]), _diag_color(ci, k))
+			_diagonal(cords, int(right[k]), int(right[k + 1]), _diag_color(ci, k))
 		_loop_half(cords, int(c["k0"]), int(c["hook"]), -1.0, color)
 		_loop_half(cords, int(c["k0"]), int(c["hook"]), 1.0, color)
 		ci += 1
@@ -109,6 +109,16 @@ func _cord_color(_i: int) -> Color:
 
 func _knot_color(_k: int, _i: int) -> Color:
 	return tint
+
+
+## Vertex colour of cord i's diagonal from row k to k + 1 (the cord's by default).
+func _diag_color(i: int, _k: int) -> Color:
+	return _cord_color(i)
+
+
+## Vertex colour of what runs on past the bottom knot of cord i.
+func _tail_color(i: int) -> Color:
+	return _cord_color(i)
 
 
 ## Texture repeats along a diagonal piece / a loop half.

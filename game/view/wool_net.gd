@@ -20,6 +20,13 @@ const YARN := ["#FF4A1C", "#A8E070", "#F2F1EC", "#A9C8EC", "#9CCBB6", "#FFE01A",
 ## every build is the same net), then twelve Tail_i particles hanging
 ## 40–120 mm under the bottom knots on a spring of that length.
 static func layout(rim_r := SimConstants.R_RIM, tube_r := SimConstants.R_TUBE) -> Dictionary:
+	return knitted_layout(rim_r, tube_r, 0.07, 0.06, 0.012, TAIL_MIN, TAIL_VAR)
+
+
+## The knitted family's layout: the cotton rings 1+ jittered by ± half of
+## `ang_j` (rad), `rad_j` (fraction) and `y_j` (m), plus the Tail_i
+## particles of `tail_min + rnd × tail_var` under the bottom knots.
+static func knitted_layout(rim_r: float, tube_r: float, ang_j: float, rad_j: float, y_j: float, tail_min: float, tail_var: float) -> Dictionary:
 	var lay := NetSim.cotton_layout(rim_r, tube_r)
 	var cols: int = NetSim.COLS
 	var rows: int = int(lay["rows"])
@@ -37,9 +44,9 @@ static func layout(rim_r := SimConstants.R_RIM, tube_r := SimConstants.R_TUBE) -
 				continue
 			var p := knots[k * cols + i]
 			var r := Vector2(p.x, p.z).length()
-			var a: float = atan2(p.z, p.x) + (rnd.call() - 0.5) * 0.07
-			var rr: float = r * (1.0 + (rnd.call() - 0.5) * 0.06)
-			var y: float = p.y + (rnd.call() - 0.5) * 0.012
+			var a: float = atan2(p.z, p.x) + (rnd.call() - 0.5) * ang_j
+			var rr: float = r * (1.0 + (rnd.call() - 0.5) * rad_j)
+			var y: float = p.y + (rnd.call() - 0.5) * y_j
 			knots[k * cols + i] = Vector3(rr * cos(a), y, rr * sin(a))
 	# Springs keep their pairs; their rest lengths follow the jittered knots.
 	var at := func(idx: int) -> Vector3:
@@ -56,7 +63,7 @@ static func layout(rim_r := SimConstants.R_RIM, tube_r := SimConstants.R_TUBE) -
 		var p := knots[ib - cols]
 		var ang := atan2(p.z, p.x)
 		var out := Vector3(cos(ang), 0.0, sin(ang))
-		var len: float = TAIL_MIN + rnd.call() * TAIL_VAR
+		var len: float = tail_min + rnd.call() * tail_var
 		var it := cols + knots.size()
 		knots.push_back(p + Vector3(0.0, -len, 0.0) - out * 0.006)
 		names.push_back("Tail_%d" % i)
@@ -92,8 +99,14 @@ func _knot_y_scale() -> float:
 func _materials() -> Array:
 	var cord := _material(knit_texture(), 1.0, 0.0, true)
 	var knot := _material(knit_texture(), 1.0, 0.0, true)
-	knot.albedo_color = Color(0.88, 0.88, 0.88)
+	var kb := _knot_brightness()
+	knot.albedo_color = Color(kb, kb, kb)
 	return [cord, knot]
+
+
+## The knots' brightness over the cords'.
+func _knot_brightness() -> float:
+	return 0.88
 
 
 func _cord_color(i: int) -> Color:
@@ -125,7 +138,7 @@ func _build_tails(mb: _MeshBuilder, lay: Dictionary) -> void:
 		var end0 := _rest[it]
 		for pair in [[-1.0, int(t["right_cord"])], [1.0, int(t["left_cord"])]]:
 			var s: float = pair[0]
-			var color := _cord_color(int(pair[1]))
+			var color := _tail_color(int(pair[1]))
 			var end: Vector3 = end0 + f_tan * (s * 0.005) + Vector3(0.0, s * len * 0.12, 0.0)
 			var mid: Vector3 = p.lerp(end, 0.5) + f_tan * (s * 0.004)
 			var pts: Array[Vector3] = []
