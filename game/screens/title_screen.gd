@@ -181,7 +181,7 @@ func rebuild_chrome() -> void:
 	_chrome.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ui.add_child(_chrome)
 	_ui.move_child(_chrome, 0)
-	if _locker != null or _peggy != null:
+	if _locker != null or _peggy != null or _settings != null:
 		_chrome.position.x = -HomePage.SLIDE   # a page is open: the home UI stays out
 
 	# The scrim over the court.
@@ -962,9 +962,14 @@ func _open_settings() -> void:
 		return
 	_settings = SettingsPanel.new()
 	_settings.name = "SettingsPanel"
-	_settings.closed.connect(func() -> void: _settings = null)
+	_settings.closed.connect(func() -> void:
+		_settings = null
+		_slide_home(false)
+	)
 	_settings.dark_mode_changed.connect(func(_on: bool) -> void: rebuild_chrome())
 	add_child(_settings)
+	_slide_home(true)
+	_settings.slide_in()
 
 
 # ---- the area archive --------------------------------------------------------------

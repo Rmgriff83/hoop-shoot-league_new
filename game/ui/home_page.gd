@@ -77,8 +77,9 @@ func set_view_active(_on: bool) -> void:
 # ---- the pieces ----------------------------------------------------------------
 
 
-## TITLE ............ [ticket chip] [extras]: the top row.
-func head(title: String) -> HBoxContainer:
+## TITLE ............ [ticket chip] [extras]: the top row (`with_chip` false
+## for a page with no money on it, like settings).
+func head(title: String, with_chip := true) -> HBoxContainer:
 	var h := HBoxContainer.new()
 	h.name = "Head"
 	h.custom_minimum_size = Vector2(0, HEAD_H)
@@ -99,6 +100,7 @@ func head(title: String) -> HBoxContainer:
 		coin.icon_name = "icon_ticket"
 		coin.custom_minimum_size = Vector2(22, 14)
 	balance.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	balance.visible = with_chip
 	h.add_child(balance)
 	set_tickets()
 	return h

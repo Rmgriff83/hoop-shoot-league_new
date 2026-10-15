@@ -130,9 +130,14 @@ chevron (the footer says START INSIDE).
   states, coins, next_up)` → `ARCADE CAGE BEST 29 · ARCADE LEAGUE · SEASON 2
   · DAY 4 · 3RD PLACE · NEXT UP: PRUDENCE CHIME · 1,240 TICKETS`, laid twice
   around a `★` seam and scrolled at 80 px/s.
-- **Settings** (`game/ui/settings_panel.gd`): SHOT HELP, DARK MODE, the
-  PLAYER section (your handle + SAVE, the cloud-save line, MOVE TO NEW
-  PHONE, ENTER CODE — docs/BACKEND.md → Identity / Phase 2), TUNING (debug builds only), CREDITS, CLOSE.
+- **Settings** (`game/ui/settings_panel.gd`, a `HomePage` since 2026-10-15,
+  design "Settings"): the menu button slides it in like the locker. Every
+  row is a dotted face — cream, gold when a toggle is on, orange for SAVE /
+  CLAIM: SHOT HELP, DARK MODE, the PLAYER section (your handle + SAVE, the
+  handle and cloud-save lines, MOVE TO NEW PHONE, ENTER CODE — docs/BACKEND.md
+  → Identity / Phase 2), TUNING (debug builds only) over DEV BUILD ONLY,
+  CREDITS, the full-width CLOSE. Flipping DARK MODE rebuilds the home chrome
+  behind it (still slid out); the page itself wears the scene colours.
 - **Ranks** (`game/ui/ranks_page.gd` `RanksPage`, copy in `ranks_copy.gd`):
   the global time-trial boards (docs/BACKEND.md). `<` RANKS and your handle;
   CAGE / BEACH / CITY tabs (a locked area's tab greyed with `LVL n`); THIS

@@ -1094,7 +1094,7 @@ func _run_ranks() -> void:
 	await _sleep(0.4)
 	# The settings sheet's PLAYER section.
 	await _click_named("Menu")
-	await _sleep(0.5)
+	await _sleep(0.8)
 	await _snap("settings_player")
 	await _click_named("EnterCode")
 	await _sleep(0.3)
@@ -1257,10 +1257,10 @@ func _run_title() -> void:
 		_mouse_button(c, true)
 		await _sleep(0.08)
 		_mouse_button(c, false)
-		await _sleep(0.5)
+		await _sleep(0.8)
 		await _snap("title_settings")
 		await _click_button_named("CLOSE")
-		await _sleep(0.3)
+		await _sleep(0.6)
 	# Dark mode: flip the setting and rebuild the chrome in place.
 	App.set_dark_mode(true)
 	var home := get_tree().current_scene

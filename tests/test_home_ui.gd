@@ -452,4 +452,11 @@ func _widgets(t) -> void:
 	t.ok(panel.has_dark_mode(), "settings has the dark-mode row")
 	t.ok(panel.find_child("ShotHelp", true, false) != null, "settings has shot help")
 	t.eq(panel.has_tuning(), OS.is_debug_build(), "tuning toggle only in a debug build")
+	t.ok(panel.has_player() and panel.find_child("MoveToPhone", true, false) != null, "the PLAYER section with MOVE TO NEW PHONE")
+	t.ok(panel.find_child("Close", true, false) != null and panel.find_child("Dim", true, false) == null, "a page with the dotted CLOSE, no dim sheet")
+	var shot: ShadowCard = panel.find_child("ShotHelp", true, false)
+	t.ok(shot != null and shot.text.begins_with("SHOT HELP: "), "the shot help row reads its setting (%s)" % (shot.text if shot != null else "?"))
+	var settings_closed := []
+	panel.closed.connect(func() -> void: settings_closed.push_back(true))
 	panel.close()
+	t.eq(settings_closed.size(), 1, "CLOSE off-tree emits closed at once")
