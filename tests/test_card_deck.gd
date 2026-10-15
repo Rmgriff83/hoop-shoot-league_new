@@ -40,6 +40,35 @@ func run(t) -> void:
 	(sheet.find_child("Slot0", true, false) as Button).pressed.emit()
 	t.eq(App.loadout_slots("online"), [null, null, null], "tapping the slot takes it out again")
 	t.eq(App.card_count("ice", "online"), 1, "…back to the spares")
+	# A card above your level is owned but not equipped (docs/PROGRESSION.md).
+	var vortex := CardDefs.get_card("vortex6")
+	if not Progression.can_use(App.level(), vortex):
+		d = svc.get_cards()
+		CardDefs.league_doc(d, "online")["inventory"] = {"ice": 1, "vortex6": 1}
+		svc.put_cards(d)
+		t.ok(not App.can_equip("vortex6"), "Vortex waits for level 5")
+		t.ok(not App.equip_card(0, "vortex6", "online"), "…so equip_card refuses it")
+		t.eq(App.loadout_slots("online"), [null, null, null], "…and the slot stays empty")
+		sheet.build("online", "ONLINE CARDS")
+		t.ok(sheet.find_child("Lock_vortex6", true, false) != null, "the spare wears its LVL chip")
+		var locked: Control = sheet.find_child("Spare_vortex6", true, false)
+		(locked.get_meta("button") as TextureButton).pressed.emit()
+		t.eq(App.loadout_slots("online"), [null, null, null], "tapping it equips nothing")
+		t.ok(sheet.status_text().begins_with("REACH LEVEL 5"), "…and says why (%s)" % sheet.status_text())
+		t.ok(App.can_equip("ice"), "a level-1 card equips as ever")
+		# …and cannot be bought below its level in a league either.
+		var cd_doc: Dictionary = svc.get_cards()
+		var cage_before: Dictionary = CardDefs.league_doc(cd_doc, "cage").duplicate(true)
+		CardDefs.league_doc(cd_doc, "cage")["coins"] = 1000
+		svc.put_cards(cd_doc)
+		t.ok(not App.try_buy_card("vortex6", "cage"), "the league shop refuses Vortex under level 5 with the coins in hand")
+		t.eq(App.league_coins("cage"), 1000, "…and takes nothing")
+		cd_doc = svc.get_cards()
+		cd_doc["leagues"]["cage"] = cage_before
+		svc.put_cards(cd_doc)
+		d = svc.get_cards()
+		CardDefs.league_doc(d, "online")["inventory"] = {"ice": 1}
+		svc.put_cards(d)
 	# The shop.
 	sheet.build("online", "ONLINE CARDS", "SHOP")
 	t.eq(sheet.sub(), "SHOP", "the shop")

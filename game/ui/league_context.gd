@@ -765,7 +765,27 @@ func _fill_loadout(vb: VBoxContainer) -> void:
 		var holder := ModeCards.art(card, Vector2(120, 160), 6.0, true)
 		holder.name = "Spare_" + str(id)
 		var cid := str(id)
+		var can := App.can_equip(cid)
+		if not can:
+			# Owned early (docs/PROGRESSION.md): it waits, dimmed, with its level.
+			(holder.get_node("Face") as Control).modulate = Color(0.55, 0.55, 0.6, 1.0)
+			var lock := PanelContainer.new()
+			lock.name = "Lock_" + cid
+			var lsb := StyleBoxFlat.new()
+			lsb.bg_color = Color(INK, 0.85)
+			lsb.border_color = CREAM
+			lsb.set_border_width_all(2)
+			lsb.set_content_margin_all(4)
+			lsb.content_margin_left = 8
+			lsb.content_margin_right = 8
+			lock.add_theme_stylebox_override("panel", lsb)
+			lock.position = Vector2(8, 160 - 34)
+			lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			lock.add_child(UiFont.label("LVL %d" % Progression.card_level(card), 14, CREAM, UiFont.body_bold()))
+			holder.add_child(lock)
 		(holder.get_meta("button") as TextureButton).pressed.connect(func() -> void:
+			if not can:
+				return
 			for slot in CardDefs.SLOTS:
 				if App.cards_bucket(league_id)["loadout"][slot] == null:
 					App.equip_card(slot, cid, league_id)
@@ -846,7 +866,7 @@ func _fill_shop(vb: VBoxContainer) -> void:
 		var buy := ShadowCard.new(RetroTheme.c("gold"))
 		buy.name = "Buy_" + str(card["id"])
 		buy.custom_minimum_size = Vector2(136 + ShadowStyle.OFFSET, 50 + ShadowStyle.OFFSET)
-		buy.disabled = App.league_coins(league_id) < int(card.get("price", 0))
+		buy.disabled = App.league_coins(league_id) < int(card.get("price", 0)) or not usable   # bought at level, too
 		var bm := MarginContainer.new()
 		bm.set_anchors_preset(Control.PRESET_FULL_RECT)
 		bm.add_theme_constant_override("margin_right", int(ShadowStyle.OFFSET))

@@ -158,7 +158,7 @@ func _fill_loadout() -> void:
 	if inv.is_empty():
 		_body.add_child(_caps("NO SPARE CARDS · VISIT THE SHOP" if bucket == Net.ONLINE_BUCKET else "NO SPARE CARDS · WIN MATCHES OR VISIT THE SHOP"))
 	else:
-		_body.add_child(_caps("SPARES · TAP ONE TO EQUIP IT" if free_slots > 0 else "SPARES · THE LOADOUT IS FULL"))
+		_body.add_child(_caps("SPARES · TAP ONE TO EQUIP IT · A CARD ABOVE YOUR LEVEL WAITS" if free_slots > 0 else "SPARES · THE LOADOUT IS FULL"))
 	var spares := HBoxContainer.new()
 	spares.name = "Spares"
 	spares.add_theme_constant_override("separation", 24)
@@ -170,7 +170,19 @@ func _fill_loadout() -> void:
 		var holder := ModeCards.art(card, Vector2(120, 160), 6.0, true)
 		holder.name = "Spare_" + str(id)
 		var cid := str(id)
+		var can := App.can_equip(cid)
+		if not can:
+			# Owned early: it waits here, dimmed with its level, until you reach it.
+			(holder.get_node("Face") as Control).modulate = Color(0.55, 0.55, 0.6, 1.0)
+			var lock := _chip("LVL %d" % Progression.card_level(card), Color(INK, 0.85), CREAM, CREAM)
+			lock.name = "Lock_" + cid
+			lock.position = Vector2(8, 160 - 34)
+			holder.add_child(lock)
 		(holder.get_meta("button") as TextureButton).pressed.connect(func() -> void:
+			if not can:
+				_status = "REACH LEVEL %d TO EQUIP %s" % [Progression.card_level(card), str(card.get("name", cid)).to_upper()]
+				build(bucket, title_text, _sub)
+				return
 			for slot in CardDefs.SLOTS:
 				if App.cards_bucket(bucket)["loadout"][slot] == null:
 					App.equip_card(slot, cid, bucket)
@@ -239,7 +251,7 @@ func _fill_shop() -> void:
 		var buy := ShadowCard.new(RetroTheme.c("gold"))
 		buy.name = "Buy_" + cid
 		buy.custom_minimum_size = Vector2(130 + ShadowStyle.OFFSET, 46 + ShadowStyle.OFFSET)
-		buy.disabled = App.league_coins(bucket) < int(card.get("price", 0)) or not usable
+		buy.disabled = App.league_coins(bucket) < int(card.get("price", 0)) or not usable   # own at level, too
 		var price := RetroTheme.display("%d" % int(card.get("price", 0)), 16, RetroTheme.c("text"))
 		price.position = Vector2.ZERO
 		price.size = Vector2(130, 46)
@@ -295,7 +307,7 @@ func sub() -> String:
 
 
 func status_text() -> String:
-	var s := get_node_or_null("Sheet/VBoxContainer/Status") as Label
+	var s := find_child("Status", true, false) as Label
 	return s.text if s != null else ""
 
 

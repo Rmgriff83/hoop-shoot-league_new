@@ -6,10 +6,13 @@ multiplayer as-is:
 
 - **Areas.** Each league spans a band of levels and caps there; reaching the
   cap opens the next area (the whole area: league, time trial, practice).
-- **Cards.** Every card has a level. You can own one early (a drop, the
-  shop) but you cannot play it until you reach its level. Each league's cap
-  is the next card's level, so grinding a league always ends at the next
-  card up the power structure.
+- **Cards.** Every card has a level. A drop can hand you one early, but you
+  cannot **buy** or **equip** a card until you reach its level
+  (`App.can_equip`, 2026-10-14): the shops' BUY is off under it (the server
+  refuses an online buy too), an early-owned one waits in the spares dimmed
+  with a `LVL n` chip, in the league hub and the online deck alike, and the
+  server deals a hand only from what the level allows. A league's cap is the next card's level, so grinding
+  a league always ends at the next card up the power structure.
 - **Fairness later.** Multiplayer matchmaking and card eligibility will read
   the same level, which is why nothing bought with money can move it.
 

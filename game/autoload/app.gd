@@ -763,7 +763,18 @@ func add_card(id: String, n := 1, league := "") -> void:
 	SaveService.put_cards(d)
 
 
+## A card waits for its level (Ross, 2026-10-14; docs/PROGRESSION.md): it
+## cannot be equipped or bought below it — a drop can still hand you one
+## early. The same rule everywhere: the league hub, the online deck, the
+## server's shop and dealt hand.
+func can_equip(id: String) -> bool:
+	var card := CardDefs.get_card(id)
+	return not card.is_empty() and Progression.can_use(level(), card)
+
+
 func equip_card(slot: int, id: String, league := "") -> bool:
+	if not can_equip(id):
+		return false
 	var d := cards_doc()
 	if not CardDefs.equip(CardDefs.league_doc(d, _league_for(league)), slot, id):
 		return false
@@ -799,7 +810,7 @@ func consume_slot(slot: int, id: String, league := "") -> bool:
 ## online bucket is the server's: buy_online_card instead.
 func try_buy_card(id: String, league := "") -> bool:
 	var card := CardDefs.get_card(id)
-	if card.is_empty() or _league_for(league) == Net.ONLINE_BUCKET:
+	if card.is_empty() or _league_for(league) == Net.ONLINE_BUCKET or not can_equip(id):
 		return false
 	var d := cards_doc()
 	var b := CardDefs.league_doc(d, _league_for(league))
