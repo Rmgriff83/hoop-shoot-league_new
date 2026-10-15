@@ -115,7 +115,7 @@ func _rnd() -> float:
 
 ## A SIDES-sided tube along a polyline, flat shaded, UV u along (× uvx), v
 ## around; vertex weights lerp bone_a → bone_b along the length.
-func _tube(mb: _MeshBuilder, pts: Array[Vector3], r: float, uvx: float, bone_a: int, bone_b: int, sides := 5, closed := false) -> void:
+func _tube(mb: _MeshBuilder, pts: Array[Vector3], r: float, uvx: float, bone_a: int, bone_b: int, sides := 5, closed := false, color := Color.WHITE) -> void:
 	var n := pts.size()
 	if n < 2:
 		return
@@ -160,9 +160,9 @@ func _tube(mb: _MeshBuilder, pts: Array[Vector3], r: float, uvx: float, bone_a: 
 			var b0 := rings[j1][sd]
 			var b1 := rings[j1][s1]
 			mb.tri([a0, b0, b1], [Vector2(u0, v0), Vector2(u1, v0), Vector2(u1, v1)],
-				[bone_a, bone_b], [w0, w1, w1])
+				[bone_a, bone_b], [w0, w1, w1], color)
 			mb.tri([a0, b1, a1], [Vector2(u0, v0), Vector2(u1, v1), Vector2(u0, v1)],
-				[bone_a, bone_b], [w0, w1, w0])
+				[bone_a, bone_b], [w0, w1, w0], color)
 	_tris += segs * sides * 2
 
 
@@ -175,6 +175,8 @@ func _add_surface(name_: String, mb: _MeshBuilder, mat: Material) -> MeshInstanc
 	arrays[Mesh.ARRAY_TEX_UV] = mb.uvs
 	arrays[Mesh.ARRAY_BONES] = mb.bones
 	arrays[Mesh.ARRAY_WEIGHTS] = mb.weights
+	if mb.colored:
+		arrays[Mesh.ARRAY_COLOR] = mb.colors
 	mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, arrays)
 	mesh.surface_set_material(0, mat)
 	var mi := MeshInstance3D.new()
@@ -188,11 +190,12 @@ func _add_surface(name_: String, mb: _MeshBuilder, mat: Material) -> MeshInstanc
 	return mi
 
 
-func _material(tex: Texture2D, roughness := 1.0, metallic := 0.0) -> StandardMaterial3D:
+func _material(tex: Texture2D, roughness := 1.0, metallic := 0.0, vertex_colors := false) -> StandardMaterial3D:
 	var m := StandardMaterial3D.new()
 	m.albedo_texture = tex
 	m.roughness = roughness
 	m.metallic = metallic
+	m.vertex_color_use_as_albedo = vertex_colors
 	m.texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 	m.texture_repeat = true
 	return m
@@ -252,6 +255,30 @@ func steel_texture(colors: Array) -> ImageTexture:
 	return _keep(img)
 
 
+## The wool net's knit (design 26b): columns of V stitches running along
+## the cord (u = length, v = around) in greys, tinted by vertex colour.
+func knit_texture() -> ImageTexture:
+	var img := _blank(Color.html("#E2E2E2"))
+	for y in TEX_SIZE:
+		for x in TEX_SIZE:
+			var col := y % 4
+			var row := x % 4
+			var arm := absf(float(col) - 1.5) < 1.0
+			var v := (row + (col if col < 2 else 3 - col)) % 4
+			if col == 3:
+				img.set_pixel(x, y, Color.html("#9A9A9A"))      # gap between stitch columns
+			elif v == 0:
+				img.set_pixel(x, y, Color.html("#FFFFFF"))      # stitch crest
+			elif v == 1 and arm:
+				img.set_pixel(x, y, Color.html("#E6E6E6"))
+			elif v == 3:
+				img.set_pixel(x, y, Color.html("#B8B8B8"))      # shadow under the V
+	for _i in 9:
+		var c := Color.html("#8C8C8C") if _rnd() < 0.5 else Color.html("#F4F4F4")
+		img.set_pixel(int(floor(_rnd() * TEX_SIZE)), int(floor(_rnd() * TEX_SIZE)), c)   # fuzz
+	return _keep(img)
+
+
 ## Worn galvanised steel (the ladder chain's design): dull mottled zinc, a
 ## worn highlight band, a few bright rub scuffs, dark pits and small rust
 ## blooms. [base, dark, light, rust].
@@ -302,14 +329,19 @@ class _MeshBuilder:
 	var uvs := PackedVector2Array()
 	var bones := PackedInt32Array()
 	var weights := PackedFloat32Array()
+	var colors := PackedColorArray()      # per vertex; only uploaded when any is not white
+	var colored := false
 
-	func tri(p: Array, uv: Array, ab: Array, w: Array) -> void:
+	func tri(p: Array, uv: Array, ab: Array, w: Array, color := Color.WHITE) -> void:
 		var nrm: Vector3 = (p[1] - p[0]).cross(p[2] - p[0])
 		nrm = nrm.normalized() if nrm.length() > 1e-12 else Vector3.UP
+		if color != Color.WHITE:
+			colored = true
 		for i in 3:
 			verts.push_back(p[i])
 			normals.push_back(nrm)
 			uvs.push_back(uv[i])
+			colors.push_back(color)
 			var wb: float = clampf(float(w[i]), 0.0, 1.0)
 			bones.push_back(int(ab[0]))
 			bones.push_back(int(ab[1]))

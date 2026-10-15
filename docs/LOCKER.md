@@ -22,8 +22,9 @@ city's steel rim), `style` names the body `NetBodies` builds
 only changes what hangs. Four nets ship (`assets/nets/<id>/net_set.tres`,
 `CosmeticLibrary.NETS`): **Cotton** and **Chain** (the stock pair, free,
 owned by every save), **Jack** (a jack chain, 600 tickets — a *mid*
-purchase) and **Ladder** (straight drops tied by hoop chains, 1000 — a
-*premium* one). A style can only hang on a hoop of its kind, which is how a
+purchase), **Ladder** (straight drops tied by hoop chains, 1000 — a
+*premium* one) and **Wool** (a hand-knitted net in twelve yarn colours,
+700 — *mid*, for the nylon courts). A style can only hang on a hoop of its kind, which is how a
 later chain area gets the chains you already own: areas resolve their kind
 through `App.AREA_MODES` → `App.net_kind_for_area`.
 
@@ -116,8 +117,8 @@ Balls are priced 0; `EconomyBudget.peggy_tickets()` is the expected cost of
 winning the whole roster (`PeggyPrizes.expected_tickets_to_complete`, 60
 seeded collection runs at the centre aim) and `catalog_hours()` is the hoops
 and the nets plus that. Shipped: 46 balls to win, 13,800 tickets expected
-(300 a ball — no drop is wasted), 18.8 h; with the hoops and the two priced
-nets (jack 600, ladder 1000) ~22 h, inside the 15–35 h band.
+(300 a ball — no drop is wasted), 18.8 h; with the hoops and the three priced
+nets (jack 600, ladder 1000, wool 700) ~23 h, inside the 15–35 h band.
 At level 1 the 20 reachable balls take 6,000 tickets; at level 3, 36 balls
 10,800. Rules in `EconomyBudget.problems()`: a drop is an entry purchase,
 the roster is payable, a ball costs at most 1.35 drops, every ball is rated

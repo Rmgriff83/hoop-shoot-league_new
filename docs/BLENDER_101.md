@@ -1242,3 +1242,23 @@ both run the chain hoop's tuned feel (the lab pages say so). Thumbnails:
 `assets/textures/nets/thumbs/<id>.png` (then `--import`); `--qa-jack` /
 `--qa-ladder` are the §29 swish pass with that style on the city.
 
+## 31. The wool net (2026-10-15)
+
+Ross's **Wool Net** (design 26b), the second cotton-kind style on the NETS
+counter (700 tickets). `CottonNet` became the base of the cord styles (a
+subclass supplies its layout, cord and knot sizes, materials, colours and
+tails) and `WoolNet` (`game/view/wool_net.gd`) is the cotton net's
+structure hand-knitted: thick i-cord (cord r 6.8 mm, knots r 11.5 mm
+stretched 1.15 in y), **one yarn colour per cord** — twelve yarns from the
+photo as vertex colours (`_MeshBuilder` colours, `ARRAY_COLOR`,
+`vertex_color_use_as_albedo`) over a grey 16×16 V-stitch knit texture
+(`NetRig.knit_texture`); the knots take the yarn of `(i + 7·(k mod 2))`
+at 0.88 brightness. The rings below the top are **hand-tied**: a seeded
+jitter of ± 0.035 rad, ± 3 % radius and ± 6 mm height (ring 0 stays exact,
+so the loops hang under the rim as the cotton's). Both yarns run on past
+every bottom knot as **40–120 mm tails** on twelve extra free `Tail_i`
+bones — particles with a spring of the tail's length to their knot, so a
+swish swings them (109 bones, 168 springs; the tails weigh `tail_mass` as
+the bottom ring does). The style takes the hoop's cotton feel. QA:
+`--qa-wool` (the cage), `--qa-net-thumbs` → `wool.png`.
+

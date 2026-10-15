@@ -87,6 +87,8 @@ func _envelope(t) -> void:
 	t.ok(catalog_ids.has("net:jack") and catalog_ids.has("net:ladder"), "the jack and ladder chains are on the counter")
 	t.eq(EconomyBudget.tier_of(600), "mid", "the jack chain is a mid purchase")
 	t.eq(EconomyBudget.tier_of(1000), "premium", "the ladder chain is a premium purchase")
+	t.ok(catalog_ids.has("net:wool"), "the wool net is on the counter")
+	t.eq(EconomyBudget.tier_of(700), "mid", "the wool net is a mid purchase")
 	# PEGGY (docs/LOCKER.md): a drop is an entry purchase, the machine pays
 	# the whole roster out, barely wastes a drop, and the roster's hours are
 	# the bulk of the catalog.

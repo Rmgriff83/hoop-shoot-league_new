@@ -66,6 +66,7 @@ const NETS: Array[String] = [
 	"res://assets/nets/chain/net_set.tres",
 	"res://assets/nets/jack/net_set.tres",
 	"res://assets/nets/ladder/net_set.tres",
+	"res://assets/nets/wool/net_set.tres",
 ]
 const ARENAS: Array[String] = [
 	"res://assets/arena/cage/arena_set.tres",

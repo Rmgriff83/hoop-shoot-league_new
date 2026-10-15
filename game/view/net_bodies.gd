@@ -4,8 +4,8 @@ extends RefCounted
 ## class and the rest layout per style id. A NetSet's `style` names one;
 ## the stock styles are the kinds themselves ("cotton", "chain").
 
-const STYLES := ["cotton", "chain", "jack", "ladder"]
-const KIND_OF := {"cotton": "cotton", "chain": "chain", "jack": "chain", "ladder": "chain"}
+const STYLES := ["cotton", "chain", "jack", "ladder", "wool"]
+const KIND_OF := {"cotton": "cotton", "chain": "chain", "jack": "chain", "ladder": "chain", "wool": "cotton"}
 
 
 static func has_style(style: String) -> bool:
@@ -30,6 +30,8 @@ static func for_style(style: String) -> NetRig:
 			return JackNet.new()
 		"ladder":
 			return LadderNet.new()
+		"wool":
+			return WoolNet.new()
 		_:
 			return CottonNet.new()
 
@@ -42,5 +44,7 @@ static func layout(style: String, rim_r := SimConstants.R_RIM, tube_r := SimCons
 			return JackNet.layout(rim_r, tube_r)
 		"ladder":
 			return LadderNet.layout(rim_r, tube_r)
+		"wool":
+			return WoolNet.layout(rim_r, tube_r)
 		_:
 			return NetSim.cotton_layout(rim_r, tube_r)

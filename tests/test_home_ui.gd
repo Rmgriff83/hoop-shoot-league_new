@@ -327,7 +327,8 @@ func _widgets(t) -> void:
 	for r in locker.rows():
 		net_rows.push_back(String(r))
 	net_rows.sort()
-	t.eq(net_rows, ["Net_chain", "Net_cotton", "Net_jack", "Net_ladder"], "every net is on the counter")
+	t.eq(net_rows, ["Net_chain", "Net_cotton", "Net_jack", "Net_ladder", "Net_wool"], "every net is on the counter")
+	t.eq(((locker.find_child("Net_wool", true, false) as Button).find_child("Kind", true, false) as Label).text, "COTTON · CAGE, BEACH", "the wool net fits the nylon courts")
 	t.ok(locker.in_use_row("net") in ["Net_cotton", "Net_chain"], "a stock net is in use")
 	var chain_tag: Label = (locker.find_child("Net_chain", true, false) as Button).find_child("Tag", true, false)
 	t.eq(chain_tag.text, "IN USE ON CITY", "the stock chain hangs on the city")

@@ -201,6 +201,12 @@ func _widgets(t) -> void:
 	t.eq(app.net_set_for("cage").id, "cotton", "…and the cage keeps its cotton")
 	(pm.find_child("Net", true, false) as Button).pressed.emit()
 	t.eq(pm.net_text(), "CHAIN", "another tap wraps back to the stock chain")
+	app.next_mode = "trial"
+	app.grant_cosmetic("net", "wool")
+	pm.open()
+	(pm.find_child("Net", true, false) as Button).pressed.emit()
+	t.eq(pm.net_text(), "WOOL", "with the wool net owned the cage can hang it")
+	t.eq(app.net_set_for("beach").id, "cotton", "…and the beach keeps its cotton until switched there")
 	app.next_mode = mode_before
 	SaveService.put_cosmetics(cos_before)
 	app.select("ball", ball_before)
