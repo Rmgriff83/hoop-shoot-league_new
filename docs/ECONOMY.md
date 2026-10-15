@@ -8,9 +8,9 @@ reward. Cards' own balance (power, rarity, AI parity) is `docs/CARDS.md`.
 |---|---|---|
 | Scope | global | **one wallet per league** |
 | Earned by | time trials (never practice), league heats, a league title | that league's heats and title |
-| Spent on | PEGGY drops (the locker's drop machine wins balls, docs/LOCKER.md) and hoops at the **locker** (home page) | that league's power-up cards in its **shop** (league hub) |
+| Spent on | PEGGY drops (the locker's drop machine wins balls, docs/LOCKER.md) and nets (and, when the counter reopens, hoops) at the **locker** (home page) | that league's power-up cards in its **shop** (league hub) |
 | Lives in | save part `cosmetics` → `tickets` | save part `cards` v3 → `leagues[id].coins`, beside that league's `inventory` / `loadout` |
-| Code | `App.tickets()`, `grant_tickets`, `spend_tickets`, `peggy_drop(aim)`, `try_buy("hoop", id)` | `App.league_coins(id)`, `grant_league_coins(n, id)`, `try_buy_card(card, id)` |
+| Code | `App.tickets()`, `grant_tickets`, `spend_tickets`, `peggy_drop(aim)`, `try_buy("net" | "hoop", id)` | `App.league_coins(id)`, `grant_league_coins(n, id)`, `try_buy_card(card, id)` |
 
 **Why segmented:** coins earned in the easy league can never buy cards for
 the hard league, and cards dropped or bought in a league play only there.
@@ -49,8 +49,8 @@ coin-flip win rate. From that:
   against;
 - **minutes to afford** = price ÷ grind rate, and the **tier** whose minutes
   band holds it (`entry`, `mid`, `premium`, `grail`);
-- the **catalog hours**: every priced locker item (the hoops) plus
-  PEGGY's expected tickets to win every ball (`peggy_tickets()`);
+- the **catalog hours**: every priced locker item (the hoops and the nets)
+  plus PEGGY's expected tickets to win every ball (`peggy_tickets()`);
 - **heats to afford** each card in each league = price ÷ expected coins per
   heat.
 
@@ -83,12 +83,14 @@ The ledger prints all of it and exits non-zero on a break:
 Rate band 6–14/min. Tiers in minutes of trials: entry 15–40, mid 40–70,
 premium 70–115, grail 115–170. At the ~12/min grind rate a PEGGY drop
 (300 tickets) is an entry purchase, the 46 winnable balls cost ~13,800
-tickets (~19 h, no drop wasted) and the whole catalog with the hoops is
-~20 hours — something new every few sessions, the legends behind level 5.
+tickets (~19 h, no drop wasted), the jack chain (600) is a mid purchase and
+the ladder chain (1000) a premium one, and the whole catalog with the hoops
+and the nets is ~22 hours — something new every few sessions, the legends
+behind level 5.
 Cards: a common (100 coins) every ~3 cage heats, a rare (150) every ~4.5,
 plus the drops.
 
-## Adding an item (a hoop)
+## Adding an item (a hoop or a net)
 
 1. Author its `.tres` with `price_coins` (the field name is historical; it
    is tickets).

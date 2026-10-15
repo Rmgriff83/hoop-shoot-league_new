@@ -1206,3 +1206,39 @@ Check it with `--qa-chain` (the city, a synthetic swish, `chain_00…13`,
 the interlock pitch, the links on the net, the sag on a slack run, the
 hooks under the rim, the steel.
 
+## 30. Jack and Ladder chains, nets as cosmetics (2026-10-15)
+
+Two more of Ross's chain models, on the same rig and solver as §29, and the
+net becomes something you buy (docs/LOCKER.md → NETS). `ChainNet` is now
+the base of every chain style: a subclass supplies `layout()`, the link
+mesh and its pitch, which knots carry a ring, the S-hook polyline and the
+materials. `NetBodies` maps a style id to its body and layout;
+`CourtGeometry.net_set` picks the style (`set_net()` swaps it live) and the
+glb's `Net` stays hidden under whichever body hangs.
+
+**Jack** (`game/view/jack_net.gd`, design 27c): twelve chains of thin
+twisted figure-8 links (22 × 10 mm, wire 1.6 mm, pitch 16.5 mm — each end
+loop through the next, 96 tris a link) in a stretched-hexagon mesh five
+rows deep. At every junction two neighbouring chains run together down a
+shared 30 mm vertical (`Knot_k_i` → `Join_k_i`) and split off on the
+diagonals; 132 knots + 12 hooks = 145 bones, 192 springs, ≈ 610 links, no
+junction rings (the crossings share a link). Long open S-hooks (~38 mm,
+two 1.15π curls) whose top curl wraps the rim's NetHook wire: hook bones
+at −(tube_r + 0.046), ring 0 25 mm under them. Bright zinc
+(`steel_texture`, ZincBright / ZincHook).
+
+**Ladder** (`game/view/ladder_net.gd`, design 27b): twelve straight drops
+(no half-step turn) tied by three horizontal hoop chains at 30 %, 58 % and
+86 % of the length, rings at the 36 crossings, a free three-link tail under
+the bottom hoop; the hoop runs carry 4 % slack so they droop between
+drops (the sag placement from §29 draws it). 73 bones, 96 springs, ≈ 330
+stadium links. Worn galvanised steel (`NetRig.worn_steel_texture`: mottled
+zinc, a worn highlight band, rub scuffs, pits, rust blooms; roughness
+0.78, metallic 0.25).
+
+Both hang under the rim like the cotton loops and the stock chain, and
+both run the chain hoop's tuned feel (the lab pages say so). Thumbnails:
+`--qa-net-thumbs` renders each style on a rim into
+`assets/textures/nets/thumbs/<id>.png` (then `--import`); `--qa-jack` /
+`--qa-ladder` are the §29 swish pass with that style on the city.
+

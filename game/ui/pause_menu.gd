@@ -2,18 +2,29 @@ class_name PauseMenu
 extends CanvasLayer
 ## The pause menu every mode shares (design "Solo Modes HUD"): a dim that
 ## swallows touches, PAUSED, RESUME, the SHOT HELP row (taps cycle
-## App.shot_help; the views read it every frame) and QUIT TO TITLE. Keeps
-## processing while the tree is paused so its buttons work. `resumed` and
-## `quit` are the screen's to wire.
+## App.shot_help; the views read it every frame), the BALL row (taps cycle
+## the owned balls — the equip is global), the NET row (taps cycle the owned
+## nets of this court's kind — the equip is this court's, docs/LOCKER.md →
+## NETS) and QUIT TO TITLE. Keeps processing while the tree is paused so its
+## buttons work. `resumed`, `quit`, `ball_changed` and `net_changed` are the
+## screen's to wire (the screen swaps the live pool / court).
 
 signal resumed
 signal quit
+signal ball_changed(id: String)
+signal net_changed(id: String)
 
 const DIM := Color("#1B1815", 0.78)
 const CREAM := RetroTheme.SCENE_TEXT
 const HI := Color("#FFCE8A")
 
 var _help_value: Label
+var _ball_value: Label
+var _net_value: Label
+var _ball_chevron: Label
+var _net_chevron: Label
+var _area := "cage"
+var _net_kind := "cotton"
 
 
 func _init() -> void:
@@ -62,27 +73,24 @@ func _ready() -> void:
 	rr.add_child(rc)
 	resume.pressed.connect(func() -> void: resumed.emit())
 	col.add_child(resume)
-	var help := ShadowCard.new(CREAM)
-	help.name = "ShotHelp"
-	help.custom_minimum_size = Vector2(0, 60 + ShadowStyle.OFFSET)
-	var hm := _margin(0, 20)
-	help.add_child(hm)
-	var hr := HBoxContainer.new()
-	hr.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hm.add_child(hr)
-	var hl := _text("SHOT HELP", 16, CREAM, true)
-	hl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	hr.add_child(hl)
-	_help_value = _text(HudCopy.shot_help_value(App.shot_help), 16, HI)
-	_help_value.name = "ShotHelpValue"
-	_help_value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	hr.add_child(_help_value)
-	help.pressed.connect(func() -> void:
+	var help: Array = _value_row("ShotHelp", "SHOT HELP")
+	_help_value = help[1]
+	_help_value.text = HudCopy.shot_help_value(App.shot_help)
+	(help[0] as ShadowCard).pressed.connect(func() -> void:
 		App.cycle_shot_help()
 		_help_value.text = HudCopy.shot_help_value(App.shot_help)
 	)
-	col.add_child(help)
+	col.add_child(help[0])
+	var ball: Array = _value_row("Ball", "BALL")
+	_ball_value = ball[1]
+	_ball_chevron = ball[2]
+	(ball[0] as ShadowCard).pressed.connect(_cycle_ball)
+	col.add_child(ball[0])
+	var net: Array = _value_row("Net", "NET")
+	_net_value = net[1]
+	_net_chevron = net[2]
+	(net[0] as ShadowCard).pressed.connect(_cycle_net)
+	col.add_child(net[0])
 	var q := ShadowCard.new(CREAM)
 	q.name = "Quit"
 	q.custom_minimum_size = Vector2(0, 60 + ShadowStyle.OFFSET)
@@ -95,8 +103,9 @@ func _ready() -> void:
 
 
 func open() -> void:
-	if _help_value != null:
-		_help_value.text = HudCopy.shot_help_value(App.shot_help)
+	_area = str(App.mode_config(App.next_mode).get("location", "cage"))
+	_net_kind = App.net_kind_for_mode(App.next_mode)
+	_refresh_values()
 	visible = true
 
 
@@ -106,6 +115,105 @@ func close() -> void:
 
 func shot_help_text() -> String:
 	return _help_value.text if _help_value != null else ""
+
+
+func ball_text() -> String:
+	return _ball_value.text if _ball_value != null else ""
+
+
+func net_text() -> String:
+	return _net_value.text if _net_value != null else ""
+
+
+## A cream row with a label on the left and a value (+ chevron) on the right:
+## [card, value label, chevron label].
+func _value_row(name_: String, label: String) -> Array:
+	var card := ShadowCard.new(CREAM)
+	card.name = name_
+	card.custom_minimum_size = Vector2(0, 60 + ShadowStyle.OFFSET)
+	var m := _margin(0, 20)
+	card.add_child(m)
+	var row := HBoxContainer.new()
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 10)
+	m.add_child(row)
+	var l := _text(label, 16, CREAM, true)
+	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(l)
+	var value := _text("", 16, HI)
+	value.name = name_ + "Value"
+	value.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(value)
+	var chevron := _text(">", 16, HI, true)
+	chevron.name = name_ + "Chevron"
+	chevron.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(chevron)
+	return [card, value, chevron]
+
+
+## The owned balls, in library order.
+func _ball_ids() -> Array:
+	var out: Array = []
+	for b in CosmeticLibrary.balls():
+		if App.owns("ball", b.id):
+			out.push_back(b.id)
+	return out
+
+
+## The owned nets of this court's kind, in library order.
+func _net_ids() -> Array:
+	var out: Array = []
+	for n in CosmeticLibrary.nets_of_kind(_net_kind):
+		if App.owns("net", n.id):
+			out.push_back(n.id)
+	return out
+
+
+func _refresh_values() -> void:
+	if _help_value != null:
+		_help_value.text = HudCopy.shot_help_value(App.shot_help)
+	if _ball_value != null:
+		_ball_value.text = str(App.ball_set.display_name).to_upper() if App.ball_set != null else ""
+		_set_choice(_ball_value, _ball_chevron, _ball_ids().size() > 1)
+	if _net_value != null:
+		var ns := App.net_set_for(_area)
+		_net_value.text = str(ns.display_name).to_upper() if ns != null else ""
+		_set_choice(_net_value, _net_chevron, _net_ids().size() > 1)
+
+
+## One option: the value reads muted and the chevron goes.
+func _set_choice(value: Label, chevron: Label, more: bool) -> void:
+	value.add_theme_color_override("font_color", HI if more else CREAM)
+	chevron.visible = more
+
+
+static func _next(ids: Array, current: String) -> String:
+	if ids.is_empty():
+		return ""
+	var i := ids.find(current)
+	return str(ids[(i + 1) % ids.size()])
+
+
+func _cycle_ball() -> void:
+	var ids := _ball_ids()
+	if ids.size() <= 1:
+		return
+	var id := _next(ids, App.ball_set.id if App.ball_set != null else "")
+	if App.select("ball", id):
+		_refresh_values()
+		ball_changed.emit(id)
+
+
+func _cycle_net() -> void:
+	var ids := _net_ids()
+	if ids.size() <= 1:
+		return
+	var cur := App.net_set_for(_area)
+	var id := _next(ids, cur.id if cur != null else "")
+	if App.select_net(_area, id):
+		_refresh_values()
+		net_changed.emit(id)
 
 
 func _text(text: String, size_ := 16, color := CREAM, display := false) -> Label:

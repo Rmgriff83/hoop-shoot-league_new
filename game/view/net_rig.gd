@@ -19,7 +19,8 @@ var _rng_state := 5
 var _textures: Array[ImageTexture] = []
 
 
-## The rig from a NetSim layout: NetRoot, Hook_0…11, then Knot_k_i.
+## The rig from a NetSim layout: NetRoot, Hook_0…11, then the knots —
+## named Knot_k_i by ring, or by the layout's `knot_names` when it has them.
 func build_rig(layout: Dictionary) -> void:
 	_layout = layout
 	_rng_state = 5
@@ -41,10 +42,12 @@ func build_rig(layout: Dictionary) -> void:
 		_bone_of_particle[i] = _add_bone("Hook_%d" % i, hooks[i])
 		_rest[i] = hooks[i]
 	var cols: int = NetSim.COLS
+	var names: PackedStringArray = layout.get("knot_names", PackedStringArray())
 	for p in n_knots:
 		var k := p / cols
 		var i := p % cols
-		_bone_of_particle[n_hooks + p] = _add_bone("Knot_%d_%d" % [k, i], knots[p])
+		var nm: String = names[p] if p < names.size() else "Knot_%d_%d" % [k, i]
+		_bone_of_particle[n_hooks + p] = _add_bone(nm, knots[p])
 		_rest[n_hooks + p] = knots[p]
 	skin = Skin.new()
 	for b in skeleton.get_bone_count():
@@ -246,6 +249,48 @@ func steel_texture(colors: Array) -> ImageTexture:
 		else:
 			c = dark if _rnd() < 0.5 else light
 		img.set_pixel(int(floor(_rnd() * TEX_SIZE)), int(floor(_rnd() * TEX_SIZE)), c)
+	return _keep(img)
+
+
+## Worn galvanised steel (the ladder chain's design): dull mottled zinc, a
+## worn highlight band, a few bright rub scuffs, dark pits and small rust
+## blooms. [base, dark, light, rust].
+func worn_steel_texture(colors: Array) -> ImageTexture:
+	var dark := Color.html(colors[1])
+	var light := Color.html(colors[2])
+	var rust := Color.html(colors[3])
+	var img := _blank(Color.html(colors[0]))
+	var put := func(x: int, y: int, c: Color) -> void:
+		img.set_pixel(posmod(x, TEX_SIZE), posmod(y, TEX_SIZE), c)
+	for y in TEX_SIZE:
+		for x in TEX_SIZE:
+			var r := _rnd()
+			if r < 0.22:
+				put.call(x, y, dark)
+			elif r < 0.3:
+				put.call(x, y, Color.html("#7E848A"))
+	for y in TEX_SIZE:
+		if y % 8 == 1:
+			for x in TEX_SIZE:
+				if _rnd() < 0.45:
+					put.call(x, y, light)
+	for _i in 5:
+		var x := int(floor(_rnd() * TEX_SIZE))
+		var y := int(floor(_rnd() * TEX_SIZE))
+		put.call(x, y, Color.html("#F2F4F6"))
+		put.call(x + 1, y, light)
+	for _i in 7:
+		put.call(int(floor(_rnd() * TEX_SIZE)), int(floor(_rnd() * TEX_SIZE)), Color.html("#3E4247"))
+	for _i in 3:
+		var x := int(floor(_rnd() * TEX_SIZE))
+		var y := int(floor(_rnd() * TEX_SIZE))
+		put.call(x, y, Color.html("#B5652E"))
+		if _rnd() < 0.7:
+			put.call(x + 1, y, rust)
+		if _rnd() < 0.6:
+			put.call(x, y + 1, rust)
+		if _rnd() < 0.4:
+			put.call(x - 1, y + 1, Color.html("#6E4128"))
 	return _keep(img)
 
 

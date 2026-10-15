@@ -12,7 +12,8 @@ const SCORES_PART := "time_trial_scores"
 ## Device-local flick tuning scratchpad (tuning mode flag + overridden fields).
 ## Never synced: it is a dev tool, not player state.
 const TUNING_PART := "tuning"
-## Player cosmetics: coins, and per kind (hoop / ball) the selected + owned set ids.
+## Player cosmetics: tickets, per kind (hoop / ball) the selected + owned set
+## ids, and the nets (owned ids, the selected style per area).
 const COSMETICS_PART := "cosmetics"
 ## Player preferences (display / assist toggles). Player state, so it syncs —
 ## unlike the tuning scratchpad above, which is a device-local dev tool.
@@ -77,6 +78,8 @@ func load_all() -> void:
 		# tickets are the locker money. Old coins are wiped (docs/ECONOMY.md).
 		_cosmetics.erase("coins")
 		_cosmetics["tickets"] = 0
+		_write_json(COSMETICS_PART, _cosmetics)
+	if migrate_cosmetics(_cosmetics):
 		_write_json(COSMETICS_PART, _cosmetics)
 	_settings = _read_json(SETTINGS_PART)
 	if _settings.is_empty():
@@ -194,8 +197,25 @@ static func default_cosmetics() -> Dictionary:
 		"tickets": 0,
 		"hoop": {"selected": "classic", "owned": ["classic"]},
 		"ball": {"selected": "classic", "owned": ["classic"]},
+		"net": default_nets(),
 		"peggy": {"drops": 0},
 	}
+
+
+## The nets block (docs/LOCKER.md → NETS): the stock pair owned, each area on
+## its hoop's stock style.
+static func default_nets() -> Dictionary:
+	return {"owned": ["cotton", "chain"], "selected": {"cage": "cotton", "beach": "cotton", "city": "chain"}}
+
+
+## Bring an older cosmetics doc up to date (a save from before the nets, or a
+## mirrored one from an older client). True when it changed.
+static func migrate_cosmetics(doc: Dictionary) -> bool:
+	var changed := false
+	if not doc.has("net") or not (doc["net"] is Dictionary):
+		doc["net"] = default_nets()
+		changed = true
+	return changed
 
 
 func get_cosmetics() -> Dictionary:
@@ -367,7 +387,9 @@ func restore_part(part: String, doc: Dictionary) -> bool:
 			if not (d.get("docs") is Array):
 				return false
 			_scores = d
-		COSMETICS_PART: _cosmetics = d
+		COSMETICS_PART:
+			_cosmetics = d
+			migrate_cosmetics(_cosmetics)
 		SETTINGS_PART: _settings = d
 		CAMPAIGN_PART: _campaign = d
 		LIVE_GAMES_PART: _live_games = d

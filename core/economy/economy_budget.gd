@@ -63,12 +63,12 @@ static func tier_of(price: int) -> String:
 	return ""
 
 
-## Every priced locker item (the hoops; balls are PEGGY prizes and priced 0):
-## [{kind, id, name, price, minutes, tier}].
+## Every priced locker item (the hoops and the nets; balls are PEGGY prizes
+## and priced 0): [{kind, id, name, price, minutes, tier}].
 static func catalog() -> Array:
 	var out := []
-	for kind in ["hoop", "ball"]:
-		var sets: Array = CosmeticLibrary.hoops() if kind == "hoop" else CosmeticLibrary.balls()
+	for kind in ["hoop", "ball", "net"]:
+		var sets: Array = CosmeticLibrary.hoops() if kind == "hoop" else (CosmeticLibrary.nets() if kind == "net" else CosmeticLibrary.balls())
 		for cs in sets:
 			if cs.price_coins <= 0:
 				continue
@@ -163,6 +163,9 @@ static func problems() -> PackedStringArray:
 			out.push_back("ball %s has no PEGGY rarity (%s)" % [b.id, b.rarity])
 		if b.price_coins > 0:
 			out.push_back("ball %s is priced %d; balls are won, not bought" % [b.id, b.price_coins])
+	for kind in NetSet.KINDS:
+		if CosmeticLibrary.stock_net(kind) == null:
+			out.push_back("net kind %s has no stock (free) net" % kind)
 	var bands: Dictionary = Economy.coins_cfg().get("heats_to_afford", {})
 	for l in LeagueData.leagues():
 		for c in CardDefs.all():

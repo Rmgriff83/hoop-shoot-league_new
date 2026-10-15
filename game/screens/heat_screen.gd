@@ -768,6 +768,7 @@ func _build_pip() -> void:
 	_ai_court.geo = base_geo
 	_ai_court.arena_set = _arena_set
 	_ai_court.hoop_set = _hoop_set
+	_ai_court.net_set = App.net_for_mode(App.next_mode)
 	_ai_court.pop_scale = 2.4   # the PiP is a third the width: the pops stay readable
 	_pip_vp.add_child(_ai_court)
 	_ai_court.info.set_text(_mode["led_text"], _ai_court.info.accent_color)
@@ -1136,3 +1137,16 @@ func _after_match_end() -> void:
 		App.mark_unlock_seen(area)
 		App.to_heat_result())
 	add_child(page)
+
+
+## The pause menu's swaps reach the opponent's window too.
+func _on_ball_changed(id: String) -> void:
+	super(id)
+	if _ai_pool != null:
+		_ai_pool.set_ball_set(App.ball_set)
+
+
+func _on_net_changed(id: String) -> void:
+	super(id)
+	if _ai_court != null:
+		_ai_court.set_net(App.net_for_mode(App.next_mode))

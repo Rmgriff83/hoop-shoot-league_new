@@ -156,6 +156,7 @@ func _build_court(i: int) -> void:
 	_court.geo = App.geo_for_mode(card["mode"])
 	_court.arena_set = arena
 	_court.hoop_set = App.hoop_for_mode(card["mode"])
+	_court.net_set = App.net_for_mode(card["mode"])
 	add_child(_court)
 	_court.led.set_text("HOOP SHOOT", _court.led.accent_color)
 	App.mark_area_visited(str(card["area"]))

@@ -61,6 +61,7 @@ func _ready() -> void:
 	_court.geo = base_geo
 	_court.arena_set = _arena_set
 	_court.hoop_set = _hoop_set
+	_court.net_set = App.net_for_mode(App.next_mode)
 	add_child(_court)
 	_court.led.show_score(0)   # the hoop's board: the score, nothing else
 	if _mode["led_text"] != "":
@@ -195,6 +196,8 @@ func _add_pause_button(layer: CanvasLayer) -> void:
 	layer.add_child(b)
 	_pause_layer = PauseMenu.new()
 	_pause_layer.resumed.connect(resume_game)
+	_pause_layer.ball_changed.connect(_on_ball_changed)
+	_pause_layer.net_changed.connect(_on_net_changed)
 	_pause_layer.quit.connect(func() -> void:
 		resume_game()
 		App.to_title()
@@ -217,6 +220,23 @@ func resume_game() -> void:
 
 func is_paused() -> bool:
 	return _pause_layer != null and _pause_layer.visible
+
+
+## The pause menu's BALL row: the equip is global (App.select did the save
+## and the sounds); the live pool takes the skin now.
+func _on_ball_changed(_id: String) -> void:
+	_ball_index = -1
+	if _pool != null:
+		_pool.set_ball_set(App.ball_set)
+
+
+## The pause menu's NET row: this court hangs the new style now.
+func _on_net_changed(_id: String) -> void:
+	if _court == null:
+		return
+	_court.set_net(App.net_for_mode(App.next_mode))
+	if _overlay != null:
+		_overlay.net_sim = _court.net_sim
 
 
 ## Leaving a mode that swapped the hoop's sounds restores the player's set,

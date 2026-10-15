@@ -169,10 +169,10 @@ func _on_save_pulled(parts: Array) -> void:
 
 func _resolve_cosmetics() -> void:
 	var c := SaveService.get_cosmetics()
-	hoop_set = CosmeticLibrary.get_hoop(c["hoop"].get("selected", ""))
+	hoop_set = CosmeticLibrary.get_hoop(str(Dictionary(c.get("hoop", {})).get("selected", "")))
 	if hoop_set == null:
 		hoop_set = CosmeticLibrary.starter_hoop()
-	ball_set = CosmeticLibrary.get_ball(c["ball"].get("selected", ""))
+	ball_set = CosmeticLibrary.get_ball(str(Dictionary(c.get("ball", {})).get("selected", "")))
 	if ball_set == null:
 		ball_set = CosmeticLibrary.starter_ball()
 	Sfx.load_hoop_set(hoop_set)
@@ -253,8 +253,7 @@ func grant_tickets(n: int) -> void:
 
 
 func owns(kind: String, id: String) -> bool:
-	var c := SaveService.get_cosmetics()
-	return c.has(kind) and Array(c[kind].get("owned", [])).has(id)
+	return owned_ids(kind).has(id)
 
 
 ## Select an owned set of `kind` ("hoop" | "ball"). Takes effect on the next
@@ -263,6 +262,7 @@ func select(kind: String, id: String) -> bool:
 	if not owns(kind, id):
 		return false
 	var c := SaveService.get_cosmetics()
+	_ensure_kind(c, kind)
 	c[kind]["selected"] = id
 	SaveService.put_cosmetics(c)
 	_resolve_cosmetics()
@@ -290,16 +290,48 @@ func try_buy(kind: String, id: String) -> bool:
 		return false   # balls are PEGGY prizes (docs/LOCKER.md), never bought
 	if kind == "hoop" and not HOOPS_IN_LOCKER:
 		return false   # the hoop counter is closed for now
-	var set: CosmeticSet = CosmeticLibrary.get_hoop(id) if kind == "hoop" else CosmeticLibrary.get_ball(id)
+	var set: CosmeticSet = _set_for(kind, id)
 	if set == null or owns(kind, id):
 		return false
 	var c := SaveService.get_cosmetics()
 	if int(c.get("tickets", 0)) < set.price_coins:
 		return false
 	c["tickets"] = int(c.get("tickets", 0)) - set.price_coins
+	_ensure_kind(c, kind)
 	c[kind]["owned"].push_back(id)
 	SaveService.put_cosmetics(c)
 	return true
+
+
+## The set a kind's id names ("hoop" | "ball" | "net"), null if unknown.
+func _set_for(kind: String, id: String) -> CosmeticSet:
+	match kind:
+		"hoop":
+			return CosmeticLibrary.get_hoop(id)
+		"ball":
+			return CosmeticLibrary.get_ball(id)
+		"net":
+			return CosmeticLibrary.get_net(id)
+	return null
+
+
+## The sets every save owns for a kind (price 0).
+func _starters(kind: String) -> Array:
+	match kind:
+		"hoop":
+			return [CosmeticLibrary.starter_hoop()]
+		"ball":
+			return [CosmeticLibrary.starter_ball()]
+		"net":
+			return CosmeticLibrary.stock_nets()
+	return []
+
+
+## A kind's block in a cosmetics doc, created when missing (nets select per area).
+func _ensure_kind(c: Dictionary, kind: String) -> void:
+	if c.has(kind) and c[kind] is Dictionary:
+		return
+	c[kind] = SaveService.default_nets() if kind == "net" else {"selected": "", "owned": []}
 
 
 # ---- PEGGY (docs/LOCKER.md) --------------------------------------------------------
@@ -328,9 +360,9 @@ func spend_tickets(n: int) -> bool:
 func owned_ids(kind: String) -> Array:
 	var c := SaveService.get_cosmetics()
 	var out: Array = Array(Dictionary(c.get(kind, {})).get("owned", [])).duplicate()
-	var starter: CosmeticSet = CosmeticLibrary.starter_ball() if kind == "ball" else CosmeticLibrary.starter_hoop()
-	if starter != null and not out.has(starter.id):
-		out.push_back(starter.id)
+	for starter in _starters(kind):
+		if starter != null and not out.has(starter.id):
+			out.push_back(starter.id)
 	return out
 
 
@@ -341,12 +373,11 @@ func owned_count(kind: String) -> int:
 ## Hand the player a set without charging (a PEGGY prize). A new ball is
 ## flagged unseen until the BALLS tab is opened.
 func grant_cosmetic(kind: String, id: String) -> bool:
-	var set: CosmeticSet = CosmeticLibrary.get_hoop(id) if kind == "hoop" else CosmeticLibrary.get_ball(id)
+	var set: CosmeticSet = _set_for(kind, id)
 	if set == null or owns(kind, id):
 		return false
 	var c := SaveService.get_cosmetics()
-	if not c.has(kind):
-		c[kind] = {"selected": id, "owned": []}
+	_ensure_kind(c, kind)
 	c[kind]["owned"].push_back(id)
 	SaveService.put_cosmetics(c)
 	if kind == "ball":
@@ -357,6 +388,98 @@ func grant_cosmetic(kind: String, id: String) -> bool:
 		st["newBalls"] = fresh
 		SaveService.put_settings(st)
 	return true
+
+
+# ---- Nets (docs/LOCKER.md → NETS) --------------------------------------------------
+## A net is a look for the hoop's KIND of net: "cotton" on the nylon hoops
+## (cage, beach), "chain" on the city's steel rim. Bought for tickets in the
+## locker (which hangs it on every area of its kind); the pause menu swaps
+## it per court. Saved as cosmetics.net {owned, selected: {area: id}}.
+
+## QA / debug: hang this net everywhere it fits, without touching the save.
+var net_override: NetSet
+
+
+## The net kind a mode's hoop hangs.
+func net_kind_for_mode(id: String) -> String:
+	return NetSet.kind_of_hoop(hoop_for_mode(id))
+
+
+## The net kind an area hangs (its practice mode's hoop; a later area joins
+## AREA_MODES and this follows).
+func net_kind_for_area(area: String) -> String:
+	var modes: Dictionary = AREA_MODES["practice"]
+	return net_kind_for_mode(str(modes.get(area, "practice")))
+
+
+## The areas that hang a kind of net, in AREA_MODES order.
+func net_areas(kind: String) -> Array:
+	var out: Array = []
+	for area in AREA_MODES["practice"]:
+		if net_kind_for_area(str(area)) == kind:
+			out.push_back(str(area))
+	return out
+
+
+func _net_doc(c: Dictionary) -> Dictionary:
+	return c["net"] if c.has("net") and c["net"] is Dictionary else SaveService.default_nets()
+
+
+## The net hung on an area: the selection when it is owned and of the area's
+## kind, else the kind's stock net.
+func net_set_for(area: String) -> NetSet:
+	var kind := net_kind_for_area(area)
+	if net_override != null and net_override.kind == kind:
+		return net_override
+	var sel: Dictionary = _net_doc(SaveService.get_cosmetics()).get("selected", {})
+	var ns := CosmeticLibrary.get_net(str(sel.get(area, "")))
+	if ns != null and ns.kind == kind and owns("net", ns.id):
+		return ns
+	return CosmeticLibrary.stock_net(kind)
+
+
+## The net a mode plays with (its area's).
+func net_for_mode(id: String) -> NetSet:
+	return net_set_for(str(mode_config(id).get("location", "cage")))
+
+
+## Hang an owned net of the right kind on one area. False otherwise.
+func select_net(area: String, id: String) -> bool:
+	var ns := CosmeticLibrary.get_net(id)
+	if ns == null or not owns("net", id) or ns.kind != net_kind_for_area(area):
+		return false
+	var c := SaveService.get_cosmetics()
+	_ensure_kind(c, "net")
+	if not (c["net"].get("selected") is Dictionary):
+		c["net"]["selected"] = {}
+	c["net"]["selected"][area] = id
+	SaveService.put_cosmetics(c)
+	return true
+
+
+## The locker's equip: hang an owned net on every area of its kind.
+func select_net_everywhere(id: String) -> bool:
+	var ns := CosmeticLibrary.get_net(id)
+	if ns == null or not owns("net", id):
+		return false
+	var c := SaveService.get_cosmetics()
+	_ensure_kind(c, "net")
+	if not (c["net"].get("selected") is Dictionary):
+		c["net"]["selected"] = {}
+	for area in net_areas(ns.kind):
+		c["net"]["selected"][area] = id
+	SaveService.put_cosmetics(c)
+	return true
+
+
+## The areas a net is hung on right now.
+func net_in_use_areas(id: String) -> Array:
+	var out: Array = []
+	for area in AREA_MODES["practice"]:
+		var ns := net_set_for(str(area))
+		if ns != null and ns.id == id:
+			out.push_back(str(area))
+	return out
 
 
 ## The area whose unlock page is due (set when a match's XP reaches its

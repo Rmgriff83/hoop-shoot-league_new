@@ -20,10 +20,11 @@ CardArea    a fixed box (y 781 → 1206) holding the home block or the league in
 Ticker      flat strip at the very bottom, scrolling copy from the save
 ```
 No bottom nav: the phone's safe area would push one up, and the space goes to
-the cards. **Locker** (`game/ui/locker_panel.gd`, docs/LOCKER.md): two tabs —
-PEGGY, the ticket-fed drop machine that wins balls, and BALLS, the collection
-(owned equip via `App.select`, the rest show their rarity); the hoop counter
-under it is closed for now (`App.HOOPS_IN_LOCKER`). The locker icon carries a gold dot
+the cards. **Locker** (`game/ui/locker_panel.gd`, docs/LOCKER.md): three tabs —
+PEGGY, the ticket-fed drop machine that wins balls, BALLS, the collection
+(owned equip via `App.select`, the rest show their rarity), and NETS, the net
+counter (a style buys for tickets and hangs on every court of its kind); the
+hoop counter is closed for now (`App.HOOPS_IN_LOCKER`). The locker icon carries a gold dot
 while a won ball has not been looked at. **Ranks** is an icon beside the area name: the global boards (below).
 **Shop is not on the home page**: it will live inside each league, selling
 cards usable only in that league (so the easy league can't farm cards for the
@@ -316,7 +317,9 @@ the 30S MODE row (`ToggleSwitch`) under PAUSE and, under that, the spot rail
 the spot you stand on in orange, with a 44 × 56 chevron beside the column that
 slides the whole rail 200 px off the left edge and back (`--qa-spots` snaps
 `spots_00..02`). The pause menu is shared (`game/ui/pause_menu.gd`, `PauseMenu`):
-PAUSED, RESUME, SHOT HELP (taps cycle the value), QUIT TO TITLE — the old
+PAUSED, RESUME, SHOT HELP (taps cycle the value), BALL (taps cycle the owned
+balls; the equip is global), NET (taps cycle the owned nets of this court's
+kind; the equip is this court's — docs/LOCKER.md → NETS), QUIT TO TITLE — the old
 BACK button lives there now.
 
 **League match** (design "League Match HUD", `game/screens/heat_screen.gd`):

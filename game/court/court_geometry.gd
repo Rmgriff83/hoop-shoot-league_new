@@ -64,7 +64,12 @@ var _model_board: Node3D
 var _anim: AnimationPlayer      # the glb's animations, null on fallback
 ## Runtime cord-lattice net driven by the sim's balls (null on fallback).
 var net_sim: NetSim
-var _net_body: NetRig           # the net's body (CottonNet / ChainNet; null for primitives)
+var _net_body: NetRig           # the net's body (a NetBodies style; null for primitives)
+## The net style to hang (docs/LOCKER.md → NETS); null or a style of another
+## kind → the hoop's stock net. Set before add_child; set_net() swaps it live.
+var net_set: NetSet
+var net_style := ""              # the style actually hung
+var _net_mi: MeshInstance3D      # the glb's own Net mesh (hidden under a body)
 var _board: MeshInstance3D
 var _face: MeshInstance3D
 var _pole: MeshInstance3D
@@ -304,41 +309,12 @@ func _build_hoop_model() -> bool:
 	_apply_rim_rigidity()
 	# The net is simulated at runtime from the real ball; the glb's Swish clip
 	# stays available for authored flourishes but its Net tracks no longer apply.
-	var net_mi: MeshInstance3D = inst.find_child("Net", true, false)
-	if net_mi != null:
-		_force_scissor(net_mi)
-		net_sim = NetSim.new()
-		net_sim.name = "NetSim"
-		net_sim.configure(hoop_set)
-		# The tuning strip's NET page (device-local overrides per net kind).
-		var save: Node = get_tree().root.get_node_or_null("SaveService") if is_inside_tree() else null
-		if save != null:
-			net_sim.apply_overrides(Dictionary(save.call("get_tuning_net")).get(hoop_set.net_kind, {}))
+	_net_mi = inst.find_child("Net", true, false)
+	if _net_mi != null:
+		_force_scissor(_net_mi)
 		if (hoop_set.net_kind == "chain") != (geo.net_rigidity() > 1.0):
 			push_warning("CourtGeometry: hoop %s hangs a %s net on a geometry whose net rigidity is %.2f" % [hoop_set.id, hoop_set.net_kind, geo.net_rigidity()])
-		add_child(net_sim)
-		# The knotted nets (docs/BLENDER_101.md §28–29): the glb's Net surface is
-		# hidden (kept so its animation tracks still resolve) and a net tied the
-		# way a real one is — cotton cords or steel chains — rides the sim's
-		# particles from the rim centre.
-		var chain := hoop_set.net_kind == "chain"
-		net_mi.visible = false
-		_net_body = ChainNet.new() if chain else CottonNet.new()
-		_net_body.name = "ChainNet" if chain else "CottonNet"
-		_net_body.position = _rim_centre()
-		rim_pivot.add_child(_net_body)
-		var ok := net_sim.setup_chain(_net_body, SimConstants.R_RIM, SimConstants.R_TUBE) if chain \
-			else net_sim.setup_cotton(_net_body, SimConstants.R_RIM, SimConstants.R_TUBE)
-		if ok:
-			_net_body.call("build", net_sim.layout())
-			_net_body.sync(net_sim)
-			_strip_blend_shape_tracks()
-		else:
-			_net_body.queue_free()
-			_net_body = null
-			net_sim.queue_free()
-			net_sim = null
-			net_mi.visible = true
+		_build_net()
 	# LED surfaces are optional (a street hoop has none: the HUD keeps score).
 	if face is MeshInstance3D:
 		(face as MeshInstance3D).material_override = led.material
@@ -481,6 +457,73 @@ func play_make() -> void:
 ## Play the set's streak flourish (hoop_set.streak_anim), if it names one.
 func play_streak() -> void:
 	_play_anim(hoop_set.streak_anim if hoop_set != null else "")
+
+
+## The style this court hangs: net_set's when it fits the hoop's kind, else
+## the hoop's stock net.
+func _resolve_net_style() -> String:
+	var kind := NetSet.kind_of_hoop(hoop_set)
+	if net_set != null and net_set.kind == kind and NetBodies.has_style(net_set.body_style()) \
+			and NetBodies.kind_of(net_set.body_style()) == kind:
+		return net_set.body_style()
+	return NetBodies.stock_style(kind)
+
+
+## The knotted net (docs/BLENDER_101.md §28–30): the glb's Net surface is
+## hidden (kept so its animation tracks still resolve) and a net tied the
+## way a real one is — cotton cords or steel chains, in the style the player
+## hangs on this court — rides the sim's particles from the rim centre.
+func _build_net() -> void:
+	if _net_mi == null or hoop_set == null:
+		return
+	net_style = _resolve_net_style()
+	var kind := NetSet.kind_of_hoop(hoop_set)
+	net_sim = NetSim.new()
+	net_sim.name = "NetSim"
+	net_sim.configure(hoop_set)
+	# The tuning strip's NET page (device-local overrides per net kind).
+	var save: Node = get_tree().root.get_node_or_null("SaveService") if is_inside_tree() else null
+	if save != null:
+		net_sim.apply_overrides(Dictionary(save.call("get_tuning_net")).get(hoop_set.net_kind, {}))
+	add_child(net_sim)
+	_net_mi.visible = false
+	_net_body = NetBodies.for_style(net_style)
+	_net_body.name = "NetBody"
+	_net_body.position = _rim_centre()
+	rim_pivot.add_child(_net_body)
+	var lay := NetBodies.layout(net_style, SimConstants.R_RIM, SimConstants.R_TUBE)
+	if net_sim.setup_layout(_net_body, lay, kind):
+		_net_body.call("build", lay)
+		_net_body.sync(net_sim)
+		_strip_blend_shape_tracks()
+	else:
+		_net_body.queue_free()
+		_net_body = null
+		net_sim.queue_free()
+		net_sim = null
+		_net_mi.visible = true
+
+
+## Hang another net style on this court, live (the pause menu's NET row).
+## A style of the wrong kind falls back to the hoop's stock net.
+func set_net(ns: NetSet) -> void:
+	net_set = ns
+	if _net_mi == null:
+		return
+	if _net_body != null:
+		rim_pivot.remove_child(_net_body)
+		_net_body.queue_free()
+		_net_body = null
+	if net_sim != null:
+		remove_child(net_sim)
+		net_sim.queue_free()
+		net_sim = null
+	_build_net()
+
+
+## The body hung right now (null for the primitive fallback).
+func net_body() -> NetRig:
+	return _net_body
 
 
 ## The ring's centre under the pivot (the glb's Rim node, else the constant).

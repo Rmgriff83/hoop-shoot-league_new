@@ -68,6 +68,7 @@ func _build_court(location: String) -> void:
 	_court.geo = App.geo_for_mode(mode)
 	_court.arena_set = arena
 	_court.hoop_set = App.hoop_for_mode(mode)
+	_court.net_set = App.net_for_mode(mode)
 	add_child(_court)
 	_court.led.set_text("HOOP SHOOT", _court.led.accent_color)
 	_spec = TitlePan.spec_of(arena)

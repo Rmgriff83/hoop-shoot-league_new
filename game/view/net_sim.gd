@@ -356,15 +356,17 @@ static func chain_layout(rim_r := SimConstants.R_RIM, tube_r := SimConstants.R_T
 ## `space` is the node whose local space the layout lives in (the NetRig at
 ## the rim centre). No mesh: the rig reads the particles each frame.
 func setup_cotton(space: Node3D, rim_r := SimConstants.R_RIM, tube_r := SimConstants.R_TUBE) -> bool:
-	return _setup_layout(space, cotton_layout(rim_r, tube_r), "cotton")
+	return setup_layout(space, cotton_layout(rim_r, tube_r), "cotton")
 
 
 func setup_chain(space: Node3D, rim_r := SimConstants.R_RIM, tube_r := SimConstants.R_TUBE) -> bool:
-	return _setup_layout(space, chain_layout(rim_r, tube_r), "chain")
+	return setup_layout(space, chain_layout(rim_r, tube_r), "chain")
 
 
-func _setup_layout(space: Node3D, layout: Dictionary, tag: String) -> bool:
-	if space == null:
+## Any knotted layout ({knots, hooks, springs, bottom, …} — a net body's
+## static layout()); `tag` is the net KIND ("cotton" | "chain") for tests.
+func setup_layout(space: Node3D, layout: Dictionary, tag: String) -> bool:
+	if space == null or not layout.has("knots") or not layout.has("hooks") or not layout.has("springs"):
 		return false
 	_space = space
 	_mi = null

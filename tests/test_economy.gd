@@ -78,10 +78,15 @@ func _envelope(t) -> void:
 		t.ok(float(r["rate"]) >= float(band[0]) and float(r["rate"]) <= float(band[1]), "%s pays inside the band (%.1f/min)" % [r["mode"], r["rate"]])
 	t.ok(EconomyBudget.trial_rate("cage") > EconomyBudget.heat_rate(LeagueData.league("cage")), "a trial out-earns a heat in tickets (heats also pay coins)")
 	var catalog := EconomyBudget.catalog()
-	t.ok(catalog.size() >= 2, "every priced hoop is in the catalog (%d)" % catalog.size())
+	t.ok(catalog.size() >= 4, "every priced hoop and net is in the catalog (%d)" % catalog.size())
+	var catalog_ids := []
 	for item in catalog:
-		t.eq(item["kind"], "hoop", "%s is a hoop: balls are PEGGY prizes, never priced" % item["id"])
+		catalog_ids.push_back("%s:%s" % [item["kind"], item["id"]])
+		t.ok(item["kind"] in ["hoop", "net"], "%s is a hoop or a net: balls are PEGGY prizes, never priced" % item["id"])
 		t.ok(str(item["tier"]) != "", "%s %s (%d) sits in a tier (%.0f min)" % [item["kind"], item["id"], item["price"], item["minutes"]])
+	t.ok(catalog_ids.has("net:jack") and catalog_ids.has("net:ladder"), "the jack and ladder chains are on the counter")
+	t.eq(EconomyBudget.tier_of(600), "mid", "the jack chain is a mid purchase")
+	t.eq(EconomyBudget.tier_of(1000), "premium", "the ladder chain is a premium purchase")
 	# PEGGY (docs/LOCKER.md): a drop is an entry purchase, the machine pays
 	# the whole roster out, barely wastes a drop, and the roster's hours are
 	# the bulk of the catalog.

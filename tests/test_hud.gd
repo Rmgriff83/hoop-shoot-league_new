@@ -153,13 +153,57 @@ func _widgets(t) -> void:
 	hud.free()
 	var pm := PauseMenu.new()
 	pm._ready()
-	for nm in ["Resume", "ShotHelp", "Quit"]:
+	for nm in ["Resume", "ShotHelp", "Ball", "Net", "Quit"]:
 		t.ok(pm.find_child(nm, true, false) is ShadowCard, "the pause menu has %s" % nm)
 	var was: int = app.shot_help
 	pm.open()
 	t.eq(pm.shot_help_text(), HudCopy.shot_help_value(was), "the shot-help value reads the setting")
 	(pm.find_child("ShotHelp", true, false) as Button).pressed.emit()
 	t.eq(pm.shot_help_text(), HudCopy.shot_help_value((was + 1) % App.SHOT_HELP_LABELS.size()), "a tap cycles it")
+	# The BALL and NET rows (docs/LOCKER.md → NETS): the ball cycles the owned
+	# balls (global), the net the owned nets of this court's kind (per court).
+	var cos_before: Dictionary = SaveService.get_cosmetics()
+	var mode_before: String = app.next_mode
+	var ball_before: String = app.ball_set.id if app.ball_set != null else "classic"
+	var cos: Dictionary = SaveService.default_cosmetics()   # the suite's parts start empty (headless)
+	cos.merge(SaveService.get_cosmetics(), true)
+	cos["ball"] = {"selected": "classic", "owned": ["classic"]}
+	cos["net"] = SaveService.default_nets()
+	SaveService.put_cosmetics(cos)
+	app.select("ball", "classic")
+	app.next_mode = "trial"
+	pm.open()
+	t.eq(pm.ball_text(), "CLASSIC", "the BALL row reads the equipped ball")
+	t.eq(pm.net_text(), "COTTON", "the NET row reads the cage's net")
+	var balls_seen: Array = []
+	var nets_seen: Array = []
+	pm.ball_changed.connect(func(id: String) -> void: balls_seen.push_back(id))
+	pm.net_changed.connect(func(id: String) -> void: nets_seen.push_back(id))
+	(pm.find_child("Ball", true, false) as Button).pressed.emit()
+	t.ok(balls_seen.is_empty(), "one owned ball: the row does nothing")
+	t.ok(not (pm.find_child("BallChevron", true, false) as Label).visible, "…and shows no chevron")
+	app.grant_cosmetic("ball", "cherry")
+	pm.open()
+	t.ok((pm.find_child("BallChevron", true, false) as Label).visible, "two owned balls: the chevron is back")
+	(pm.find_child("Ball", true, false) as Button).pressed.emit()
+	t.eq(balls_seen, ["cherry"], "a tap equips the next owned ball and tells the screen")
+	t.eq(app.ball_set.id, "cherry", "…globally (App.ball_set)")
+	t.eq(pm.ball_text(), "CHERRY", "…and the row follows")
+	(pm.find_child("Net", true, false) as Button).pressed.emit()
+	t.ok(nets_seen.is_empty(), "one cotton net: the NET row does nothing on the cage")
+	app.next_mode = "city"
+	app.grant_cosmetic("net", "jack")
+	pm.open()
+	t.eq(pm.net_text(), "CHAIN", "the city hangs its stock chain")
+	(pm.find_child("Net", true, false) as Button).pressed.emit()
+	t.eq(nets_seen, ["jack"], "a tap hangs the next owned chain on this court")
+	t.eq(app.net_set_for("city").id, "jack", "…saved for the city")
+	t.eq(app.net_set_for("cage").id, "cotton", "…and the cage keeps its cotton")
+	(pm.find_child("Net", true, false) as Button).pressed.emit()
+	t.eq(pm.net_text(), "CHAIN", "another tap wraps back to the stock chain")
+	app.next_mode = mode_before
+	SaveService.put_cosmetics(cos_before)
+	app.select("ball", ball_before)
 	app.set_shot_help(was)
 	var resumed := []
 	pm.resumed.connect(func() -> void: resumed.push_back(true))

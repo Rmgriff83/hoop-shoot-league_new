@@ -1,15 +1,55 @@
-# The locker and PEGGY — how balls are won (2026-10-01)
+# The locker and PEGGY — how balls are won, how nets are bought (2026-10-01, nets 2026-10-15)
 
 The locker (the ball icon on the home page, `game/ui/locker_panel.gd`) has
-two tabs. **PEGGY** is a ticket-fed drop machine: aim a puck along a rail,
+three tabs. **PEGGY** is a ticket-fed drop machine: aim a puck along a rail,
 hold the big red button while a ticket feeds in, and the puck rattles down a
 peg board into one of seven prize slots. Whatever ball sits in that slot is
 yours. **BALLS** is the collection: owned balls equip on tap, the rest show
-their rarity. The hoop counter that used to sit under it (buy for tickets,
-swap) is **closed for now** (`App.HOOPS_IN_LOCKER = false`, 2026-10-07):
-`try_buy("hoop", …)` refuses and the locker lists balls only; the player's
-hoop stays the starter and the beach / city mandate their own. **Balls are
-never bought**, `try_buy("ball", …)` refuses. Never call the machine "Plinko" anywhere in the game — it is PEGGY.
+their rarity. **NETS** is the net counter (below). The hoop counter that
+used to sit under the balls (buy for tickets, swap) is **closed for now**
+(`App.HOOPS_IN_LOCKER = false`, 2026-10-07): `try_buy("hoop", …)` refuses;
+the player's hoop stays the starter and the beach / city mandate their own.
+**Balls are never bought**, `try_buy("ball", …)` refuses. Never call the
+machine "Plinko" anywhere in the game — it is PEGGY.
+
+## NETS (2026-10-15)
+
+A net is a **look for the hoop's kind of net** (`game/cosmetics/net_set.gd`,
+`NetSet`): `kind` is `cotton` (the nylon hoops: cage, beach) or `chain` (the
+city's steel rim), `style` names the body `NetBodies` builds
+(docs/BLENDER_101.md §28–30), `price_coins` is tickets. The feel — the nine
+`net_*` knobs and the make sounds — stays on the court's `HoopSet`; a style
+only changes what hangs. Four nets ship (`assets/nets/<id>/net_set.tres`,
+`CosmeticLibrary.NETS`): **Cotton** and **Chain** (the stock pair, free,
+owned by every save), **Jack** (a jack chain, 600 tickets — a *mid*
+purchase) and **Ladder** (straight drops tied by hoop chains, 1000 — a
+*premium* one). A style can only hang on a hoop of its kind, which is how a
+later chain area gets the chains you already own: areas resolve their kind
+through `App.AREA_MODES` → `App.net_kind_for_area`.
+
+- The **NETS tab** lists every style (tile `Net_<id>`, the thumbnail from
+  `assets/textures/nets/thumbs/<id>.png`, rendered by `--qa-net-thumbs`), a
+  KIND · AREAS line ("CHAIN · CITY", "COTTON · CAGE, BEACH") and a tag:
+  **IN USE ON CITY** / **IN USE ON CAGE + BEACH**, **EQUIP**, or **n
+  TICKETS** (disabled while short). Tapping an owned net hangs it on
+  **every area of its kind** (`App.select_net_everywhere`); buying
+  (`App.try_buy("net", id)`) does the same.
+- The **pause menu**'s NET row (docs/HOME.md) cycles the owned nets of
+  that court's kind and hangs the pick on **that court only**
+  (`App.select_net(area, id)`); its BALL row cycles the owned balls and the
+  equip is global (`App.select("ball", id)`). Both swap live:
+  `CourtGeometry.set_net`, `BallPool.set_ball_set`.
+- Saved in `cosmetics.net = {"owned": [...], "selected": {area: id}}`
+  (`SaveService.default_nets`, `migrate_cosmetics` backfills older saves and
+  mirrored docs). `App.net_set_for(area)` falls back to the kind's stock net
+  when a selection is unowned or of the wrong kind. `App.net_override` hangs
+  a net everywhere it fits without the save (QA, `--qa-jack` / `--qa-ladder`).
+- Cosmetics never go on the wire: in an online heat each phone shows its own.
+
+Adding a net: a body class (`extends ChainNet` for a chain, `CottonNet` for
+cotton) registered in `NetBodies`, a `.tres` with its kind, style and price,
+one line in `CosmeticLibrary.NETS`, `--qa-net-thumbs` then `--import`, the
+ledger (the price must land in a tier and keep the catalog in band).
 
 ## The rules
 
@@ -75,8 +115,9 @@ lvl 1 rare 9 / 18 %; lvl 3 epic 9 / 18 %, rare 19 / 24 %; lvl 5 legend
 Balls are priced 0; `EconomyBudget.peggy_tickets()` is the expected cost of
 winning the whole roster (`PeggyPrizes.expected_tickets_to_complete`, 60
 seeded collection runs at the centre aim) and `catalog_hours()` is the hoops
-plus that. Shipped: 46 balls to win, 13,800 tickets expected (300 a ball —
-no drop is wasted), 18.8 h; with the hoops 19.8 h, inside the 15–35 h band.
+and the nets plus that. Shipped: 46 balls to win, 13,800 tickets expected
+(300 a ball — no drop is wasted), 18.8 h; with the hoops and the two priced
+nets (jack 600, ladder 1000) ~22 h, inside the 15–35 h band.
 At level 1 the 20 reachable balls take 6,000 tickets; at level 3, 36 balls
 10,800. Rules in `EconomyBudget.problems()`: a drop is an entry purchase,
 the roster is payable, a ball costs at most 1.35 drops, every ball is rated

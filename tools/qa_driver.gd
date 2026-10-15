@@ -14,7 +14,7 @@ var _outcomes: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-ranks") or args.has("--qa-multi")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# The splash is the main scene now: every other pass starts from the title.
@@ -54,6 +54,12 @@ func _ready() -> void:
 		_run_net.call_deferred()
 	elif args.has("--qa-chain"):
 		_run_chain.call_deferred()
+	elif args.has("--qa-jack"):
+		_run_net_style.call_deferred("jack")
+	elif args.has("--qa-ladder"):
+		_run_net_style.call_deferred("ladder")
+	elif args.has("--qa-net-thumbs"):
+		_run_net_thumbs.call_deferred()
 	elif args.has("--qa-ranks"):
 		_run_ranks.call_deferred()
 	elif args.has("--qa-multi"):
@@ -228,6 +234,83 @@ func _run_chain() -> void:
 	await _run_net_in("chain", true)
 
 
+## A bought chain style hung on the city through App.net_override (no save
+## change): --qa-jack / --qa-ladder → jack_* / ladder_* snaps.
+func _run_net_style(style: String) -> void:
+	App.net_override = CosmeticLibrary.get_net(style)
+	await _run_net_in(style, true)
+
+
+## The locker's net thumbnails (docs/LOCKER.md → NETS): every style hung on
+## a rim in its own viewport, saved to assets/textures/nets/thumbs/<id>.png
+## (run --import afterwards so the locker can load them).
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-net-thumbs
+func _run_net_thumbs() -> void:
+	await _sleep(0.5)
+	var out_dir := ProjectSettings.globalize_path("res://assets/textures/nets/thumbs")
+	DirAccess.make_dir_recursive_absolute(out_dir)
+	for ns in CosmeticLibrary.nets():
+		var vp := SubViewport.new()
+		vp.size = Vector2i(256, 256)
+		vp.own_world_3d = true
+		vp.transparent_bg = true
+		vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+		vp.msaa_3d = Viewport.MSAA_4X
+		add_child(vp)
+		var env := WorldEnvironment.new()
+		var e := Environment.new()
+		e.background_mode = Environment.BG_COLOR
+		e.background_color = Color(0, 0, 0, 0)
+		e.ambient_light_source = Environment.AMBIENT_SOURCE_COLOR
+		e.ambient_light_color = Color(0.85, 0.82, 0.78)
+		e.ambient_light_energy = 0.55
+		env.environment = e
+		vp.add_child(env)
+		var sun := DirectionalLight3D.new()
+		sun.rotation_degrees = Vector3(-50, 35, 0)
+		sun.light_energy = 1.3
+		vp.add_child(sun)
+		var rig := Node3D.new()
+		vp.add_child(rig)
+		var torus := TorusMesh.new()
+		torus.inner_radius = SimConstants.R_RIM - SimConstants.R_TUBE
+		torus.outer_radius = SimConstants.R_RIM + SimConstants.R_TUBE
+		torus.rings = 32
+		torus.ring_segments = 10
+		var rim := MeshInstance3D.new()
+		rim.mesh = torus
+		var rm := StandardMaterial3D.new()
+		rm.albedo_color = Color("#E8703A")
+		rm.roughness = 0.6
+		rim.material_override = rm
+		rig.add_child(rim)
+		var body := NetBodies.for_style(ns.body_style())
+		rig.add_child(body)
+		var sim := NetSim.new()
+		rig.add_child(sim)
+		sim.configure(CosmeticLibrary.get_hoop("chain") if ns.kind == "chain" else HoopSet.new())
+		var lay := NetBodies.layout(ns.body_style())
+		sim.setup_layout(body, lay, ns.kind)
+		body.call("build", lay)
+		body.sync(sim)
+		var cam := Camera3D.new()
+		cam.fov = 38.0
+		vp.add_child(cam)
+		cam.position = Vector3(0.18, 0.12, 0.92)
+		cam.look_at(Vector3(0.0, -0.17, 0.0))
+		await get_tree().process_frame
+		await get_tree().process_frame
+		await RenderingServer.frame_post_draw
+		var img := vp.get_texture().get_image()
+		img.save_png("%s/%s.png" % [out_dir, ns.id])
+		img.save_png("user://qa/net_thumb_%s.png" % ns.id)
+		print("QA net thumb %s (%d bones)" % [ns.id, body.bone_count()])
+		vp.queue_free()
+		await get_tree().process_frame
+	print("QA net thumbs: done")
+	get_tree().quit(0)
+
+
 func _run_net_in(prefix: String, city: bool) -> void:
 	await _sleep(1.2)
 	var was_tuning: bool = App.tuning_mode
@@ -299,7 +382,7 @@ func _run_net_in(prefix: String, city: bool) -> void:
 		ccam.look_at(hoop + Vector3(0.0, -0.2, 0.0))
 		await _sleep(0.3)
 		await _snap(prefix + "_close")
-	var body: Node = get_tree().root.find_child("ChainNet" if city else "CottonNet", true, false)
+	var body: Node = get_tree().root.find_child("NetBody", true, false)
 	if body != null:
 		var extra := " %d links" % body.link_count() if body is ChainNet else ""
 		print("QA %s: %s %d bones, %d surfaces, %d tris%s" % [prefix, body.name, body.bone_count(), body.surface_count(), body.tri_count(), extra])
@@ -358,6 +441,27 @@ func _run_hud() -> void:
 		await _snap("hud_pause")
 		await _click_button_named("QUIT TO TITLE")
 		await _sleep(1.5)
+	# The locker's NETS tab (docs/LOCKER.md → NETS), with the counter open.
+	var cos_before: Dictionary = SaveService.get_cosmetics()
+	App.grant_tickets(700)
+	var locker_btn: Button = get_tree().root.find_child("Locker", true, false)
+	if locker_btn != null:
+		var lc := (locker_btn.global_position + locker_btn.size / 2.0) * 0.5
+		_mouse_button(lc, true)
+		await _sleep(0.08)
+		_mouse_button(lc, false)
+		await _sleep(0.8)
+		var panel: LockerPanel = get_tree().root.find_child("LockerPanel", true, false)
+		if panel == null:
+			for c in get_tree().root.find_children("*", "LockerPanel", true, false):
+				panel = c
+		if panel != null:
+			panel.show_tab("NETS")
+			await _sleep(0.4)
+			await _snap("locker_nets")
+			panel.close()
+			await _sleep(0.5)
+	SaveService.put_cosmetics(cos_before)
 	await _click_button_named("PRACTICE")
 	await _sleep(1.2)
 	await _snap("hud_practice")

@@ -1,17 +1,19 @@
 class_name LockerPanel
 extends CanvasLayer
-## The locker sheet (the top-left locker icon), docs/LOCKER.md. Two tabs:
-## PEGGY — the drop machine (PeggyMachine) that wins balls for tickets — and
+## The locker sheet (the top-left locker icon), docs/LOCKER.md. Three tabs:
+## PEGGY — the drop machine (PeggyMachine) that wins balls for tickets —
 ## BALLS — the collection grid (owned balls equip on tap, the rest show their
-## rarity). The hoop counter under it (buy for tickets, swap) is closed for
-## now (App.HOOPS_IN_LOCKER). A win pops the prize card over the sheet: SET AS YOUR BALL?
+## rarity) — and NETS — the net counter (a style buys for tickets and hangs
+## on every court of its kind; the pause menu swaps per court). The hoop
+## counter (buy for tickets, swap) is closed for now (App.HOOPS_IN_LOCKER).
+## A win pops the prize card over the sheet: SET AS YOUR BALL?
 ## EQUIP / KEEP, AGAIN; an epic or legend pull gets the rays. Opening BALLS
 ## clears App.unseen_balls(), which the title's locker icon badges.
 
 signal closed
 
 const DIM := Color(0.02, 0.02, 0.05, 0.72)
-const TABS := ["PEGGY", "BALLS"]
+const TABS := ["PEGGY", "BALLS", "NETS"]
 const TIER_COLOR := PeggyMachine.TIER_COLOR
 const SKIN_REGION := Rect2(64, 64, 128, 128)
 
@@ -116,6 +118,8 @@ func _fill() -> void:
 		var label: String = tab
 		if tab == "BALLS":
 			label = "BALLS %d/%d" % [App.owned_count("ball"), CosmeticLibrary.balls().size()]
+		elif tab == "NETS":
+			label = "NETS %d/%d" % [App.owned_count("net"), CosmeticLibrary.nets().size()]
 		var b := Button.new()
 		b.name = "Tab_" + tab
 		b.text = label
@@ -135,6 +139,8 @@ func _fill() -> void:
 	_list = null
 	if _tab == "PEGGY":
 		_build_peggy()
+	elif _tab == "NETS":
+		_build_nets()
 	else:
 		_build_balls()
 
@@ -522,6 +528,123 @@ func _build_balls() -> void:
 		_list.add_child(row)
 
 
+# ---- NETS ---------------------------------------------------------------------------
+
+
+## The net's thumbnail (tools/qa_driver.gd --qa-net-thumbs), a blank panel
+## when it is missing.
+func _net_rect(net: NetSet, px: int) -> TextureRect:
+	var tr := TextureRect.new()
+	tr.custom_minimum_size = Vector2(px, px)
+	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	tr.stretch_mode = TextureRect.STRETCH_SCALE
+	tr.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	if net != null:
+		var thumb := NetSet.thumb_path(net.id)
+		if ResourceLoader.exists(thumb):
+			tr.texture = load(thumb)
+	if tr.texture == null:
+		var blank := PlaceholderTexture2D.new()
+		blank.size = Vector2(px, px)
+		tr.texture = blank
+		tr.self_modulate = Color(0, 0, 0, 0)
+	return tr
+
+
+## The net counter: every style, in library order. Owned styles equip (on
+## every court of their kind), the rest buy for tickets.
+func _build_nets() -> void:
+	var scroll := ScrollContainer.new()
+	scroll.name = "NetsTab"
+	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_content.add_child(scroll)
+	_list = VBoxContainer.new()
+	_list.name = "Items"
+	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_list.add_theme_constant_override("separation", 10)
+	scroll.add_child(_list)
+	var head := RetroTheme.caps("NETS · BOUGHT WITH TICKETS", 16, RetroTheme.c("muted"))
+	head.name = "Head_net"
+	_list.add_child(head)
+	var grid := GridContainer.new()
+	grid.name = "NetGrid"
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	_list.add_child(grid)
+	for cs in CosmeticLibrary.nets():
+		var net := cs as NetSet
+		var owned: bool = App.owns("net", net.id)
+		var used: Array = App.net_in_use_areas(net.id)
+		var in_use: bool = owned and not used.is_empty()
+		var tile := Button.new()
+		tile.name = "Net_" + net.id
+		tile.custom_minimum_size = Vector2(148, 196)
+		tile.text = ""
+		var fill := RetroTheme.c("gold") if in_use else (RetroTheme.c("panel") if owned else RetroTheme.c("bg"))
+		_face(tile, fill, 6.0)
+		var vb := VBoxContainer.new()
+		vb.set_anchors_preset(Control.PRESET_FULL_RECT)
+		vb.offset_right = -ShadowStyle.OFFSET
+		vb.offset_bottom = -ShadowStyle.OFFSET
+		vb.alignment = BoxContainer.ALIGNMENT_CENTER
+		vb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		vb.add_theme_constant_override("separation", 4)
+		tile.add_child(vb)
+		var pic := _net_rect(net, 96)
+		pic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if not owned:
+			pic.modulate = Color(0.25, 0.25, 0.28, 1.0)
+		vb.add_child(pic)
+		var nm := RetroTheme.caps(str(net.display_name).to_upper(), 11,
+			RetroTheme.c("card_text") if in_use else (RetroTheme.c("text") if owned else RetroTheme.c("muted")))
+		nm.name = "Name"
+		nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		nm.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		vb.add_child(nm)
+		var areas: Array = App.net_areas(net.kind)
+		var where := PackedStringArray()
+		for a in areas:
+			where.push_back(str(a).to_upper())
+		var kind := RetroTheme.caps("%s · %s" % [net.kind.to_upper(), ", ".join(where)], 9,
+			RetroTheme.c("card_text") if in_use else RetroTheme.c("muted"))
+		kind.name = "Kind"
+		kind.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		kind.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		vb.add_child(kind)
+		var tag_text: String
+		if in_use:
+			var on := PackedStringArray()
+			for a in used:
+				on.push_back(str(a).to_upper())
+			tag_text = "IN USE ON %s" % " + ".join(on)
+		elif owned:
+			tag_text = "EQUIP"
+		else:
+			tag_text = "%s TICKETS" % RetroTheme.thousands(int(net.price_coins))
+		var tag := RetroTheme.caps(tag_text, 11,
+			RetroTheme.c("card_text") if in_use else (RetroTheme.c("text") if owned else RetroTheme.c("gold")))
+		tag.name = "Tag"
+		tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		vb.add_child(tag)
+		if not owned and App.tickets() < int(net.price_coins):
+			tile.disabled = true
+		var id := net.id
+		var was_owned := owned
+		tile.pressed.connect(func() -> void:
+			if was_owned:
+				if App.select_net_everywhere(id):
+					_fill()
+			elif App.try_buy("net", id):
+				App.select_net_everywhere(id)
+				_fill()
+		)
+		grid.add_child(tile)
+
+
 ## The id in use: the live set, else the starter.
 func _current_id(kind: String) -> String:
 	var live: CosmeticSet = App.ball_set if kind == "ball" else App.hoop_set
@@ -531,7 +654,7 @@ func _current_id(kind: String) -> String:
 	return starter.id if starter != null else ""
 
 
-## Button names on the BALLS tab, in order ("Ball_<id>" / "Hoop_<id>"), for tests.
+## Button names on the BALLS / NETS tab, in order ("Ball_<id>" / "Hoop_<id>" / "Net_<id>"), for tests.
 func rows() -> Array:
 	var out := []
 	if _list == null:
@@ -543,7 +666,7 @@ func rows() -> Array:
 
 
 func in_use_row(kind := "ball") -> String:
-	var prefix := "Ball_" if kind == "ball" else "Hoop_"
+	var prefix := "Ball_" if kind == "ball" else ("Net_" if kind == "net" else "Hoop_")
 	if _list == null:
 		return ""
 	for c in BeachFx._descendants(_list):

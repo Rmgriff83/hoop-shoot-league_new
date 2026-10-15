@@ -1,6 +1,6 @@
 class_name CosmeticLibrary
 extends RefCounted
-## Registry of every hoop, ball and arena set. Explicit lists (no directory
+## Registry of every hoop, ball, net and arena set. Explicit lists (no directory
 ## scanning) so exported builds behave; manifests load on demand and are
 ## cached. Adding a set = adding its folder under assets/ and one path here.
 ## Order matters for starters: the first price-0 set of each kind is the one
@@ -59,6 +59,13 @@ const BALLS: Array[String] = [
 	"res://assets/balls/baseball/ball_set.tres",
 	"res://assets/balls/moon/ball_set.tres",
 	"res://assets/balls/donut/ball_set.tres",
+]
+## Net styles (docs/LOCKER.md → NETS): the stock pair first, then the counter.
+const NETS: Array[String] = [
+	"res://assets/nets/cotton/net_set.tres",
+	"res://assets/nets/chain/net_set.tres",
+	"res://assets/nets/jack/net_set.tres",
+	"res://assets/nets/ladder/net_set.tres",
 ]
 const ARENAS: Array[String] = [
 	"res://assets/arena/cage/arena_set.tres",
@@ -146,3 +153,45 @@ static func starter_ball() -> BallSet:
 		if s.price_coins == 0:
 			return s
 	return all[0] if not all.is_empty() else null
+
+
+static func nets() -> Array[NetSet]:
+	var out: Array[NetSet] = []
+	for p in NETS:
+		var s := _load(p)
+		if s is NetSet:
+			out.push_back(s)
+	return out
+
+
+static func get_net(id: String) -> NetSet:
+	for s in nets():
+		if s.id == id:
+			return s
+	return null
+
+
+static func nets_of_kind(kind: String) -> Array[NetSet]:
+	var out: Array[NetSet] = []
+	for s in nets():
+		if s.kind == kind:
+			out.push_back(s)
+	return out
+
+
+## The free net of a kind (the first priced 0; else the first of the kind).
+static func stock_net(kind: String) -> NetSet:
+	var all := nets_of_kind(kind)
+	for s in all:
+		if s.price_coins == 0:
+			return s
+	return all[0] if not all.is_empty() else null
+
+
+## Every free net: owned by every save.
+static func stock_nets() -> Array[NetSet]:
+	var out: Array[NetSet] = []
+	for s in nets():
+		if s.price_coins == 0:
+			out.push_back(s)
+	return out

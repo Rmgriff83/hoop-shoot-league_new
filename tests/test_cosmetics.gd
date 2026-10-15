@@ -7,6 +7,7 @@ extends RefCounted
 func run(t) -> void:
 	_wall_sound(t)
 	_net_overrides(t)
+	_nets(t)
 	_street_and_arenas(t)
 	# Manifests + library.
 	var hoop := CosmeticLibrary.get_hoop("classic")
@@ -168,6 +169,42 @@ func run(t) -> void:
 		# Restore the real sets for anything that runs after this test.
 		sfx.load_hoop_set(hoop)
 		sfx.load_ball_set(ball)
+
+
+## The net styles (docs/LOCKER.md → NETS): the stock pair free, the counter
+## priced, every style's body known and of its kind.
+func _nets(t) -> void:
+	var all := CosmeticLibrary.nets()
+	t.eq(all.size(), CosmeticLibrary.NETS.size(), "every net manifest loads (%d)" % all.size())
+	var ids := []
+	for n in all:
+		t.eq(n.validate(), PackedStringArray(), "net %s validates" % n.id)
+		t.ok(n.kind in NetSet.KINDS, "net %s has a kind (%s)" % [n.id, n.kind])
+		t.ok(NetBodies.has_style(n.body_style()) and NetBodies.kind_of(n.body_style()) == n.kind, "net %s has a body of its kind" % n.id)
+		t.ok(not ids.has(n.id), "net id %s is unique" % n.id)
+		ids.push_back(n.id)
+	t.eq(ids, ["cotton", "chain", "jack", "ladder"], "the four nets, stock first")
+	t.eq(CosmeticLibrary.get_net("cotton").price_coins, 0, "cotton is free")
+	t.eq(CosmeticLibrary.get_net("chain").price_coins, 0, "the stock chain is free")
+	t.ok(CosmeticLibrary.get_net("jack").price_coins > 0 and CosmeticLibrary.get_net("jack").kind == "chain", "the jack chain is a priced chain")
+	t.ok(CosmeticLibrary.get_net("ladder").price_coins > 0 and CosmeticLibrary.get_net("ladder").kind == "chain", "the ladder chain is a priced chain")
+	t.eq(CosmeticLibrary.stock_net("cotton").id, "cotton", "cotton's stock net")
+	t.eq(CosmeticLibrary.stock_net("chain").id, "chain", "chain's stock net")
+	t.eq(CosmeticLibrary.nets_of_kind("chain").size(), 3, "three chain styles")
+	t.eq(CosmeticLibrary.stock_nets().size(), 2, "two free nets")
+	t.eq(NetSet.kind_of_hoop(CosmeticLibrary.get_hoop("classic")), "cotton", "a nylon hoop hangs cotton")
+	t.eq(NetSet.kind_of_hoop(CosmeticLibrary.get_hoop("chain")), "chain", "the steel rim hangs chain")
+	t.ok(CosmeticLibrary.get_net("nope") == null, "an unknown net is null")
+	var bad := NetSet.new()
+	bad.id = "x"
+	bad.kind = "rope"
+	bad.style = "cotton"
+	t.eq(bad.validate().size(), 2, "a rope net fails validation (kind, and cotton is not rope)")
+	var wrong := NetSet.new()
+	wrong.id = "y"
+	wrong.kind = "cotton"
+	wrong.style = "jack"
+	t.eq(wrong.validate().size(), 1, "a cotton net cannot wear a chain body")
 
 
 func _street_and_arenas(t) -> void:

@@ -87,11 +87,22 @@ func run(t) -> void:
 	t.ok(Array(cos["ball"]["owned"]).has("classic"), "starter ball owned")
 	t.eq(int(cos["tickets"]), 0, "no tickets to start")
 	t.ok(not cos.has("coins"), "the one-wallet coins key is gone")
+	t.ok(Array(cos["net"]["owned"]).has("cotton") and Array(cos["net"]["owned"]).has("chain"), "the stock nets are owned")
+	t.eq(cos["net"]["selected"]["city"], "chain", "the city hangs the chain")
+	t.eq(cos["net"]["selected"]["cage"], "cotton", "the cage hangs cotton")
 	cos["tickets"] = 250
 	cos["hoop"]["owned"].push_back("neon")
 	cos["hoop"]["selected"] = "neon"
+	cos["net"]["owned"].push_back("jack")
+	cos["net"]["selected"]["city"] = "jack"
 	svc.put_cosmetics(cos)
 	t.ok(svc.dirty_parts().has("cosmetics"), "cosmetics part marked dirty")
+	# An older doc (no nets block) is brought up to date on load and on restore.
+	var old_doc: Dictionary = svc.get_cosmetics()
+	old_doc.erase("net")
+	t.ok(SaveService.migrate_cosmetics(old_doc), "a doc without nets is migrated")
+	t.eq(old_doc["net"]["selected"]["city"], "chain", "…to the stock pair")
+	t.ok(not SaveService.migrate_cosmetics(old_doc), "…once")
 
 	# Progress: level 1 with no XP to start, round-trip, marked dirty.
 	var prog: Dictionary = svc.get_progress()
@@ -115,6 +126,12 @@ func run(t) -> void:
 	t.eq(bool(svc2.get_settings().get("darkMode", false)), true, "dark mode survives reload")
 	t.eq(int(svc2.get_cosmetics()["tickets"]), 250, "tickets survive reload")
 	t.eq(svc2.get_cosmetics()["hoop"]["selected"], "neon", "hoop selection survives reload")
+	t.eq(svc2.get_cosmetics()["net"]["selected"]["city"], "jack", "the city's net survives reload")
+	var mirrored: Dictionary = svc2.get_cosmetics()
+	mirrored.erase("net")
+	mirrored["updatedAt"] = int(mirrored.get("updatedAt", 0)) + 1
+	t.ok(svc2.restore_part("cosmetics", mirrored), "a mirrored cosmetics doc restores")
+	t.ok(svc2.get_cosmetics().has("net"), "…and is migrated to carry the nets block")
 	t.close(float(svc2.get_tuning()["fields"]["angle_low"]), 42.0, 1e-9, "tuning field survives reload")
 	t.close(float(svc2.get_tuning().get("undo", {}).get("angle_low", 0.0)), 41.0, 1e-9, "undo snapshot survives reload")
 

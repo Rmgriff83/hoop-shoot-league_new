@@ -313,6 +313,42 @@ func _widgets(t) -> void:
 		app.select("ball", before)
 	else:
 		t.eq(locker.in_use_row(), "Ball_classic", "no save (headless): the starter reads as in use")
+	# The NETS tab (docs/LOCKER.md → NETS): every style, the stock pair in
+	# use, the counter buys for tickets and hangs the net on its kind's courts.
+	var cos_before: Dictionary = SaveService.get_cosmetics()
+	var cos: Dictionary = SaveService.default_cosmetics()   # the suite's parts start empty (headless)
+	cos.merge(SaveService.get_cosmetics(), true)
+	cos["tickets"] = 0
+	cos["net"] = SaveService.default_nets()
+	SaveService.put_cosmetics(cos)
+	t.ok(locker.find_child("Tab_NETS", true, false) != null, "the NETS tab button exists")
+	locker.show_tab("NETS")
+	var net_rows: Array = []
+	for r in locker.rows():
+		net_rows.push_back(String(r))
+	net_rows.sort()
+	t.eq(net_rows, ["Net_chain", "Net_cotton", "Net_jack", "Net_ladder"], "every net is on the counter")
+	t.ok(locker.in_use_row("net") in ["Net_cotton", "Net_chain"], "a stock net is in use")
+	var chain_tag: Label = (locker.find_child("Net_chain", true, false) as Button).find_child("Tag", true, false)
+	t.eq(chain_tag.text, "IN USE ON CITY", "the stock chain hangs on the city")
+	var cotton_tag: Label = (locker.find_child("Net_cotton", true, false) as Button).find_child("Tag", true, false)
+	t.eq(cotton_tag.text, "IN USE ON CAGE + BEACH", "the cotton net on both nylon courts")
+	var jack: Button = locker.find_child("Net_jack", true, false)
+	t.ok(jack.disabled, "the jack chain cannot be bought with no tickets")
+	t.eq((jack.find_child("Tag", true, false) as Label).text, "600 TICKETS", "…it costs 600")
+	t.eq((jack.find_child("Kind", true, false) as Label).text, "CHAIN · CITY", "…and fits the city's chain hoop")
+	app.grant_tickets(600)
+	locker._fill()
+	jack = locker.find_child("Net_jack", true, false)
+	t.ok(not jack.disabled, "with the tickets it can be bought")
+	jack.pressed.emit()
+	t.eq(app.tickets(), 0, "buying spends the tickets")
+	t.ok(app.owns("net", "jack"), "…and the jack chain is owned")
+	t.eq(((locker.find_child("Net_jack", true, false) as Button).find_child("Tag", true, false) as Label).text, "IN USE ON CITY", "…and hung on the city")
+	t.eq(((locker.find_child("Net_chain", true, false) as Button).find_child("Tag", true, false) as Label).text, "EQUIP", "the stock chain stands by")
+	(locker.find_child("Net_chain", true, false) as Button).pressed.emit()
+	t.eq(((locker.find_child("Net_chain", true, false) as Button).find_child("Tag", true, false) as Label).text, "IN USE ON CITY", "tapping an owned net hangs it back")
+	SaveService.put_cosmetics(cos_before)
 	locker.close()
 	# The league in context: enter without a scene change, build the panel.
 	var was_league: String = app.current_league

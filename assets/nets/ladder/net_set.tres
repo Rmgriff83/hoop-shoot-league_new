@@ -1,0 +1,11 @@
+[gd_resource type="Resource" script_class="NetSet" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/cosmetics/net_set.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "ladder"
+display_name = "Ladder"
+price_coins = 1000
+kind = "chain"
+style = "ladder"
