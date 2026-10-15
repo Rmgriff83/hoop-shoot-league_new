@@ -1071,3 +1071,15 @@ plate, a ticket dispenser, two waiting balls — was built into the cage on
 open at the front). Nothing of it remains in `build_cage.py`, the glb or
 `SimGeometry.arcade()` (the arcade carries no prop boxes; `tests/test_props.gd`
 asserts it). The history is in commit `1b5c065` if it is ever wanted back.
+
+## 27. Packing the assets for a design session (2026-10-14)
+
+`python3 tools/pack_3d_assets.py` writes `~/Desktop/hoop_shoot_3d_assets.zip`
+(a path argument puts it elsewhere): every area, hoop, ball and prop glb with
+its textures and set resources, the `.blend` sources and the build scripts
+that generate them, the Aseprite texture pipeline, the third-party buildings
+with their credits, the real-court snapshots, this document, a README with
+the art direction (the look, the palette, the scale, what a new area must
+ship) and `docs/geometry.md` generated from `core/physics/sim_geometry.gd`
+and the `arena_set.tres` files. No audio, no `.import` sidecars, no
+`.blend1`. Re-run it after a new area lands; the zip is never committed.
