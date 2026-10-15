@@ -301,7 +301,13 @@ func _run_hud() -> void:
 	await _flick(1.9, 0.30, 0.0)
 	await _sleep(1.6)
 	await _snap("hud_live")
-	await _sleep(1.5)
+	# The TIME! chip (design 5a), shown by hand: the small toast at the top.
+	var sc_t := get_tree().current_scene
+	if sc_t != null and "_hud" in sc_t:
+		(sc_t.get("_hud") as Hud).banner("TIME!", RetroTheme.LIGHT["orange"])
+		await _sleep(0.5)
+		await _snap("hud_toast")
+	await _sleep(1.0)
 	# Rim pops (design "Solo Modes HUD" 5a): a swish and an ON FIRE pop at
 	# the rim, snapped through their 1.1 s life.
 	await _pop_snaps("_court", "hud_pop")

@@ -463,8 +463,9 @@ func _process_shuffle(dt: float) -> void:
 			var on := fmod(tl, 0.5) < 0.25
 			_spot_buttons[_shuffle_target].modulate = Color(1.0, 0.85, 0.3) if on else Color.WHITE
 		return
-	# Time: walk over.
+	# Time: walk over (the stayed NEXT chip goes with it).
 	_set_spot(_shuffle_target)
+	_hud.hide_toast()
 	_hud.banner("NOW SHOOTING: %s" % nm2, Color(0.4, 0.9, 0.55))
 	_court.info.flash(nm2, 2, _court.info.accent_color)
 	_shuffle_target = -1

@@ -1,6 +1,6 @@
 extends RefCounted
-## The solo-mode HUD (docs/HOME.md → HUD): HudCopy's banner split, clock
-## and BEST chip; every banner word in the display face; the Hud built
+## The solo-mode HUD (docs/HOME.md → HUD): HudCopy's toast mapping, clock
+## and BEST chip; every chip word in both faces; the Hud built
 ## off-tree (the clock or PRACTICE card, the score card, the BEST chip
 ## flipping to NEW BEST); the PauseMenu (RESUME / SHOT HELP / QUIT, the
 ## value cycles); the pause icon; the toggle switch.
@@ -16,17 +16,26 @@ func run(t) -> void:
 
 
 func _copy(t) -> void:
-	t.eq(HudCopy.split_banner("SWISH +2"), ["SWISH", "+2"], "a trailing +N is the bottom line")
-	t.eq(HudCopy.split_banner("+1"), ["+1", ""], "a bare +N stays on top")
-	t.eq(HudCopy.split_banner("HEATING UP"), ["HEATING", "UP"], "two words split")
-	t.eq(HudCopy.split_banner("TIME!"), ["TIME!", ""], "one word on top")
-	t.eq(HudCopy.split_banner("GO!"), ["GO!", ""], "GO!")
-	t.eq(HudCopy.split_banner("BUZZER BEATER +3"), ["BUZZER BEATER", "+3"], "the buzzer beater's points drop")
-	t.eq(HudCopy.split_banner("IN AND OUT"), ["IN AND", "OUT"], "three words break after two")
-	t.eq(HudCopy.split_banner("✨ SWISH +2"), ["SWISH", "+2"], "emoji are dropped")
-	t.ok(HudCopy.is_note("30s MODE: spots shuffle every 10 s"), "a long message is a note")
-	t.ok(HudCopy.is_note("BUZZER BEATER +3"), "BUZZER BEATER is too long for the big line")
-	t.ok(not HudCopy.is_note("HEATING UP"), "HEATING UP is not")
+	# Every mid-play call maps to a toast chip (designs 4a / 5a); nothing big mid-screen.
+	var go := HudCopy.toast_for("GO!", Color.GREEN)
+	t.eq([go["kind"], go["title"], go["pre"]], ["big", "GO", ""], "GO! is the big GO chip")
+	t.ok(go["color"] == HudCopy.POP_ORANGE and absf(float(go["seconds"]) - Hud.GO_TOAST_S) < 1e-9, "…orange, up for GO_TOAST_S")
+	var tm := HudCopy.toast_for("TIME!", RetroTheme.LIGHT["orange"])
+	t.eq([tm["kind"], tm["title"], tm["icon"], tm["sub"]], ["small", "TIME!", "icon_stopwatch", ""], "TIME! is the small chip with the stopwatch")
+	t.ok(tm["color"] == HudCopy.POP_ORANGE and absf(float(tm["seconds"]) - HudCopy.TOAST_S) < 1e-9 and not bool(tm["stay"]), "…orange, 2.6 s, gone by itself")
+	var on := HudCopy.toast_for("30s MODE: spots shuffle every 10 s", Color.WHITE)
+	t.eq([on["title"], on["sub"], on["icon"]], ["30S MODE", "ON", "icon_stopwatch"], "the 30s note is 30S MODE · ON")
+	t.eq(HudCopy.toast_for("30s MODE: hoop on the move", Color.WHITE)["sub"], "ON", "…the cage's too")
+	t.eq(HudCopy.toast_for("30s mode off", Color.WHITE)["sub"], "OFF", "…and OFF")
+	var nx := HudCopy.toast_for("NEXT: L ELBOW IN 3", Color.WHITE)
+	t.eq([nx["pre"], nx["title"], nx["sub"]], ["NEXT", "L ELBOW", "IN 3"], "the shuffle warning splits into NEXT / the spot / IN n")
+	t.ok(nx["color"] == HudCopy.POP_GOLD and bool(nx["stay"]), "…gold and staying (the seconds swap)")
+	var ns := HudCopy.toast_for("NOW SHOOTING: R BASE", Color.WHITE)
+	t.eq([ns["pre"], ns["title"], ns["stay"]], ["NOW SHOOTING", "R BASE", false], "the walk-over chip")
+	t.ok(ns["color"] == HudCopy.POP_CREAM and absf(float(ns["seconds"]) - HudCopy.SHOOTING_TOAST_S) < 1e-9, "…cream, briefly")
+	var other := HudCopy.toast_for("✨ something else", Color.RED)
+	t.eq([other["kind"], other["title"]], ["small", "SOMETHING ELSE"], "anything else: a small chip, upper-cased, emoji dropped")
+	t.ok(other["color"] == Color.RED, "…in the colour given")
 	t.eq(HudCopy.clock_text(41.66), "41.7", "the clock")
 	t.eq(HudCopy.clock_text(-0.2), "0.0", "never negative")
 	t.eq(HudCopy.clock_text(12.3, 1), "OT1 12.3", "an OT tag")
@@ -43,9 +52,10 @@ func _copy(t) -> void:
 	t.eq(HudCopy.shot_help_value(0), "OFF", "shot help off")
 	t.eq(HudCopy.shot_help_value(2), "NUMBERS + ARC", "shot help full")
 	var display := UiFont.display()
-	for s in ["SWISH +2", "HEATING UP", "TIME!", "GO!", "IN AND OUT", "BUZZER BEATER +3", "NEW BEST", "30S MODE", "OT1 12.3", "SHOT HELP", "QUIT TO TITLE", "PAUSED", "RESUME"]:
+	var bold := UiFont.body_bold()
+	for s in ["SWISH +2", "HEATING UP", "TIME!", "GO", "IN AND OUT", "BUZZER BEATER +3", "NEW BEST", "30S MODE", "ON", "OFF", "NEXT", "IN 3", "NOW SHOOTING", "L ELBOW", "STARTS IN", "OT1 12.3", "SHOT HELP", "QUIT TO TITLE", "PAUSED", "RESUME"]:
 		for ch in s:
-			t.ok(display.has_char(ch.unicode_at(0)), "glyph '%s' in the display face" % ch)
+			t.ok(display.has_char(ch.unicode_at(0)) and bold.has_char(ch.unicode_at(0)), "glyph '%s' in both faces (%s)" % [ch, s])
 
 
 func _widgets(t) -> void:
@@ -72,8 +82,32 @@ func _widgets(t) -> void:
 	hud.update_clock(41.66, 0.0, TimeTrial.PHASE_RUNNING)
 	t.eq(hud.clock_text(), "41.7", "the clock text")
 	hud.update_clock(2.0, 3.0, TimeTrial.PHASE_COUNTDOWN)
-	t.ok(hud.find_child("Countdown", true, false).visible and (hud.find_child("Countdown", true, false) as Label).text == "3", "the countdown shows its digit")
-	t.ok((hud.find_child("Countdown", true, false) as Label).material is ShaderMaterial, "dithered")
+	var solo_big: Toast = hud.find_child("CountdownToast", true, false)
+	t.ok(solo_big.visible and solo_big.title_text() == "3" and solo_big.pre_text() == "STARTS IN", "a solo trial counts down in the toast chip too")
+	t.ok(hud.find_child("Countdown", true, false) == null, "…the 160 px digit is gone")
+	# The mid-play calls as chips (designs 4a / 5a).
+	hud.banner("GO!", Color(0.4, 0.9, 0.55))
+	t.ok(solo_big.visible and solo_big.title_text() == "GO" and solo_big.color == HudCopy.POP_ORANGE, "GO! is the big orange GO chip")
+	hud.update_clock(59.9, 0.0, TimeTrial.PHASE_RUNNING)
+	t.ok(solo_big.visible, "…running leaves GO up")
+	hud.banner("TIME!", RetroTheme.LIGHT["orange"])
+	var chip: Toast = hud.find_child("Toast", true, false)
+	t.ok(chip.visible and chip.title_text() == "TIME!" and chip.has_icon() and chip.color == HudCopy.POP_ORANGE, "TIME! is the small orange chip with the stopwatch")
+	t.ok(absf(chip.size.y - (Toast.SMALL_H + ShadowStyle.OFFSET)) < 0.5, "…64 tall")
+	t.ok(not chip.staying(), "…and goes by itself")
+	t.ok(hud.find_child("Banner", true, false) == null and hud.find_child("Note", true, false) == null, "the centre banner and note are gone")
+	hud.banner("30s MODE: hoop on the move", Color(1.0, 0.75, 0.3))
+	t.eq([chip.title_text(), chip.sub_text()], ["30S MODE", "ON"], "the 30s note is 30S MODE · ON")
+	hud.banner("NEXT: L ELBOW IN 3", Color(1.0, 0.75, 0.3))
+	t.ok(chip.staying() and chip.pre_text() == "NEXT" and chip.title_text() == "L ELBOW" and chip.sub_text() == "IN 3" and chip.color == HudCopy.POP_GOLD, "NEXT stays up in gold")
+	hud.banner("NEXT: L ELBOW IN 2", Color(1.0, 0.75, 0.3))
+	t.ok(chip.staying() and chip.sub_text() == "IN 2", "…the seconds swap without a re-slide")
+	t.eq(hud.banner_text(), "NEXT L ELBOW IN 2", "what the chip reads")
+	hud.hide_toast()
+	hud.banner("NOW SHOOTING: L ELBOW", Color(0.4, 0.9, 0.55))
+	t.ok(chip.visible and chip.pre_text() == "NOW SHOOTING" and chip.title_text() == "L ELBOW" and not chip.staying(), "the walk-over chip, briefly")
+	hud.hide_toast()
+	hud.hide_countdown_toast()
 	hud.set_heat(true, "OLLIE", Color("#3E7C4F"))
 	t.ok(hud.find_child("YouCard", true, false) is ShadowPanel and hud.find_child("OppCard", true, false) is ShadowPanel, "a heat shows the two side cards")
 	t.ok(not hud.find_child("ScoreCard", true, false).visible and not hud.find_child("BestChip", true, false).visible, "and hides the score card and chip")
@@ -89,7 +123,7 @@ func _widgets(t) -> void:
 	hud.update_clock(60.0, 3.0, TimeTrial.PHASE_COUNTDOWN)
 	var big: Toast = hud.find_child("CountdownToast", true, false)
 	t.ok(big.visible and big.title_text() == "3" and big.pre_text() == "STARTS IN", "a heat counts down in the toast chip")
-	t.ok(not hud.find_child("Countdown", true, false).visible, "…not the bare digits")
+	t.ok(hud.find_child("Countdown", true, false) == null, "…there are no bare digits any more")
 	hud.update_clock(60.0, 1.0, TimeTrial.PHASE_COUNTDOWN)
 	t.eq(big.title_text(), "1", "…the digit swaps")
 	t.ok(big.size.x >= Toast.BIG_MIN_W, "the chip is at least 240 wide (%.0f)" % big.size.x)
@@ -110,6 +144,7 @@ func _widgets(t) -> void:
 	t.eq(HudCopy.countdown_pre(), "STARTS IN", "countdown pre-line")
 	hud.set_ball_wait(0.8)
 	t.ok(hud.find_child("Wait", true, false).visible, "the NEXT BALL chip")
+	t.ok(absf((hud.find_child("Wait", true, false) as Control).custom_minimum_size.y - (Hud.WAIT_H + ShadowStyle.OFFSET)) < 0.5, "…46 tall")
 	hud.set_ball_wait(0.0)
 	t.ok(not hud.find_child("Wait", true, false).visible, "hidden when the ball is ready")
 	hud.set_practice(true, "BEACH")

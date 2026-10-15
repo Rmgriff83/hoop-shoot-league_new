@@ -64,9 +64,25 @@ func set_big(pre: String, title: String) -> void:
 	_fit()
 
 
-## The notice shape: an optional icon, the title (20 px display, in the colour), an optional sub.
-func set_small(title: String, sub := "", icon_name := "") -> void:
+## The notice shape: an optional icon, an optional pre word (16 px bold),
+## the title (20 px display, in the colour), an optional sub. A chip already
+## in this shape with the same parts just swaps its text.
+func set_small(title: String, sub := "", icon_name := "", pre := "") -> void:
+	if _box != null and not _big and (_pre != null) == (pre != "") and (_sub != null) == (sub != "") and (_icon != null) == (icon_name != ""):
+		if _pre != null:
+			_pre.text = pre
+		_title.text = title
+		_title.add_theme_color_override("font_color", color)
+		if _sub != null:
+			_sub.text = sub
+		_fit()
+		queue_redraw()
+		return
 	_rebuild(false)
+	if pre != "":
+		_pre = _label(pre, 16, false)
+		_pre.name = "Pre"
+		_box.add_child(_pre)
 	if icon_name != "":
 		_icon = PixelIcon.new(icon_name, Vector2(28, 28))
 		_icon.name = "Icon"
@@ -153,9 +169,18 @@ func _kill() -> void:
 		_tween = null
 
 
+var _staying := false
+
+
+## Up with no fade-out scheduled (show_stay, not show_once)?
+func staying() -> bool:
+	return visible and _staying
+
+
 ## Slide in from above with a fade, then hold until hidden.
 func show_stay() -> void:
 	_kill()
+	_staying = true
 	visible = true
 	modulate.a = 0.0
 	var h := size.y   # read first: moving offset_top alone stretches the box
@@ -170,6 +195,7 @@ func show_stay() -> void:
 ## Slide in, hold `seconds`, fade out.
 func show_once(seconds := 2.6) -> void:
 	show_stay()
+	_staying = false
 	_tween.chain().tween_interval(maxf(0.0, seconds - SLIDE_S - FADE_OUT_S))
 	_tween.chain().tween_property(self, "modulate:a", 0.0, FADE_OUT_S)
 	_tween.chain().tween_callback(hide_now)
@@ -177,6 +203,7 @@ func show_once(seconds := 2.6) -> void:
 
 func hide_now() -> void:
 	_kill()
+	_staying = false
 	visible = false
 
 

@@ -286,9 +286,15 @@ and gets only HOME.
 (`IconButton("pause")`), the clock card (stopwatch + seconds, gold in the last
 ten; `OT1 12.3` in overtime) or the teal PRACTICE card, the orange SCORE card
 with the springy count-up and, in a trial, the gold BEST chip (`NEW BEST`
-once you pass it) — the dithered countdown at 160 px, and the centre banners
-on two dithered lines, now only `GO!` and `TIME!`; messages too long for
-the big lines draw as a small note (the shuffle and 30 s notes).
+once you pass it) — and the **toast chips** (designs 4a / 5a, 2026-10-14;
+`game/ui/toast.gd`, `HudCopy.toast_for`): the countdown is the big chip at
+y 300 (`STARTS IN` over the digit, then `GO` in orange for 0.9 s), and every
+mid-play call is the small 64 px chip at y 196 for 2.6 s — `TIME!` (orange,
+stopwatch), `30S MODE · ON / OFF` (orange, stopwatch), the spot shuffle's
+`NEXT / L ELBOW / IN 3` (gold, staying while the seconds swap) and `NOW
+SHOOTING / L ELBOW` (cream, 1.6 s). The old centre banner (48 / 72 px at
+y 450) and the 160 px digit are gone: nothing sits over the hoop while you
+shoot. `Hud.banner(text, color)` keeps its name; the mapping is the copy.
 
 **Rim pops** (design "Solo Modes HUD" 5a, 2026-10-03; `game/view/rim_pop.gd`,
 `RimPop`, `tests/test_rim_pop.gd`): every scoring call — `+1`, `+2` under

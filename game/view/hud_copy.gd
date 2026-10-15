@@ -1,12 +1,13 @@
 class_name HudCopy
 extends RefCounted
 ## The solo-mode HUD's copy (design "Solo Modes HUD", docs/HOME.md → HUD),
-## pure and headless: how a banner splits into its two lines, the clock's
-## text and its last-ten-seconds colour, the BEST chip, the shot-help value.
+## pure and headless: which toast chip a call draws as, the clock's text
+## and its last-ten-seconds colour, the BEST chip, the shot-help value.
 
-## A banner line longer than this is a note (drawn small, one line).
-const NOTE_OVER := 12
 const HOT_SECONDS := 10.0
+## The toasts' seconds (designs 4a / 5a: toastIn is 2.6 s).
+const TOAST_S := 2.6
+const SHOOTING_TOAST_S := 1.6
 const POP_CREAM := Color("#F1E8D0")
 const POP_GOLD := Color("#F0B84A")
 const POP_ORANGE := Color("#E8703A")
@@ -34,29 +35,46 @@ static func in_out_pop() -> Dictionary:
 	return {"number": "", "word": "IN AND OUT", "color": POP_CREAM}
 
 
-## A banner as [top, bottom]: a trailing `+N` is the bottom line (`SWISH +2`
-## → SWISH / +2), a bare `+N` sits on top, two words split (`HEATING UP`),
-## three words break after the second (`IN AND OUT` → IN AND / OUT), a
-## single word stays on top. Non-ASCII glyphs (the old emoji) are dropped.
-static func split_banner(text: String) -> Array:
+## Every call the screens send to Hud.banner, as the toast chip the designs
+## draw it with (4a / 5a: nothing big in the middle of the screen any more):
+## {kind: big|small, pre, title, sub, icon, color, seconds, stay}.
+## GO! → the big orange GO (up GO_TOAST_S, it sits over the hoop); TIME! →
+## the small orange chip with the stopwatch; the 30S MODE notes → `30S MODE`
+## with ON / OFF; `NEXT: <spot> IN n` → NEXT / the spot / IN n in gold,
+## staying (the screen re-sends each second and the text swaps); `NOW
+## SHOOTING: <spot>` → cream for a moment; anything else → a small chip with
+## the text upper-cased in the colour given.
+static func toast_for(text: String, color: Color) -> Dictionary:
 	var clean := ascii(text).strip_edges()
-	var words := clean.split(" ", false)
-	if words.is_empty():
-		return ["", ""]
-	if words.size() == 1:
-		return [words[0], ""]
-	var last: String = words[words.size() - 1]
-	if last.begins_with("+") and last.length() > 1 and last.substr(1).is_valid_int():
-		return [" ".join(words.slice(0, words.size() - 1)), last]
-	if words.size() == 2:
-		return [words[0], words[1]]
-	return [" ".join(words.slice(0, 2)), " ".join(words.slice(2))]
-
-
-## Too long for the big banner: draw it as a note.
-static func is_note(text: String) -> bool:
-	var parts := split_banner(text)
-	return str(parts[0]).length() > NOTE_OVER or str(parts[1]).length() > NOTE_OVER
+	var upper := clean.to_upper()
+	var out := {"kind": "small", "pre": "", "title": upper, "sub": "", "icon": "", "color": color, "seconds": TOAST_S, "stay": false}
+	if upper == "GO!" or upper == "GO":
+		out["kind"] = "big"
+		out["title"] = "GO"
+		out["color"] = POP_ORANGE
+		out["seconds"] = Hud.GO_TOAST_S
+	elif upper == "TIME!":
+		out["color"] = POP_ORANGE
+		out["icon"] = "icon_stopwatch"
+	elif upper.begins_with("30S MODE"):
+		out["title"] = "30S MODE"
+		out["sub"] = "OFF" if upper.contains("OFF") else "ON"
+		out["color"] = POP_ORANGE
+		out["icon"] = "icon_stopwatch"
+	elif upper.begins_with("NEXT: "):
+		var rest := upper.trim_prefix("NEXT: ")
+		var at := rest.rfind(" IN ")
+		out["pre"] = "NEXT"
+		out["title"] = rest.substr(0, at) if at > 0 else rest
+		out["sub"] = rest.substr(at + 1) if at > 0 else ""
+		out["color"] = POP_GOLD
+		out["stay"] = true
+	elif upper.begins_with("NOW SHOOTING: "):
+		out["pre"] = "NOW SHOOTING"
+		out["title"] = upper.trim_prefix("NOW SHOOTING: ")
+		out["color"] = POP_CREAM
+		out["seconds"] = SHOOTING_TOAST_S
+	return out
 
 
 static func ascii(text: String) -> String:
