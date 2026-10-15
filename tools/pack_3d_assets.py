@@ -2,8 +2,11 @@
 """Pack every 3D asset and the art direction around it into one zip for a
 design session elsewhere (docs/BLENDER_101.md §27):
 
-    python3 tools/pack_3d_assets.py            # → ~/Desktop/hoop_shoot_3d_assets.zip
-    python3 tools/pack_3d_assets.py out.zip    # anywhere else
+    python3 tools/pack_3d_assets.py            # → ~/Desktop/hoop_shoot_3d_assets_1_areas.zip, _2_props_balls.zip, _3_sources.zip
+    python3 tools/pack_3d_assets.py outdir     # anywhere else
+
+Three zips, each under the 20 MB upload limit of the design sessions, each
+carrying README.md and docs/ so any one of them stands alone.
 
 Models (glb), their textures and set resources, the Blender sources and the
 build scripts that generate them, the third-party pack with its credits, the
@@ -22,6 +25,13 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 NAME = "hoop_shoot_3d_assets"
+## The parts (every one gets README.md + docs/): each must stay under the upload cap.
+PARTS = [
+    ("1_areas", ["areas", "hoops", "textures"]),
+    ("2_props_balls", ["balls", "props"]),
+    ("3_sources", ["source", "third_party"]),
+]
+PART_CAP_MB = 19.5
 SKIP_SUFFIX = (".import", ".blend1", ".ogg", ".wav", ".mp3", ".uid", ".pyc")
 SKIP_DIRS = {"ambience", "sfx", "__pycache__"}
 
@@ -242,7 +252,7 @@ the hoop_shoot repository; the physics that mirrors each court is
 
 
 def main() -> int:
-    out_zip = Path(sys.argv[1]).expanduser() if len(sys.argv) > 1 else Path.home() / "Desktop" / (NAME + ".zip")
+    out_dir = Path(sys.argv[1]).expanduser() if len(sys.argv) > 1 else Path.home() / "Desktop"
     tmp = Path(tempfile.mkdtemp(prefix="hs3d_"))
     root = tmp / NAME
     root.mkdir()
@@ -272,18 +282,27 @@ def main() -> int:
     counts["docs/img"] = copy_tree(ROOT / "docs/img", root / "docs/img") if (ROOT / "docs/img").exists() else 0
     (root / "docs/geometry.md").write_text(geometry_md())
     (root / "README.md").write_text(README)
-    out_zip.parent.mkdir(parents=True, exist_ok=True)
-    if out_zip.exists():
-        out_zip.unlink()
-    with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED) as z:
-        for p in sorted(root.rglob("*")):
-            if p.is_file():
-                z.write(p, p.relative_to(tmp))
-    shutil.rmtree(tmp)
+    out_dir.mkdir(parents=True, exist_ok=True)
     for k in sorted(counts):
         print("%-24s %4d files" % (k, counts[k]))
-    print("WROTE %s (%.1f MB)" % (out_zip, out_zip.stat().st_size / 1e6))
-    return 0
+    common = ["README.md", "docs"]
+    ok = True
+    for tag, groups in PARTS:
+        out_zip = out_dir / ("%s_%s.zip" % (NAME, tag))
+        if out_zip.exists():
+            out_zip.unlink()
+        with zipfile.ZipFile(out_zip, "w", zipfile.ZIP_DEFLATED) as z:
+            for g in common + groups:
+                base = root / g
+                files = [base] if base.is_file() else sorted(p for p in base.rglob("*") if p.is_file())
+                for p in files:
+                    z.write(p, p.relative_to(tmp))
+        mb = out_zip.stat().st_size / 1e6
+        flag = "" if mb <= PART_CAP_MB else "   ← OVER THE %.1f MB CAP: split the part" % PART_CAP_MB
+        ok = ok and mb <= PART_CAP_MB
+        print("WROTE %s (%.1f MB)%s" % (out_zip, mb, flag))
+    shutil.rmtree(tmp)
+    return 0 if ok else 1
 
 
 if __name__ == "__main__":
