@@ -335,10 +335,14 @@ var _picker_locked := false
 var _picker_free := true
 var _rng := RandomNumberGenerator.new()
 
-## Held ball follows the finger: cast the touch through the camera onto the
-## vertical hand plane through the spot (facing the camera) and clamp so the
-## ball stays in frame. That point is also the shot's release origin — the sim
-## aims from it at the hoop, so a shot from the side really is a shot from the side.
+## Held ball follows the finger SIDEWAYS: cast the touch through the camera
+## onto the vertical hand plane through the spot (facing the camera) and
+## clamp so the ball stays in frame. Its HEIGHT is the tap's (2026-10-14,
+## Ross): the press puts the ball where the finger is, and from then on a
+## pull down only pumps the arc — the ball never sinks with the finger, nor
+## rises with the flick. That point is also the shot's release origin — the
+## sim aims from it at the hoop, so a shot from the side really is a shot
+## from the side, and every shot from a grab leaves from the grab's height.
 const HAND_Y_RANGE := Vector2(0.35, 2.3)
 const HAND_LATERAL := 0.9
 var _hand_pos: Vector3 = BallPool.HELD_POS
@@ -635,16 +639,24 @@ func _screen_to_plane(pos: Vector2) -> Variant:
 	return plane.intersects_ray(_cam.project_ray_origin(pos), _cam.project_ray_normal(pos))
 
 
+## Where the held ball goes for a finger hit on the hand plane: sideways with
+## the finger (clamped to ±HAND_LATERAL along the spot's right), at the
+## finger's height on the press (clamped to HAND_Y_RANGE) and at `anchor_y`
+## — the press's height — on every drag after it, so the pull never lowers
+## the ball. Pure: the tests drive it.
+static func hand_point(spot: Vector3, right: Vector3, hit: Vector3, anchor_y: float, pinned: bool) -> Vector3:
+	var lat := clampf((hit - spot).dot(right), -HAND_LATERAL, HAND_LATERAL)
+	var y := anchor_y if pinned else clampf(hit.y, HAND_Y_RANGE.x, HAND_Y_RANGE.y)
+	return spot + right * lat + Vector3(0.0, y, 0.0)
+
+
 func _on_drag(pos: Vector2) -> void:
 	if not trial.holding:
 		return
 	var hit = _screen_to_plane(pos)
 	if hit == null:
 		return
-	var p: Vector3 = hit
-	# Clamp in the shooter's frame: height, and sideways along the spot's right.
-	var lat := clampf((p - _spot).dot(_right), -HAND_LATERAL, HAND_LATERAL)
-	p = _spot + _right * lat + Vector3(0.0, clampf(p.y, HAND_Y_RANGE.x, HAND_Y_RANGE.y), 0.0)
+	var p := hand_point(_spot, _right, hit, _grab_anchor.y, not _anchor_pending)
 	_hand_pos = p
 	_pool.set_held_position(p)
 	if _anchor_pending:
@@ -692,12 +704,10 @@ func _refresh_readout() -> void:
 		return
 	var viewport_h := get_viewport().get_visible_rect().size.y
 	var angle := FlickMap.windup_angle(_pull_px, viewport_h, tuning)
-	# Pinned in HEIGHT to where the wind-up started, but tracking the ball
-	# sideways: the ball sinks as you pull (so a readout that follows it
-	# vertically drifts away mid-read), yet it also slides left and right with
-	# your thumb, and numbers that ignored that would drift off the ball.
+	# Beside the ball: the ball holds the grab's height through the pull now,
+	# so the anchor is simply the hand, set off sideways by HELP_SIDE.
 	var lat := (_hand_pos - _spot).dot(_right) - HELP_SIDE
-	var anchor := _spot + _right * lat + Vector3(0.0, _grab_anchor.y, 0.0)
+	var anchor := _spot + _right * lat + Vector3(0.0, _hand_pos.y, 0.0)
 	_readout.aim(anchor, angle, _hand_pos, _lead_geo(angle, NAN))
 
 

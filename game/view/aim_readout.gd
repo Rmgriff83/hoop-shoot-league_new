@@ -4,13 +4,10 @@ extends Control
 ## the shot would carry as a percentage of the distance to the rim (100 % =
 ## drops in).
 ##
-## They hold the HEIGHT the wind-up started at while tracking the ball
-## sideways. The ball sinks toward the bottom of the screen as you pull, so a
-## readout that followed it vertically would drift away exactly when you are
-## reading it — but it also slides left and right under your thumb, and one
-## that ignored that would drift off the ball. The caller composes that anchor;
-## the maths still solve from the live hand, because that is where the ball
-## actually leaves from.
+## They sit beside the held ball, which holds the grab's height through the
+## pull (2026-10-14) and slides left and right under your thumb; the caller
+## composes that anchor, and the maths solve from the live hand, because that
+## is where the ball actually leaves from.
 ##
 ## Both are colour-coded from the real ballistics rather than from hardcoded
 ## thresholds, so they stay honest as the board slides and at every arena's
@@ -36,8 +33,7 @@ const HOLD_S := 0.8
 const FADE_S := 0.3
 const FONT_SIZE := 27
 ## Screen offset from the projected anchor, and the gap between the two lines.
-## Sits BELOW the grab height, closer to where the ball ends up once you have
-## pulled, rather than floating above the point you first touched.
+## Sits a little below the held ball, out of the thumb's way.
 const OFFSET := Vector2(-34.0, 44.0)
 const LINE_GAP := 34.0
 

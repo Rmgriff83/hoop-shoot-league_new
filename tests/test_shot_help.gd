@@ -4,7 +4,11 @@ extends RefCounted
 ## rather than against itself.
 
 
+const TrialScreen := preload("res://game/screens/time_trial_screen.gd")
+
+
 func run(t) -> void:
+	_hand(t)
 	var geo := SimGeometry.arcade()
 	var tuning := FlickTuning.new()
 	var origin := Vector3(0.0, 1.6, 0.3)
@@ -103,3 +107,41 @@ func run(t) -> void:
 	t.eq(AppScript.shot_help_from_saved(-3), AppScript.SHOT_HELP_OFF, "out of range clamps down")
 	t.eq(AppScript.shot_help_from_saved("nonsense"), AppScript.SHOT_HELP_OFF, "junk reads as off")
 	t.eq(AppScript.SHOT_HELP_LABELS.size(), 3, "every mode has a label")
+
+
+## The held ball (2026-10-14): the press takes the finger's height, every
+## drag after it keeps that height and only slides sideways, and the shot
+## therefore leaves from the same point whatever the pull — the pull changes
+## only the arc.
+func _hand(t) -> void:
+	var spot := Vector3(0.0, 0.0, 0.0)
+	var right := Vector3(0.0, 0.0, 1.0)
+	var press := TrialScreen.hand_point(spot, right, Vector3(0.0, 1.5, 0.2), 0.0, false)
+	t.close(press.y, 1.5, 1e-9, "the press puts the ball at the finger's height")
+	t.close(press.z, 0.2, 1e-6, "…and where it is sideways")
+	var low := TrialScreen.hand_point(spot, right, Vector3(0.0, 0.7, 0.3), 1.5, true)
+	t.close(low.y, 1.5, 1e-9, "a pull 0.8 m down keeps the grab's height")
+	t.close(low.z, 0.3, 1e-6, "…while following the finger sideways")
+	var high := TrialScreen.hand_point(spot, right, Vector3(0.0, 2.0, -0.4), 1.5, true)
+	t.close(high.y, 1.5, 1e-9, "the flick up keeps it too")
+	t.close(high.z, -0.4, 1e-6, "…either side")
+	var wide := TrialScreen.hand_point(spot, right, Vector3(0.0, 1.5, 3.0), 1.5, true)
+	t.close(wide.z, TrialScreen.HAND_LATERAL, 1e-6, "sideways clamps at HAND_LATERAL")
+	t.close(wide.x, 0.0, 1e-9, "depth never moves")
+	var floor_press := TrialScreen.hand_point(spot, right, Vector3(0.0, -1.0, 0.0), 0.0, false)
+	t.close(floor_press.y, TrialScreen.HAND_Y_RANGE.x, 1e-9, "a press below the range clamps up")
+	# The consequence on the launch: same grab, two pull depths → same origin,
+	# distance and speed; only the arc differs.
+	var geo := SimGeometry.arcade()
+	var tuning := FlickTuning.new()
+	var origin := {"rx": 0.0, "ry": 1.5, "rz": 0.2}
+	var h := 1280.0
+	var mk := func(pull_px: float) -> Dictionary:
+		return FlickMap.map_windup({"vel_x": 0.0, "vel_y": -3.5 * h, "viewport_h": h, "path_px": 400.0, "duration_s": 0.2, "pull_px": pull_px, "curl": 0.0}, tuning, geo, origin)
+	var shallow: Dictionary = mk.call(0.1 * h)
+	var deep: Dictionary = mk.call(0.4 * h)
+	t.ok(not shallow.is_empty() and not deep.is_empty(), "both gestures are shots")
+	t.close(float(deep["ry"]), float(shallow["ry"]), 1e-12, "the deep pull leaves from the same height")
+	t.close(float(deep["dist"]), float(shallow["dist"]), 1e-12, "…the same distance")
+	t.close(float(deep["speed"]), float(shallow["speed"]), 1e-9, "…the same power")
+	t.ok(float(deep["angle_deg"]) > float(shallow["angle_deg"]) + 15.0, "…and only a higher arc")
