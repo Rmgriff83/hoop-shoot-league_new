@@ -281,12 +281,6 @@ and gets only HOME.
 
 ## HUD (design "Solo Modes HUD", 2026-09-26)
 
-**The hold** (`time_trial_screen.gd` `hand_point`, 2026-10-14): the press puts
-the held ball at the finger's height, and from then on it only slides sideways
-with the thumb — a pull down pumps the arc, it never lowers the ball — so every
-shot from a grab leaves from the grab's height and the pull changes only the
-arc. `tests/test_shot_help.gd`.
-
 `game/view/hud.gd` (`Hud`, a CanvasLayer over the live game; copy in
 `game/view/hud_copy.gd`, `tests/test_hud.gd`): the top row — PAUSE
 (`IconButton("pause")`), the clock card (stopwatch + seconds, gold in the last

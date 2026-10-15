@@ -1109,7 +1109,7 @@ func _run_title() -> void:
 ##
 ## The main --qa spread cannot do this: its _flick() drags straight up from the
 ## press, so `_charge` never accumulates and every one of its gestures fires at
-## the minimum arc (21°), which no flick strength can make. This mode is the
+## the minimum arc (19°), which no flick strength can make. This mode is the
 ## only thing that exercises the wind-up, and therefore the aim arrow.
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-aim
 func _run_aim() -> void:
@@ -1119,9 +1119,9 @@ func _run_aim() -> void:
 	await _click_button_named("TIME TRIAL")   # on the cage card
 	await _sleep(4.4)             # countdown, then GO
 
-	# A full wind-up is FlickTuning.pull_full_frac (0.44) of the VIEWPORT
+	# A full wind-up is FlickTuning.pull_full_frac (0.32) of the VIEWPORT
 	# height; this window is half the viewport, so the same fraction of WIN.y.
-	var full := FlickTuning.new().pull_full_frac * WIN.y
+	var full := 0.32 * WIN.y
 	var start := Vector2(WIN.x / 2.0, WIN.y * 0.58)  # inside the grab zone
 	_mouse_button(start, true)
 	await _sleep(0.12)
