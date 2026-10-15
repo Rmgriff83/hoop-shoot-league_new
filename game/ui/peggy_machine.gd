@@ -1,6 +1,6 @@
 class_name PeggyMachine
 extends SubViewportContainer
-## PEGGY, the locker's drop machine (docs/LOCKER.md): the 3D cabinet in its
+## PEGGY, the PEGGY page's drop machine (docs/LOCKER.md): the 3D cabinet in its
 ## own little world, and the hands that work it. Drag along the rail band to
 ## aim the carriage (a servo whines while it moves), press and HOLD the big
 ## red button to feed a ticket (release early and it backs out, nothing

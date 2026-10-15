@@ -1,6 +1,7 @@
 class_name PeggyStick
 extends Control
-## The locker's joystick (docs/LOCKER.md): a horizontal stick that drives
+## The joystick (docs/LOCKER.md) — unused since PEGGY got its own page,
+## kept for the cabinet model: a horizontal stick that drives
 ## the carriage along PEGGY's rail. Drag the knob left or right and the aim
 ## moves at a rate proportional to the deflection; let go and the knob
 ## springs back to centre and the carriage stays put. Pure _draw.

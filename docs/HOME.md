@@ -20,12 +20,14 @@ CardArea    a fixed box (y 781 → 1206) holding the home block or the league in
 Ticker      flat strip at the very bottom, scrolling copy from the save
 ```
 No bottom nav: the phone's safe area would push one up, and the space goes to
-the cards. **Locker** (`game/ui/locker_panel.gd`, docs/LOCKER.md): three tabs —
-PEGGY, the ticket-fed drop machine that wins balls, BALLS, the collection
-(owned equip via `App.select`, the rest show their rarity), and NETS, the net
-counter (a style buys for tickets and hangs on every court of its kind); the
-hoop counter is closed for now (`App.HOOPS_IN_LOCKER`). The locker icon carries a gold dot
-while a won ball has not been looked at. **Ranks** is an icon beside the area name: the global boards (below).
+the cards. **Locker** (`game/ui/locker_panel.gd`, docs/LOCKER.md): a **page**
+over the area (below) — BALLS, the balls you own (equip via `App.select`),
+and NETS, the nets you own by kind (COTTON / CHAIN sub-tab, equip on every
+court of the kind); nothing unowned is listed. Its PEGGY button opens the
+**PEGGY page** (`game/ui/peggy_page.gd`), the ticket-fed drop machine that
+wins balls; the hoop counter is closed for now (`App.HOOPS_IN_LOCKER`). The
+locker icon carries a gold dot while a won ball has not been looked at.
+**Ranks** is an icon beside the area name: the global boards (below).
 **Shop is not on the home page**: it will live inside each league, selling
 cards usable only in that league (so the easy league can't farm cards for the
 hard one); the pill shows TICKETS, the locker money.
@@ -65,6 +67,18 @@ hard one); the pill shows TICKETS, the locker money.
   horizontal swipe. A page turn (arrows or swipe) fades a full-screen ink
   cover, rebuilds the court, refreshes the zone, cards and ticker, and
   fades back. `App.home_card` keeps the page. No SubViewport.
+- **Pages over the area** (`game/ui/home_page.gd`, `HomePage`, 2026-10-15,
+  design "Store and Locker"): the locker and PEGGY open with the ENTER
+  LEAGUE move — `TitleScreen._slide_home` slides the whole chrome (top bar,
+  zone, chevrons, cards, ticker) out to the left while the page's frame
+  (654 × 1234 at (30, 20), see-through dotted pieces in the scene colours on
+  every palette) slides in from the right over the area, under a light wash
+  (`HomePage.WASH`), 0.3 s on the league's quad curve; the full-width dotted
+  CLOSE runs it back. Pages **stack**: PEGGY from the locker slides the
+  locker out under it to the LEFT and brings it back when it closes
+  (`slide_out(true, false)` / `slide_in(true)`); the locker's CLOSE then
+  returns home. A dark-mode `rebuild_chrome()` keeps the chrome out while a
+  page is open.
 - **The league in context** (`game/ui/league_context.gd`, `LeagueContext`):
   tapping the LEAGUE card (or ENTER LEAGUE) slides the home block out left
   and the league in from the right, in the same box — a tab row `<` MATCH ·
@@ -355,7 +369,8 @@ loadout row under the PiP shows dashed 40 px chips for their empty slots.
   empty slots of the dev save).
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-hud` →
   `user://qa/hud_countdown.png`, `hud_live.png`, `hud_pause.png`,
-  `hud_practice.png`, `hud_practice30.png`.
+  `locker_slide.png` (mid-move), `locker_balls.png`, `locker_nets.png`,
+  `locker_nets_chain.png`, `hud_practice.png`, `hud_practice30.png`.
 
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-city` →
   `user://qa/city_home.png` (the third page: CITY COURT, three stars, the
@@ -373,8 +388,8 @@ loadout row under the PiP shows dashed 40 px chips for their empty slots.
 
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-title` →
   `user://qa/title_*.png`: the cage over its pan, the beach page, back, the
-  league open on every tab (with its float), the locker, the settings sheet,
-  then the dark page.
+  league open on every tab (with its float), the locker page, the settings
+  sheet, then the dark page.
 - `--qa`, `--qa-aim`, `--qa-beach` click TIME TRIAL on the right page.
 - `tests/test_home_ui.gd` (palettes, faces, dark mode persistence, league
   lines, ticker copy + glyph coverage, widgets), `tests/test_title_cards.gd`

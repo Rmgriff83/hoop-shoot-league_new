@@ -1,12 +1,20 @@
-# The locker and PEGGY — how balls are won, how nets are bought (2026-10-01, nets 2026-10-15)
+# The locker and PEGGY — the collection, and how balls are won (2026-10-01, pages 2026-10-15)
 
-The locker (the ball icon on the home page, `game/ui/locker_panel.gd`) has
-three tabs. **PEGGY** is a ticket-fed drop machine: aim a puck along a rail,
-hold the big red button while a ticket feeds in, and the puck rattles down a
-peg board into one of seven prize slots. Whatever ball sits in that slot is
-yours. **BALLS** is the collection: owned balls equip on tap, the rest show
-their rarity. **NETS** is the net counter (below). The hoop counter that
-used to sit under the balls (buy for tickets, swap) is **closed for now**
+The **locker** (the ball icon on the home page, `game/ui/locker_panel.gd`)
+is a page over the area (docs/HOME.md → Pages, design "Store and Locker"):
+your collection, nothing more. **BALLS** lists the balls you own in a
+4-wide grid of dotted tiles (the one in use gold, "IN USE"; the rest
+"EQUIP", tap to equip everywhere); **NETS** lists the nets you own, split by
+a **COTTON / CHAIN sub-tab** since each kind hangs on different courts
+(below). The tabs count what you own ("BALLS 9", "NETS 2"). No locked or
+unowned tile is shown: balls are won on PEGGY and nets will be bought on a
+later store page. The **PEGGY button** beside the ticket chip opens the
+**PEGGY page** (`game/ui/peggy_page.gd`), the ticket-fed drop machine in a
+cream dotted frame: aim a puck along a rail, hold the big red button while
+a ticket feeds in, and the puck rattles down a peg board into one of seven
+prize slots. Whatever ball sits in that slot is yours. Its CLOSE returns to
+the locker; the locker's CLOSE returns home. The hoop counter that used to
+sit under the balls (buy for tickets, swap) is **closed for now**
 (`App.HOOPS_IN_LOCKER = false`, 2026-10-07): `try_buy("hoop", …)` refuses;
 the player's hoop stays the starter and the beach / city mandate their own.
 **Balls are never bought**, `try_buy("ball", …)` refuses. Never call the
@@ -30,13 +38,16 @@ Blue** (the heavy-duty polyester net in colour bands, 500 — *mid*). A style ca
 later chain area gets the chains you already own: areas resolve their kind
 through `App.AREA_MODES` → `App.net_kind_for_area`.
 
-- The **NETS tab** lists every style (tile `Net_<id>`, the thumbnail from
-  `assets/textures/nets/thumbs/<id>.png`, rendered by `--qa-net-thumbs`), a
-  KIND · AREAS line ("CHAIN · CITY", "COTTON · CAGE, BEACH") and a tag:
-  **IN USE ON CITY** / **IN USE ON CAGE + BEACH**, **EQUIP**, or **n
-  TICKETS** (disabled while short). Tapping an owned net hangs it on
-  **every area of its kind** (`App.select_net_everywhere`); buying
-  (`App.try_buy("net", id)`) does the same.
+- The **NETS tab** lists the styles you own of the sub-tab's kind (tile
+  `Net_<id>`, the thumbnail from `assets/textures/nets/thumbs/<id>.png`,
+  rendered by `--qa-net-thumbs` — the net alone, no rim), under a head
+  "COTTON · HANGS ON CAGE + BEACH" / "CHAIN · HANGS ON CITY", with a KIND ·
+  AREAS line ("CHAIN · CITY", "COTTON · CAGE, BEACH") and a tag: **IN USE
+  ON CITY** / **IN USE ON CAGE + BEACH** (the gold tile) or **EQUIP**.
+  Tapping a net hangs it on **every area of its kind**
+  (`App.select_net_everywhere`). **Buying has no UI yet** (2026-10-15): the
+  locker is the collection; `App.try_buy("net", id)` stays wired for the
+  store page to come, and the economy still prices every style.
 - The **pause menu**'s NET row (docs/HOME.md) cycles the owned nets of
   that court's kind and hangs the pick on **that court only**
   (`App.select_net(area, id)`); its BALL row cycles the owned balls and the
@@ -153,15 +164,15 @@ up/down, ticket, the rarity plates, the light strip, and the UI's
 ball's skin, scaled 0.29, behind a frosted pane.
 
 The machine lives in a `SubViewportContainer` with its own world
-(600×780, camera fov 40 at (0, 1.42, 2.78)); the **joystick** under it
-(`game/ui/peggy_stick.gd`, 3 u/s at full deflection, springs back to
-centre) drives the carriage — dragging in the view's top 150 px also aims —
-and pressing in the button rect feeds. Under the level line a **rarity
-meter** shows the XP from the last rarity gate to the next (epic at 3,
-legend at 5; "EVERY RARITY OPEN" past that). The board back is a solid
-navy and the glass is near-clear (Ross: a tinted back read as glass).
-Buttons on panel/bg faces take the theme's text colour so dark mode stays
-readable (`LockerPanel._face`). Sounds (`tools/gen_sfx.gd`): `peggy_press`,
+(600×780, camera fov 40 at (0, 1.42, 2.78)) inside the PEGGY page's cream
+dotted frame: **dragging in the view's top 150 px aims** the carriage (a
+servo whines while it moves) and pressing in the button rect feeds. The
+level line, the rarity meter and the joystick are **off the page since
+2026-10-15** — they move into the cabinet model (`game/ui/peggy_stick.gd`
+is kept for it); the only words under the frame are **NEED n MORE** while
+you are short of a drop (and the feed bar while a ticket goes in). The
+board back is a solid navy and the glass is near-clear (Ross: a tinted
+back read as glass). The page wears the scene colours on both palettes. Sounds (`tools/gen_sfx.gd`): `peggy_press`,
 `peggy_servo` (a flat loop while the carriage moves), `peggy_ticket`,
 `peggy_peg_0..2` (pitched up with each hit), `peggy_win`, `peggy_jackpot`.
 
@@ -175,5 +186,7 @@ readable (`LockerPanel._face`). Sounds (`tools/gen_sfx.gd`): `peggy_press`,
    96 px thumbnails the BALLS tab shows.
 4. `godot --headless --path . --import`, the suite, `tools/peggy_ledger.gd`.
 
-QA: `godot --path . --resolution 360x640 -- --qa-peggy` (open, aim, hold,
-drop, card, the staged epic page, the badge, the BALLS tab).
+QA: `godot --path . --resolution 360x640 -- --qa-peggy` (the locker, PEGGY
+sliding in, aim, hold, drop, card, the staged epic page, the short hint,
+CLOSE back to the locker, the badge, the BALLS tab, dark mode); `--qa-hud`
+snaps the locker's slide, BALLS, NETS and the CHAIN sub-tab.

@@ -181,6 +181,8 @@ func rebuild_chrome() -> void:
 	_chrome.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ui.add_child(_chrome)
 	_ui.move_child(_chrome, 0)
+	if _locker != null or _peggy != null:
+		_chrome.position.x = -HomePage.SLIDE   # a page is open: the home UI stays out
 
 	# The scrim over the court.
 	var scrim := ColorRect.new()
@@ -885,24 +887,78 @@ func _pick(mode: String) -> void:
 
 
 var _locker: LockerPanel
+var _peggy: PeggyPage
+var _home_slide: Tween
 
 
+## The locker page (docs/LOCKER.md): the home chrome slides out left, the
+## page in from the right — the ENTER LEAGUE move, over the area.
 func _open_locker() -> void:
-	if _locker != null or _settings != null or _ranks != null or _lobby != null or _switching:
+	if _locker != null or _peggy != null or _settings != null or _ranks != null or _lobby != null or _switching:
 		return
 	_locker = LockerPanel.new()
 	_locker.name = "LockerPanel"
 	_locker.closed.connect(func() -> void:
 		_locker = null
-		var icon: IconButton = _chrome.find_child("Locker", true, false) if _chrome != null else null
-		if icon != null:
-			icon.badge = not App.unseen_balls().is_empty()
+		_slide_home(false)
+		_refresh_locker_badge()
 	)
+	_locker.peggy_requested.connect(_open_peggy)
 	add_child(_locker)
+	_slide_home(true)
+	_locker.slide_in()
+
+
+## PEGGY (docs/LOCKER.md), from the locker's PEGGY button: the locker slides
+## out under it to the left and comes back when PEGGY closes.
+func _open_peggy() -> void:
+	if _peggy != null or _locker == null or _switching:
+		return
+	_peggy = PeggyPage.new()
+	_peggy.name = "PeggyPage"
+	_peggy.closed.connect(func() -> void:
+		_peggy = null
+		_refresh_locker_badge()
+		if _locker != null:
+			_locker._fill()
+			_locker.slide_in(true)
+	)
+	add_child(_peggy)
+	_locker.slide_out(true, false)
+	_peggy.slide_in()
+
+
+## The whole home UI (the chrome: top bar, zone, chevrons, cards, ticker)
+## out to the left for a page, or back.
+func _slide_home(out: bool) -> void:
+	if _chrome == null:
+		return
+	if _home_slide != null and _home_slide.is_valid():
+		_home_slide.kill()
+	var x := -HomePage.SLIDE if out else 0.0
+	if not is_inside_tree():
+		_chrome.position.x = x
+		return
+	_home_slide = create_tween()
+	_home_slide.tween_property(_chrome, "position:x", x, OPEN_S).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
+func _refresh_locker_badge() -> void:
+	var icon: IconButton = _chrome.find_child("Locker", true, false) if _chrome != null else null
+	if icon != null:
+		icon.badge = not App.unseen_balls().is_empty()
+
+
+func locker() -> LockerPanel:
+	return _locker
+
+
+func peggy() -> PeggyPage:
+	return _peggy
 
 
 func _open_settings() -> void:
-	if _settings != null or _ranks != null or _lobby != null or _switching:
+	if _locker != null or _peggy != null or _settings != null or _ranks != null or _lobby != null or _switching:
 		return
 	_settings = SettingsPanel.new()
 	_settings.name = "SettingsPanel"
@@ -921,7 +977,7 @@ func _archive_rows() -> Array:
 ## The page before an area's home (docs/HOME.md → Area archive). `instant`
 ## on a cold launch: no slide, and no `<` when the area behind is locked.
 func _open_archive(instant := false) -> void:
-	if _archive != null or _locker != null or _settings != null or _ranks != null or _lobby != null or _switching:
+	if _archive != null or _locker != null or _settings != null or _ranks != null or _lobby != null or _peggy != null or _switching:
 		return
 	var rows := _archive_rows()
 	_archive = AreaArchivePage.new()
@@ -953,7 +1009,7 @@ func archive() -> AreaArchivePage:
 ## for data through `request`; Net answers with a board or a failure, and a
 ## failure shows the device's own board for the area.
 func _open_ranks() -> void:
-	if _ranks != null or _archive != null or _locker != null or _settings != null or _switching:
+	if _ranks != null or _archive != null or _locker != null or _settings != null or _peggy != null or _switching:
 		return
 	_ranks = RanksPage.new()
 	_ranks.name = "RanksPage"
@@ -987,7 +1043,7 @@ func ranks() -> RanksPage:
 ## The lobby for this area: quick match, a code for a friend, or a friend's
 ## code. App arranges the room and starts the heat; the page shows the way.
 func _open_lobby() -> void:
-	if _lobby != null or _ranks != null or _archive != null or _locker != null or _settings != null or _switching:
+	if _lobby != null or _ranks != null or _archive != null or _locker != null or _settings != null or _peggy != null or _switching:
 		return
 	var area := str(CARDS[_index]["area"])
 	_lobby = MatchLobbyPage.new()

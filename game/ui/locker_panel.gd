@@ -1,145 +1,75 @@
 class_name LockerPanel
-extends CanvasLayer
-## The locker sheet (the top-left locker icon), docs/LOCKER.md. Three tabs:
-## PEGGY — the drop machine (PeggyMachine) that wins balls for tickets —
-## BALLS — the collection grid (owned balls equip on tap, the rest show their
-## rarity) — and NETS — the net counter (a style buys for tickets and hangs
-## on every court of its kind; the pause menu swaps per court). The hoop
-## counter (buy for tickets, swap) is closed for now (App.HOOPS_IN_LOCKER).
-## A win pops the prize card over the sheet: SET AS YOUR BALL?
-## EQUIP / KEEP, AGAIN; an epic or legend pull gets the rays. Opening BALLS
-## clears App.unseen_balls(), which the title's locker icon badges.
+extends HomePage
+## The locker page (the top-left ball icon), docs/LOCKER.md: the collection.
+## Two tabs — BALLS, the balls you own (tap to equip, everywhere) — and
+## NETS, the nets you own, split by a COTTON / CHAIN sub-tab since each kind
+## hangs on different courts (tap to hang it on every court of its kind;
+## the pause menu swaps per court). Nothing unowned is listed: balls are won
+## on PEGGY (the PEGGY button beside the ticket chip opens its page) and the
+## net store is a later page. The hoop counter is closed
+## (App.HOOPS_IN_LOCKER). Opening BALLS clears App.unseen_balls(), which the
+## title's locker icon badges.
 
-signal closed
+signal peggy_requested
 
-const DIM := Color(0.02, 0.02, 0.05, 0.72)
-const TABS := ["PEGGY", "BALLS", "NETS"]
-const TIER_COLOR := PeggyMachine.TIER_COLOR
+const TABS := ["BALLS", "NETS"]
+const KINDS := ["cotton", "chain"]
 const SKIN_REGION := Rect2(64, 64, 128, 128)
+const TILE_W := 140.0
 
-var _sheet: PanelContainer
-var _vbox: VBoxContainer
-var _balance: CoinsPill
 var _tabs: HBoxContainer
 var _content: Control
-var _tab := "PEGGY"
-var _machine: PeggyMachine
-var _level_line: Label
-var _meter: Meter
-var _stick: PeggyStick
-var _hint: Label
+var _tab := "BALLS"
+var _net_kind := "cotton"
 var _list: VBoxContainer
-var _card: Control
-var _rays: PrizeRays
 
 
-func _init() -> void:
-	layer = 30
+func _row_gap() -> int:
+	return 28
 
 
-func _ready() -> void:
-	var dim := ColorRect.new()
-	dim.name = "Dim"
-	dim.color = DIM
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
-	dim.mouse_filter = Control.MOUSE_FILTER_STOP
-	dim.gui_input.connect(func(ev: InputEvent) -> void:
-		if (ev is InputEventMouseButton or ev is InputEventScreenTouch) and not ev.pressed and _card == null:
-			close()
-	)
-	add_child(dim)
-
-	_sheet = PanelContainer.new()
-	_sheet.name = "Sheet"
-	_sheet.set_anchors_preset(Control.PRESET_CENTER)
-	_sheet.position = Vector2(-330, -620)
-	_sheet.size = Vector2(660, 1240)
-	_sheet.add_theme_stylebox_override("panel", RetroTheme.face(RetroTheme.c("bg"), RetroTheme.RADIUS, 20.0))
-	_sheet.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(_sheet)
-	_vbox = VBoxContainer.new()
-	_vbox.add_theme_constant_override("separation", 10)
-	_sheet.add_child(_vbox)
-
-	var head := HBoxContainer.new()
-	head.name = "Head"
-	_vbox.add_child(head)
-	var title := RetroTheme.display("LOCKER", 32)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	head.add_child(title)
-	_balance = CoinsPill.new()
-	_balance.name = "Balance"
-	var coin: PixelIcon = _balance.find_child("Coin", true, false)
-	if coin != null:
-		coin.icon_name = "icon_ticket"
-		coin.custom_minimum_size = Vector2(22, 14)
-	head.add_child(_balance)
-
+func _build() -> void:
+	var h := head("LOCKER")
+	var peggy := button("PEGGY", RetroTheme.LIGHT["orange"], 16, 48)
+	peggy.name = "Peggy"
+	peggy.custom_minimum_size.x = 120
+	peggy.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	peggy.pressed.connect(func() -> void: peggy_requested.emit())
+	h.add_child(peggy)
 	_tabs = HBoxContainer.new()
 	_tabs.name = "Tabs"
 	_tabs.add_theme_constant_override("separation", 10)
-	_vbox.add_child(_tabs)
+	body.add_child(_tabs)
 	_content = Control.new()
 	_content.name = "Content"
 	_content.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	_content.mouse_filter = Control.MOUSE_FILTER_PASS
-	_vbox.add_child(_content)
-
-	var close_btn := UiFont.flat_button("CLOSE", 24, RetroTheme.c("text"))
-	close_btn.name = "Close"
-	close_btn.custom_minimum_size = Vector2(0, 60)
-	close_btn.pressed.connect(close)
-	_vbox.add_child(close_btn)
+	body.add_child(_content)
+	close_button()
 	_fill()
-
-
-## A card button whose words stay readable on BOTH palettes: card_button's
-## ink is for the gold/orange faces; on a panel/bg face in dark mode that ink
-## is dark on dark, so those take the theme's text colour instead.
-static func _face(b: Button, fill: Color, margin: float) -> Button:
-	RetroTheme.card_button(b, fill, RetroTheme.RADIUS, margin)
-	if fill == RetroTheme.c("panel") or fill == RetroTheme.c("bg"):
-		for k in ["font_color", "font_hover_color", "font_pressed_color"]:
-			b.add_theme_color_override(k, RetroTheme.c("text"))
-		b.add_theme_color_override("font_disabled_color", RetroTheme.c("muted"))
-	return b
 
 
 ## Rebuild the tabs and the current tab's content. Old nodes are removed at
 ## once and freed later: _fill runs from the tabs' own pressed signals, and
-## freeing the emitter mid-signal left the sheet half built.
+## freeing the emitter mid-signal left the page half built.
 func _fill() -> void:
-	_balance.set_coins(App.tickets())
+	set_tickets()
 	for c in _tabs.get_children():
 		_tabs.remove_child(c)
 		c.queue_free()
 	for tab in TABS:
-		var label: String = tab
-		if tab == "BALLS":
-			label = "BALLS %d/%d" % [App.owned_count("ball"), CosmeticLibrary.balls().size()]
-		elif tab == "NETS":
-			label = "NETS %d/%d" % [App.owned_count("net"), CosmeticLibrary.nets().size()]
-		var b := Button.new()
+		var label := "%s %d" % [tab, App.owned_count("ball" if tab == "BALLS" else "net")]
+		var b := button(label, RetroTheme.LIGHT["gold"] if tab == _tab else CREAM, 16, 54)
 		b.name = "Tab_" + tab
-		b.text = label
-		b.custom_minimum_size = Vector2(0, 54)
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_face(b, RetroTheme.c("gold") if tab == _tab else RetroTheme.c("panel"), 10.0)
-		b.add_theme_font_size_override("font_size", UiFont.snap(16))
 		var t: String = tab
 		b.pressed.connect(func() -> void: show_tab.call_deferred(t))
 		_tabs.add_child(b)
 	for c in _content.get_children():
 		_content.remove_child(c)
 		c.queue_free()
-	_machine = null
-	_stick = null
-	_meter = null
 	_list = null
-	if _tab == "PEGGY":
-		_build_peggy()
-	elif _tab == "NETS":
+	if _tab == "NETS":
 		_build_nets()
 	else:
 		_build_balls()
@@ -158,249 +88,68 @@ func tab() -> String:
 	return _tab
 
 
-# ---- PEGGY ------------------------------------------------------------------------
-
-
-func _build_peggy() -> void:
-	var col := VBoxContainer.new()
-	col.name = "PeggyTab"
-	col.set_anchors_preset(Control.PRESET_FULL_RECT)
-	col.add_theme_constant_override("separation", 8)
-	_content.add_child(col)
-	var center := CenterContainer.new()
-	center.mouse_filter = Control.MOUSE_FILTER_PASS
-	col.add_child(center)
-	_machine = PeggyMachine.new()
-	_machine.dropped.connect(_on_dropped)
-	_machine.feeding.connect(_on_feeding)
-	center.add_child(_machine)
-	_level_line = RetroTheme.caps("", 16, RetroTheme.c("muted"))
-	_level_line.name = "LevelLine"
-	_level_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	col.add_child(_level_line)
-	_meter = Meter.new()
-	col.add_child(_meter)
-	_hint = RetroTheme.caps("", 16, RetroTheme.c("text"))
-	_hint.name = "Hint"
-	_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	col.add_child(_hint)
-	var deck := CenterContainer.new()
-	deck.name = "Deck"
-	col.add_child(deck)
-	_stick = PeggyStick.new()
-	deck.add_child(_stick)
-	_refresh_machine()
-
-
-func _refresh_machine() -> void:
-	if _machine == null:
+## The NETS sub-tab ("cotton" | "chain").
+func show_kind(kind: String) -> void:
+	if not KINDS.has(kind):
 		return
-	_machine.set_slots(App.peggy_slots())
-	var level := App.level()
-	var top := PeggyPrizes.top_rarity(level)
-	var line := "LVL %02d · PRIZES UP TO %s" % [level, top.to_upper()]
-	if level < PeggyPrizes.EPIC_LEVEL:
-		line += " · EPIC AT LVL %d" % PeggyPrizes.EPIC_LEVEL
-	elif level < PeggyPrizes.LEGEND_LEVEL:
-		line += " · LEGEND AT LVL %d" % PeggyPrizes.LEGEND_LEVEL
-	_level_line.text = line
-	_meter.set_progress(App.xp(), level)
-	var short := PeggyPrizes.DROP_COST - App.tickets()
-	_machine.can_drop = short <= 0
-	if short > 0:
-		_hint.text = "NEED %s MORE" % RetroTheme.thousands(short)
-		_hint.add_theme_color_override("font_color", RetroTheme.c("muted"))
-	else:
-		_hint.text = "HOLD TO DROP · %d" % PeggyPrizes.DROP_COST
-		_hint.add_theme_color_override("font_color", RetroTheme.c("text"))
-	_balance.set_coins(App.tickets())
+	_net_kind = kind
+	_fill()
 
 
-const STICK_RATE := 3.0   # board units a second at full deflection
+func net_kind() -> String:
+	return _net_kind
 
 
-func _process(delta: float) -> void:
-	if _stick != null and _machine != null and _stick.deflection() != 0.0 and not _machine.playing():
-		_machine.nudge(_stick.deflection() * STICK_RATE * delta)
+# ---- the pieces ----------------------------------------------------------------
 
 
-func stick() -> PeggyStick:
-	return _stick
+func _scroll() -> VBoxContainer:
+	var scroll := ScrollContainer.new()
+	scroll.name = _tab.capitalize() + "Tab"
+	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_content.add_child(scroll)
+	_list = VBoxContainer.new()
+	_list.name = "Items"
+	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_list.add_theme_constant_override("separation", 20)
+	scroll.add_child(_list)
+	return _list
 
 
-func meter() -> Meter:
-	return _meter
+func _grid(name_: String) -> GridContainer:
+	var grid := GridContainer.new()
+	grid.name = name_
+	grid.columns = 4
+	grid.add_theme_constant_override("h_separation", 10)
+	grid.add_theme_constant_override("v_separation", 10)
+	_list.add_child(grid)
+	return grid
 
 
-## The level meter under the machine: how far to the next rarity's plates.
-class Meter extends Control:
-	const H := 18.0
-	var frac := 0.0
-	var label := ""
-	var fill := Color.WHITE
-
-	func _init() -> void:
-		name = "RarityMeter"
-		custom_minimum_size = Vector2(0, H + 24)
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	## XP and level → the bar from the last rarity gate to the next.
-	func set_progress(xp: int, level: int) -> void:
-		var per := Progression.xp_per_level()
-		var next := 0
-		var prev := 1
-		for gate in [PeggyPrizes.EPIC_LEVEL, PeggyPrizes.LEGEND_LEVEL]:
-			if level >= gate:
-				prev = gate
-			elif next == 0:
-				next = gate
-		if next == 0:
-			frac = 1.0
-			label = "EVERY RARITY OPEN"
-			fill = PeggyMachine.TIER_COLOR["legend"]
-		else:
-			var start := (prev - 1) * per
-			var end := (next - 1) * per
-			frac = clampf(float(xp - start) / float(maxi(end - start, 1)), 0.0, 1.0)
-			var rarity := "epic" if next == PeggyPrizes.EPIC_LEVEL else "legend"
-			label = "%d/%d XP TO %s PLATES" % [xp - start, end - start, rarity.to_upper()]
-			fill = PeggyMachine.TIER_COLOR[rarity]
-		queue_redraw()
-
-	func _draw() -> void:
-		var w := size.x
-		var y := 0.0
-		draw_rect(Rect2(Vector2(3, y + 3), Vector2(w - 3, H)), RetroTheme.c("shadow"))
-		draw_rect(Rect2(Vector2(0, y), Vector2(w - 3, H)), RetroTheme.c("ink"))
-		draw_rect(Rect2(Vector2(3, y + 3), Vector2(maxf((w - 9) * frac, 0.0), H - 6)), fill)
-		var font := UiFont.body_bold()
-		var fs := UiFont.snap(12)
-		var tw := font.get_string_size(label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs).x
-		draw_string(font, Vector2((w - tw) * 0.5, y + H + 16), label, HORIZONTAL_ALIGNMENT_LEFT, -1, fs, RetroTheme.c("muted"))
+## A tile: a gold (in use) or cream dotted card with its picture and lines
+## stacked inside; the stack is a child so it rides the press.
+func _tile(name_: String, height: float, in_use: bool) -> Array:
+	var tile := ShadowCard.new(RetroTheme.LIGHT["gold"] if in_use else CREAM)
+	tile.name = name_
+	tile.custom_minimum_size = Vector2(TILE_W, height + ShadowStyle.OFFSET)
+	tile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var vb := VBoxContainer.new()
+	vb.set_anchors_preset(Control.PRESET_FULL_RECT)
+	vb.offset_right = -ShadowStyle.OFFSET
+	vb.offset_bottom = -ShadowStyle.OFFSET
+	vb.alignment = BoxContainer.ALIGNMENT_CENTER
+	vb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	vb.add_theme_constant_override("separation", 4)
+	tile.add_child(vb)
+	return [tile, vb]
 
 
-func _on_feeding(frac: float) -> void:
-	if _hint == null:
-		return
-	if frac > 0.0:
-		_hint.text = "FEEDING " + "▮".repeat(int(ceil(frac * 6))) + "▯".repeat(6 - int(ceil(frac * 6)))
-	else:
-		_refresh_machine()
-
-
-func _on_dropped(prize: Dictionary) -> void:
-	_balance.set_coins(App.tickets())
-	_show_card(prize)
-
-
-# ---- the prize card -------------------------------------------------------------------
-
-
-func _show_card(prize: Dictionary) -> void:
-	_dismiss_card()
-	var rarity := str(prize.get("rarity", ""))
-	var id := str(prize.get("ball_id", ""))
-	var big := rarity == "epic" or rarity == "legend"
-	_card = Control.new()
-	_card.name = "PrizeCard"
-	_card.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_card.mouse_filter = Control.MOUSE_FILTER_STOP
-	add_child(_card)
-	var shade := ColorRect.new()
-	shade.color = Color(0.02, 0.02, 0.05, 0.6 if not big else 0.82)
-	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
-	shade.mouse_filter = Control.MOUSE_FILTER_STOP
-	_card.add_child(shade)
-	if big:
-		_rays = PrizeRays.new(TIER_COLOR.get(rarity, Color.WHITE))
-		_card.add_child(_rays)
-	var panel := PanelContainer.new()
-	panel.name = "Card"
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.position = Vector2(-270, -250)
-	panel.size = Vector2(540, 500)
-	panel.add_theme_stylebox_override("panel", RetroTheme.face(RetroTheme.c("panel"), RetroTheme.RADIUS, 24.0))
-	_card.add_child(panel)
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 12)
-	panel.add_child(col)
-	var ball := CosmeticLibrary.get_ball(id)
-	if id == "":
-		_card_text(col, "EMPTY SLOT", 18, RetroTheme.c("muted"))
-		_card_text(col, "+%d TICKETS BACK" % int(prize.get("refund", 0)), 30, RetroTheme.c("text"), true)
-	else:
-		_card_text(col, "EPIC PULL!" if big else "NEW BALL", 18, TIER_COLOR.get(rarity, RetroTheme.c("muted")))
-		if big:
-			_card_text(col, "TOP PRIZE AT LVL %02d" % App.level(), 14, RetroTheme.c("muted"))
-		var skin := _skin_rect(ball, 128)
-		skin.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		col.add_child(skin)
-		_card_text(col, str(ball.display_name).to_upper() if ball != null else id.to_upper(), 30, RetroTheme.c("text"), true)
-		_card_text(col, "%s · %d/%d BALLS" % [rarity.to_upper(), int(prize.get("owned_after", 0)), CosmeticLibrary.balls().size()],
-			14, RetroTheme.c("muted"))
-		_card_text(col, "ADDED TO YOUR LOCKER" if big else "SET AS YOUR BALL?", 16, RetroTheme.c("text"))
-		var row := HBoxContainer.new()
-		row.alignment = BoxContainer.ALIGNMENT_CENTER
-		row.add_theme_constant_override("separation", 12)
-		col.add_child(row)
-		var equip := _card_button("EQUIP", RetroTheme.c("gold"))
-		equip.name = "Equip"
-		equip.pressed.connect(func() -> void:
-			App.select("ball", id)
-			_dismiss_card()
-			_fill()
-		)
-		row.add_child(equip)
-		var keep := _card_button("KEEP", RetroTheme.c("panel"))
-		keep.name = "Keep"
-		keep.pressed.connect(func() -> void:
-			_dismiss_card()
-			_fill()
-		)
-		row.add_child(keep)
-	var again := _card_button("AGAIN · %d" % PeggyPrizes.DROP_COST, RetroTheme.c("orange"))
-	again.name = "Again"
-	again.custom_minimum_size = Vector2(300, 60)
-	again.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	if App.tickets() < PeggyPrizes.DROP_COST:
-		again.text = "NEED %s MORE" % RetroTheme.thousands(PeggyPrizes.DROP_COST - App.tickets())
-		again.disabled = true
-	again.pressed.connect(func() -> void:
-		_dismiss_card()
-		_refresh_machine()
-	)
-	col.add_child(again)
-
-
-func _card_text(col: Control, text: String, size_: int, color: Color, display := false) -> Label:
-	var l := RetroTheme.display(text, size_, color) if display else RetroTheme.caps(text, size_, color)
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	col.add_child(l)
+func _line(vb: Control, name_: String, text: String, size_: int) -> Label:
+	var l := words(text, size_)
+	l.name = name_
+	vb.add_child(l)
 	return l
-
-
-func _card_button(text: String, fill: Color) -> Button:
-	var b := Button.new()
-	b.text = text
-	b.custom_minimum_size = Vector2(140, 56)
-	_face(b, fill, 10.0)
-	b.add_theme_font_size_override("font_size", UiFont.snap(16))
-	return b
-
-
-func _dismiss_card() -> void:
-	if _card != null:
-		_card.queue_free()
-		_card = null
-		_rays = null
-
-
-func prize_card() -> Control:
-	return _card
-
-
-func machine() -> PeggyMachine:
-	return _machine
 
 
 # ---- BALLS --------------------------------------------------------------------------
@@ -408,12 +157,14 @@ func machine() -> PeggyMachine:
 
 ## The ball's shaded thumbnail (tools/blender/build_ball_lineup.py --thumbs),
 ## falling back to a crop of the wrap when a thumb is missing.
-func _skin_rect(ball: BallSet, px: int) -> TextureRect:
+static func skin_rect(ball: BallSet, px: int) -> TextureRect:
 	var tr := TextureRect.new()
 	tr.custom_minimum_size = Vector2(px, px)
 	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	tr.stretch_mode = TextureRect.STRETCH_SCALE
 	tr.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tr.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	if ball != null:
 		var thumb := "res://assets/textures/balls/thumbs/%s.png" % ball.id
 		if ResourceLoader.exists(thumb):
@@ -426,106 +177,31 @@ func _skin_rect(ball: BallSet, px: int) -> TextureRect:
 	return tr
 
 
+## The balls you own, in library order; the one in use is gold.
 func _build_balls() -> void:
-	var scroll := ScrollContainer.new()
-	scroll.name = "BallsTab"
-	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_content.add_child(scroll)
-	_list = VBoxContainer.new()
-	_list.name = "Items"
-	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_list.add_theme_constant_override("separation", 10)
-	scroll.add_child(_list)
-	var head := RetroTheme.caps("BALLS · WON ON PEGGY", 16, RetroTheme.c("muted"))
-	head.name = "Head_ball"
-	_list.add_child(head)
-	var grid := GridContainer.new()
-	grid.name = "BallGrid"
-	grid.columns = 4
-	grid.add_theme_constant_override("h_separation", 10)
-	grid.add_theme_constant_override("v_separation", 10)
-	_list.add_child(grid)
+	_scroll()
+	var head_ := chip("BALLS · OWNED")
+	head_.name = "Head_ball"
+	_list.add_child(head_)
+	var grid := _grid("BallGrid")
 	var current := _current_id("ball")
 	for cs in CosmeticLibrary.balls():
 		var ball := cs as BallSet
-		var owned: bool = App.owns("ball", ball.id) or ball.id == current
-		var in_use: bool = owned and ball.id == current
-		var tile := Button.new()
-		tile.name = "Ball_" + ball.id
-		tile.custom_minimum_size = Vector2(148, 176)
-		tile.text = ""
-		var fill := RetroTheme.c("gold") if in_use else (RetroTheme.c("panel") if owned else RetroTheme.c("bg"))
-		_face(tile, fill, 6.0)
-		var vb := VBoxContainer.new()
-		vb.set_anchors_preset(Control.PRESET_FULL_RECT)
-		vb.offset_right = -ShadowStyle.OFFSET
-		vb.offset_bottom = -ShadowStyle.OFFSET
-		vb.alignment = BoxContainer.ALIGNMENT_CENTER
-		vb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		vb.add_theme_constant_override("separation", 4)
-		tile.add_child(vb)
-		var skin := _skin_rect(ball, 96)
-		skin.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		skin.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		if not owned:
-			skin.modulate = Color(0.25, 0.25, 0.28, 1.0)
-		vb.add_child(skin)
-		var nm := RetroTheme.caps(str(ball.display_name).to_upper(), 11,
-			RetroTheme.c("card_text") if in_use else (RetroTheme.c("text") if owned else RetroTheme.c("muted")))
-		nm.name = "Name"
-		nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		nm.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		vb.add_child(nm)
-		var tag_text := "IN USE" if in_use else ("EQUIP" if owned else ball.rarity.to_upper())
-		var tag := RetroTheme.caps(tag_text, 11,
-			TIER_COLOR.get(ball.rarity, RetroTheme.c("muted")) if not owned else (RetroTheme.c("card_text") if in_use else RetroTheme.c("muted")))
-		tag.name = "Tag"
-		tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		vb.add_child(tag)
-		tile.disabled = not owned
+		if not (App.owns("ball", ball.id) or ball.id == current):
+			continue
+		var in_use: bool = ball.id == current
+		var parts := _tile("Ball_" + ball.id, 176, in_use)
+		var tile: ShadowCard = parts[0]
+		var vb: Control = parts[1]
+		vb.add_child(skin_rect(ball, 96))
+		_line(vb, "Name", str(ball.display_name).to_upper(), 11)
+		_line(vb, "Tag", "IN USE" if in_use else "EQUIP", 11)
 		var id := ball.id
 		tile.pressed.connect(func() -> void:
 			if App.select("ball", id):
 				_fill()
 		)
 		grid.add_child(tile)
-	if not App.HOOPS_IN_LOCKER:
-		return
-	var hhead := RetroTheme.caps("HOOPS", 16, RetroTheme.c("muted"))
-	hhead.name = "Head_hoop"
-	_list.add_child(hhead)
-	var hcur := _current_id("hoop")
-	for cs in CosmeticLibrary.hoops():
-		var owned: bool = App.owns("hoop", cs.id) or cs.id == hcur
-		var in_use: bool = owned and cs.id == hcur
-		var row := Button.new()
-		row.name = "Hoop_" + cs.id
-		var label := str(cs.display_name).to_upper()
-		if in_use:
-			label += "   -  IN USE"
-		elif not owned:
-			label += "   -  %s TICKETS" % RetroTheme.thousands(int(cs.price_coins))
-		row.text = label
-		row.custom_minimum_size = Vector2(0, 60)
-		var fill := RetroTheme.c("gold") if in_use else (RetroTheme.c("panel") if owned else RetroTheme.c("bg"))
-		_face(row, fill, 12.0)
-		row.add_theme_font_size_override("font_size", UiFont.snap(16))
-		row.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		if not owned and App.tickets() < int(cs.price_coins):
-			row.disabled = true
-		var id := str(cs.id)
-		var was_owned := owned
-		row.pressed.connect(func() -> void:
-			if was_owned:
-				if App.select("hoop", id):
-					_fill()
-			elif App.try_buy("hoop", id):
-				App.select("hoop", id)
-				_fill()
-		)
-		_list.add_child(row)
 
 
 # ---- NETS ---------------------------------------------------------------------------
@@ -533,12 +209,14 @@ func _build_balls() -> void:
 
 ## The net's thumbnail (tools/qa_driver.gd --qa-net-thumbs), a blank panel
 ## when it is missing.
-func _net_rect(net: NetSet, px: int) -> TextureRect:
+static func net_rect(net: NetSet, px: int) -> TextureRect:
 	var tr := TextureRect.new()
 	tr.custom_minimum_size = Vector2(px, px)
 	tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	tr.stretch_mode = TextureRect.STRETCH_SCALE
 	tr.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+	tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tr.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	if net != null:
 		var thumb := NetSet.thumb_path(net.id)
 		if ResourceLoader.exists(thumb):
@@ -551,95 +229,48 @@ func _net_rect(net: NetSet, px: int) -> TextureRect:
 	return tr
 
 
-## The net counter: every style, in library order. Owned styles equip (on
-## every court of their kind), the rest buy for tickets.
+static func _upper(areas: Array) -> PackedStringArray:
+	var out := PackedStringArray()
+	for a in areas:
+		out.push_back(str(a).to_upper())
+	return out
+
+
+## The nets you own of the sub-tab's kind; the one hanging is gold.
 func _build_nets() -> void:
-	var scroll := ScrollContainer.new()
-	scroll.name = "NetsTab"
-	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
-	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	_content.add_child(scroll)
-	_list = VBoxContainer.new()
-	_list.name = "Items"
-	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	_list.add_theme_constant_override("separation", 10)
-	scroll.add_child(_list)
-	var head := RetroTheme.caps("NETS · BOUGHT WITH TICKETS", 16, RetroTheme.c("muted"))
-	head.name = "Head_net"
-	_list.add_child(head)
-	var grid := GridContainer.new()
-	grid.name = "NetGrid"
-	grid.columns = 4
-	grid.add_theme_constant_override("h_separation", 10)
-	grid.add_theme_constant_override("v_separation", 10)
-	_list.add_child(grid)
+	_scroll()
+	var subs := HBoxContainer.new()
+	subs.name = "NetSubs"
+	subs.add_theme_constant_override("separation", 12)
+	_list.add_child(subs)
+	for kind in KINDS:
+		var b := button(str(kind).to_upper(), RetroTheme.LIGHT["gold"] if kind == _net_kind else CREAM, 16, 46)
+		b.name = "Sub_" + str(kind).to_upper()
+		b.custom_minimum_size.x = 170
+		var k: String = kind
+		b.pressed.connect(func() -> void: show_kind.call_deferred(k))
+		subs.add_child(b)
+	var hangs := _upper(App.net_areas(_net_kind))
+	var head_ := chip("%s · HANGS ON %s" % [_net_kind.to_upper(), " + ".join(hangs)])
+	head_.name = "Head_net"
+	_list.add_child(head_)
+	var grid := _grid("NetGrid")
 	for cs in CosmeticLibrary.nets():
 		var net := cs as NetSet
-		var owned: bool = App.owns("net", net.id)
+		if net.kind != _net_kind or not App.owns("net", net.id):
+			continue
 		var used: Array = App.net_in_use_areas(net.id)
-		var in_use: bool = owned and not used.is_empty()
-		var tile := Button.new()
-		tile.name = "Net_" + net.id
-		tile.custom_minimum_size = Vector2(148, 196)
-		tile.text = ""
-		var fill := RetroTheme.c("gold") if in_use else (RetroTheme.c("panel") if owned else RetroTheme.c("bg"))
-		_face(tile, fill, 6.0)
-		var vb := VBoxContainer.new()
-		vb.set_anchors_preset(Control.PRESET_FULL_RECT)
-		vb.offset_right = -ShadowStyle.OFFSET
-		vb.offset_bottom = -ShadowStyle.OFFSET
-		vb.alignment = BoxContainer.ALIGNMENT_CENTER
-		vb.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		vb.add_theme_constant_override("separation", 4)
-		tile.add_child(vb)
-		var pic := _net_rect(net, 96)
-		pic.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		if not owned:
-			pic.modulate = Color(0.25, 0.25, 0.28, 1.0)
-		vb.add_child(pic)
-		var nm := RetroTheme.caps(str(net.display_name).to_upper(), 11,
-			RetroTheme.c("card_text") if in_use else (RetroTheme.c("text") if owned else RetroTheme.c("muted")))
-		nm.name = "Name"
-		nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		nm.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		vb.add_child(nm)
-		var areas: Array = App.net_areas(net.kind)
-		var where := PackedStringArray()
-		for a in areas:
-			where.push_back(str(a).to_upper())
-		var kind := RetroTheme.caps("%s · %s" % [net.kind.to_upper(), ", ".join(where)], 9,
-			RetroTheme.c("card_text") if in_use else RetroTheme.c("muted"))
-		kind.name = "Kind"
-		kind.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		kind.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		vb.add_child(kind)
-		var tag_text: String
-		if in_use:
-			var on := PackedStringArray()
-			for a in used:
-				on.push_back(str(a).to_upper())
-			tag_text = "IN USE ON %s" % " + ".join(on)
-		elif owned:
-			tag_text = "EQUIP"
-		else:
-			tag_text = "%s TICKETS" % RetroTheme.thousands(int(net.price_coins))
-		var tag := RetroTheme.caps(tag_text, 11,
-			RetroTheme.c("card_text") if in_use else (RetroTheme.c("text") if owned else RetroTheme.c("gold")))
-		tag.name = "Tag"
-		tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		vb.add_child(tag)
-		if not owned and App.tickets() < int(net.price_coins):
-			tile.disabled = true
+		var in_use := not used.is_empty()
+		var parts := _tile("Net_" + net.id, 196, in_use)
+		var tile: ShadowCard = parts[0]
+		var vb: Control = parts[1]
+		vb.add_child(net_rect(net, 96))
+		_line(vb, "Name", str(net.display_name).to_upper(), 11)
+		_line(vb, "Kind", "%s · %s" % [net.kind.to_upper(), ", ".join(_upper(App.net_areas(net.kind)))], 9)
+		_line(vb, "Tag", "IN USE ON %s" % " + ".join(_upper(used)) if in_use else "EQUIP", 11)
 		var id := net.id
-		var was_owned := owned
 		tile.pressed.connect(func() -> void:
-			if was_owned:
-				if App.select_net_everywhere(id):
-					_fill()
-			elif App.try_buy("net", id):
-				App.select_net_everywhere(id)
+			if App.select_net_everywhere(id):
 				_fill()
 		)
 		grid.add_child(tile)
@@ -654,31 +285,26 @@ func _current_id(kind: String) -> String:
 	return starter.id if starter != null else ""
 
 
-## Button names on the BALLS / NETS tab, in order ("Ball_<id>" / "Hoop_<id>" / "Net_<id>"), for tests.
+## Button names on the BALLS / NETS tab, in order ("Ball_<id>" / "Net_<id>"), for tests.
 func rows() -> Array:
 	var out := []
 	if _list == null:
 		return out
 	for c in BeachFx._descendants(_list):
-		if c is Button:
-			out.push_back(c.name)
+		if c is Button and (str(c.name).begins_with("Ball_") or str(c.name).begins_with("Net_")):
+			out.push_back(String(c.name))
 	return out
 
 
 func in_use_row(kind := "ball") -> String:
-	var prefix := "Ball_" if kind == "ball" else ("Net_" if kind == "net" else "Hoop_")
+	var prefix := "Ball_" if kind == "ball" else "Net_"
 	if _list == null:
 		return ""
 	for c in BeachFx._descendants(_list):
 		if c is Button and str(c.name).begins_with(prefix):
-			var words: String = c.text
+			var words_: String = c.text
 			for l in c.find_children("*", "Label", true, false):
-				words += " " + str(l.text)
-			if words.contains("IN USE"):
-				return c.name
+				words_ += " " + str(l.text)
+			if words_.contains("IN USE"):
+				return String(c.name)
 	return ""
-
-
-func close() -> void:
-	closed.emit()
-	queue_free()

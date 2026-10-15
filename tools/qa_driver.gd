@@ -246,7 +246,7 @@ func _run_net_style(style: String) -> void:
 	await _run_net_in(style, ns != null and ns.kind == "chain")
 
 
-## The locker's net thumbnails (docs/LOCKER.md → NETS): every style hung on
+## The locker's net thumbnails (docs/LOCKER.md → NETS): every style hung,
 ## a rim in its own viewport, saved to assets/textures/nets/thumbs/<id>.png
 ## (run --import afterwards so the locker can load them).
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-net-thumbs
@@ -277,18 +277,7 @@ func _run_net_thumbs() -> void:
 		vp.add_child(sun)
 		var rig := Node3D.new()
 		vp.add_child(rig)
-		var torus := TorusMesh.new()
-		torus.inner_radius = SimConstants.R_RIM - SimConstants.R_TUBE
-		torus.outer_radius = SimConstants.R_RIM + SimConstants.R_TUBE
-		torus.rings = 32
-		torus.ring_segments = 10
-		var rim := MeshInstance3D.new()
-		rim.mesh = torus
-		var rm := StandardMaterial3D.new()
-		rm.albedo_color = Color("#E8703A")
-		rm.roughness = 0.6
-		rim.material_override = rm
-		rig.add_child(rim)
+		# No rim: the locker shows the net alone (docs/LOCKER.md → NETS).
 		var body := NetBodies.for_set(ns)
 		rig.add_child(body)
 		var sim := NetSim.new()
@@ -301,8 +290,8 @@ func _run_net_thumbs() -> void:
 		var cam := Camera3D.new()
 		cam.fov = 38.0
 		vp.add_child(cam)
-		cam.position = Vector3(0.18, 0.12, 0.92)
-		cam.look_at(Vector3(0.0, -0.17, 0.0))
+		cam.position = Vector3(0.16, 0.06, 0.88)
+		cam.look_at(Vector3(0.0, -0.2, 0.0))
 		await get_tree().process_frame
 		await get_tree().process_frame
 		await RenderingServer.frame_post_draw
@@ -446,26 +435,30 @@ func _run_hud() -> void:
 		await _snap("hud_pause")
 		await _click_button_named("QUIT TO TITLE")
 		await _sleep(1.5)
-	# The locker's NETS tab (docs/LOCKER.md → NETS), with the counter open.
+	# The locker page (docs/LOCKER.md): the slide, BALLS, NETS by kind.
 	var cos_before: Dictionary = SaveService.get_cosmetics()
-	App.grant_tickets(700)
+	App.grant_cosmetic("net", "jack")
+	App.grant_cosmetic("net", "wool")
 	var locker_btn: Button = get_tree().root.find_child("Locker", true, false)
 	if locker_btn != null:
 		var lc := (locker_btn.global_position + locker_btn.size / 2.0) * 0.5
 		_mouse_button(lc, true)
 		await _sleep(0.08)
 		_mouse_button(lc, false)
-		await _sleep(0.8)
+		await _sleep(0.15)
+		await _snap("locker_slide")
+		await _sleep(0.7)
+		await _snap("locker_balls")
 		var panel: LockerPanel = get_tree().root.find_child("LockerPanel", true, false)
-		if panel == null:
-			for c in get_tree().root.find_children("*", "LockerPanel", true, false):
-				panel = c
 		if panel != null:
 			panel.show_tab("NETS")
 			await _sleep(0.4)
 			await _snap("locker_nets")
+			panel.show_kind("chain")
+			await _sleep(0.4)
+			await _snap("locker_nets_chain")
 			panel.close()
-			await _sleep(0.5)
+			await _sleep(0.6)
 	SaveService.put_cosmetics(cos_before)
 	await _click_button_named("PRACTICE")
 	await _sleep(1.2)
@@ -727,9 +720,10 @@ func _run_city() -> void:
 ## Home QA: the cage card over its slow pan (frames at 0 / 5 / 10 / 14 s of a
 ## 28 s truck), then a page turn to the beach card.
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-title
-## PEGGY (docs/LOCKER.md): open the locker from the title, aim, hold the
-## button through a drop, the prize card, the BALLS tab, the badge. Grants
-## tickets first and restores the save's cosmetics/settings after.
+## PEGGY (docs/LOCKER.md): open the locker from the title, PEGGY from the
+## locker, aim, hold the button through a drop, the prize card, the short
+## hint, CLOSE back to the locker, the BALLS tab, the badge. Grants tickets
+## first and restores the save's cosmetics/settings after.
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-peggy
 func _run_peggy() -> void:
 	await _sleep(1.0)
@@ -746,8 +740,13 @@ func _run_peggy() -> void:
 	await _sleep(0.08)
 	_mouse_button(lc, false)
 	await _sleep(0.8)
+	await _snap("locker_open")
+	await _click_button_named("PEGGY")
+	await _sleep(0.15)
+	await _snap("peggy_slide")
+	await _sleep(0.7)
 	await _snap("peggy_open")
-	var panel: LockerPanel = get_tree().root.find_child("LockerPanel", true, false)
+	var panel: PeggyPage = get_tree().root.find_child("PeggyPage", true, false)
 	var m: PeggyMachine = panel.machine() if panel != null else null
 	if m == null:
 		print("QA: no machine")
@@ -791,20 +790,34 @@ func _run_peggy() -> void:
 	await _snap("peggy_epic")
 	panel._dismiss_card()
 	await _sleep(0.2)
+	# Short of a drop: the one line under the frame.
+	var cos_rich: Dictionary = SaveService.get_cosmetics()
+	var cos_poor: Dictionary = cos_rich.duplicate(true)
+	cos_poor["tickets"] = 180
+	SaveService.put_cosmetics(cos_poor)
+	panel._refresh_machine()
+	await _sleep(0.3)
+	await _snap("peggy_short")
+	SaveService.put_cosmetics(cos_rich)
+	panel._refresh_machine()
+	# CLOSE: back to the locker, then CLOSE: home with the badge.
 	await _click_button_named("CLOSE")
-	await _sleep(0.5)
+	await _sleep(0.8)
+	await _snap("peggy_back_locker")
+	await _click_button_named("CLOSE")
+	await _sleep(0.8)
 	await _snap("peggy_badge")
 	_mouse_button(lc, true)
 	await _sleep(0.08)
 	_mouse_button(lc, false)
-	await _sleep(0.6)
-	panel = get_tree().root.find_child("LockerPanel", true, false)
-	if panel != null:
-		panel.show_tab("BALLS")
+	await _sleep(0.8)
+	var locker_page: LockerPanel = get_tree().root.find_child("LockerPanel", true, false)
+	if locker_page != null:
+		locker_page.show_tab("BALLS")
 	await _sleep(0.5)
 	await _snap("peggy_balls")
 	await _click_button_named("CLOSE")
-	await _sleep(0.3)
+	await _sleep(0.6)
 	# Dark mode: both tabs must stay readable.
 	var was_dark: bool = App.dark_mode
 	App.set_dark_mode(true)
@@ -815,15 +828,15 @@ func _run_peggy() -> void:
 		_mouse_button(lc, true)
 		await _sleep(0.08)
 		_mouse_button(lc, false)
-		await _sleep(0.6)
-		await _snap("peggy_dark")
-		panel = get_tree().root.find_child("LockerPanel", true, false)
-		if panel != null:
-			panel.show_tab("BALLS")
-		await _sleep(0.4)
+		await _sleep(0.8)
 		await _snap("peggy_dark_balls")
+		await _click_button_named("PEGGY")
+		await _sleep(0.8)
+		await _snap("peggy_dark")
 		await _click_button_named("CLOSE")
-		await _sleep(0.3)
+		await _sleep(0.6)
+		await _click_button_named("CLOSE")
+		await _sleep(0.6)
 	App.set_dark_mode(was_dark)
 	SaveService.put_cosmetics(cos_before)
 	SaveService.put_settings(set_before)
@@ -1211,10 +1224,10 @@ func _run_title() -> void:
 		_mouse_button(lc, true)
 		await _sleep(0.08)
 		_mouse_button(lc, false)
-		await _sleep(0.5)
+		await _sleep(0.8)
 		await _snap("title_locker")
 		await _click_button_named("CLOSE")
-		await _sleep(0.3)
+		await _sleep(0.6)
 	# The menu (a HamburgerButton has no text: click it by name).
 	var menu: Button = get_tree().root.find_child("Menu", true, false)
 	if menu != null:
