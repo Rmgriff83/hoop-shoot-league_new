@@ -780,12 +780,9 @@ corners chamfered 45° over 0.22 m — the sim keeps the rectangle collider,
 the cut sits where a ball is a wide miss — a bare steel gym rim
 (`hoop_rim_steel.png`, add_gym_rim's neck / flange / spring box / hooks),
 a net with the chain net's own topology — a diamond lattice of 5 rings
-of 12 nodes, each ring turned half a step, so the springs `NetSim` drives
-ARE the 12 chains' diagonal runs — which `NetSim.set_chain(true)` draws
-as a multimesh of real steel links (one procedural oval link per 2.8 cm
-of every spring between rings, every other link turned 90°, re-placed
-each frame the net moves; the cord surface itself is hidden), open at the
-bottom, and a GOOSENECK:
+of 12 nodes, each ring turned half a step (**since 2026-10-14 that glb
+mesh is hidden and the chain is the procedural `ChainNet`, §29**), open at
+the bottom, and a GOOSENECK:
 one bent tube swept by `_tube()` from the ground on the sim's pole line up
 to 2.1 m, round a 0.55 m bend and up to a bolted mount on the board's back.
 The city arena builds no pole. `hoop_set.tres` sets `net_kind = "chain"`
@@ -1119,7 +1116,10 @@ front of the rim, so nothing of a loop rises above the tube
 `setup_cotton(space, rim_r, tube_r)` builds the particles — hooks first
 (pinned), then the 84 knots — and the springs, with no mesh; `structure`
 reads `"cotton"` and `_upload()` does nothing. `setup(mi)` (mesh-fed) stays
-for the chain hoop, the primitive fallback and the tests' cylinder.
+for the primitive fallback and the tests' cylinder. The layout is the
+general `knotted_layout(rows, ring0_y, hook_r, hook_y)`; the chain (§29) is
+the same with four rows. The rig, skin, tube builder and pixel textures
+live in `game/view/net_rig.gd` (`NetRig`), which both bodies extend.
 
 **The body** is `game/view/cotton_net.gd` (`CottonNet`): one `Skeleton3D`
 "NetRoot" with 97 bones (`Hook_0…11`, `Knot_k_i`) and three skinned
@@ -1133,7 +1133,7 @@ frayed stubs under the bottom ring). Flat shaded, roughness 1, the design's
 rebuilt per frame: `CourtGeometry.step_net()` steps the sim and
 `CottonNet.sync()` moves the knot bones onto the particles. The glb's `Net`
 node is hidden, not removed (its animation tracks still resolve; the glbs
-are not rebuilt). The chain hoop is untouched — its own pass comes next.
+are not rebuilt). The chain hoop got the same treatment the same night (§29).
 
 **The defaults** (`HoopSet`, Ross's 2026-10-14 lab set; the 2026-10-03 mesh
 set in brackets): stiffness 0.14 [0.14], damping 0.9864 [0.9864],
@@ -1145,4 +1145,64 @@ NET page's rails widened to fit (tail_mass 0.2–4, kick 0–8) and RESET now
 refreshes the tail weight too. `tests/test_net_sim.gd` runs its mesh
 sections under the old set (`MESH_KNOBS`) and a `_cotton` section under
 the new.
+
+## 29. The chain net (2026-10-14)
+
+Ross's **Chain Net Model** (27a) follows the cotton net the same night:
+the city hoop's chain is now twelve continuous chains on the knotted-net
+rig, four rows deep (`NetSim.CHAIN_ROWS 4`, as `build_chain_hoop.py`'s
+`NET_RINGS`): chain `i` climbs a left diagonal, up through its top junction
+ring `Knot_0_i`, a short drop to `Hook_i`, and back down the right
+diagonal. 60 junction rings (free) + 12 S-hooks (pinned) = 73 bones; 108
+springs (96 diagonal runs + 12 hook drops). `NetSim.chain_layout()` /
+`setup_chain(space)`; the body is `game/view/chain_net.gd` (`ChainNet
+extends NetRig`).
+
+**The links** are ONE oval wire link (stadium 34 × 17 mm, wire 2.8 mm, 80
+tris, the mesh that used to live in `NetSim._link_mesh`) in a MultiMesh,
+`n = max(1, round(len / 0.0228))` per run — 22.8 mm is the link's inner
+length, so each link's end passes through the next and the chain reads
+as interlocking (the old mesh chain used a 28 mm pitch and showed gaps).
+444 links, ~42K tris, one draw. `ChainNet.sync()` moves the bones and
+re-places every link whenever the net is awake or its rest pose changed
+(a knob change re-settles it): straight when a run is taut, a shallow
+catenary when it goes slack (`sag = ½·√(len² − dist²)`, the design's
+placement), every other link turned 90° the way a real chain hangs.
+
+**The rings and the S-hooks** are skinned, rigid on their bones: a torus
+(r 8.5 mm, wire 3.2 mm) standing in the net's surface at every junction,
+and twelve S-hooks whose top curl wraps the rim's own `NetHook` loop
+(`add_gym_rim.py`: r 11 mm under the ring, bottom wire ≈ −0.036) and
+whose lower curl carries the chain's top link. The design hung the hooks
+above the rim line; here the hook bone sits at radius `rim_r`, height
+`−(tube_r + CHAIN_HOOK_DROP 0.030)` = −0.046 — nothing above the rim, the
+same rule as the cotton loops. Ring 0 hangs `CHAIN_HOOK_HH 0.025` (one
+link) under the hooks, ring 4 at −0.42. Galvanised steel pixel textures
+(`NetRig.steel_texture`: a light band and a dark band every 8 rows,
+fourteen seeded speckles, a third rust), roughness 0.5, metallic 0.35 —
+the city's blue dusk sky shows in the metal; the lab had no sky.
+
+**The feel** (`assets/hoops/chain/hoop_set.tres`, Ross's 2026-10-14 lab
+set; the 2026-10-14 phone bake beside it): stiffness 0.22 [0.95], damping
+0.9601 [0.98], rest_spring 25 [25], rest_pull 0.007 [0.05], tail_mass 0.5
+[1.0], kick 0.6 [0.6], grab_band 0.02 [0.02], grab_pull 0.22 [1.0], friction
+0.23 [0.35]. The NET page's damping rail widened to 0.95 to reach it.
+
+**A solver fix the soft chain exposed:** `_settle_rest()` used to re-bake
+the rest pose three times with the shape spring pulling toward the
+previous bake. For a net whose cords cannot carry it alone (stiffness
+0.22), the spring carries part of the weight, so every re-bake let it sink
+a few millimetres more and the idle net hung 7 mm below "rest" for ever —
+never asleep. The shape memory now pulls toward a fixed ANCHOR (the
+authored layout, `_anchor`), the net settles once against it (1440
+substeps) and that equilibrium is `_rest` (sleep, ease-home, displacement).
+A stiff net behaves exactly as before; the cotton net (no spring) is
+unchanged. `NetSim` draws nothing itself any more: `set_chain` and the
+link multimesh are gone, the primitive-fallback cylinder is the only
+mesh it still updates.
+
+Check it with `--qa-chain` (the city, a synthetic swish, `chain_00…13`,
+`chain_hooks`, `chain_close`); `tests/test_chain_net.gd` pins the rig,
+the interlock pitch, the links on the net, the sag on a slack run, the
+hooks under the rim, the steel.
 

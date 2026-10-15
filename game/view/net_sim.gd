@@ -17,11 +17,12 @@ extends Node
 ## kicks the cords (kick()), the net eases to sleep rather than jumping, and
 ## the normals follow the cords so the light does too.
 ##
-## Two structure sources feed the one solver. setup(mi) takes a mesh (the
-## chain hoop, the primitive fallback, the tests' cylinder). setup_cotton()
-## takes no mesh: the particles are the 84 knots and 12 pinned hooks of a net
-## tied the way a real one is (cotton_layout(), docs/BLENDER_101.md §28) and
-## a CottonNet skins its cords to them, so nothing is rebuilt per frame.
+## Structure sources feed the one solver. setup(mi) takes a mesh (the
+## primitive fallback, the tests' cylinder). setup_cotton() / setup_chain()
+## take no mesh: the particles are the knots and pinned hooks of a net tied
+## the way a real one is (knotted_layout(), docs/BLENDER_101.md §28–29) and a
+## NetRig body (CottonNet, ChainNet) rides its bones, so nothing is rebuilt
+## per frame. NetSim itself draws nothing but the mesh it was handed.
 
 ## Fixed internal step (s). Position-based springs settle differently per step
 ## size, so the net always integrates at exactly this rate (frame-rate
@@ -62,14 +63,15 @@ const SLEEP_EASE_S := 0.3      # near rest this long, eased home, then asleep
 const SLEEP_EASE := 0.1        # per-frame lerp toward rest while easing
 const KICK_REACH := 0.08       # m beyond the ball's radius that the kick reaches
 
-## "mesh" (setup) or "cotton" (setup_cotton).
+## "mesh" (setup), "cotton" (setup_cotton) or "chain" (setup_chain).
 var structure := "mesh"
 var _mi: MeshInstance3D
 var _space: Node3D               # the node whose local space the particles live in
 var _mesh: ArrayMesh
 var _arrays: Array = []
 var _material: Material
-var _rest := PackedVector3Array()
+var _anchor := PackedVector3Array()   # the authored layout: the shape memory's target
+var _rest := PackedVector3Array()     # the settled idle pose: sleep, ease-home, displacement
 var _pos := PackedVector3Array()
 var _prev := PackedVector3Array()
 var _pinned := PackedByteArray()
@@ -84,16 +86,6 @@ var _g_scale := PackedFloat32Array()
 var _last_balls: Array = []        # last frame's local balls, for sub-sampling
 var _ease_t := 0.0
 var _index: PackedInt32Array = PackedInt32Array()
-## Chain rendering (the city hoop): the driven surface is hidden and every
-## spring between rings is drawn as a run of steel links in a multimesh.
-const LINK_PITCH := 0.028
-const LINK_LEN := 0.034
-const LINK_W := 0.017
-const LINK_WIRE := 0.0028
-var _chain: MultiMeshInstance3D
-var _chain_edges: PackedInt32Array = PackedInt32Array()   # spring index per rendered edge
-var _chain_n: PackedInt32Array = PackedInt32Array()       # links per rendered edge
-var _chain_xf: Array[Transform3D] = []                     # the placed links (a CPU copy: tests, headless)
 
 
 ## Ball description for step(): world position/velocity (m, m/s), scalar spin
@@ -152,12 +144,17 @@ func set_knob(name_: String, value: float) -> void:
 func _weigh_tail() -> void:
 	if _rest.is_empty():
 		return
-	var y_min := INF
-	for p in _rest:
-		y_min = minf(y_min, p.y)
 	_g_scale.resize(_rest.size())
-	for i in _rest.size():
-		_g_scale[i] = tail_mass if _rest[i].y <= y_min + 1e-4 else 1.0
+	if not _bottom.is_empty():
+		_g_scale.fill(1.0)
+		for i in _bottom:
+			_g_scale[i] = tail_mass
+		return
+	var y_min := INF
+	for p in _anchor:
+		y_min = minf(y_min, p.y)
+	for i in _anchor.size():
+		_g_scale[i] = tail_mass if _anchor[i].y <= y_min + 1e-4 else 1.0
 
 
 ## On-device overrides over the hoop set's values ({knob: value}).
@@ -187,6 +184,8 @@ func setup(mi: MeshInstance3D) -> bool:
 	_mi = mi
 	_space = mi
 	structure = "mesh"
+	_bottom = PackedInt32Array()
+	_layout = {}
 	var src: Mesh = mi.mesh
 	_arrays = src.surface_get_arrays(0)
 	var verts: PackedVector3Array = _arrays[Mesh.ARRAY_VERTEX]
@@ -211,6 +210,7 @@ func setup(mi: MeshInstance3D) -> bool:
 			lookup[key] = _rest.size()
 			_rest.push_back(v)
 		_vert_to_particle[i] = lookup[key]
+	_anchor = _rest.duplicate()
 	_pos = _rest.duplicate()
 	_prev = _rest.duplicate()
 
@@ -258,53 +258,58 @@ func setup(mi: MeshInstance3D) -> bool:
 
 
 
-## ---- The cotton net (2026-10-14): twelve continuous knotted cords ----
+## ---- Knotted nets (2026-10-14): twelve continuous cords or chains ----
 ## No ring cords. Cord i climbs a left diagonal from the bottom
-## (Knot_k_((i−k) mod 12), k = 6…1), rises through its top knot Knot_0_i,
+## (Knot_k_((i−k) mod 12), k = ROWS…1), rises through its top knot Knot_0_i,
 ## turns over Hook_i and comes back down the right diagonal (Knot_k_i,
-## k = 1…6); neighbouring cords are knotted where they cross, which makes
-## the diamonds. Ross's design model (26a, Cotton Net Model.html) with one
-## change: the hooks sit UNDER the rim tube (radius rim_r + HOOK_OUT, height
-## −tube_r × HOOK_DROP) so no loop shows above the rim line.
-const COTTON_COLS := 12
+## k = 1…ROWS); neighbouring cords are knotted where they cross, which makes
+## the diamonds. Ross's design models (26a cotton, 27a chain) with one change:
+## the hooks sit UNDER the rim tube so nothing shows above the rim line.
+const COLS := 12
+const COTTON_COLS := COLS
 const COTTON_ROWS := 6                # 7 rings of knots, the top one included
-const COTTON_LEN := 0.42              # rim centre line → bottom ring (m)
-const COTTON_BOTTOM_R := 0.10
-const COTTON_TOP_GAP := 0.028         # ring 0 hangs this far below the tube's underside
-const HOOK_DROP := 0.9                # hook height = −tube_r × this (inside the tube)
-const HOOK_OUT := 0.002               # hook radius = rim_r + this
+const CHAIN_ROWS := 4                 # 5 rings (build_chain_hoop.py NET_RINGS)
+const NET_LEN := 0.42                 # rim centre line → bottom ring (m)
+const COTTON_LEN := NET_LEN
+const NET_BOTTOM_R := 0.10
+const COTTON_BOTTOM_R := NET_BOTTOM_R
+const COTTON_TOP_GAP := 0.028         # cotton: ring 0 hangs this far below the tube's underside
+const HOOK_DROP := 0.9                # cotton: hook height = −tube_r × this (inside the tube)
+const HOOK_OUT := 0.002               # cotton: hook radius = rim_r + this
+const CHAIN_HOOK_DROP := 0.030        # chain: S-hook bone = −(tube_r + this), its top curl on the rim's NetHook loop
+const CHAIN_HOOK_HH := 0.025          # chain: ring 0 hangs this far under the S-hooks (one link)
 var _bottom := PackedInt32Array()     # particle indices of the bottom ring
+var _layout: Dictionary = {}          # the knotted layout this sim was built from
 
 
 ## Ring k's radius at t = k / ROWS: tapers fast near the rim, gently below.
 static func cotton_ring_radius(t: float, rim_r := SimConstants.R_RIM) -> float:
-	return rim_r + (COTTON_BOTTOM_R - rim_r) * (1.0 - pow(1.0 - t, 1.7))
+	return rim_r + (NET_BOTTOM_R - rim_r) * (1.0 - pow(1.0 - t, 1.7))
 
 
-## The rest layout, in rim space (origin = rim centre, y up, metres):
-## {knots: PackedVector3Array (84, ring-major: ring k, knot i at k×12+i),
-##  hooks: PackedVector3Array (12), springs: [[a, b, rest_len]] (156, particle
+## A knotted layout, in rim space (origin = rim centre, y up, metres):
+## {knots: PackedVector3Array (ring-major: ring k, knot i at k×12+i),
+##  hooks: PackedVector3Array (12), springs: [[a, b, rest_len]] (particle
 ##  indices with the hooks FIRST: hook i = i, knot (k, i) = 12 + k×12 + i),
-##  cords: [{left: [7 idx, ring 0…6], right: [7 idx], hook, k0}],
-##  bottom: [12 particle indices], ring_y: [7 heights]}.
-static func cotton_layout(rim_r := SimConstants.R_RIM, tube_r := SimConstants.R_TUBE) -> Dictionary:
+##  cords: [{left: [idx per ring], right: [idx per ring], hook, k0}],
+##  bottom: [12 particle indices], ring_y: [heights], rows}.
+static func knotted_layout(rows: int, ring0_y: float, hook_r: float, hook_y: float, rim_r := SimConstants.R_RIM) -> Dictionary:
 	var knots := PackedVector3Array()
 	var hooks := PackedVector3Array()
 	var ring_y := PackedFloat32Array()
-	var y0 := -(tube_r + COTTON_TOP_GAP)
-	for k in COTTON_ROWS + 1:
-		var t := float(k) / float(COTTON_ROWS)
+	for k in rows + 1:
+		var t := float(k) / float(rows)
 		var r := cotton_ring_radius(t, rim_r)
-		var y := y0 + (-COTTON_LEN - y0) * t
+		var y := ring0_y + (-NET_LEN - ring0_y) * t
 		ring_y.push_back(y)
-		for i in COTTON_COLS:
-			var a := (float(i) + float(k) * 0.5) / float(COTTON_COLS) * TAU
+		for i in COLS:
+			var a := (float(i) + float(k) * 0.5) / float(COLS) * TAU
 			knots.push_back(Vector3(r * cos(a), y, r * sin(a)))
-	for i in COTTON_COLS:
-		var a := float(i) / float(COTTON_COLS) * TAU
-		hooks.push_back(Vector3((rim_r + HOOK_OUT) * cos(a), -tube_r * HOOK_DROP, (rim_r + HOOK_OUT) * sin(a)))
+	for i in COLS:
+		var a := float(i) / float(COLS) * TAU
+		hooks.push_back(Vector3(hook_r * cos(a), hook_y, hook_r * sin(a)))
 	var knot_idx := func(k: int, i: int) -> int:
-		return COTTON_COLS + k * COTTON_COLS + posmod(i, COTTON_COLS)
+		return COLS + k * COLS + posmod(i, COLS)
 	var springs: Array = []
 	var cords: Array = []
 	var seen := {}
@@ -313,37 +318,58 @@ static func cotton_layout(rim_r := SimConstants.R_RIM, tube_r := SimConstants.R_
 		if seen.has(key):
 			return
 		seen[key] = true
-		var pa: Vector3 = hooks[a] if a < COTTON_COLS else knots[a - COTTON_COLS]
-		var pb: Vector3 = hooks[b] if b < COTTON_COLS else knots[b - COTTON_COLS]
+		var pa: Vector3 = hooks[a] if a < COLS else knots[a - COLS]
+		var pb: Vector3 = hooks[b] if b < COLS else knots[b - COLS]
 		springs.push_back([a, b, pa.distance_to(pb)])
-	for i in COTTON_COLS:
+	for i in COLS:
 		var left: Array = []
 		var right: Array = []
-		for k in COTTON_ROWS + 1:
+		for k in rows + 1:
 			left.push_back(knot_idx.call(k, i - k))
 			right.push_back(knot_idx.call(k, i))
-		for k in COTTON_ROWS:
+		for k in rows:
 			add_spring.call(left[k], left[k + 1])
 			add_spring.call(right[k], right[k + 1])
 		add_spring.call(knot_idx.call(0, i), i)
 		cords.push_back({"left": left, "right": right, "hook": i, "k0": knot_idx.call(0, i)})
 	var bottom: Array = []
-	for i in COTTON_COLS:
-		bottom.push_back(knot_idx.call(COTTON_ROWS, i))
-	return {"knots": knots, "hooks": hooks, "springs": springs, "cords": cords, "bottom": bottom, "ring_y": ring_y}
+	for i in COLS:
+		bottom.push_back(knot_idx.call(rows, i))
+	return {"knots": knots, "hooks": hooks, "springs": springs, "cords": cords, "bottom": bottom, "ring_y": ring_y, "rows": rows}
 
 
-## Build the particles from cotton_layout(): hooks first (pinned), then the
-## 84 knots; springs = the cord pieces; the bottom ring weighs tail_mass.
-## `space` is the node whose local space the layout lives in (the CottonNet
-## at the rim centre). No mesh: a CottonNet reads the particles each frame.
+## The cotton net (docs/BLENDER_101.md §28): 7 rings, hooks tucked inside the
+## rim tube just outside its centre line, the top knots under its underside.
+static func cotton_layout(rim_r := SimConstants.R_RIM, tube_r := SimConstants.R_TUBE) -> Dictionary:
+	return knotted_layout(COTTON_ROWS, -(tube_r + COTTON_TOP_GAP), rim_r + HOOK_OUT, -tube_r * HOOK_DROP, rim_r)
+
+
+## The chain net (§29): 5 rings, the S-hook bones on the rim's radius under
+## its NetHook loops, the top junction rings one link below them.
+static func chain_layout(rim_r := SimConstants.R_RIM, tube_r := SimConstants.R_TUBE) -> Dictionary:
+	var hook_y := -(tube_r + CHAIN_HOOK_DROP)
+	return knotted_layout(CHAIN_ROWS, hook_y - CHAIN_HOOK_HH, rim_r, hook_y, rim_r)
+
+
+## Build the particles from a knotted layout: hooks first (pinned), then the
+## knots; springs = the cord pieces; the bottom ring weighs tail_mass.
+## `space` is the node whose local space the layout lives in (the NetRig at
+## the rim centre). No mesh: the rig reads the particles each frame.
 func setup_cotton(space: Node3D, rim_r := SimConstants.R_RIM, tube_r := SimConstants.R_TUBE) -> bool:
+	return _setup_layout(space, cotton_layout(rim_r, tube_r), "cotton")
+
+
+func setup_chain(space: Node3D, rim_r := SimConstants.R_RIM, tube_r := SimConstants.R_TUBE) -> bool:
+	return _setup_layout(space, chain_layout(rim_r, tube_r), "chain")
+
+
+func _setup_layout(space: Node3D, layout: Dictionary, tag: String) -> bool:
 	if space == null:
 		return false
-	var layout := cotton_layout(rim_r, tube_r)
 	_space = space
 	_mi = null
-	structure = "cotton"
+	structure = tag
+	_layout = layout
 	var hooks: PackedVector3Array = layout["hooks"]
 	var knots: PackedVector3Array = layout["knots"]
 	_rest = PackedVector3Array()
@@ -354,6 +380,7 @@ func setup_cotton(space: Node3D, rim_r := SimConstants.R_RIM, tube_r := SimConst
 	for k in knots:
 		_rest.push_back(k)
 		_pinned.push_back(0)
+	_anchor = _rest.duplicate()
 	_pos = _rest.duplicate()
 	_prev = _rest.duplicate()
 	_bottom = PackedInt32Array(layout["bottom"])
@@ -374,164 +401,45 @@ func setup_cotton(space: Node3D, rim_r := SimConstants.R_RIM, tube_r := SimConst
 	return true
 
 
-## The cotton net's cords ({left, right, hook, k0} per cord; empty for a mesh).
+## The knotted layout this sim was built from (empty for a mesh).
+func layout() -> Dictionary:
+	return _layout
+
+
+## The net's cords ({left, right, hook, k0} per cord; empty for a mesh).
+func cords() -> Array:
+	return _layout.get("cords", [])
+
+
 func cotton_cords() -> Array:
-	return cotton_layout()["cords"] if structure == "cotton" else []
+	return cords()
 
 
 func is_pinned(i: int) -> bool:
 	return _pinned[i] == 1
 
 
+## The springs as [a, b, rest_len] (particle indices).
+func spring_count() -> int:
+	return _spring_a.size()
+
+
+func spring(i: int) -> Array:
+	return [_spring_a[i], _spring_b[i], _spring_len[i]]
+
+
 ## Let the cords sag under gravity and adopt that as the rest pose, so the
 ## idle net hangs naturally and "at rest" really is at rest (sleep works).
+## The shape memory pulls toward the ANCHOR (the authored layout), never
+## toward the settled pose: re-baking the spring's target each round would
+## let a soft net (the chain's 0.22 stiffness) sink a few millimetres every
+## round and hang below rest for ever, never asleep (2026-10-14). Settled
+## against the fixed anchor, the equilibrium is stationary, and that is rest.
 func _settle_rest() -> void:
-	for _round in 3:
-		for _i in 480:
-			_substep(STEP, [])
-		_rest = _pos.duplicate()
-		_prev = _pos.duplicate()
-
-
-## Draw the net as CHAIN: hide the cord surface and place a link mesh along
-## every spring that runs between rings (the chains), re-placed whenever the
-## particles move. Off: the surface shows again.
-func set_chain(on: bool) -> void:
-	if not _ready_ok or structure != "mesh":
-		return
-	if _chain != null:
-		_chain.queue_free()
-		_chain = null
-	_chain_edges = PackedInt32Array()
-	_chain_n = PackedInt32Array()
-	_chain_xf = []
-	_mi.visible = not on
-	if not on:
-		return
-	for s in _spring_a.size():
-		var a := _rest[_spring_a[s]]
-		var b := _rest[_spring_b[s]]
-		if absf(a.y - b.y) < 1e-4:
-			continue   # a ring's horizontal: a stiffener, not a chain
-		_chain_edges.push_back(s)
-		_chain_n.push_back(maxi(1, roundi(a.distance_to(b) / LINK_PITCH)))
-	var total := 0
-	for n in _chain_n:
-		total += n
-	var mm := MultiMesh.new()
-	mm.transform_format = MultiMesh.TRANSFORM_3D
-	mm.mesh = _link_mesh()
-	mm.instance_count = total
-	_chain = MultiMeshInstance3D.new()
-	_chain.name = "Chain"
-	_chain.multimesh = mm
-	_chain.transform = _mi.transform
-	var parent := _mi.get_parent()
-	if parent != null:
-		parent.add_child(_chain)
-	_upload_chain()
-
-
-func chain_link_count() -> int:
-	return _chain_xf.size()
-
-
-func chain_instance_transform(i: int) -> Transform3D:
-	return _chain_xf[i] if i < _chain_xf.size() else Transform3D()
-
-
-## One link: an oval ring of wire (LINK_LEN x LINK_W, wire LINK_WIRE), its
-## long axis along +y, its flat plane x-y. ~80 tris; galvanised grey.
-static func _link_mesh() -> ArrayMesh:
-	var st := SurfaceTool.new()
-	st.begin(Mesh.PRIMITIVE_TRIANGLES)
-	var around := 10
-	var tube := 4
-	var half_l := LINK_LEN * 0.5 - LINK_W * 0.5
-	var ring_r := LINK_W * 0.5 - LINK_WIRE
-	# Centre-line of the oval: two straight runs joined by semicircles (a stadium).
-	var path: Array[Vector3] = []
-	var tangents: Array[Vector3] = []
-	for i in around:
-		var t := float(i) / around
-		var p: Vector3
-		var tg: Vector3
-		if t < 0.5:
-			var ang := PI * (t / 0.5) - PI * 0.5      # right semicircle, from bottom to top
-			p = Vector3(ring_r * cos(ang), half_l + ring_r * sin(ang), 0.0)
-			tg = Vector3(-sin(ang), cos(ang), 0.0)
-			if i == 0:
-				p = Vector3(ring_r, -half_l, 0.0)
-				tg = Vector3(0, 1, 0)
-		else:
-			var ang := PI * ((t - 0.5) / 0.5) + PI * 0.5   # left semicircle, top to bottom
-			p = Vector3(ring_r * cos(ang), -half_l + ring_r * sin(ang), 0.0)
-			tg = Vector3(-sin(ang), cos(ang), 0.0)
-			if i == around / 2:
-				p = Vector3(-ring_r, half_l, 0.0)
-				tg = Vector3(0, -1, 0)
-		path.push_back(p)
-		tangents.push_back(tg.normalized())
-	var rings: Array = []
-	for i in around:
-		var tg := tangents[i]
-		var side := Vector3(0, 0, 1)
-		var out := tg.cross(side).normalized()
-		var ring := []
-		for k in tube:
-			var a := TAU * k / tube
-			var nrm := (out * cos(a) + side * sin(a)).normalized()
-			ring.push_back([path[i] + nrm * LINK_WIRE, nrm])
-		rings.push_back(ring)
-	for i in around:
-		var r0: Array = rings[i]
-		var r1: Array = rings[(i + 1) % around]
-		for k in tube:
-			var k1 := (k + 1) % tube
-			for tri in [[r0[k], r1[k], r1[k1]], [r0[k], r1[k1], r0[k1]]]:
-				for v in tri:
-					st.set_normal(v[1])
-					st.add_vertex(v[0])
-	var mesh := st.commit()
-	var mat := StandardMaterial3D.new()
-	mat.albedo_color = Color(0.72, 0.74, 0.78)
-	mat.metallic = 0.6
-	mat.roughness = 0.45
-	mesh.surface_set_material(0, mat)
-	return mesh
-
-
-## Place every link along its spring: y along the edge, the flat plane
-## turned 90 degrees on every other link, as a real chain hangs.
-func _upload_chain() -> void:
-	if _chain == null:
-		return
-	var mm := _chain.multimesh
-	if _chain_xf.size() != mm.instance_count:
-		_chain_xf.resize(mm.instance_count)
-	var idx := 0
-	for e in _chain_edges.size():
-		var s := _chain_edges[e]
-		var a := _pos[_spring_a[s]]
-		var b := _pos[_spring_b[s]]
-		var dir := (b - a)
-		var n := _chain_n[e]
-		if dir.length() < 1e-6:
-			for k in n:
-				_chain_xf[idx] = Transform3D(Basis(), a)
-				mm.set_instance_transform(idx, _chain_xf[idx])
-				idx += 1
-			continue
-		var y := dir.normalized()
-		var ref := Vector3(0, 0, 1) if absf(y.z) < 0.9 else Vector3(1, 0, 0)
-		var x := y.cross(ref).normalized()
-		var z := x.cross(y).normalized()
-		for k in n:
-			var p := a + dir * ((k + 0.5) / n)
-			var basis := Basis(x, y, z) if k % 2 == 0 else Basis(z, y, -x)
-			_chain_xf[idx] = Transform3D(basis, p)
-			mm.set_instance_transform(idx, _chain_xf[idx])
-			idx += 1
+	for _i in 1440:
+		_substep(STEP, [])
+	_rest = _pos.duplicate()
+	_prev = _pos.duplicate()
 
 
 func particle_count() -> int:
@@ -638,9 +546,9 @@ func _substep(h: float, balls: Array) -> void:
 		var p := _pos[i]
 		var v := (p - _prev[i]) * damping
 		_prev[i] = p
-		var to_rest := _rest[i] - p
-		p += v + g * (_g_scale[i] if i < _g_scale.size() else 1.0) + to_rest * k_spring
-		p += (_rest[i] - p) * rest_pull
+		var to_anchor := _anchor[i] - p
+		p += v + g * (_g_scale[i] if i < _g_scale.size() else 1.0) + to_anchor * k_spring
+		p += (_anchor[i] - p) * rest_pull
 		_pos[i] = p
 	# Ball contact: push cords to the ball's surface, hand them surface velocity.
 	for b in balls:
@@ -754,4 +662,3 @@ func _upload() -> void:
 	_mesh.add_surface_from_arrays(Mesh.PRIMITIVE_TRIANGLES, _arrays)
 	if _material != null:
 		_mesh.surface_set_material(0, _material)
-	_upload_chain()

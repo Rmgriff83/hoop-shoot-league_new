@@ -14,7 +14,7 @@ var _outcomes: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-ranks") or args.has("--qa-multi")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-ranks") or args.has("--qa-multi")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# The splash is the main scene now: every other pass starts from the title.
@@ -52,6 +52,8 @@ func _ready() -> void:
 		_run_archive.call_deferred()
 	elif args.has("--qa-net"):
 		_run_net.call_deferred()
+	elif args.has("--qa-chain"):
+		_run_chain.call_deferred()
 	elif args.has("--qa-ranks"):
 		_run_ranks.call_deferred()
 	elif args.has("--qa-multi"):
@@ -217,23 +219,37 @@ func _click_named(node_name: String) -> void:
 ## a burst of frames from the moment the net wakes — the wrap, the snap
 ## down, the whip back, the ring-down.
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-net
+## The chain net in the city (§29), the same burst: --qa-chain → chain_*.
 func _run_net() -> void:
+	await _run_net_in("net", false)
+
+
+func _run_chain() -> void:
+	await _run_net_in("chain", true)
+
+
+func _run_net_in(prefix: String, city: bool) -> void:
 	await _sleep(1.2)
-	await _close_archive()
 	var was_tuning: bool = App.tuning_mode
-	App.set_tuning_mode(true)   # the strip, with its NET page
-	await _click_button_named("PRACTICE")
-	await _sleep(1.5)
-	await _snap("net_strip_flick")
-	await _click_button_named("NET")
-	await _sleep(0.3)
-	await _snap("net_strip_net")
-	await _click_button_named("+")
-	await _sleep(0.2)
-	await _snap("net_strip_plus")
-	await _click_button_named("RESET")
-	await _sleep(0.2)
-	App.set_tuning_mode(was_tuning)
+	if city:
+		await _pick_area("city")
+		App.start_mode("trial_city")
+		await _sleep(3.0)
+	else:
+		await _close_archive()
+		App.set_tuning_mode(true)   # the strip, with its NET page
+		await _click_button_named("PRACTICE")
+		await _sleep(1.5)
+		await _snap("net_strip_flick")
+		await _click_button_named("NET")
+		await _sleep(0.3)
+		await _snap("net_strip_net")
+		await _click_button_named("+")
+		await _sleep(0.2)
+		await _snap("net_strip_plus")
+		await _click_button_named("RESET")
+		await _sleep(0.2)
+		App.set_tuning_mode(was_tuning)
 	# A synthetic swish: a ball dropped straight through the hoop's axis,
 	# driven into the net sim beside the court's own stepping (no view ball;
 	# this is about the cords), the kick at the rim plane, then a burst.
@@ -263,7 +279,7 @@ func _run_net() -> void:
 		y += vy * dt
 		t += dt
 		if t >= next_snap and snapped < 14:
-			await _snap("net_%02d" % snapped)
+			await _snap("%s_%02d" % [prefix, snapped])
 			snapped += 1
 			next_snap = t + 0.08
 		await get_tree().process_frame
@@ -278,15 +294,16 @@ func _run_net() -> void:
 		ccam.global_position = hoop + Vector3(-0.62, 0.16, 0.30)
 		ccam.look_at(hoop + Vector3(0.0, -0.03, 0.0))
 		await _sleep(0.3)
-		await _snap("net_hooks")
+		await _snap(prefix + "_hooks")
 		ccam.global_position = hoop + Vector3(-0.75, -0.08, 0.45)
 		ccam.look_at(hoop + Vector3(0.0, -0.2, 0.0))
 		await _sleep(0.3)
-		await _snap("net_close")
-	var cotton: Node = get_tree().root.find_child("CottonNet", true, false)
-	if cotton != null:
-		print("QA net: cotton %d bones, %d surfaces, %d tris" % [cotton.bone_count(), cotton.surface_count(), cotton.tri_count()])
-	print("QA net: done")
+		await _snap(prefix + "_close")
+	var body: Node = get_tree().root.find_child("ChainNet" if city else "CottonNet", true, false)
+	if body != null:
+		var extra := " %d links" % body.link_count() if body is ChainNet else ""
+		print("QA %s: %s %d bones, %d surfaces, %d tris%s" % [prefix, body.name, body.bone_count(), body.surface_count(), body.tri_count(), extra])
+	print("QA %s: done" % prefix)
 	get_tree().quit(0)
 
 

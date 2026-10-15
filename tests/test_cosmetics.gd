@@ -63,6 +63,18 @@ func run(t) -> void:
 	t.close(hs.net_kick, ns.kick_speed, 0.0, "set default kick = NetSim default")
 	t.close(hs.net_grab_band, ns.grab_band, 0.0, "set default grab band = NetSim default")
 	t.close(hs.net_grab_pull, ns.grab_pull, 0.0, "set default grab pull = NetSim default")
+	# The chain hoop's own feel (Ross's 2026-10-14 lab set, docs/BLENDER_101.md §29).
+	var chain: HoopSet = load("res://assets/hoops/chain/hoop_set.tres")
+	t.eq(chain.net_kind, "chain", "chain set hangs a chain")
+	t.close(chain.net_stiffness, 0.22, 0.0, "chain: stiffness 0.22")
+	t.close(chain.net_damping, 0.9601, 0.0, "chain: damping 0.9601")
+	t.close(chain.net_rest_spring, 25.0, 0.0, "chain: rest spring 25")
+	t.close(chain.net_rest_pull, 0.007, 0.0, "chain: rest pull 0.007")
+	t.close(chain.net_tail_mass, 0.5, 0.0, "chain: tail 0.5")
+	t.close(chain.net_kick, 0.6, 0.0, "chain: kick 0.6")
+	t.close(chain.net_grab_band, 0.02, 0.0, "chain: grab band 0.02")
+	t.close(chain.net_grab_pull, 0.22, 0.0, "chain: grab pull 0.22")
+	t.close(chain.net_friction, 0.23, 0.0, "chain: friction 0.23")
 	# Ross's 2026-10-14 cotton set (docs/BLENDER_101.md §28).
 	t.close(hs.net_rest_spring, 0.0, 0.0, "cotton: no rest spring")
 	t.close(hs.net_tail_mass, 0.5, 0.0, "cotton: light tail")
@@ -173,7 +185,7 @@ func _street_and_arenas(t) -> void:
 	if chain != null:
 		t.eq(chain.validate(), PackedStringArray(), "chain set references only files that exist")
 		t.eq(chain.net_kind, "chain", "it hangs a chain")
-		t.ok(chain.net_stiffness > 0.9 and chain.net_friction < 0.5, "links: near-inextensible, little grip")
+		t.ok(chain.net_stiffness < 0.5 and chain.net_friction < 0.5, "links: Ross's 2026-10-14 chain set, little grip")
 		t.close(chain.model_board_h, 1.05, 1e-12, "regulation board")
 		# Four recorded chain swishes (Ross's 2026-10-03 cuts joined the first);
 		# Sfx.make() picks one at random, never the same twice running.

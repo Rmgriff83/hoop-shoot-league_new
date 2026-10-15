@@ -1,9 +1,9 @@
 extends RefCounted
 ## NetSim: a Verlet cord lattice built from a tapered open cylinder (the hoop
 ## net), pinned at the top ring, pushed and dragged by a ball. Deterministic.
-## Two structures: the mesh-fed lattice (the chain hoop, the primitive
-## fallback) under the 2026-10-03 snap-model knobs, and the cotton net (the
-## nylon hoops) under the 2026-10-14 defaults.
+## Three structures: the mesh-fed lattice (the primitive fallback) under the
+## 2026-10-03 snap-model knobs, the cotton net (the nylon hoops) under the
+## 2026-10-14 defaults, and the chain net (the city) under its hoop set.
 
 ## The mesh net's knobs (the snap model the mesh sections were written for;
 ## the class defaults are the cotton net's now).
@@ -54,6 +54,7 @@ func _run_drop(net: NetSim, spin: float, seconds := 1.2) -> void:
 
 func run(t) -> void:
 	_cotton(t)
+	_chain(t)
 	var root := Node3D.new()
 	var mi := _make_net()
 	root.add_child(mi)
@@ -166,34 +167,6 @@ func run(t) -> void:
 	for i in c.particle_count():
 		diff = maxf(diff, c.particle_position(i).distance_to(d.particle_position(i)))
 	t.ok(diff > 0.005, "spin changes how the cords are dragged (%.4f m)" % diff)
-
-	# 5. Chain rendering (the city hoop): the surface hides, links line every
-	#    spring between rings, they sit inside the net and follow a pass.
-	var e := _mesh_sim()
-	var me := _make_net()
-	root.add_child(me)
-	root.add_child(e)
-	e.setup(me)
-	e.set_chain(true)
-	var chain: Node = root.find_child("Chain", true, false)
-	t.ok(chain is MultiMeshInstance3D and not me.visible, "chain: a link multimesh replaces the cord surface")
-	t.ok(e.chain_link_count() > 100, "hundreds of links (%d)" % e.chain_link_count())
-	var inside := true
-	for i in e.chain_link_count():
-		var o := e.chain_instance_transform(i).origin
-		if absf(o.x) > 0.3 or absf(o.z) > 0.3 or o.y > 0.3 or o.y < -0.5:   # the test cylinder is centred at the origin
-			inside = false
-	t.ok(inside, "every link sits on the net")
-	var before := PackedVector3Array()
-	for i in e.chain_link_count():
-		before.push_back(e.chain_instance_transform(i).origin)
-	_run_drop(e, 0.0, 0.25)
-	var moved := 0.0
-	for i in e.chain_link_count():
-		moved = maxf(moved, e.chain_instance_transform(i).origin.distance_to(before[i]))
-	t.ok(moved > 0.005, "the links follow the ball's pass (%.4f m)" % moved)
-	e.set_chain(false)
-	t.ok(me.visible and e.chain_link_count() == 0, "chain off: the surface is back")
 
 	root.free()
 	# The tuning strip's knobs: by name, with a re-settle, and overrides on top.
@@ -326,5 +299,109 @@ func _cotton(t) -> void:
 	net.configure(soft)
 	t.ok(not net.is_awake() and net.max_displacement() < 1e-9, "cotton: configure re-settles at rest")
 	t.ok(net.rest_position(84).y < net.rest_position(12 + 60).y, "cotton: the bottom ring hangs lowest after a heavier tail")
-	t.ok(net.cotton_cords().size() == 12, "cotton: the cords read back")
+	t.ok(net.cords().size() == 12, "cotton: the cords read back")
+	root.free()
+
+
+## The chain net (docs/BLENDER_101.md §29): 5 rings, S-hooks on the rim's
+## NetHook loops, under the chain hoop set's feel.
+func _chain(t) -> void:
+	var rim_r: float = SimConstants.R_RIM
+	var tube_r: float = SimConstants.R_TUBE
+	var lay := NetSim.chain_layout(rim_r, tube_r)
+	var knots: PackedVector3Array = lay["knots"]
+	var hooks: PackedVector3Array = lay["hooks"]
+	t.eq(knots.size(), 60, "chain: 5 rings × 12 junctions")
+	t.eq(hooks.size(), 12, "chain: 12 S-hooks")
+	t.eq((lay["springs"] as Array).size(), 108, "chain: 96 diagonal runs + 12 hook drops")
+	t.eq((lay["cords"] as Array).size(), 12, "chain: twelve chains")
+	t.eq((lay["bottom"] as Array).size(), 12, "chain: a 12-ring bottom")
+	t.eq(int(lay["rows"]), 4, "chain: four rows")
+	var hook_y := -(tube_r + NetSim.CHAIN_HOOK_DROP)
+	var hooks_ok := true
+	for h in hooks:
+		if absf(h.y - hook_y) > 1e-6 or absf(Vector2(h.x, h.z).length() - rim_r) > 1e-6:
+			hooks_ok = false
+	t.ok(hooks_ok, "chain: the hook bones hang on the rim's radius %.3f under its centre line" % -hook_y)
+	t.ok(hook_y < -(tube_r + 0.011 * 2 - 0.002) and hook_y > -0.42, "chain: …below the rim's NetHook loop")
+	t.close(knots[0].y, hook_y - NetSim.CHAIN_HOOK_HH, 1e-6, "chain: ring 0 one link under the hooks")
+	t.close(Vector2(knots[0].x, knots[0].z).length(), rim_r, 1e-6, "chain: ring 0 at the rim's radius")
+	t.close(knots[48].y, -NetSim.NET_LEN, 1e-6, "chain: 0.42 m long")
+	t.close(Vector2(knots[48].x, knots[48].z).length(), NetSim.NET_BOTTOM_R, 1e-6, "chain: the bottom ring at 0.10")
+	var c3: Dictionary = lay["cords"][3]
+	t.eq(int(c3["left"][2]), 12 + 2 * 12 + 1, "chain: chain 3's left diagonal passes Knot_2_1")
+	t.eq(int(c3["hook"]), 3, "chain: …over Hook_3")
+
+	var set: HoopSet = load("res://assets/hoops/chain/hoop_set.tres")
+	var root := Node3D.new()
+	var space := Node3D.new()
+	root.add_child(space)
+	var net := NetSim.new()
+	root.add_child(net)
+	net.configure(set)
+	t.ok(net.setup_chain(space, rim_r, tube_r), "chain: setup needs no mesh")
+	t.eq(net.structure, "chain", "chain: structure tag")
+	t.eq(net.particle_count(), 72, "chain: 72 particles")
+	t.eq(net.spring_count(), 108, "chain: 108 springs")
+	var pinned := 0
+	for i in net.particle_count():
+		if net.is_pinned(i):
+			pinned += 1
+	t.eq(pinned, 12, "chain: the 12 hooks are pinned")
+	t.ok(net.rest_position(12 + 48).y < knots[48].y, "chain: the rest pose settled under gravity")
+	for i in 30:
+		net.step(1.0 / 60.0, [])
+	t.ok(not net.is_awake() and net.max_displacement() < 1e-9, "chain: asleep at rest")
+
+	var dt := 1.0 / 60.0
+	var y := 0.42
+	var vy := -4.6
+	var peak := 0.0
+	var spread := 0.0
+	for i in 50:
+		net.step(dt, [_ball(Vector3(0.0, y, 0.0), Vector3(0.0, vy, 0.0), 14.0)])
+		vy -= 9.81 * dt
+		y += vy * dt
+		peak = maxf(peak, net.max_displacement())
+		var pb := net.particle_position(60)
+		spread = maxf(spread, Vector2(pb.x, pb.z).length() - Vector2(net.rest_position(60).x, net.rest_position(60).z).length())
+	t.ok(net.is_awake(), "chain: the ball wakes the net")
+	t.ok(peak > 0.03, "chain: the ball spreads the chains (peak %.3f m)" % peak)
+	t.ok(spread > 0.01, "chain: the bottom ring flares outward (%.3f m)" % spread)
+	var hook_moved := 0.0
+	for i in 12:
+		hook_moved = maxf(hook_moved, net.particle_position(i).distance_to(net.rest_position(i)))
+	t.close(hook_moved, 0.0, 1e-9, "chain: the hooks stay on the rim")
+	for i in 240:
+		net.step(dt, [])
+	t.ok(net.max_displacement() < 0.02, "chain: the rest spring brings it back within 4 s (%.4f m)" % net.max_displacement())
+	var slept := 0
+	while net.is_awake() and slept < 900:
+		net.step(dt, [])
+		slept += 1
+	t.ok(not net.is_awake(), "chain: asleep again within %d frames" % slept)
+	net.kick(space.transform * Vector3(0.0, 0.0, 0.0), Vector3(0.0, -5.0, 0.0))
+	net.step(dt, [])
+	t.ok(net.is_awake() and net.max_displacement() > 0.002, "chain: the kick (0.6 m/s) shoves the chains (%.4f m)" % net.max_displacement())
+
+	var a := NetSim.new()
+	var b := NetSim.new()
+	var c := NetSim.new()
+	for n in [a, b, c]:
+		var sp := Node3D.new()
+		root.add_child(sp)
+		root.add_child(n)
+		n.configure(set)
+		n.setup_chain(sp, rim_r, tube_r)
+	_run_drop(a, 15.0, 0.4)
+	_run_drop(b, 15.0, 0.4)
+	_run_drop(c, 0.0, 0.4)
+	var same := true
+	var diff := 0.0
+	for i in a.particle_count():
+		if a.particle_position(i) != b.particle_position(i):
+			same = false
+		diff = maxf(diff, a.particle_position(i).distance_to(c.particle_position(i)))
+	t.ok(same, "chain: identical inputs give identical nets")
+	t.ok(diff > 1e-3, "chain: spin changes how the chains are dragged (%.4f m)" % diff)
 	root.free()

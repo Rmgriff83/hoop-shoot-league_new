@@ -64,7 +64,7 @@ var _model_board: Node3D
 var _anim: AnimationPlayer      # the glb's animations, null on fallback
 ## Runtime cord-lattice net driven by the sim's balls (null on fallback).
 var net_sim: NetSim
-var _cotton: CottonNet          # the nylon net's body (null for chain / primitives)
+var _net_body: NetRig           # the net's body (CottonNet / ChainNet; null for primitives)
 var _board: MeshInstance3D
 var _face: MeshInstance3D
 var _pole: MeshInstance3D
@@ -317,32 +317,28 @@ func _build_hoop_model() -> bool:
 		if (hoop_set.net_kind == "chain") != (geo.net_rigidity() > 1.0):
 			push_warning("CourtGeometry: hoop %s hangs a %s net on a geometry whose net rigidity is %.2f" % [hoop_set.id, hoop_set.net_kind, geo.net_rigidity()])
 		add_child(net_sim)
-		if hoop_set.net_kind == "nylon":
-			# The cotton net (docs/BLENDER_101.md §28): the glb's Net surface is
-			# hidden (kept so its animation tracks still resolve) and a knotted
-			# cord net skinned to the sim's particles hangs from the rim centre.
-			net_mi.visible = false
-			_cotton = CottonNet.new()
-			_cotton.name = "CottonNet"
-			_cotton.position = _rim_centre()
-			rim_pivot.add_child(_cotton)
-			if net_sim.setup_cotton(_cotton, SimConstants.R_RIM, SimConstants.R_TUBE):
-				_cotton.build(NetSim.cotton_layout(SimConstants.R_RIM, SimConstants.R_TUBE))
-				_cotton.sync(net_sim)
-				_strip_blend_shape_tracks()
-			else:
-				_cotton.queue_free()
-				_cotton = null
-				net_sim.queue_free()
-				net_sim = null
-				net_mi.visible = true
-		elif not net_sim.setup(net_mi):
+		# The knotted nets (docs/BLENDER_101.md §28–29): the glb's Net surface is
+		# hidden (kept so its animation tracks still resolve) and a net tied the
+		# way a real one is — cotton cords or steel chains — rides the sim's
+		# particles from the rim centre.
+		var chain := hoop_set.net_kind == "chain"
+		net_mi.visible = false
+		_net_body = ChainNet.new() if chain else CottonNet.new()
+		_net_body.name = "ChainNet" if chain else "CottonNet"
+		_net_body.position = _rim_centre()
+		rim_pivot.add_child(_net_body)
+		var ok := net_sim.setup_chain(_net_body, SimConstants.R_RIM, SimConstants.R_TUBE) if chain \
+			else net_sim.setup_cotton(_net_body, SimConstants.R_RIM, SimConstants.R_TUBE)
+		if ok:
+			_net_body.call("build", net_sim.layout())
+			_net_body.sync(net_sim)
+			_strip_blend_shape_tracks()
+		else:
+			_net_body.queue_free()
+			_net_body = null
 			net_sim.queue_free()
 			net_sim = null
-		else:
-			_strip_blend_shape_tracks()
-			# A chain hoop draws its springs as runs of steel links, not a surface.
-			net_sim.set_chain(hoop_set.net_kind == "chain")
+			net_mi.visible = true
 	# LED surfaces are optional (a street hoop has none: the HUD keeps score).
 	if face is MeshInstance3D:
 		(face as MeshInstance3D).material_override = led.material
@@ -409,8 +405,8 @@ func step_net(dt: float, balls: Array[BallState]) -> void:
 	for s in balls:
 		descs.push_back(NetSim.ball_from_state(s))
 	net_sim.step(dt, descs)
-	if _cotton != null:
-		_cotton.sync(net_sim)
+	if _net_body != null:
+		_net_body.sync(net_sim)
 
 
 ## NetSim swaps the Net for a dynamic ArrayMesh with no blend shapes, which
