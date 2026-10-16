@@ -741,8 +741,9 @@ func _run_park() -> void:
 		await _snap("park_ice")
 		pcourt.set_ice(false, "qa")
 		await _sleep(0.5)
-	for i in 10:
+	for i in 8:
 		await _snap("park_%02d" % i)
+		print("QA park: %d fps at snap %d" % [int(Engine.get_frames_per_second()), i])
 		await _sleep(4.5)
 	await _snap("park_last")
 	var fxs := get_tree().root.find_children("*", "ParkFx", true, false)

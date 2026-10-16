@@ -10,9 +10,9 @@ uniform vec3 mid_colour : source_color = vec3(0.55, 0.72, 0.90);
 uniform vec3 horizon_colour : source_color = vec3(0.80, 0.86, 0.92);
 uniform vec3 sun_dir = vec3(-0.65, 0.51, -0.56);
 uniform sampler2D clouds : hint_default_white, filter_nearest, repeat_enable;
-uniform float cloud_cover = 0.56;
-uniform float cloud_edge = 0.12;
-uniform float drift = 0.012;
+uniform float cloud_cover = 0.55;   // the mask value where cloud begins (a partly cloudy day)
+uniform float cloud_edge = 0.14;
+uniform float drift = 0.012;        // uv a second: the whole sky's worth of cloud drifts by in ~20 s
 
 varying vec3 v_dir;
 
@@ -28,8 +28,8 @@ void fragment() {
 	float sd = max(dot(d, normalize(sun_dir)), 0.0);
 	c += vec3(1.0, 0.93, 0.78) * (pow(sd, 6.0) * 0.28 + pow(sd, 400.0) * 1.2);
 	// the cloud plane: the mask projected onto a dome, pixel-stepped
-	vec2 uv = d.xz / (y + 0.12) * 0.16;
-	uv = floor(uv * 96.0) / 96.0;
+	vec2 uv = d.xz / (y + 0.12) * 1.1;   // ~1.5 mask periods across the dome (the design's fbm scale)
+	uv = floor(uv * 32.0) / 32.0;        // pixel-stepped, so the clouds march in steps
 	vec2 scroll = vec2(TIME * drift, TIME * drift * 0.33);
 	float cl = texture(clouds, uv + scroll).r;
 	float cov = smoothstep(cloud_cover, cloud_cover + cloud_edge, cl) * smoothstep(0.0, 0.08, y);

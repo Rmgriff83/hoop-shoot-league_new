@@ -154,10 +154,20 @@ do
     local b = h(ix, iy + 1) + (h(ix + 1, iy + 1) - h(ix, iy + 1)) * fx
     return a + (b - a) * fy
   end
+  -- two passes: measure the noise's range, then stretch it over 0..1 so the
+  -- shader's coverage threshold has clear sky AND solid cloud to work with
+  local vals, lo, hi = {}, 1.0, 0.0
   for y = 0, H - 1 do
     for x = 0, W - 1 do
       local v = 0.5 * vn(x, y, 61, 64) + 0.25 * vn(x, y, 62, 32) + 0.125 * vn(x, y, 63, 16) + 0.0625 * vn(x, y, 64, 8)
-      local q = math.floor(v * 8) / 8
+      vals[y * W + x] = v
+      lo = math.min(lo, v); hi = math.max(hi, v)
+    end
+  end
+  for y = 0, H - 1 do
+    for x = 0, W - 1 do
+      local v = (vals[y * W + x] - lo) / math.max(hi - lo, 1e-6)
+      local q = math.floor(v * 16) / 16
       local g = clamp(q * 255)
       img:drawPixel(x, y, rgb(g, g, g))
     end
