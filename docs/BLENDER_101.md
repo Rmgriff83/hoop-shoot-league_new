@@ -836,10 +836,12 @@ laid out from the reference photo. Three scripts and a layout file:
 - `tools/gen_park_layout.py` → `data/park_layout.json`: the design's seeded
   placement (aspens on the avenue rows, pines in the gaps, the big trees
   right, the group past the path, the trees behind the camera, the tall
-  aspen leaning in over the board, two stumps, the mossy rock, the fallen
+  two stumps, the mossy rock, the fallen
   log along the lot). `game/view/park_fx.gd` builds one `MultiMeshInstance3D`
   per model surface from it — split near/far at `ParkFx.SHADOW_R` (16 m
-  from the hoop): only the three trees by the court cast shadows, and the
+  from the hoop): only the two trees by the court cast shadows (the photo's
+  leaning aspen over the board went on 2026-10-16: it doubled up on the left
+  from the key), and the
   six far aspens on the avenue are `aspen_tree_02` scaled ×1.74 to the big
   aspen's height (the park running lighter, 2026-10-16: `aspen_tree_01` is
   2562 triangles, the small one 945; the big aspen that doubled up behind

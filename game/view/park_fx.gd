@@ -29,8 +29,8 @@ const SNOW_CAP := 800
 const ASPEN_TINT := Color("#9A7650")
 const CAR_SCALE := 0.8
 const RNG_SEED := 0x9A7C_5E0F
-## Trees within this of the hoop cast shadows (the leaning aspen, the big
-## aspen and the pine by the slab: three); the rest draw unshadowed, which
+## Trees within this of the hoop cast shadows (the big aspen and the pine
+## by the slab: two); the rest draw unshadowed, which
 ## halves the shadow pass (2026-10-16, the park running lighter).
 const SHADOW_R := 16.0
 const HOOP_XZ := Vector2(3.7, 0.0)

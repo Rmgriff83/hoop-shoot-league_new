@@ -22,7 +22,7 @@ func run(t) -> void:
 		if m.find("tree_0") >= 0 and m.find("stump") < 0 and m.find("fallen") < 0:
 			trees += 1
 		t.ok(FileAccess.file_exists("res://assets/arena/park/trees/%s.glb" % m), "the layout's %s ships conformed" % m)
-	t.ok(trees >= 30 and trees <= 50, "a few dozen trees (%d)" % trees)
+	t.ok(trees >= 25 and trees <= 50, "a few dozen trees (%d)" % trees)
 	# The park running lighter: the six far aspens are the small model scaled to height.
 	var big := 0
 	var far_small := 0
@@ -32,7 +32,7 @@ func run(t) -> void:
 			t.ok(float(r["x"]) < 29.0, "a big aspen stays only near the court (x %.1f)" % float(r["x"]))
 		elif str(r["model"]) == "aspen_tree_02" and float(r["x"]) >= 29.0 and float(r.get("s", 1.0)) >= 1.6:
 			far_small += 1
-	t.eq(big, 6, "six big aspens near the court")
+	t.eq(big, 5, "five big aspens near the court")
 	t.eq(far_small, 6, "six far aspens are the small model scaled up to the big one's height")
 	var behind_board := false
 	for r in rows:
@@ -43,9 +43,9 @@ func run(t) -> void:
 		"aspens, pines, a stump, the mossy rock and the fallen log")
 	var leaning := false
 	for r in rows:
-		if str(r["model"]) == "aspen_tree_01" and absf(float(r["x"]) - 4.6) < 1e-6 and float(r.get("rx", 0.0)) > 0.0:
+		if str(r["model"]) == "aspen_tree_01" and absf(float(r["x"]) - 4.6) < 1e-6:
 			leaning = true
-	t.ok(leaning, "the tall aspen leans in over the board")
+	t.ok(not leaning, "the aspen that leaned in over the board is gone (it doubled up on the left from the key)")
 	# The dressing on the park arena, off-tree (the shaders compile headless).
 	var arena := CosmeticLibrary.get_arena("park")
 	t.ok(arena != null and arena.snow and arena.parked_cars.size() == 1, "the park ArenaSet asks for snow and one parked car")
@@ -63,7 +63,7 @@ func run(t) -> void:
 	t.ok(fx.setup(inst, arena), "ParkFx dresses the park")
 	t.eq(fx.instance_count(), rows.size(), "every layout row is instanced")
 	t.ok(fx.draw_count() >= models.size() and fx.draw_count() <= models.size() * 6, "a draw per model surface and near/far split (%d draws for %d models)" % [fx.draw_count(), models.size()])
-	t.ok(fx.shadow_caster_count() >= 3 and fx.shadow_caster_count() <= 5, "only the trees by the court cast shadows (%d)" % fx.shadow_caster_count())
+	t.ok(fx.shadow_caster_count() >= 2 and fx.shadow_caster_count() <= 5, "only the trees by the court cast shadows (%d)" % fx.shadow_caster_count())
 	var split_ok := true
 	for mmi in inst.find_children("*", "MultiMeshInstance3D", true, false):
 		var n := String(mmi.name)

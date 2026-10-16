@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """The park's tree and litter placement (docs/BLENDER_101.md → The park): the
 design's seeded layout ("Park Area Concept": aspens carry the avenue rows,
-pines fill the gaps, the big trees right, the left group past the path, the
-trees behind the camera, the tall aspen leaning in over the board, two
-stumps, a mossy rock and the fallen pine along the lot) ported once into
+pines fill the gaps, the big trees right, the left group past the path, two
+stumps, a mossy rock and the fallen pine along the lot; Ross then cut the
+four never in view, the aspen behind the backboard and the photo's leaning
+aspen on 2026-10-16) ported once into
 data/park_layout.json, which game/view/park_fx.gd instances at runtime.
 
     python3 tools/gen_park_layout.py
@@ -59,8 +60,9 @@ for x, z, s, k in [(16.5, -26, 1.3, 1), (8, -27, 1.2, 0), (21, -32, 1.1, 6), (3,
 # Nothing behind the camera: the shooter never turns round, so the design's
 # three trees back there and the one far left past the path (-4, -24) were
 # never in any spot's view cone (checked 2026-10-16) and are left out.
-# the tree from the photo: a tall aspen just off-frame left, leaning in over the board
-rows.append({"model": "aspen_tree_01", "x": 4.6, "y": 0.0, "z": -5.4, "s": 1.3, "ry": 2.4, "rx": 0.12})
+# The photo's tall aspen leaning in over the board (x 4.6, z -5.4) is gone:
+# from the key it doubled up with the far aspen behind it on the left, and
+# Ross asked for the nearer one out (2026-10-16).
 rows.append({"model": "pine_tree_01_a", "x": 34.0, "y": 0.0, "z": -31.0, "s": 0.9, "ry": 0.4})
 rows.append({"model": "pine_tree_01_b", "x": 39.0, "y": 0.0, "z": -27.0, "s": 1.0, "ry": 1.2})
 # ground litter, kept minimal: two stumps, one big mossy rock, one log along the lot
