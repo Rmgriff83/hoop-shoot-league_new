@@ -60,5 +60,5 @@ league_banner_size = Vector2(1.6, 1)
 league_banner_yaw_deg = -90.0
 league_banner_lit = false
 ambient_clips = PackedStringArray("res://assets/arena/park/ambience/voices.ogg", "res://assets/arena/park/ambience/winter_wind.wav")
-ambient_gains_db = PackedFloat32Array(4, -6)
+ambient_gains_db = PackedFloat32Array(8, -6)
 ambient_fade_s = 1.2
