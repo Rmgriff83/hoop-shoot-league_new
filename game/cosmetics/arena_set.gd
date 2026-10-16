@@ -28,6 +28,15 @@ extends CosmeticSet
 @export var fill_energy := 0.0
 @export var fill_color := Color(0.5, 0.6, 0.95)
 @export var sun_shadows := false
+## How far the sun's shadows reach (m) and the directional shadow map's size
+## (the project's mobile default is 2048); the park trims both (20 m, 1024)
+## with its near-only tree casters (ParkFx.SHADOW_R) to run lighter.
+@export var shadow_distance := 30.0
+@export var shadow_size := 2048
+## The 3D render scale CourtGeometry puts on its viewport while this area is
+## up (bilinear; the 2D HUD stays full-res). The park's 0.7 hides under the
+## pixel-art look and halves the sky's and the leaves' fill cost.
+@export var render_scale := 1.0
 @export var fog_enabled := false
 @export var fog_color := Color(0.9, 0.58, 0.45)
 @export var fog_density := 0.01

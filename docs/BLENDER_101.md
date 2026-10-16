@@ -838,7 +838,11 @@ laid out from the reference photo. Three scripts and a layout file:
   right, the group past the path, the trees behind the camera, the tall
   aspen leaning in over the board, two stumps, the mossy rock, the fallen
   log along the lot). `game/view/park_fx.gd` builds one `MultiMeshInstance3D`
-  per model surface from it (trees cast shadows, litter does not), stands
+  per model surface from it — split near/far at `ParkFx.SHADOW_R` (16 m
+  from the hoop): only the three trees by the court cast shadows, and the
+  six far aspens on the avenue are `aspen_tree_02` scaled ×1.74 to the big
+  aspen's height (the park running lighter, 2026-10-16: `aspen_tree_01` is
+  2562 triangles, the small one 945) — stands
   the parked car from the vehicle pool with a snow cap, hangs
   one points mesh of 500 flakes under `park_snow.gdshader` (all motion in
   the vertex shader, the box follows the camera) and puts

@@ -27,11 +27,17 @@ const SNOW_CAP := 800
 const ASPEN_TINT := Color("#9A7650")
 const CAR_SCALE := 0.8
 const RNG_SEED := 0x9A7C_5E0F
+## Trees within this of the hoop cast shadows (the leaning aspen, the big
+## aspen and the pine by the slab: three); the rest draw unshadowed, which
+## halves the shadow pass (2026-10-16, the park running lighter).
+const SHADOW_R := 16.0
+const HOOP_XZ := Vector2(3.7, 0.0)
 
 var _rng := RandomNumberGenerator.new()
 var _root: Node3D
 var _multis: Array[MultiMeshInstance3D] = []
 var _instances := 0
+var _casters := 0
 var _cars: Array[Node3D] = []
 var _snow: MeshInstance3D
 var _snow_mat: ShaderMaterial
@@ -68,7 +74,9 @@ func setup(arena: Node, set: ArenaSet) -> bool:
 # ---- the trees and the litter ---------------------------------------------------------
 
 
-## One multimesh per (model, surface): every placement of that model in one draw.
+## One multimesh per (model, surface, near|far): every placement of that
+## model in one draw, the near trees (within SHADOW_R of the hoop) casting
+## shadows and the far ones not.
 func _build_trees(path: String) -> void:
 	if not FileAccess.file_exists(path):
 		push_warning("ParkFx: no layout at %s" % path)
@@ -86,23 +94,36 @@ func _build_trees(path: String) -> void:
 	models.sort()
 	for m in models:
 		var rows: Array = by_model[m]
+		var is_tree := str(m).find("tree_0") >= 0 and str(m).find("stump") < 0 and str(m).find("fallen") < 0
+		var near: Array = []
+		var far: Array = []
+		for row in rows:
+			var d := Vector2(float(row.get("x", 0.0)), float(row.get("z", 0.0))).distance_to(HOOP_XZ)
+			if is_tree and d <= SHADOW_R:
+				near.push_back(row)
+			else:
+				far.push_back(row)
+		_casters += near.size()
 		var parts := _model_parts(str(m))
 		for part in parts:
 			var mesh: Mesh = part["mesh"]
 			var local: Transform3D = part["xform"]
-			var mmi := MultiMeshInstance3D.new()
-			mmi.name = "%s_%d" % [m, part["index"]]
-			var mm := MultiMesh.new()
-			mm.transform_format = MultiMesh.TRANSFORM_3D
-			mm.mesh = mesh
-			mm.instance_count = rows.size()
-			for i in rows.size():
-				mm.set_instance_transform(i, _placement(rows[i]) * local)
-			mmi.multimesh = mm
-			var is_tree := str(m).find("tree_0") >= 0 and str(m).find("stump") < 0 and str(m).find("fallen") < 0
-			mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if is_tree else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-			_root.add_child(mmi)
-			_multis.push_back(mmi)
+			for group in [["near", near], ["far", far]]:
+				var grows: Array = group[1]
+				if grows.is_empty():
+					continue
+				var mmi := MultiMeshInstance3D.new()
+				mmi.name = "%s_%d_%s" % [m, part["index"], group[0]]
+				var mm := MultiMesh.new()
+				mm.transform_format = MultiMesh.TRANSFORM_3D
+				mm.mesh = mesh
+				mm.instance_count = grows.size()
+				for i in grows.size():
+					mm.set_instance_transform(i, _placement(grows[i]) * local)
+				mmi.multimesh = mm
+				mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if group[0] == "near" else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				_root.add_child(mmi)
+				_multis.push_back(mmi)
 		_instances += rows.size()
 
 
@@ -285,6 +306,11 @@ func instance_count() -> int:
 
 func draw_count() -> int:
 	return _multis.size()
+
+
+## The trees that cast shadows (within SHADOW_R of the hoop).
+func shadow_caster_count() -> int:
+	return _casters
 
 
 func car_count() -> int:

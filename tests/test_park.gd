@@ -6,6 +6,7 @@ extends RefCounted
 
 
 func run(t) -> void:
+	_lights(t)
 	_geometry(t)
 	_shots(t)
 	_edge(t)
@@ -151,3 +152,24 @@ func _endless_trial(t) -> void:
 		tt.tick(SimConstants.SIM_DT)
 	t.eq(tt.makes, 1, "ideal park shot scores")
 	t.close(tt.geo.hoop_x, SimGeometry.PARK_DIST, 1e-12, "park hoop stayed put")
+
+
+## The park's sun from its ArenaSet: 20 m shadows; the court puts the area's
+## render scale on its viewport only when it is in a tree.
+func _lights(t) -> void:
+	var court := CourtGeometry.new()
+	court.geo = SimGeometry.park()
+	court.arena_set = CosmeticLibrary.get_arena("park")
+	court.hoop_set = CosmeticLibrary.get_hoop("park")
+	court._ready()
+	var sun: DirectionalLight3D = court.find_child("Sun", true, false)
+	t.ok(sun != null and sun.shadow_enabled and absf(sun.directional_shadow_max_distance - 20.0) < 1e-9, "the park's sun shadows reach 20 m")
+	var beach := CourtGeometry.new()
+	beach.geo = SimGeometry.beach()
+	beach.arena_set = CosmeticLibrary.get_arena("beach")
+	beach.hoop_set = CosmeticLibrary.starter_hoop()
+	beach._ready()
+	var bsun: DirectionalLight3D = beach.find_child("Sun", true, false)
+	t.ok(bsun != null and absf(bsun.directional_shadow_max_distance - 30.0) < 1e-9, "the beach keeps 30 m")
+	court.free()
+	beach.free()

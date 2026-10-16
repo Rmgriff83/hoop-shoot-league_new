@@ -94,6 +94,27 @@ var _park_fx: ParkFx            # the park's trees, parked cars, falling snow an
 var _arena_anim: AnimationPlayer  # the arena glb's clips (one per NLA track), null on fallback
 
 
+## The area's 3D render scale on this court's viewport while it is up (the
+## title, the trial, the heat's PiP SubViewport, the results all follow the
+## area they show); full resolution again when it leaves.
+func _enter_tree() -> void:
+	_apply_render_scale(arena_set.render_scale if arena_set != null else 1.0)
+
+
+func _exit_tree() -> void:
+	_apply_render_scale(1.0)
+
+
+func _apply_render_scale(scale: float) -> void:
+	if not is_inside_tree():
+		return
+	var vp := get_viewport()
+	if vp == null:
+		return
+	vp.scaling_3d_mode = Viewport.SCALING_3D_MODE_BILINEAR
+	vp.scaling_3d_scale = clampf(scale, 0.25, 1.0)
+
+
 func _ready() -> void:
 	if geo == null:
 		geo = SimGeometry.regulation()
@@ -915,7 +936,10 @@ func _build_lights() -> void:
 		if arena_set.sun_shadows:
 			sun.shadow_enabled = true
 			sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
-			sun.directional_shadow_max_distance = 30.0
+			sun.directional_shadow_max_distance = arena_set.shadow_distance
+			# One court is live at a time (the heat's PiP is the same area), so
+			# every area sets the atlas it wants and the park's 1024 never leaks.
+			RenderingServer.directional_shadow_atlas_set_size(arena_set.shadow_size, true)
 		env.background_color = arena_set.background_color
 		env.ambient_light_color = arena_set.ambient_color
 		env.ambient_light_energy = arena_set.ambient_energy

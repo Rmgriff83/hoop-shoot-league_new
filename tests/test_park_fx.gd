@@ -23,6 +23,17 @@ func run(t) -> void:
 			trees += 1
 		t.ok(FileAccess.file_exists("res://assets/arena/park/trees/%s.glb" % m), "the layout's %s ships conformed" % m)
 	t.ok(trees >= 30 and trees <= 50, "a few dozen trees (%d)" % trees)
+	# The park running lighter: the six far aspens are the small model scaled to height.
+	var big := 0
+	var far_small := 0
+	for r in rows:
+		if str(r["model"]) == "aspen_tree_01":
+			big += 1
+			t.ok(float(r["x"]) < 29.0, "a big aspen stays only near the court (x %.1f)" % float(r["x"]))
+		elif str(r["model"]) == "aspen_tree_02" and float(r["x"]) >= 29.0 and float(r.get("s", 1.0)) >= 1.6:
+			far_small += 1
+	t.eq(big, 7, "seven big aspens near the court")
+	t.eq(far_small, 6, "six far aspens are the small model scaled up to the big one's height")
 	t.ok(models.has("aspen_tree_01") and models.has("pine_tree_01_a") and models.has("pine_tree_stump_01") and models.has("rock_01_large_mossy") and models.has("fallen_pine_tree_01"),
 		"aspens, pines, a stump, the mossy rock and the fallen log")
 	var leaning := false
@@ -46,7 +57,16 @@ func run(t) -> void:
 	var fx := ParkFx.new()
 	t.ok(fx.setup(inst, arena), "ParkFx dresses the park")
 	t.eq(fx.instance_count(), rows.size(), "every layout row is instanced")
-	t.ok(fx.draw_count() >= models.size() and fx.draw_count() <= models.size() * 3, "a draw per model surface (%d draws for %d models)" % [fx.draw_count(), models.size()])
+	t.ok(fx.draw_count() >= models.size() and fx.draw_count() <= models.size() * 6, "a draw per model surface and near/far split (%d draws for %d models)" % [fx.draw_count(), models.size()])
+	t.ok(fx.shadow_caster_count() >= 3 and fx.shadow_caster_count() <= 5, "only the trees by the court cast shadows (%d)" % fx.shadow_caster_count())
+	var split_ok := true
+	for mmi in inst.find_children("*", "MultiMeshInstance3D", true, false):
+		var n := String(mmi.name)
+		if n.ends_with("_near") and mmi.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_ON:
+			split_ok = false
+		if n.ends_with("_far") and mmi.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF:
+			split_ok = false
+	t.ok(split_ok, "every near multimesh casts, every far one does not")
 	t.eq(fx.car_count(), 1, "one parked car, in its striped bay")
 	var fence: MeshInstance3D = inst.find_child("SplitRailFence", true, false)
 	var fa: AABB = fence.get_aabb()
@@ -68,9 +88,9 @@ func run(t) -> void:
 	var snow: MeshInstance3D = inst.find_child("Snowfall", true, false)
 	t.ok(snow != null and snow.mesh.surface_get_primitive_type(0) == Mesh.PRIMITIVE_POINTS, "the snow is one points mesh")
 	t.ok(snow != null and snow.custom_aabb.size.x > 100.0, "…never culled")
-	var mmi: MultiMeshInstance3D = inst.find_child("pine_tree_01_a_0", true, false)
-	t.ok(mmi != null and mmi.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_ON, "the pines cast shadows")
-	var rock: MultiMeshInstance3D = inst.find_child("rock_01_large_mossy_0", true, false)
+	var mmi: MultiMeshInstance3D = inst.find_child("pine_tree_01_a_0_near", true, false)
+	t.ok(mmi != null and mmi.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_ON, "the pine by the slab casts a shadow")
+	var rock: MultiMeshInstance3D = inst.find_child("rock_01_large_mossy_0_far", true, false)
 	t.ok(rock != null and rock.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "the rock does not")
 	var bare := ParkFx.new()
 	t.ok(not bare.setup(Node3D.new(), CosmeticLibrary.get_arena("cage")), "the cage asks for none of it")

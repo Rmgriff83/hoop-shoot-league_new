@@ -775,7 +775,7 @@ func _run_park() -> void:
 	var fxs := get_tree().root.find_children("*", "ParkFx", true, false)
 	if not fxs.is_empty():
 		var fx: ParkFx = fxs[0]
-		print("QA park: %d instances in %d draws, %d cars, %d flakes, sky %s" % [fx.instance_count(), fx.draw_count(), fx.car_count(), fx.snow_count(), str(fx.has_sky())])
+		print("QA park: %d instances in %d draws, %d cars, %d flakes, sky %s, %d shadow casters, 3D scale %.2f" % [fx.instance_count(), fx.draw_count(), fx.car_count(), fx.snow_count(), str(fx.has_sky()), fx.shadow_caster_count(), get_viewport().scaling_3d_scale])
 	print("QA park: done")
 	get_tree().quit(0)
 

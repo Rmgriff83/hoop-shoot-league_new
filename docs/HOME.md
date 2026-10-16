@@ -186,7 +186,11 @@ for older saves), `ScorePayload.AREAS` + `server/src/rules.ts` (Ross
 deploys the Worker), `RanksCopy` (four tabs: `RanksPage.TAB_SIZE` shrank),
 `ResultsCopy.board_name` / `run_sub`, `AreaUnlockCopy.LOOK`,
 `tools/pack_3d_assets.py`, `--qa-park` / `--qa-unlock`, and
-`tests/test_park.gd` + `test_park_fx.gd`. The park's dressing is
+`tests/test_park.gd` + `test_park_fx.gd`. An area's cost knobs live on
+its ArenaSet (2026-10-16): `shadow_distance` / `shadow_size` (the sun's
+reach and the directional atlas `CourtGeometry._build_lights` sets) and
+`render_scale` (the 3D scale the court puts on its viewport while it is up;
+the park runs 20 m / 1024 / 0.7 with near-only tree shadows). The park's dressing is
 `game/view/park_fx.gd` (`ArenaSet.snow` / `sky` / `parked_cars` /
 `tree_layout`): the PSX trees instanced from `data/park_layout.json`
 (docs/BLENDER_101.md → The park), the parked cars, the falling snow and the

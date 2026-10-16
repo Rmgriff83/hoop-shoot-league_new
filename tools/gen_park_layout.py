@@ -69,6 +69,19 @@ rows.append({"model": "pine_tree_stump_01", "x": 11.8, "y": -0.06, "z": 12.2, "s
 rows.append({"model": "rock_01_large_mossy", "x": 10.2, "y": -0.06, "z": 6.6, "s": 1.5, "sy": 1.1, "ry": 0.7})
 rows.append({"model": "fallen_pine_tree_01", "x": 13.5, "y": 0.0, "z": -13.6, "s": 1.15, "ry": 0.03})
 
+# The far aspens (2026-10-16, the park running lighter): aspen_tree_01 is
+# 2562 triangles and was two thirds of every instanced triangle; the six on
+# the avenue at x >= 29 m become aspen_tree_02 (945) scaled by their height
+# ratio (9.9 / 5.7) so the tree line keeps its silhouette and density at
+# 30-55 m, where the shape difference does not read. The seven nearer ones
+# stay the big aspen.
+FAR_ASPEN_X = 29.0
+ASPEN_HEIGHT_RATIO = 1.74
+for r in rows:
+    if r["model"] == "aspen_tree_01" and r["x"] >= FAR_ASPEN_X:
+        r["model"] = "aspen_tree_02"
+        r["s"] = round(r["s"] * ASPEN_HEIGHT_RATIO, 3)
+
 doc = {"generated_by": "tools/gen_park_layout.py", "seed": 7, "rows": rows}
 with open(OUT, "w") as f:
     json.dump(doc, f, indent=1)
