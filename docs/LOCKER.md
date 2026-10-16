@@ -45,9 +45,11 @@ through `App.AREA_MODES` → `App.net_kind_for_area`.
 - The **NETS tab** lists the styles you own of the sub-tab's kind (tile
   `Net_<id>`, the thumbnail from `assets/textures/nets/thumbs/<id>.png`,
   rendered by `--qa-net-thumbs` — the net alone, no rim), under a head
-  "COTTON · HANGS ON CAGE + BEACH" / "CHAIN · HANGS ON CITY", with a KIND ·
-  AREAS line ("CHAIN · CITY", "COTTON · CAGE, BEACH") and a tag: **IN USE
-  ON CITY** / **IN USE ON CAGE + BEACH** (the gold tile) or **EQUIP**.
+  "COTTON · HANGS ON CAGE + BEACH + PARK" / "CHAIN · HANGS ON CITY", with a
+  KIND · AREAS line ("CHAIN · CITY", "COTTON · CAGE, BEACH, PARK") and a
+  tag: **IN USE ON CITY** / **IN USE ON CAGE + BEACH + PARK** (the gold
+  tile) or **EQUIP**. The park (2026-10-15) hangs cotton like the cage and
+  the beach.
   Tapping a net hangs it on **every area of its kind**
   (`App.select_net_everywhere`). **Buying has no UI yet** (2026-10-15): the
   locker is the collection; `App.try_buy("net", id)` stays wired for the

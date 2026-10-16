@@ -205,16 +205,25 @@ static func default_cosmetics() -> Dictionary:
 ## The nets block (docs/LOCKER.md → NETS): the stock pair owned, each area on
 ## its hoop's stock style.
 static func default_nets() -> Dictionary:
-	return {"owned": ["cotton", "chain"], "selected": {"cage": "cotton", "beach": "cotton", "city": "chain"}}
+	return {"owned": ["cotton", "chain"], "selected": {"cage": "cotton", "beach": "cotton", "park": "cotton", "city": "chain"}}
 
 
 ## Bring an older cosmetics doc up to date (a save from before the nets, or a
-## mirrored one from an older client). True when it changed.
+## mirrored one from an older client; a save from before an area got its
+## net selection). True when it changed.
 static func migrate_cosmetics(doc: Dictionary) -> bool:
 	var changed := false
 	if not doc.has("net") or not (doc["net"] is Dictionary):
 		doc["net"] = default_nets()
 		changed = true
+	var net: Dictionary = doc["net"]
+	if not (net.get("selected", null) is Dictionary):
+		net["selected"] = default_nets()["selected"]
+		changed = true
+	for area in default_nets()["selected"]:
+		if not Dictionary(net["selected"]).has(area):
+			net["selected"][area] = default_nets()["selected"][area]
+			changed = true
 	return changed
 
 

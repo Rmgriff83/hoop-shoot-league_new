@@ -20,14 +20,29 @@ static func area_name(location: String) -> String:
 	return str(arena.display_name).to_upper() if arena != null else location.to_upper()
 
 
-## The board's short name: ARCADE / BEACH / CITY (the leaderboard header's right side).
+## The board's short name: ARCADE / BEACH / PARK / CITY (the leaderboard header's right side).
 static func board_name(location: String) -> String:
-	return "BEACH" if location == "beach" else ("CITY" if location == "city" else "ARCADE")
+	match location:
+		"beach":
+			return "BEACH"
+		"park":
+			return "PARK"
+		"city":
+			return "CITY"
+	return "ARCADE"
 
 
 ## The area's short word for RUN IT BACK: `60 S · SAME CAGE` / `SAME BEACH`.
 static func run_sub(location: String, seconds := int(TimeTrial.TIME_TRIAL_SECONDS)) -> String:
-	return "%d S · SAME %s" % [seconds, "BEACH" if location == "beach" else ("COURT" if location == "city" else "CAGE")]
+	var word := "CAGE"
+	match location:
+		"beach":
+			word = "BEACH"
+		"park":
+			word = "PARK"
+		"city":
+			word = "COURT"
+	return "%d S · SAME %s" % [seconds, word]
 
 
 ## Not a best: `BEST 31 · 7 SHORT`, or `BEST 31 · LEVEL` on a tie (a tie is

@@ -32,8 +32,13 @@ save's `progress` part holds `{xp, seasonXp, seasonKey}`.
 | League | Band | Opens at | Cap (XP) |
 |---|---|---|---|
 | Arcade (cage) | 1 → 3 | — | 200 |
-| Beach | 3 → 5 | level 3 | 400 |
+| Beach | 3 → 4 | level 3 | 300 |
+| Park | 4 → 5 | level 4 | 400 |
 | City | 5 → 7 | level 5 | 600 |
+
+The park (2026-10-15) took a level out of the beach's band: Ross wanted
+it to open at 4, one area per level, so the beach caps at 4 and the park
+runs 4 → 5.
 
 A league's matches never push XP past its cap (`Progression.apply_match`
 clamps; `capped` says so). The next league starts where this one caps and

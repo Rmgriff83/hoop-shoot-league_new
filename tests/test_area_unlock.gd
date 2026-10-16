@@ -13,9 +13,10 @@ func run(t) -> void:
 
 func _crossing(t) -> void:
 	t.eq(AreaUnlockCopy.crossed(2, 3), "beach", "reaching 3 opens the beach")
+	t.eq(AreaUnlockCopy.crossed(3, 4), "park", "reaching 4 opens the park")
 	t.eq(AreaUnlockCopy.crossed(4, 5), "city", "reaching 5 opens the city")
-	t.eq(AreaUnlockCopy.crossed(2, 5), "beach", "a jump across both opens the beach first")
-	t.eq(AreaUnlockCopy.crossed(3, 4), "", "3 → 4 opens nothing")
+	t.eq(AreaUnlockCopy.crossed(2, 5), "beach", "a jump across all three opens the beach first")
+	t.eq(AreaUnlockCopy.crossed(5, 6), "", "5 → 6 opens nothing")
 	t.eq(AreaUnlockCopy.crossed(1, 1), "", "no rise, nothing")
 	t.eq(AreaUnlockCopy.crossed(0, 1), "", "the cage is never an unlock")
 
@@ -31,7 +32,11 @@ func _copy(t) -> void:
 	var c := AreaUnlockCopy.state("city", 5)
 	t.eq(c["name"], "CITY COURT", "the city's name")
 	t.ok(c["ray"] != b["ray"], "each area has its own ray colour")
-	for v in [b, c]:
+	var pk := AreaUnlockCopy.state("park", 4)
+	t.eq(pk["name"], "PARK", "the park's name")
+	t.eq(pk["level_text"], "LEVEL 04 REACHED", "the park's chip")
+	t.ok(pk["ray"] == AreaUnlockCopy.BLUE and int(pk["stars"]) == 3, "the park's blue rays and three stars")
+	for v in [b, c, pk]:
 		for s in AreaUnlockCopy.strings(v):
 			for ch in str(s):
 				t.ok(UiFont.display().has_char(ch.unicode_at(0)) and UiFont.body_bold().has_char(ch.unicode_at(0)), "'%s' glyph in both faces" % ch)

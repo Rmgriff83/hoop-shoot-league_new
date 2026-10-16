@@ -11,6 +11,7 @@ const CREAM := Color("#F1E8D0")
 ## The rays' colour and the confetti palette per area.
 const LOOK := {
 	"beach": {"ray": ORANGE, "palette": [ORANGE, GOLD, BLUE, CREAM]},
+	"park": {"ray": BLUE, "palette": [BLUE, CREAM, TEAL, GOLD]},
 	"city": {"ray": GOLD, "palette": [GOLD, TEAL, ORANGE, CREAM]},
 }
 const DEFAULT_LOOK := {"ray": GOLD, "palette": [GOLD, ORANGE, CREAM]}

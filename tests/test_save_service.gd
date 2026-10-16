@@ -90,6 +90,7 @@ func run(t) -> void:
 	t.ok(Array(cos["net"]["owned"]).has("cotton") and Array(cos["net"]["owned"]).has("chain"), "the stock nets are owned")
 	t.eq(cos["net"]["selected"]["city"], "chain", "the city hangs the chain")
 	t.eq(cos["net"]["selected"]["cage"], "cotton", "the cage hangs cotton")
+	t.eq(cos["net"]["selected"]["park"], "cotton", "the park hangs cotton")
 	cos["tickets"] = 250
 	cos["hoop"]["owned"].push_back("neon")
 	cos["hoop"]["selected"] = "neon"
@@ -103,6 +104,9 @@ func run(t) -> void:
 	t.ok(SaveService.migrate_cosmetics(old_doc), "a doc without nets is migrated")
 	t.eq(old_doc["net"]["selected"]["city"], "chain", "…to the stock pair")
 	t.ok(not SaveService.migrate_cosmetics(old_doc), "…once")
+	var pre_park: Dictionary = svc.get_cosmetics()
+	pre_park["net"]["selected"].erase("park")
+	t.ok(SaveService.migrate_cosmetics(pre_park) and pre_park["net"]["selected"]["park"] == "cotton", "a save from before the park gets its park net")
 
 	# Progress: level 1 with no XP to start, round-trip, marked dirty.
 	var prog: Dictionary = svc.get_progress()

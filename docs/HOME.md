@@ -172,11 +172,24 @@ chevron (the footer says START INSIDE).
 ## Adding an area
 
 An ArenaSet with `title_*` set (pose, and `title_stars` for the star row), its
-`App.MODES` rows, and a row in `title_screen.gd` `CARDS`. The city (2026-09-27)
-is the worked example: `SimGeometry.city()` + `geo_for_mode`, the `city` /
-`trial_city` / `heat_city` rows, `AREA_MODES`, the league row (level 5→7),
-seven shooters, `data/economy.json` multipliers, `calibrate_ai -- city`,
-the card lab, `ResultsCopy.board_name`, and `tests/test_city.gd`.
+`App.MODES` rows, and a row in `AreaArchiveCopy.AREAS` (the title's `CARDS`,
+the archive, the snapshots and the unlock order all read it). The park
+(2026-10-15, design "Park Area Concept") is the latest worked example and
+touches every place an area lives: `SimGeometry.park()` + `geo_for_mode`
+(+ `calibrate_ai` / `card_lab` `geo_for*`), the `park` / `trial_park` /
+`heat_park` rows, `AREA_MODES`, `CosmeticLibrary.ARENAS` + `HOOPS` (its own
+`assets/hoops/park`), the league row (level 4→5, the beach's band shrunk to
+3→4) and seven shooters, `data/economy.json` multipliers, `calibrate_ai --
+park`, `league_lab -- park`, `SaveService.default_nets` (+ the migration
+for older saves), `ScorePayload.AREAS` + `server/src/rules.ts` (Ross
+deploys the Worker), `RanksCopy` (four tabs: `RanksPage.TAB_SIZE` shrank),
+`ResultsCopy.board_name` / `run_sub`, `AreaUnlockCopy.LOOK`,
+`tools/pack_3d_assets.py`, `--qa-park` / `--qa-unlock`, and
+`tests/test_park.gd` + `test_park_fx.gd`. The park's dressing is
+`game/view/park_fx.gd` (`ArenaSet.snow` / `sky` / `parked_cars` /
+`tree_layout`): the PSX trees instanced from `data/park_layout.json`
+(docs/BLENDER_101.md → The park), the parked cars, the falling snow and the
+sky shader.
 
 ## Splash (design "Splash Screen" 29a, 2026-10-03)
 
@@ -203,7 +216,7 @@ links come later). Title music starts here and carries into the title.
 `game/ui/area_unlock_page.gd` (`AreaUnlockPage`, layer 45; copy
 `game/ui/area_unlock_copy.gd`; `tests/test_area_unlock.gd`; QA `--qa-unlock`):
 the page that plays the moment a league match's XP reaches an area's level
-(beach 3, city 5 — `AreaUnlockCopy.crossed(before, after)`, the first area
+(beach 3, park 4, city 5 — `AreaUnlockCopy.crossed(before, after)`, the first area
 in archive order whose level the rise passed). `App._apply_league_heat` queues
 it (`App.pending_unlock`) unless `settings.unlocksSeen` already lists the
 area; the heat screen shows it after the match-end page and before the
@@ -233,8 +246,8 @@ area's archive card) until that area has been visited
 (`App.show_archive`), from the area name, and from the `▾ ALL AREAS · 2/3
 OPEN` line under it; `<` goes back out to the splash when the archive was the
 front door (a cold launch), else to the area you came from (hidden when
-that area is locked). A cream sheet, `AREAS` and the open count, then a
-320 px card per area: a **snapshot of the real rendered court** under a
+that area is locked). A cream sheet, `AREAS` and the open count (`2/4
+OPEN` since the park), then a 320 px card per area: a **snapshot of the real rendered court** under a
 bottom gradient, the stars, the name, a `>` and the history line (`🏆 2
 TITLES · 3 SEASONS · ⏱ BEST 31`, `NO RUNS`) when it is open; a locked area
 under an ink overlay with the lock (`assets/ui/icon_lock.png`,

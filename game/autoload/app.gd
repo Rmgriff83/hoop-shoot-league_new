@@ -96,11 +96,21 @@ const MODES := {
 	"heat_city": {"arena": "city", "hoop": "chain", "geo": "city", "dist": SimGeometry.CITY_DIST,
 		"endless": false, "board_motion": false, "hud_label": "", "led_text": "READY", "location": "city",
 		"heat": true, "calib_key": "city", "spot_shuffle": true},
+	# The park (docs/HOME.md, 2026-10-15): the winter court, its own slim park
+	# hoop with a cotton net, the spot game.
+	"park": {"arena": "park", "hoop": "park", "geo": "park", "dist": SimGeometry.PARK_DIST,
+		"endless": true, "board_motion": false, "hud_label": "PARK", "led_text": "", "location": "park"},
+	"trial_park": {"arena": "park", "hoop": "park", "geo": "park", "dist": SimGeometry.PARK_DIST,
+		"endless": false, "board_motion": false, "hud_label": "", "led_text": "READY", "location": "park",
+		"spot_shuffle": true},
+	"heat_park": {"arena": "park", "hoop": "park", "geo": "park", "dist": SimGeometry.PARK_DIST,
+		"endless": false, "board_motion": false, "hud_label": "", "led_text": "READY", "location": "park",
+		"heat": true, "calib_key": "park", "spot_shuffle": true},
 }
-## mode ("trial"/"practice"/"heat") × area ("cage"/"beach"/"city") → MODES id.
+## mode ("trial"/"practice"/"heat") × area ("cage"/"beach"/"park"/"city") → MODES id.
 const AREA_MODES := {
-	"trial": {"cage": "trial", "beach": "trial_beach", "city": "trial_city"},
-	"practice": {"cage": "practice", "beach": "beach", "city": "city"},
+	"trial": {"cage": "trial", "beach": "trial_beach", "park": "trial_park", "city": "trial_city"},
+	"practice": {"cage": "practice", "beach": "beach", "park": "park", "city": "city"},
 }
 var next_mode := "trial"
 
@@ -127,6 +137,8 @@ static func geo_for_mode(id: String) -> SimGeometry:
 		return SimGeometry.beach(cfg["dist"])
 	if cfg["geo"] == "city":
 		return SimGeometry.city(cfg["dist"])
+	if cfg["geo"] == "park":
+		return SimGeometry.park(cfg["dist"])
 	return SimGeometry.arcade(cfg["dist"])
 
 

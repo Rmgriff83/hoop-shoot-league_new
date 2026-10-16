@@ -792,6 +792,49 @@ swishes (`assets/hoops/chain/sfx/swish_1..4.wav`; 2–4 cut from his
 picked at random per make, never the same twice running. The sim side is
 `SimGeometry.city()`'s `net_drag 1.6` / `net_wall_e 0.20`.
 
+## 14c. Lesson 5c — the park, the PSX trees and the park hoop (2026-10-15)
+
+Ross's "Park Area Concept": a neighbourhood park court on a winter morning,
+laid out from the reference photo. Three scripts and a layout file:
+
+- `tools/aseprite/gen_park_textures.lua` — the asphalt, winter grass, snow,
+  the black pole, the white park board (edge band, shooting square, rust,
+  the sticker), the sky's cloud mask and the treeline strip.
+- `tools/blender/build_park.py` (`-- --force`) → `assets/arena/park/park.glb`:
+  the slab (x −7.0…4.70, z ±6.0 — `SimGeometry.park()`'s soft walls), the
+  lawn, the lot, the road, the path, the pads, five horizon buildings with
+  snow roofs, the ballfield fence, the light poles, the bollards and the
+  notice board (the league banner's host), the lying snow merged into one
+  mesh (plough piles at the court's edges, the pole-foot drift = the sim's
+  prop box, kerbside piles, patches in the lawn's hollows), a far snow
+  disc, the `Sky` dome (faces flipped, the sky shader goes on at runtime)
+  and the `TreelineRing` (an open cylinder, the strip wrapped ×7, pre-hazed
+  so it sits in the fog). No trees, litter or cars: they are instanced at
+  runtime.
+- `tools/blender/conform_psx_trees.py` (`-- --force`) — the vendored pack
+  (`art/third_party/psx_trees`, DanglingBat, its own licence; credited in
+  `data/credits.json`) stripped to its albedo at 256², leaves alpha-cut,
+  flat-shaded → `assets/arena/park/trees/<id>.glb`. Nothing under `assets/`
+  is edited by hand; the licence forbids shipping the pack on its own.
+- `tools/gen_park_layout.py` → `data/park_layout.json`: the design's seeded
+  placement (aspens on the avenue rows, pines in the gaps, the big trees
+  right, the group past the path, the trees behind the camera, the tall
+  aspen leaning in over the board, two stumps, the mossy rock, the fallen
+  log along the lot). `game/view/park_fx.gd` builds one `MultiMeshInstance3D`
+  per model surface from it (trees cast shadows, litter does not), stands
+  the three parked cars from the vehicle pool with a snow cap each, hangs
+  one points mesh of 500 flakes under `park_snow.gdshader` (all motion in
+  the vertex shader, the box follows the camera) and puts
+  `park_sky.gdshader` on the dome.
+- `tools/blender/build_park_hoop.py` (`-- --force`) → `assets/hoops/park/hoop.glb`:
+  the slim white board (1.40 × 1.05 × 0.022, `park_board.png`), the black
+  `BoardBand`, the gym rim (add_gym_rim), the black in-ground `Pole` 0.17 m
+  behind the board with two braces. No LED face: the HUD carries the score.
+
+Checks: `tests/test_park.gd` (the geometry, the slab bounds, the drift, the
+spots, the modes, the league) and `tests/test_park_fx.gd` (the layout, the
+instancing, the cars, the snow, the sky). QA `--qa-park`.
+
 ## 15. Flipbooks: authoring fire (and other effects) in Blender
 
 The rim's "on fire" flames are not particles in Godot: they are a looping

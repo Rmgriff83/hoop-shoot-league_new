@@ -5,7 +5,7 @@ extends RefCounted
 ## hand (server/src/rules.ts) so the suite proves both sides agree and the
 ## game never queues a run the server would bounce. Pure: no nodes, no net.
 
-const AREAS := ["cage", "beach", "city"]
+const AREAS := ["cage", "beach", "park", "city"]
 ## A 60 s trial with a ball return never gets more shots off than this.
 const MAX_ATTEMPTS := 80
 ## The hottest make pays 4 + 1 for the swish (core/match/streak_rules.gd).

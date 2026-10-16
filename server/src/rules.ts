@@ -3,7 +3,7 @@
  * `plausible` and tests/test_score_payload.gd asserts the same verdicts, so a
  * change here is a change there.
  */
-export const AREAS = ["cage", "beach", "city"] as const;
+export const AREAS = ["cage", "beach", "park", "city"] as const;
 export type Area = (typeof AREAS)[number];
 
 /** A time trial is 60 s with a ball return; nobody gets more shots off than this. */

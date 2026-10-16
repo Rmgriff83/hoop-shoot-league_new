@@ -33,7 +33,11 @@ func _levels(t) -> void:
 	t.eq(Progression.cap_level(cage), 3, "the cage caps at 3")
 	t.eq(Progression.cap_xp(cage), 200, "= 200 XP")
 	t.eq(Progression.min_level(beach), 3, "the beach starts at 3")
-	t.eq(Progression.cap_xp(beach), 400, "and caps at 5 = 400 XP")
+	t.eq(Progression.cap_xp(beach), 300, "and caps at 4 = 300 XP (the park's band follows)")
+	var park := LeagueData.league("park")
+	t.eq(Progression.min_level(park), 4, "the park starts at 4")
+	t.eq(Progression.cap_xp(park), 400, "and caps at 5 = 400 XP")
+	t.eq(Progression.area_level("park"), 4, "the park area opens at level 4")
 	var city := LeagueData.league("city")
 	t.eq(Progression.min_level(city), 5, "the city starts at 5")
 	t.eq(Progression.cap_xp(city), 600, "and caps at 7 = 600 XP")
@@ -97,7 +101,14 @@ func _season(t) -> void:
 	fresh["seasonKey"] = ""
 	for i in 60:
 		Progression.apply_match(fresh, _result(true, 6, 8, 40, 28), beach, 1)
-	t.eq(int(fresh["xp"]), 400, "the beach caps at 400")
+	t.eq(int(fresh["xp"]), 300, "the beach caps at 300 (level 4, where the park opens)")
+	t.eq(Progression.level_for(int(fresh["xp"])), 4, "level 4")
+	# The park's band continues from 4.
+	var park := LeagueData.league("park")
+	fresh["seasonKey"] = ""
+	for i in 60:
+		Progression.apply_match(fresh, _result(true, 6, 8, 40, 28), park, 1)
+	t.eq(int(fresh["xp"]), 400, "the park caps at 400")
 	t.eq(Progression.level_for(int(fresh["xp"])), 5, "level 5")
 
 

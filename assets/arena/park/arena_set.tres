@@ -1,0 +1,64 @@
+[gd_resource type="Resource" script_class="ArenaSet" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/cosmetics/arena_set.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "park"
+display_name = "Park"
+price_coins = 0
+model_path = "res://assets/arena/park/park.glb"
+emissive_nodes = PackedStringArray("Sky", "TreelineRing")
+sun_rotation_deg = Vector3(-24, 205, 0)
+sun_energy = 1.1
+sun_color = Color(0.97, 0.97, 1, 1)
+ambient_color = Color(0.82, 0.86, 0.92, 1)
+ambient_energy = 1.35
+background_color = Color(0.8, 0.84, 0.88, 1)
+fill_rotation_deg = Vector3(-15, 20, 0)
+fill_energy = 0.5
+fill_color = Color(0.84, 0.88, 0.96, 1)
+sun_shadows = true
+fog_enabled = true
+fog_color = Color(0.8, 0.86, 0.92, 1)
+fog_density = 0.0085
+camera_fov = 60.0
+camera_look_height = 2.2
+title_cam_pos = Vector3(-1.6, 1.7, -0.5)
+title_look_at = Vector3(3.7, 2.3, 0.1)
+title_drift = Vector3(0.05, 0, 0.4)
+title_period_s = 30.0
+title_fov = 66.0
+title_stars = 3
+top_wash = 0.6
+wall_sound = false
+snow = true
+snow_amount = 500
+sky = "partly_cloudy"
+parked_cars = Array[Dictionary]([{
+"model": "compact_yellow",
+"x": 15.6,
+"yaw": 0.0,
+"z": 2.2
+}, {
+"model": "sedan_black",
+"x": 17.4,
+"yaw": 3.14159,
+"z": 0.2
+}, {
+"model": "van_grey",
+"x": 20.6,
+"yaw": 0.0,
+"z": -0.8
+}])
+tree_layout = "res://data/park_layout.json"
+spot_names = PackedStringArray("KEY", "L ELBOW", "R ELBOW", "L BASE", "R BASE")
+spot_positions = PackedVector3Array(0, 0, 0, 0.928, 0, -2.45, 0.928, 0, 2.45, 2.173, 0, -3.37, 2.173, 0, 3.37)
+league_banner_kind = "standings"
+league_banner_pos = Vector3(9.0, 1.2, 3.6)
+league_banner_size = Vector2(1.6, 1)
+league_banner_yaw_deg = -90.0
+league_banner_lit = false
+ambient_clips = PackedStringArray("res://assets/arena/park/ambience/winter_wind.wav")
+ambient_gains_db = PackedFloat32Array(6)
+ambient_fade_s = 1.2

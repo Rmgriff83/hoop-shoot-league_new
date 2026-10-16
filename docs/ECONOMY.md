@@ -78,8 +78,10 @@ The ledger prints all of it and exits non-zero on a break:
 |---|---|---|
 | trial, cage | 6 + 0.45/pt (×1.0), +10 new best | ~11 tickets/min |
 | trial, beach | same ×1.25 | ~12 tickets/min |
+| trial, park | same ×1.4 (avg 17) | ~12 tickets/min |
 | heat, cage | 50 / 20 / 300 coins · 28 / 11 / 80 tickets | ~8 tickets/min + 35 coins/heat |
 | heat, beach | 60 / 25 / 400 coins · 35 / 14 / 100 tickets | ~10 tickets/min + 42 coins/heat |
+| heat, park | 63 / 26 / 420 coins · 40 / 16 / 115 tickets | ~11 tickets/min + 44 coins/heat |
 
 Rate band 6–14/min. Tiers in minutes of trials: entry 15–40, mid 40–70,
 premium 70–115, grail 115–170. At the ~12/min grind rate a PEGGY drop

@@ -13,7 +13,7 @@ signal closed
 signal request(area: String, period: String)
 
 const PAD := Vector2(28, 44)
-const TAB_SIZE := Vector2(200, 56)
+const TAB_SIZE := Vector2(156, 56)   # four tabs and three 12 px gaps fill the 664 px row
 const CHIP_SIZE := Vector2(176, 44)
 const ROW_H := 60.0
 const ME_H := 64.0
@@ -83,7 +83,7 @@ func build(tabs: Array, handle: String) -> Control:
 	tab_row.name = "Tabs"
 	tab_row.position = Vector2(PAD.x, PAD.y + 56 + 24)
 	tab_row.size = Vector2(720 - PAD.x * 2, TAB_SIZE.y + ShadowStyle.OFFSET)
-	tab_row.add_theme_constant_override("separation", 16)
+	tab_row.add_theme_constant_override("separation", 12)
 	_root.add_child(tab_row)
 	for tb in tabs:
 		var area := str(tb["area"])

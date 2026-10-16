@@ -67,6 +67,10 @@ func _heats(t) -> void:
 	var city := LeagueData.league("city")
 	t.ok(Economy.expected_coins_per_heat(city) > Economy.expected_coins_per_heat(beach), "the city pays more coins a heat than the beach")
 	t.ok(Economy.trial_tickets({"score": 24, "location": "city"}, false) > Economy.trial_tickets({"score": 24, "location": "beach"}, false), "and its trials pay more for the same score")
+	var park_pay := Economy.trial_tickets({"score": 24, "location": "park"}, false)
+	t.ok(park_pay > Economy.trial_tickets({"score": 24, "location": "beach"}, false) and park_pay < Economy.trial_tickets({"score": 24, "location": "city"}, false), "the park's trials pay between the beach's and the city's")
+	var park := LeagueData.league("park")
+	t.ok(Economy.expected_coins_per_heat(park) > Economy.expected_coins_per_heat(beach) and Economy.expected_coins_per_heat(park) < Economy.expected_coins_per_heat(city), "the park league's coins sit between")
 	t.close(Economy.expected_coins_per_heat(cage), 0.5 * int(r["win_coins"]) + 0.5 * int(r["loss_coins"]), 1e-9, "expected coins at a coin flip")
 
 

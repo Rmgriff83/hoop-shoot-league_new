@@ -115,7 +115,11 @@ everywhere; the farther hoop, livelier iron and chain net are the *player's* ram
 Ross tunes per area (after any geometry change re-run `tools/calibrate_ai.gd -- <key>`,
 then the lab below to confirm the AI ladder held).
 
-**The lab** — `godot --headless --path . -s tools/league_lab.gd [-- cage|beach|city]
+The park league (2026-10-15, seven NORTH shooters, band 4 → 5) sits between the beach and
+the city on the same ladder: accuracies 0.49–0.61, one pushover (snowline), birchwood its
+star; `assets/ai/calibration_park.json` is its hoop's table.
+
+**The lab** — `godot --headless --path . -s tools/league_lab.gd [-- cage|beach|park|city]
 [-- --n=20]`: every roster shooter plays `n` seeded bot-vs-bot heats (`CardLab.run_heat`,
 no cards) against one reference bot (accuracy 0.55, swish 0.5, pace 4, composure 0.6 —
 a decent human) on the league's real geometry, `err_mult`, format and calibration, and

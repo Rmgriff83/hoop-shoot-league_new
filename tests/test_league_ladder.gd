@@ -28,8 +28,11 @@ func run(t) -> void:
 	if not (doc is Dictionary and doc.has("leagues")):
 		return
 	var L: Dictionary = doc["leagues"]
-	for lid in ["cage", "beach", "city"]:
+	for lid in ["cage", "beach", "park", "city"]:
 		t.ok(L.has(lid) and L[lid]["shooters"].size() == 7, "%s measured, seven shooters" % lid)
+	var park_mean := float(L["park"]["mean"])
+	t.ok(park_mean >= float(L["beach"]["mean"]) * 0.95 and park_mean <= float(L["city"]["mean"]) * 1.05, "the park's AIs sit between the beach's and the city's (%.1f)" % park_mean)
+	t.ok(int(L["park"]["pushovers"]) >= 1, "the park has a pushover")
 	t.eq(int(L["cage"]["pushovers"]), 3, "the cage has three pushovers")
 	t.eq(int(L["beach"]["pushovers"]), 1, "the beach one")
 	t.eq(int(L["city"]["pushovers"]), 0, "the city none")

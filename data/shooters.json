@@ -346,142 +346,303 @@
       }
     },
     {
-        "id": "kingsbridge",
-        "name": "Dre Okafor",
-        "hometown": "Kingsbridge",
-        "conference": "EAST",
-        "number": 11,
-        "nickname": "Gridlock",
-        "bio": "Learned the game between parked cars. Nothing gets past him, on the court or off it.",
-        "colors": {
-          "primary": "#2f4858",
-          "secondary": "#1b2a33",
-          "accent": "#f2a541"
-        },
-        "signature": "A defender who happens to shoot — every make is a dare.",
-        "ratings": {
-          "accuracy": 0.54,
-          "swishRate": 0.7,
-          "pace": 4.0,
-          "composure": 0.8,
-          "streakiness": 0.3,
-          "consistency": 0.82
-        }
+      "id": "kingsbridge",
+      "name": "Dre Okafor",
+      "hometown": "Kingsbridge",
+      "conference": "EAST",
+      "number": 11,
+      "nickname": "Gridlock",
+      "bio": "Learned the game between parked cars. Nothing gets past him, on the court or off it.",
+      "colors": {
+        "primary": "#2f4858",
+        "secondary": "#1b2a33",
+        "accent": "#f2a541"
+      },
+      "signature": "A defender who happens to shoot — every make is a dare.",
+      "ratings": {
+        "accuracy": 0.54,
+        "swishRate": 0.7,
+        "pace": 4.0,
+        "composure": 0.8,
+        "streakiness": 0.3,
+        "consistency": 0.82
+      }
     },
     {
-        "id": "ferry-row",
-        "name": "Sol Marchetti",
-        "hometown": "Ferry Row",
-        "conference": "EAST",
-        "number": 5,
-        "nickname": "Tollbooth",
-        "bio": "Runs the pier courts at dawn before the first boat. Slow, sure, and impossible to hurry.",
-        "colors": {
-          "primary": "#5a3e2b",
-          "secondary": "#2d1f16",
-          "accent": "#8fd3f4"
-        },
-        "signature": "Pays every shot in full — no rushed releases, ever.",
-        "ratings": {
-          "accuracy": 0.54,
-          "swishRate": 0.5,
-          "pace": 3.2,
-          "composure": 0.7,
-          "streakiness": 0.5,
-          "consistency": 0.7
-        }
+      "id": "ferry-row",
+      "name": "Sol Marchetti",
+      "hometown": "Ferry Row",
+      "conference": "EAST",
+      "number": 5,
+      "nickname": "Tollbooth",
+      "bio": "Runs the pier courts at dawn before the first boat. Slow, sure, and impossible to hurry.",
+      "colors": {
+        "primary": "#5a3e2b",
+        "secondary": "#2d1f16",
+        "accent": "#8fd3f4"
+      },
+      "signature": "Pays every shot in full — no rushed releases, ever.",
+      "ratings": {
+        "accuracy": 0.54,
+        "swishRate": 0.5,
+        "pace": 3.2,
+        "composure": 0.7,
+        "streakiness": 0.5,
+        "consistency": 0.7
+      }
     },
     {
-        "id": "union-yards",
-        "name": "Tasha Greer",
-        "hometown": "Union Yards",
-        "conference": "EAST",
-        "number": 32,
-        "nickname": "Switchyard",
-        "bio": "Grew up shooting over freight cars. Changes direction mid-air like she owns the rails.",
-        "colors": {
-          "primary": "#7a1f2b",
-          "secondary": "#3a0f15",
-          "accent": "#ffd166"
-        },
-        "signature": "Swishes in bunches; when the tracks clear she does not miss.",
-        "ratings": {
-          "accuracy": 0.59,
-          "swishRate": 0.82,
-          "pace": 4.6,
-          "composure": 0.85,
-          "streakiness": 0.15,
-          "consistency": 0.88
-        }
+      "id": "union-yards",
+      "name": "Tasha Greer",
+      "hometown": "Union Yards",
+      "conference": "EAST",
+      "number": 32,
+      "nickname": "Switchyard",
+      "bio": "Grew up shooting over freight cars. Changes direction mid-air like she owns the rails.",
+      "colors": {
+        "primary": "#7a1f2b",
+        "secondary": "#3a0f15",
+        "accent": "#ffd166"
+      },
+      "signature": "Swishes in bunches; when the tracks clear she does not miss.",
+      "ratings": {
+        "accuracy": 0.59,
+        "swishRate": 0.82,
+        "pace": 4.6,
+        "composure": 0.85,
+        "streakiness": 0.15,
+        "consistency": 0.88
+      }
     },
     {
-        "id": "eastgate",
-        "name": "Malik Rowe",
-        "hometown": "Eastgate",
-        "conference": "WEST",
-        "number": 14,
-        "nickname": "Turnstile",
-        "bio": "Fastest hands on the line. Shoots like the train is pulling out.",
-        "colors": {
-          "primary": "#1f6f5f",
-          "secondary": "#0f3a32",
-          "accent": "#ff8c42"
-        },
-        "signature": "Volume and speed — the score climbs before you look up.",
-        "ratings": {
-          "accuracy": 0.61,
-          "swishRate": 0.6,
-          "pace": 5.2,
-          "composure": 0.6,
-          "streakiness": 0.6,
-          "consistency": 0.6
-        }
+      "id": "eastgate",
+      "name": "Malik Rowe",
+      "hometown": "Eastgate",
+      "conference": "WEST",
+      "number": 14,
+      "nickname": "Turnstile",
+      "bio": "Fastest hands on the line. Shoots like the train is pulling out.",
+      "colors": {
+        "primary": "#1f6f5f",
+        "secondary": "#0f3a32",
+        "accent": "#ff8c42"
+      },
+      "signature": "Volume and speed — the score climbs before you look up.",
+      "ratings": {
+        "accuracy": 0.61,
+        "swishRate": 0.6,
+        "pace": 5.2,
+        "composure": 0.6,
+        "streakiness": 0.6,
+        "consistency": 0.6
+      }
     },
     {
-        "id": "north-tunnel",
-        "name": "Ines Castellano",
-        "hometown": "North Tunnel",
-        "conference": "WEST",
-        "number": 9,
-        "nickname": "Undertow",
-        "bio": "Quiet, patient, and always one make ahead of where you think she is.",
-        "colors": {
-          "primary": "#3b3b6b",
-          "secondary": "#1d1d3a",
-          "accent": "#9ef01a"
-        },
-        "signature": "Never rattled — the cold streak is somebody else's problem.",
-        "ratings": {
-          "accuracy": 0.53,
-          "swishRate": 0.78,
-          "pace": 3.7,
-          "composure": 0.9,
-          "streakiness": 0.2,
-          "consistency": 0.9
-        }
+      "id": "north-tunnel",
+      "name": "Ines Castellano",
+      "hometown": "North Tunnel",
+      "conference": "WEST",
+      "number": 9,
+      "nickname": "Undertow",
+      "bio": "Quiet, patient, and always one make ahead of where you think she is.",
+      "colors": {
+        "primary": "#3b3b6b",
+        "secondary": "#1d1d3a",
+        "accent": "#9ef01a"
+      },
+      "signature": "Never rattled — the cold streak is somebody else's problem.",
+      "ratings": {
+        "accuracy": 0.53,
+        "swishRate": 0.78,
+        "pace": 3.7,
+        "composure": 0.9,
+        "streakiness": 0.2,
+        "consistency": 0.9
+      }
     },
     {
-        "id": "rooftop-hill",
-        "name": "Benny Szabo",
-        "hometown": "Rooftop Hill",
-        "conference": "WEST",
-        "number": 77,
-        "nickname": "Fire Escape",
-        "bio": "Shoots from the top of the key like he is dropping it off a balcony. Streaky, loud, unmissable when hot.",
-        "colors": {
-          "primary": "#b5451b",
-          "secondary": "#5a220d",
-          "accent": "#f1e8d0"
-        },
-        "signature": "Runs hot — five in a row, then the whole block hears about it.",
-        "ratings": {
-          "accuracy": 0.6,
-          "swishRate": 0.66,
-          "pace": 4.1,
-          "composure": 0.75,
-          "streakiness": 0.35,
-          "consistency": 0.8
-        }
+      "id": "rooftop-hill",
+      "name": "Benny Szabo",
+      "hometown": "Rooftop Hill",
+      "conference": "WEST",
+      "number": 77,
+      "nickname": "Fire Escape",
+      "bio": "Shoots from the top of the key like he is dropping it off a balcony. Streaky, loud, unmissable when hot.",
+      "colors": {
+        "primary": "#b5451b",
+        "secondary": "#5a220d",
+        "accent": "#f1e8d0"
+      },
+      "signature": "Runs hot — five in a row, then the whole block hears about it.",
+      "ratings": {
+        "accuracy": 0.6,
+        "swishRate": 0.66,
+        "pace": 4.1,
+        "composure": 0.75,
+        "streakiness": 0.35,
+        "consistency": 0.8
+      }
+    },
+    {
+      "id": "frostfield",
+      "name": "Nell Frost",
+      "hometown": "Frostfield",
+      "conference": "NORTH",
+      "number": 12,
+      "nickname": "The Thaw",
+      "bio": "Shoots in mittens until the second quarter. Says cold rims are honest rims.",
+      "colors": {
+        "primary": "#7FAEC6",
+        "secondary": "#2C3F58",
+        "accent": "#F1E8D0"
+      },
+      "signature": "Soft high arcs that drop in without a sound.",
+      "ratings": {
+        "accuracy": 0.57,
+        "swishRate": 0.62,
+        "pace": 3.9,
+        "composure": 0.65,
+        "streakiness": 0.35,
+        "consistency": 0.78
+      }
+    },
+    {
+      "id": "oak-hollow",
+      "name": "Rudy Acorn",
+      "hometown": "Oak Hollow",
+      "conference": "NORTH",
+      "number": 31,
+      "nickname": "Big Oak",
+      "bio": "Learned the game on this exact slab, and will tell you so between every possession.",
+      "colors": {
+        "primary": "#8A5A48",
+        "secondary": "#4A3A30",
+        "accent": "#F0B84A"
+      },
+      "signature": "Line drives off the board; the square is his friend.",
+      "ratings": {
+        "accuracy": 0.52,
+        "swishRate": 0.42,
+        "pace": 3.4,
+        "composure": 0.7,
+        "streakiness": 0.3,
+        "consistency": 0.82
+      }
+    },
+    {
+      "id": "millpond",
+      "name": "Ivy Skate",
+      "hometown": "Millpond",
+      "conference": "NORTH",
+      "number": 8,
+      "nickname": "Pond Ice",
+      "bio": "Played on frozen ponds before she played on asphalt. Nothing about a cold morning slows her down.",
+      "colors": {
+        "primary": "#CCD6E0",
+        "secondary": "#3F8C7A",
+        "accent": "#221C18"
+      },
+      "signature": "Quick catch-and-shoot, always on the move between spots.",
+      "ratings": {
+        "accuracy": 0.55,
+        "swishRate": 0.55,
+        "pace": 4.8,
+        "composure": 0.55,
+        "streakiness": 0.55,
+        "consistency": 0.66
+      }
+    },
+    {
+      "id": "cedar-row",
+      "name": "Dex Cedar",
+      "hometown": "Cedar Row",
+      "conference": "NORTH",
+      "number": 44,
+      "nickname": "The Fence",
+      "bio": "Tall, slow, and never flustered. The flurries don't exist as far as he's concerned.",
+      "colors": {
+        "primary": "#3E5E46",
+        "secondary": "#1F2E24",
+        "accent": "#E8703A"
+      },
+      "signature": "Set shots from the elbows, one every four seconds, like a clock.",
+      "ratings": {
+        "accuracy": 0.58,
+        "swishRate": 0.5,
+        "pace": 3.2,
+        "composure": 0.85,
+        "streakiness": 0.2,
+        "consistency": 0.88
+      }
+    },
+    {
+      "id": "snowline",
+      "name": "Pip Snowline",
+      "hometown": "Snowline",
+      "conference": "NORTH",
+      "number": 3,
+      "nickname": "Flurry",
+      "bio": "The smallest shooter in the league and the first to a loose ball every time.",
+      "colors": {
+        "primary": "#F1E8D0",
+        "secondary": "#7FAEC6",
+        "accent": "#E0457B"
+      },
+      "signature": "Floaters from odd angles; streaky as the weather.",
+      "ratings": {
+        "accuracy": 0.49,
+        "swishRate": 0.48,
+        "pace": 4.4,
+        "composure": 0.45,
+        "streakiness": 0.7,
+        "consistency": 0.58
+      }
+    },
+    {
+      "id": "lamplight",
+      "name": "Theo Lamp",
+      "hometown": "Lamplight",
+      "conference": "NORTH",
+      "number": 27,
+      "nickname": "Late Shift",
+      "bio": "Shoots under the light pole until the lot empties. Knows every bump on the slab.",
+      "colors": {
+        "primary": "#F0B84A",
+        "secondary": "#4A4038",
+        "accent": "#221C18"
+      },
+      "signature": "Bank shots from the baselines, square and clean.",
+      "ratings": {
+        "accuracy": 0.6,
+        "swishRate": 0.58,
+        "pace": 3.7,
+        "composure": 0.72,
+        "streakiness": 0.3,
+        "consistency": 0.8
+      }
+    },
+    {
+      "id": "birchwood",
+      "name": "Mara Birch",
+      "hometown": "Birchwood",
+      "conference": "NORTH",
+      "number": 19,
+      "nickname": "White Bark",
+      "bio": "The park's star. Grew up with the leaning aspen over the board and shoots like it's not there.",
+      "colors": {
+        "primary": "#E6ECEF",
+        "secondary": "#9A7650",
+        "accent": "#3F8C7A"
+      },
+      "signature": "Pure swishes from the key; the net barely moves.",
+      "ratings": {
+        "accuracy": 0.61,
+        "swishRate": 0.72,
+        "pace": 3.9,
+        "composure": 0.8,
+        "streakiness": 0.3,
+        "consistency": 0.86
+      }
     }
   ]
 }

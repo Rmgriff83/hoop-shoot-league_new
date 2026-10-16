@@ -147,6 +147,20 @@ const CHAIN_NET_DRAG := 1.6
 const CHAIN_NET_WALL_E := 0.20
 ## City court hoop distance: 25 % farther than the arcade base pose.
 const CITY_DIST := 2.9 * 1.25
+## The park (Ross's "Park Area Concept", 2026-10-15): the photo's hoop at
+## 3.70 m, cold steel a touch livelier than the city's iron, a slim 1.40 m
+## park board, a nylon net, an in-ground pole close behind the board, no
+## fence — the open court is bounded at the asphalt slab's edge by soft,
+## grippy snow banks (soft invisible walls), and a drift at the pole's foot
+## is a prop box. Ross chose the slab bounds over a grass zone.
+const PARK_DIST := 3.70
+const PARK_RIM_E := 0.60
+const PARK_BOARD_HALF_W := 0.70
+const PARK_POLE_R := 0.07
+const PARK_POLE_OFF := 0.17
+const PARK_WALL_E := 0.20
+const PARK_WALL_MU := 0.8
+const PARK_PROP_E := 0.25
 
 
 func _init(p_hoop_x: float, p_hoop_y: float, p_release_h: float,
@@ -337,6 +351,30 @@ static func city(dist := CITY_DIST) -> SimGeometry:
 	# 0.76 wide). Move them there and here together.
 	g.props.push_back(_box(4.32, 4.78, 0.0, 0.92, -1.75 - 0.26, -1.75 + 0.26))
 	g.props.push_back(_box(5.20, 5.65, 0.0, 0.56, 1.45 - 0.38, 1.45 + 0.38))
+	return g
+
+
+## The park: the arcade rim feel and a nylon net on a slim board 3.70 m
+## out, the slab's edge as soft walls (tools/blender/build_park.py COURT_*
+## must match), the pole and the drift box at its foot.
+static func park(dist := PARK_DIST) -> SimGeometry:
+	var rim_h := 2.44
+	var b_bottom := rim_h - 0.15
+	var g := _arcade_feel(SimGeometry.new(dist, rim_h, 1.85, PARK_BOARD_HALF_W, b_bottom, b_bottom + 1.05))
+	g.rim_e = PARK_RIM_E
+	# The asphalt slab (x -7.0 .. 4.70, z ±6.0): past its edge the snow banks.
+	g.wall_x_min = -7.0
+	g.wall_x_max = 4.70
+	g.wall_z_min = -6.0
+	g.wall_z_max = 6.0
+	g.wall_e = PARK_WALL_E
+	g.wall_mu = PARK_WALL_MU
+	g.pole_r = PARK_POLE_R
+	g.pole_off = PARK_POLE_OFF
+	g.pole_top = g.board_top + 0.05
+	# The drift at the pole's foot (build_park.py draws it there).
+	g.props.push_back(_box(4.05, 4.50, 0.0, 0.18, -0.40, 0.40))
+	g.prop_e = PARK_PROP_E
 	return g
 
 

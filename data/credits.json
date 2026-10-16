@@ -143,6 +143,13 @@
       "url": "https://samgrady.itch.io/low-poly-buildings-pack",
       "license": "Attribution 4.0",
       "used_for": "The buildings around the city court"
+    },
+    {
+      "title": "PSX Trees",
+      "author": "DanglingBat",
+      "url": "https://danglingbat.itch.io/",
+      "license": "DanglingBat's Game Assets CC License Agreement (attribution appreciated)",
+      "used_for": "The trees, stumps, rocks and the fallen log in the park"
     }
   ]
 }

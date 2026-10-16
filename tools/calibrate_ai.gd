@@ -22,6 +22,8 @@ static func geo_for(key: String) -> SimGeometry:
 			return SimGeometry.beach()
 		"city":
 			return SimGeometry.city()
+		"park":
+			return SimGeometry.park()
 		_:
 			return SimGeometry.regulation()
 

@@ -125,6 +125,73 @@
       },
       "levels": {
         "min": 3,
+        "cap": 4
+      },
+      "xp_mult": 1.0
+    },
+    {
+      "id": "park",
+      "name": "Park League",
+      "location": "park",
+      "mode": "heat_park",
+      "arena": "park",
+      "hoop": "park",
+      "calib_key": "park",
+      "roster": [
+        "frostfield",
+        "oak-hollow",
+        "millpond",
+        "cedar-row",
+        "snowline",
+        "lamplight",
+        "birchwood"
+      ],
+      "err_mult": 1.0,
+      "heat_seconds": 90,
+      "ot_seconds": 20,
+      "ball_return_s": 1.0,
+      "rounds": 2,
+      "playoff_teams": 4,
+      "semis_best_of": 3,
+      "final_best_of": 5,
+      "unlock": {
+        "level": 4
+      },
+      "ai_cards_per_season": 11,
+      "ai_hand_max": 2,
+      "ai_pool": [
+        "ice",
+        "fire7"
+      ],
+      "card_parity": 0.85,
+      "ai_cards": {
+        "birchwood": [
+          "ice",
+          "fire7"
+        ],
+        "lamplight": [
+          "ice"
+        ],
+        "cedar-row": [
+          "ice"
+        ],
+        "millpond": [
+          "fire7"
+        ],
+        "frostfield": [
+          "ice"
+        ]
+      },
+      "rewards": {
+        "win_coins": 63,
+        "loss_coins": 26,
+        "title_coins": 420,
+        "win_tickets": 40,
+        "loss_tickets": 16,
+        "title_tickets": 115
+      },
+      "levels": {
+        "min": 4,
         "cap": 5
       },
       "xp_mult": 1.0
@@ -137,7 +204,15 @@
       "arena": "city",
       "hoop": "chain",
       "calib_key": "city",
-      "roster": ["starfall", "kingsbridge", "ferry-row", "union-yards", "eastgate", "north-tunnel", "rooftop-hill"],
+      "roster": [
+        "starfall",
+        "kingsbridge",
+        "ferry-row",
+        "union-yards",
+        "eastgate",
+        "north-tunnel",
+        "rooftop-hill"
+      ],
       "err_mult": 1.0,
       "heat_seconds": 90,
       "ot_seconds": 20,
@@ -146,22 +221,51 @@
       "playoff_teams": 4,
       "semis_best_of": 3,
       "final_best_of": 5,
-      "unlock": { "level": 5 },
+      "unlock": {
+        "level": 5
+      },
       "ai_cards_per_season": 12,
       "ai_hand_max": 2,
-      "ai_pool": ["ice", "fire7", "vortex6"],
+      "ai_pool": [
+        "ice",
+        "fire7",
+        "vortex6"
+      ],
       "card_parity": 1.0,
       "ai_cards": {
-        "starfall": ["ice", "vortex6"],
-        "union-yards": ["vortex6"],
-        "north-tunnel": ["ice", "ice"],
-        "rooftop-hill": ["fire7"],
-        "kingsbridge": ["ice"],
-        "ferry-row": ["ice"]
+        "starfall": [
+          "ice",
+          "vortex6"
+        ],
+        "union-yards": [
+          "vortex6"
+        ],
+        "north-tunnel": [
+          "ice",
+          "ice"
+        ],
+        "rooftop-hill": [
+          "fire7"
+        ],
+        "kingsbridge": [
+          "ice"
+        ],
+        "ferry-row": [
+          "ice"
+        ]
       },
-      "rewards": { "win_coins": 66, "loss_coins": 27, "title_coins": 440,
-                   "win_tickets": 45, "loss_tickets": 18, "title_tickets": 130 },
-      "levels": { "min": 5, "cap": 7 },
+      "rewards": {
+        "win_coins": 66,
+        "loss_coins": 27,
+        "title_coins": 440,
+        "win_tickets": 45,
+        "loss_tickets": 18,
+        "title_tickets": 130
+      },
+      "levels": {
+        "min": 5,
+        "cap": 7
+      },
       "xp_mult": 1.0
     }
   ]

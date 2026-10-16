@@ -278,6 +278,13 @@ func _street_and_arenas(t) -> void:
 		t.ok(city != null and city.validate() == PackedStringArray() and city.traffic and not beach.traffic and not cage.traffic,
 			"the city resolves, validates, and is the one with traffic")
 		t.ok(not cage.emissive_nodes.has("Marquee"), "the HOOP SHOOT sign is gone (string lights replace it)")
+		var park := CosmeticLibrary.get_arena("park")
+		t.ok(park != null and park.validate() == PackedStringArray() and park.snow and park.sky == "partly_cloudy" and park.parked_cars.size() == 3 and park.tree_layout != "",
+			"the park resolves, validates, snows, has a sky, three parked cars and a tree layout")
+		t.ok(park != null and not park.traffic and not park.ocean and park.title_stars == 3, "…and nothing of the other areas' life")
+		var park_hoop := CosmeticLibrary.get_hoop("park")
+		t.ok(park_hoop != null and park_hoop.validate() == PackedStringArray() and park_hoop.net_kind == "nylon", "the park hoop resolves and hangs nylon")
+		t.close(park_hoop.model_board_half_w, 0.70, 1e-12, "…on the slim 1.40 m board")
 		t.ok(beach.sun_rotation_deg.y > 0.0 and beach.sun_rotation_deg.y < 60.0 and beach.sun_rotation_deg.x < 0.0,
 			"beach sun sits low in the east-north-east (yaw %.1f)" % beach.sun_rotation_deg.y)
 		t.ok(beach.sun_shadows and beach.fog_enabled and beach.fill_energy > 0.0, "beach has shadows, haze and a fill light")

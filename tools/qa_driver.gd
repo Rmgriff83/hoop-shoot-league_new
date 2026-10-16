@@ -14,7 +14,7 @@ var _outcomes: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# The splash is the main scene now: every other pass starts from the title.
@@ -42,6 +42,8 @@ func _ready() -> void:
 		_run_beach.call_deferred()
 	elif args.has("--qa-city"):
 		_run_city.call_deferred()
+	elif args.has("--qa-park"):
+		_run_park.call_deferred()
 	elif args.has("--qa-peggy"):
 		_run_peggy.call_deferred()
 	elif args.has("--qa-match-end"):
@@ -717,6 +719,28 @@ func _run_city() -> void:
 	get_tree().quit(0)
 
 
+## Park QA (docs/HOME.md → the park): the park's home page, then the park
+## time trial over ~45 s so the flurries fall, the trees and the parked
+## cars show, and the spot shuffle lands.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-park
+func _run_park() -> void:
+	await _sleep(1.2)
+	await _pick_area("park")
+	await _snap("park_home")
+	App.start_mode("trial_park")
+	await _sleep(4.4)
+	for i in 10:
+		await _snap("park_%02d" % i)
+		await _sleep(4.5)
+	await _snap("park_last")
+	var fxs := get_tree().root.find_children("*", "ParkFx", true, false)
+	if not fxs.is_empty():
+		var fx: ParkFx = fxs[0]
+		print("QA park: %d instances in %d draws, %d cars, %d flakes, sky %s" % [fx.instance_count(), fx.draw_count(), fx.car_count(), fx.snow_count(), str(fx.has_sky())])
+	print("QA park: done")
+	get_tree().quit(0)
+
+
 ## Home QA: the cage card over its slow pan (frames at 0 / 5 / 10 / 14 s of a
 ## 28 s truck), then a page turn to the beach card.
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-title
@@ -1172,7 +1196,7 @@ func _pick_area(id: String) -> void:
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-unlock
 func _run_unlock() -> void:
 	await _sleep(0.8)
-	for pair in [["beach", 3], ["city", 5]]:
+	for pair in [["beach", 3], ["park", 4], ["city", 5]]:
 		var page := AreaUnlockPage.new()
 		page.build(AreaUnlockCopy.state(str(pair[0]), int(pair[1])))
 		add_child(page)

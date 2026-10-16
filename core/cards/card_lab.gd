@@ -23,6 +23,8 @@ static func geo_for_key(key: String) -> SimGeometry:
 			return SimGeometry.beach()
 		"city":
 			return SimGeometry.city()
+		"park":
+			return SimGeometry.park()
 		_:
 			return SimGeometry.regulation()
 

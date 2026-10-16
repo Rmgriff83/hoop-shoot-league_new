@@ -4,14 +4,21 @@ extends RefCounted
 ## periods, the status line, the rows from a server board or the device's
 ## own, and the pinned YOU line. Pure; the page and the tests read it.
 
-const AREAS := ["cage", "beach", "city"]
+const AREAS := ["cage", "beach", "park", "city"]
 const PERIODS := ["week", "all"]
 const BOARD_SIZE := 50
 const TOP_COLOURS := 3
 
 
 static func tab_name(area: String) -> String:
-	return "BEACH" if area == "beach" else ("CITY" if area == "city" else "CAGE")
+	match area:
+		"beach":
+			return "BEACH"
+		"park":
+			return "PARK"
+		"city":
+			return "CITY"
+	return "CAGE"
 
 
 static func period_name(period: String) -> String:

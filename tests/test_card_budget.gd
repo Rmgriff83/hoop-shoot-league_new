@@ -52,7 +52,8 @@ func _envelope(t) -> void:
 	var chain := CardBudget.unlock_chain(leagues)
 	t.eq(chain[0]["id"], "cage", "the open league heads the chain")
 	t.eq(chain[1]["id"], "beach", "the beach follows it")
-	t.eq(chain[2]["id"], "city", "then the city")
+	t.eq(chain[2]["id"], "park", "then the park")
+	t.eq(chain[3]["id"], "city", "then the city")
 	for i in range(1, chain.size()):
 		t.ok(float(chain[i]["card_parity"]) >= float(chain[i - 1]["card_parity"]), "parity does not fall from %s to %s" % [chain[i - 1]["id"], chain[i]["id"]])
 	# The cage's arithmetic, by hand: 7 opponents × 2 rounds = 14 games; drops at

@@ -89,6 +89,7 @@ var _ice: RimIce              # on-fire flames/smoke/glow on the rim
 var _beach_fx: BeachFx          # waves + tide, only when arena_set.ocean
 var _arcade_fx: ArcadeFx        # cabinet screens + marquees, only when arena_set.arcade_life
 var _city_fx: CityFx            # traffic, window lights, trees, only when arena_set.traffic
+var _park_fx: ParkFx            # the park's trees, parked cars, falling snow and sky
 var _arena_anim: AnimationPlayer  # the arena glb's clips (one per NLA track), null on fallback
 
 
@@ -247,6 +248,14 @@ func _build_arena_model() -> bool:
 		else:
 			_city_fx.free()
 			_city_fx = null
+	if arena_set.snow or arena_set.tree_layout != "" or not arena_set.parked_cars.is_empty() or arena_set.sky != "":
+		_park_fx = ParkFx.new()
+		_park_fx.name = "ParkFx"
+		if _park_fx.setup(_arena, arena_set):
+			add_child(_park_fx)
+		else:
+			_park_fx.free()
+			_park_fx = null
 	return true
 
 

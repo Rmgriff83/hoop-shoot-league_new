@@ -51,9 +51,10 @@ func _theme(t) -> void:
 	t.eq(over.get_theme_color("font_color"), RetroTheme.SCENE_TEXT, "on-scene text is cream")
 	t.eq(over.get_theme_constant("outline_size"), RetroTheme.OUTLINE, "on-scene text carries an ink outline")
 	over.free()
-	for id in ["cage", "beach", "city"]:
+	for id in ["cage", "beach", "park", "city"]:
 		t.ok(int(CosmeticLibrary.get_arena(id).title_stars) >= 1, "%s rates its difficulty in stars" % id)
 	t.eq(int(CosmeticLibrary.get_arena("city").title_stars), 3, "the city is three stars")
+	t.eq(int(CosmeticLibrary.get_arena("park").title_stars), 3, "the park is three stars")
 	t.eq(int(CosmeticLibrary.get_arena("cage").title_stars), 1, "the cage is one star")
 	t.ok(int(CosmeticLibrary.get_arena("beach").title_stars) > int(CosmeticLibrary.get_arena("cage").title_stars), "the beach is harder")
 	for icon in ["ball", "coin", "jersey", "multiplayer", "star", "stopwatch", "trophy", "ticket", "lock"]:
@@ -316,9 +317,9 @@ func _widgets(t) -> void:
 	t.eq(locker.net_kind(), "cotton", "NETS opens on COTTON")
 	t.eq((locker.find_child("Tab_NETS", true, false) as Button).text, "NETS 2", "the tab counts the stock pair")
 	t.eq(locker.rows(), ["Net_cotton"], "only the owned cotton nets are listed")
-	t.eq(((locker.find_child("Head_net", true, false) as Control).find_child("Text", true, false) as Label).text, "COTTON · HANGS ON CAGE + BEACH", "the head names the courts")
+	t.eq(((locker.find_child("Head_net", true, false) as Control).find_child("Text", true, false) as Label).text, "COTTON · HANGS ON CAGE + BEACH + PARK", "the head names the courts")
 	var cotton_tag: Label = (locker.find_child("Net_cotton", true, false) as Button).find_child("Tag", true, false)
-	t.eq(cotton_tag.text, "IN USE ON CAGE + BEACH", "the cotton net on both nylon courts")
+	t.eq(cotton_tag.text, "IN USE ON CAGE + BEACH + PARK", "the cotton net on every nylon court")
 	t.eq(locker.in_use_row("net"), "Net_cotton", "…and it is the one in use")
 	t.ok(locker.find_child("Sub_CHAIN", true, false) != null, "the CHAIN sub-tab exists")
 	locker.show_kind("chain")
@@ -341,7 +342,7 @@ func _widgets(t) -> void:
 	var cottons: Array = locker.rows()
 	cottons.sort()
 	t.eq(cottons, ["Net_cotton", "Net_wool"], "COTTON lists the owned cottons")
-	t.eq(((locker.find_child("Net_wool", true, false) as Button).find_child("Kind", true, false) as Label).text, "COTTON · CAGE, BEACH", "the wool net fits the nylon courts")
+	t.eq(((locker.find_child("Net_wool", true, false) as Button).find_child("Kind", true, false) as Label).text, "COTTON · CAGE, BEACH, PARK", "the wool net fits the nylon courts")
 	var tags := []
 	for l in locker.find_children("Tag", "Label", true, false):
 		tags.push_back(str(l.text))

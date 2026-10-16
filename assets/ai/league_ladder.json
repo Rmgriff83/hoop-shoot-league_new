@@ -1,13 +1,13 @@
 {
-  "generated": "2026-10-03",
+  "generated": "2026-10-15",
   "leagues": {
     "beach": {
       "err_mult": 1.0,
       "max": 30.1,
       "mean": 24.9,
       "min": 19.9,
-      "n": 40,
-      "pushovers": 1,
+      "n": 40.0,
+      "pushovers": 1.0,
       "ref_mean": 24.1,
       "shooters": {
         "bellmeadow": {
@@ -60,8 +60,8 @@
       "max": 28.7,
       "mean": 19.4,
       "min": 13.1,
-      "n": 40,
-      "pushovers": 3,
+      "n": 40.0,
+      "pushovers": 3.0,
       "ref_mean": 21.0,
       "shooters": {
         "brickport": {
@@ -114,8 +114,8 @@
       "max": 34.4,
       "mean": 28.5,
       "min": 25.4,
-      "n": 40,
-      "pushovers": 0,
+      "n": 40.0,
+      "pushovers": 0.0,
       "ref_mean": 24.5,
       "shooters": {
         "eastgate": {
@@ -162,9 +162,63 @@
         }
       },
       "top_id": "starfall"
+    },
+    "park": {
+      "err_mult": 1.0,
+      "max": 30.3,
+      "mean": 25.2,
+      "min": 18.9,
+      "n": 40,
+      "pushovers": 1,
+      "ref_mean": 22.7,
+      "shooters": {
+        "birchwood": {
+          "acc": 0.61,
+          "ai": 30.3,
+          "ref": 21.9,
+          "win": 0.85
+        },
+        "cedar-row": {
+          "acc": 0.58,
+          "ai": 29.7,
+          "ref": 24.2,
+          "win": 0.85
+        },
+        "frostfield": {
+          "acc": 0.57,
+          "ai": 26.1,
+          "ref": 22.5,
+          "win": 0.75
+        },
+        "lamplight": {
+          "acc": 0.6,
+          "ai": 28.3,
+          "ref": 22.3,
+          "win": 0.8
+        },
+        "millpond": {
+          "acc": 0.55,
+          "ai": 21.6,
+          "ref": 21.5,
+          "win": 0.48
+        },
+        "oak-hollow": {
+          "acc": 0.52,
+          "ai": 21.8,
+          "ref": 22.4,
+          "win": 0.43
+        },
+        "snowline": {
+          "acc": 0.49,
+          "ai": 18.9,
+          "ref": 23.9,
+          "win": 0.25
+        }
+      },
+      "top_id": "birchwood"
     }
   },
-  "n": 40,
+  "n": 40.0,
   "pushover_win": 0.25,
   "reference": {
     "accuracy": 0.55,
@@ -174,5 +228,5 @@
     "streakiness": 0.3,
     "swish": 0.5
   },
-  "seed": 7171
+  "seed": 7171.0
 }

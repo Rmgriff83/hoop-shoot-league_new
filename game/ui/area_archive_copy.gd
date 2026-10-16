@@ -7,7 +7,7 @@ extends RefCounted
 ## The home page and the snapshot tool read AREAS too, so it is the single
 ## list of areas.
 
-const AREAS := [{"area": "cage", "mode": "practice"}, {"area": "beach", "mode": "beach"}, {"area": "city", "mode": "city"}]
+const AREAS := [{"area": "cage", "mode": "practice"}, {"area": "beach", "mode": "beach"}, {"area": "park", "mode": "park"}, {"area": "city", "mode": "city"}]
 
 
 static func ids() -> Array:

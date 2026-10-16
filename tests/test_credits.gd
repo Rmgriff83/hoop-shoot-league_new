@@ -46,6 +46,12 @@ func run(t) -> void:
 		if str(c.get("author", "")) == "Sam Grady" and str(c.get("license", "")).begins_with("Attribution"):
 			grady = true
 	t.ok(grady, "the city's buildings credit Sam Grady's pack (CC BY)")
+	var bat := false
+	for c in models:
+		if str(c.get("author", "")) == "DanglingBat" and str(c.get("used_for", "")).find("park") >= 0:
+			bat = true
+	t.ok(bat, "the park's trees credit DanglingBat's PSX Trees")
+	t.ok(FileAccess.file_exists("res://assets/arena/park/trees/pine_tree_01_a.glb"), "the conformed trees ship")
 	var fonts: Array = credits.get("fonts", [])
 	t.ok(fonts.size() >= 1 and str(fonts[0]["title"]) == "Caveat", "the chalk font is credited")
 	t.ok(FileAccess.file_exists("res://assets/fonts/caveat/Caveat.ttf") and FileAccess.file_exists("res://assets/fonts/caveat/OFL.txt"), "font and its licence ship together")
