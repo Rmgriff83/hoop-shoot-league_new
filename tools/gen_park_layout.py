@@ -54,11 +54,11 @@ while x <= 60.0:
 for x, z, s, k in [(12.5, 9.5, 1.45, 0), (17.5, 14.5, 1.3, 1), (11, 17, 1.2, 5), (23, 19, 1.3, 0), (8.5, 13, 1.1, 4)]:
     T(x, z, s, k)
 # left, past the path
-for x, z, s, k in [(16.5, -26, 1.3, 1), (8, -27, 1.2, 0), (21, -32, 1.1, 6), (3, -22, 1.25, 4), (-4, -24, 1.1, 1)]:
+for x, z, s, k in [(16.5, -26, 1.3, 1), (8, -27, 1.2, 0), (21, -32, 1.1, 6), (3, -22, 1.25, 4)]:
     T(x, z, s, k)
-# behind the camera
-for x, z, s, k in [(-10, 14, 1.2, 0), (-14, -10, 1.3, 5), (-12, 4, 1.1, 1)]:
-    T(x, z, s, k)
+# Nothing behind the camera: the shooter never turns round, so the design's
+# three trees back there and the one far left past the path (-4, -24) were
+# never in any spot's view cone (checked 2026-10-16) and are left out.
 # the tree from the photo: a tall aspen just off-frame left, leaning in over the board
 rows.append({"model": "aspen_tree_01", "x": 4.6, "y": 0.0, "z": -5.4, "s": 1.3, "ry": 2.4, "rx": 0.12})
 rows.append({"model": "pine_tree_01_a", "x": 34.0, "y": 0.0, "z": -31.0, "s": 0.9, "ry": 0.4})
