@@ -11,7 +11,11 @@ uniform vec3 mid_color = vec3(0.55, 0.72, 0.90);
 uniform vec3 horizon_color = vec3(0.80, 0.86, 0.92);   // same value as the fog colour
 uniform vec3 sun_dir = vec3(-0.65204, 0.51232, -0.55890); // normalize(-14, 11, -12)
 
-// Seconds. Drive from script (see guide) so it never jumps at TIME rollover.
+// The clouds' clock is TIME plus this phase (ParkFx.CLOUD_T0, set once).
+// Driving it from script every frame flagged the Sky dirty and re-rendered
+// its radiance cubemap every frame on the phone (2026-10-16); TIME costs
+// nothing. Its rollover is pushed out to days in project.godot
+// (rendering/limits/time/time_rollover_secs), so the one jump never shows.
 uniform float cloud_time = 0.0;
 
 // Cloud tuning, all equal to the concept's hard-coded numbers.
@@ -34,6 +38,10 @@ float fbm(vec2 p) {
 	for (int k = 0; k < 4; k++) { s += a * n(p); p *= 2.03; a *= 0.5; }
 	return s;
 }
+// The shade layer only steers a soft tint, so two octaves carry it.
+float fbm2(vec2 p) {
+	return 0.5 * n(p) + 0.25 * n(p * 2.03);
+}
 vec3 srgb_to_linear(vec3 c) {
 	return mix(c / 12.92, pow((c + 0.055) / 1.055, vec3(2.4)), step(vec3(0.04045), c));
 }
@@ -53,10 +61,10 @@ void sky() {
 	if (!AT_CUBEMAP_PASS) {
 		vec2 uv = d.xz / (y + 0.12) * cloud_scale;     // project onto a flat cloud plane
 		uv = floor(uv * cloud_pixels) / cloud_pixels;  // pixel-step BEFORE the noise
-		vec2 t = drift * cloud_time;
+		vec2 t = drift * (TIME + cloud_time);
 		float cl = fbm(uv * noise_scale + t);
 		float cov = smoothstep(coverage_lo, coverage_hi, cl) * smoothstep(0.0, 0.08, y); // fade at the horizon
-		float shade = smoothstep(0.55, 0.78, fbm(uv * noise_scale + vec2(0.35, 0.2) + t));
+		float shade = smoothstep(0.55, 0.78, fbm2(uv * noise_scale + vec2(0.35, 0.2) + t));
 		vec3 cc = mix(vec3(0.98, 0.97, 0.95), vec3(0.70, 0.74, 0.82), shade * 0.8)
 			+ vec3(1.0, 0.9, 0.75) * pow(sd, 4.0) * 0.25;
 		c = mix(c, cc, cov * cloud_opacity);

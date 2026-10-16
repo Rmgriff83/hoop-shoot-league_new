@@ -32,8 +32,13 @@ func run(t) -> void:
 			t.ok(float(r["x"]) < 29.0, "a big aspen stays only near the court (x %.1f)" % float(r["x"]))
 		elif str(r["model"]) == "aspen_tree_02" and float(r["x"]) >= 29.0 and float(r.get("s", 1.0)) >= 1.6:
 			far_small += 1
-	t.eq(big, 7, "seven big aspens near the court")
+	t.eq(big, 6, "six big aspens near the court")
 	t.eq(far_small, 6, "six far aspens are the small model scaled up to the big one's height")
+	var behind_board := false
+	for r in rows:
+		if str(r["model"]).begins_with("aspen") and absf(float(r["x"]) - 25.4) < 0.3 and absf(float(r["z"]) - 0.9) < 0.3:
+			behind_board = true
+	t.ok(not behind_board, "the aspen that doubled up behind the backboard is gone")
 	t.ok(models.has("aspen_tree_01") and models.has("pine_tree_01_a") and models.has("pine_tree_stump_01") and models.has("rock_01_large_mossy") and models.has("fallen_pine_tree_01"),
 		"aspens, pines, a stump, the mossy rock and the fallen log")
 	var leaning := false
@@ -84,7 +89,11 @@ func run(t) -> void:
 	t.ok(fx.has_sky() and fx.sky_resource() is Sky and (fx.sky_resource() as Sky).sky_material is ShaderMaterial, "the design's sky shader is a Sky resource for the court's Environment")
 	t.ok(not (inst.find_child("Sky", true, false) as MeshInstance3D).visible, "the glb's dome is hidden under it")
 	fx._process(0.5)
-	t.close(float(((fx.sky_resource() as Sky).sky_material as ShaderMaterial).get_shader_parameter("cloud_time")), ParkFx.CLOUD_T0 + 0.5, 1e-6, "the clouds' clock is driven from script")
+	t.close(float(((fx.sky_resource() as Sky).sky_material as ShaderMaterial).get_shader_parameter("cloud_time")), ParkFx.CLOUD_T0, 1e-6, "the clouds' phase is set once: no per-frame uniform write (that re-rendered the radiance every frame)")
+	t.close(fx.clock(), ParkFx.CLOUD_T0 + 0.5, 1e-6, "…the drift rides the shader's TIME")
+	t.ok((fx.sky_resource() as Sky).radiance_size == Sky.RADIANCE_SIZE_64, "a small radiance map (reflections only)")
+	t.ok(FileAccess.get_file_as_string("res://game/court/park_sky.gdshader").contains("drift * (TIME + cloud_time)"), "the shader drifts on TIME")
+	t.ok(float(ProjectSettings.get_setting("rendering/limits/time/time_rollover_secs", 3600.0)) >= 86400.0, "TIME rolls over in days, not the hour")
 	var snow: MeshInstance3D = inst.find_child("Snowfall", true, false)
 	t.ok(snow != null and snow.mesh.surface_get_primitive_type(0) == Mesh.PRIMITIVE_POINTS, "the snow is one points mesh")
 	t.ok(snow != null and snow.custom_aabb.size.x > 100.0, "…never culled")

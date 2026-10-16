@@ -842,7 +842,8 @@ laid out from the reference photo. Three scripts and a layout file:
   from the hoop): only the three trees by the court cast shadows, and the
   six far aspens on the avenue are `aspen_tree_02` scaled ×1.74 to the big
   aspen's height (the park running lighter, 2026-10-16: `aspen_tree_01` is
-  2562 triangles, the small one 945) — stands
+  2562 triangles, the small one 945; the big aspen that doubled up behind
+  the backboard from the key is gone) — stands
   the parked car from the vehicle pool with a snow cap, hangs
   one points mesh of 500 flakes under `park_snow.gdshader` (all motion in
   the vertex shader, the box follows the camera) and puts

@@ -39,6 +39,8 @@ pointing/emulate_touch_from_mouse=true
 
 [rendering]
 
+limits/time/time_rollover_secs=259200.0
+
 textures/canvas_textures/default_texture_filter=0
 renderer/rendering_method="mobile"
 textures/vram_compression/import_etc2_astc=true

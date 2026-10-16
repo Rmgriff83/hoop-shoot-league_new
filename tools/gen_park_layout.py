@@ -82,6 +82,11 @@ for r in rows:
         r["model"] = "aspen_tree_02"
         r["s"] = round(r["s"] * ASPEN_HEIGHT_RATIO, 3)
 
+# From the key two brown aspens on the lot's far row stood side by side
+# (x 25.4 / z 0.9 and x 25.2 / z 5.7); the one hidden behind the backboard
+# goes (Ross, 2026-10-16).
+rows = [r for r in rows if not (r["model"].startswith("aspen") and abs(r["x"] - 25.4) < 0.3 and abs(r["z"] - 0.9) < 0.3)]
+
 doc = {"generated_by": "tools/gen_park_layout.py", "seed": 7, "rows": rows}
 with open(OUT, "w") as f:
     json.dump(doc, f, indent=1)

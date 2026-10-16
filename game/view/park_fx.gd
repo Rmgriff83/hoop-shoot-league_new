@@ -10,8 +10,10 @@ extends Node
 ## and the sky: the design's sky shader (a line-for-line port of the
 ## concept's SkyDome, handed off 2026-10-16 — gradient, sun glow, two layers
 ## of pixel-stepped fbm clouds drifting about one cell per 80 s) as the
-## court Environment's Sky, its clock driven from here so it never jumps at
-## TIME's rollover; the glb's `Sky` dome is hidden under it. Never touches
+## court Environment's Sky, its clock the shader's own TIME plus a phase set
+## once (a per-frame uniform write re-rendered the sky's radiance cubemap
+## every frame, 2026-10-16; the rollover is pushed out to days in
+## project.godot); the glb's `Sky` dome is hidden under it. Never touches
 ## the sim. Seeded: a QA screenshot or a test replays identically.
 
 const TREES_DIR := "res://assets/arena/park/trees/%s.glb"
@@ -271,7 +273,9 @@ func _build_sky(arena: Node, _set: ArenaSet) -> void:
 	_sky = Sky.new()
 	_sky.sky_material = _sky_mat
 	_sky.process_mode = Sky.PROCESS_MODE_AUTOMATIC
-	_sky.radiance_size = Sky.RADIANCE_SIZE_256
+	# The radiance map feeds reflections only (the ambient is a colour) and
+	# the clouds skip the cubemap pass: 64 is plenty, and it renders once.
+	_sky.radiance_size = Sky.RADIANCE_SIZE_64
 	var dome := arena.find_child("Sky", true, false) as MeshInstance3D
 	if dome != null:
 		dome.visible = false
@@ -282,13 +286,16 @@ func sky_resource() -> Sky:
 	return _sky
 
 
+## Seconds the clouds have drifted since load (tests).
+func clock() -> float:
+	return _cloud_t
+
+
 # ---- per frame ---------------------------------------------------------------------------
 
 
 func _process(delta: float) -> void:
-	if _sky_mat != null:
-		_cloud_t += delta
-		_sky_mat.set_shader_parameter("cloud_time", _cloud_t)
+	_cloud_t += delta   # the clouds' clock for tests; the shader keeps its own
 	if _snow_mat == null:
 		return
 	if _cam == null or not is_instance_valid(_cam):
