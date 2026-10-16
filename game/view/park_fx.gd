@@ -7,14 +7,21 @@ extends Node
 ## trees casting shadows), three parked cars from the vehicle pool with a
 ## snow cap each, the falling snow (one points mesh under park_snow.gdshader,
 ## every flake's motion in the vertex shader, the box following the camera)
-## and the sky dome's shader with the drifting pixel clouds. Never touches
+## and the sky: the design's sky shader (a line-for-line port of the
+## concept's SkyDome, handed off 2026-10-16 — gradient, sun glow, two layers
+## of pixel-stepped fbm clouds drifting about one cell per 80 s) as the
+## court Environment's Sky, its clock driven from here so it never jumps at
+## TIME's rollover; the glb's `Sky` dome is hidden under it. Never touches
 ## the sim. Seeded: a QA screenshot or a test replays identically.
 
 const TREES_DIR := "res://assets/arena/park/trees/%s.glb"
 const VEHICLE := "res://assets/vehicles/%s.glb"
 const SNOW_SHADER := preload("res://game/court/park_snow.gdshader")
 const SKY_SHADER := preload("res://game/court/park_sky.gdshader")
-const CLOUDS := "res://assets/textures/park_sky_clouds.png"
+## The concept's sun, normalize(-14, 11, -12); the clouds' clock starts here
+## so every load sees the same sky (the concept starts at page-load time).
+const SUN_DIR := Vector3(-0.65204, 0.51232, -0.55890)
+const CLOUD_T0 := 137.0
 const SNOW_BOX := Vector3(14.0, 9.0, 14.0)
 const SNOW_CAP := 800
 const ASPEN_TINT := Color("#9A7650")
@@ -30,6 +37,8 @@ var _snow: MeshInstance3D
 var _snow_mat: ShaderMaterial
 var _snow_count := 0
 var _sky_mat: ShaderMaterial
+var _sky: Sky
+var _cloud_t := CLOUD_T0
 var _cam: Camera3D
 
 
@@ -230,28 +239,35 @@ func _build_snow(n: int) -> void:
 # ---- the sky ----------------------------------------------------------------------------
 
 
-func _build_sky(arena: Node, set: ArenaSet) -> void:
-	var sky := arena.find_child("Sky", true, false) as MeshInstance3D
-	if sky == null:
-		return
+## The design's sky as a Sky resource (CourtGeometry hangs it on the court's
+## Environment: background Sky, fog_sky_affect 0, linear tonemap). The glb's
+## dome would hide it, so it goes.
+func _build_sky(arena: Node, _set: ArenaSet) -> void:
 	_sky_mat = ShaderMaterial.new()
 	_sky_mat.shader = SKY_SHADER
-	var tex: Texture2D = load(CLOUDS) if ResourceLoader.exists(CLOUDS) else null
-	if tex != null:
-		_sky_mat.set_shader_parameter("clouds", tex)
-	# The sun's direction from the ArenaSet's light rotation (the light shines
-	# along -z of its basis; the sun sits the other way).
-	var basis := Basis.from_euler(set.sun_rotation_deg * (PI / 180.0))
-	_sky_mat.set_shader_parameter("sun_dir", (basis * Vector3(0.0, 0.0, 1.0)).normalized())
-	sky.material_override = _sky_mat
-	sky.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
-	sky.custom_aabb = AABB(Vector3(-500, -500, -500), Vector3(1000, 1000, 1000))
+	_sky_mat.set_shader_parameter("sun_dir", SUN_DIR)
+	_sky_mat.set_shader_parameter("cloud_time", _cloud_t)
+	_sky = Sky.new()
+	_sky.sky_material = _sky_mat
+	_sky.process_mode = Sky.PROCESS_MODE_AUTOMATIC
+	_sky.radiance_size = Sky.RADIANCE_SIZE_256
+	var dome := arena.find_child("Sky", true, false) as MeshInstance3D
+	if dome != null:
+		dome.visible = false
+
+
+## The Sky the court's Environment shows (null when the area has no sky).
+func sky_resource() -> Sky:
+	return _sky
 
 
 # ---- per frame ---------------------------------------------------------------------------
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	if _sky_mat != null:
+		_cloud_t += delta
+		_sky_mat.set_shader_parameter("cloud_time", _cloud_t)
 	if _snow_mat == null:
 		return
 	if _cam == null or not is_instance_valid(_cam):
