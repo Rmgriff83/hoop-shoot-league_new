@@ -13,6 +13,11 @@ extends RefCounted
 ## aim-by-pointing flick), which is used as-is. "vz" is lateral to the bearing.
 
 
+## A ball slower than this, down on the floor (its centre under REST_HEIGHT
+## radii), is at rest: the rack moves on.
+const REST_SPEED := 0.6
+const REST_HEIGHT := 1.5
+
 ## Cold streak (rim iced over): how long the ice holds a caught ball, how long
 ## it takes to settle into the hole, where it sits, and the pop-out velocity
 ## (toward the shooter, who stands at x < hoop_x).
@@ -273,13 +278,22 @@ static func _update_resolution(s: BallState) -> void:
 	# third floor hit: on the slope it keeps rolling down whatever its speed,
 	# and on the deck it rolls out against deck_roll_decel until it is slower
 	# than the rest speed. Everywhere else the original rules hold exactly.
+	#
+	# The rest-speed rule only counts a ball that is DOWN on the floor: a ball
+	# also passes through near-zero speed at the top of every rebound, and a
+	# make — dropping out of the net almost straight down, with no sideways
+	# speed to carry it — used to vanish in mid-air at the apex of its first
+	# bounce (Ross, 2026-10-16: "on the make, it bounced one time and then
+	# disappeared"). A miss comes off the rim with sideways speed and never
+	# met the rule there, which is why the two looked different.
 	var ramp := s.geo.has_ramp()
 	var on_ramp := ramp and pos.x > s.geo.ramp_x0
+	var on_floor := pos.y < SimConstants.R_BALL * REST_HEIGHT
 	if (
 		(s.floor_hits >= 3 and not ramp)
 		or s.t > SimConstants.MAX_SHOT_TIME
 		or far
-		or (s.floor_hits > 0 and s.vel.length() < 0.6 and not on_ramp)
+		or (s.floor_hits > 0 and s.vel.length() < REST_SPEED and on_floor and not on_ramp)
 	):
 		s.settled = true
 		s.resolved = true
