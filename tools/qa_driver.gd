@@ -14,6 +14,13 @@ var _outcomes: Array[String] = []
 
 func _ready() -> void:
 	var args := OS.get_cmdline_user_args()
+	# `--net=<id>` hangs that net everywhere for the run (any net on any hoop):
+	# --qa-park-chain is --qa-park with the jack chain.
+	for a in args:
+		if str(a).begins_with("--net="):
+			App.net_override = CosmeticLibrary.get_net(str(a).trim_prefix("--net="))
+	if args.has("--qa-park-chain") and App.net_override == null:
+		App.net_override = CosmeticLibrary.get_net("jack")
 	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
@@ -42,6 +49,8 @@ func _ready() -> void:
 		_run_beach.call_deferred()
 	elif args.has("--qa-city"):
 		_run_city.call_deferred()
+	elif args.has("--qa-park-chain"):
+		_run_park.call_deferred()
 	elif args.has("--qa-park"):
 		_run_park.call_deferred()
 	elif args.has("--qa-peggy"):
@@ -459,6 +468,15 @@ func _run_hud() -> void:
 			panel.show_kind("chain")
 			await _sleep(0.4)
 			await _snap("locker_nets_chain")
+			# The hang-it-where sheet for the jack chain, the park row tapped.
+			panel.open_area_sheet("jack")
+			await _sleep(0.3)
+			var park_row: Button = panel.area_sheet().find_child("Area_park", true, false) if panel.area_sheet() != null else null
+			if park_row != null:
+				park_row.pressed.emit()
+			await _sleep(0.3)
+			await _snap("locker_net_sheet")
+			panel.close_area_sheet()
 			panel.close()
 			await _sleep(0.6)
 	SaveService.put_cosmetics(cos_before)

@@ -478,14 +478,29 @@ func play_streak() -> void:
 	_play_anim(hoop_set.streak_anim if hoop_set != null else "")
 
 
-## The style this court hangs: net_set's when it fits the hoop's kind, else
-## the hoop's stock net.
+## The style this court hangs: the net set's own (any kind on any hoop —
+## a chain on the park's nylon rim, cotton on the city's steel), else the
+## hoop's kind's stock net.
 func _resolve_net_style() -> String:
-	var kind := NetSet.kind_of_hoop(hoop_set)
-	if net_set != null and net_set.kind == kind and NetBodies.has_style(net_set.body_style()) \
-			and NetBodies.kind_of(net_set.body_style()) == kind:
+	if net_set != null and NetBodies.has_style(net_set.body_style()):
 		return net_set.body_style()
-	return NetBodies.stock_style(kind)
+	return NetBodies.stock_style(NetSet.kind_of_hoop(hoop_set))
+
+
+## The kind that hangs: the style's own.
+func net_kind() -> String:
+	return NetBodies.kind_of(net_style) if NetBodies.has_style(net_style) else NetSet.kind_of_hoop(hoop_set)
+
+
+## The hoop whose nine net_* knobs feel like `kind`: this hoop when it hangs
+## that kind natively, else the kind's reference hoop (the chain hoop for a
+## chain, the starter nylon hoop for cotton) — a chain hung on the park
+## swings and grabs like the city's chain, not like a cotton net.
+func _knobs_hoop(kind: String) -> HoopSet:
+	if hoop_set != null and NetSet.kind_of_hoop(hoop_set) == kind:
+		return hoop_set
+	var ref: HoopSet = CosmeticLibrary.get_hoop("chain") if kind == "chain" else CosmeticLibrary.starter_hoop()
+	return ref if ref != null and NetSet.kind_of_hoop(ref) == kind else hoop_set
 
 
 ## The knotted net (docs/BLENDER_101.md §28–30): the glb's Net surface is
@@ -496,14 +511,14 @@ func _build_net() -> void:
 	if _net_mi == null or hoop_set == null:
 		return
 	net_style = _resolve_net_style()
-	var kind := NetSet.kind_of_hoop(hoop_set)
+	var kind := net_kind()
 	net_sim = NetSim.new()
 	net_sim.name = "NetSim"
-	net_sim.configure(hoop_set)
+	net_sim.configure(_knobs_hoop(kind))
 	# The tuning strip's NET page (device-local overrides per net kind).
 	var save: Node = get_tree().root.get_node_or_null("SaveService") if is_inside_tree() else null
 	if save != null:
-		net_sim.apply_overrides(Dictionary(save.call("get_tuning_net")).get(hoop_set.net_kind, {}))
+		net_sim.apply_overrides(Dictionary(save.call("get_tuning_net")).get("chain" if kind == "chain" else "nylon", {}))
 	add_child(net_sim)
 	_net_mi.visible = false
 	_net_body = NetBodies.for_set(net_set) if net_set != null and net_set.body_style() == net_style else NetBodies.for_style(net_style)
@@ -523,8 +538,8 @@ func _build_net() -> void:
 		_net_mi.visible = true
 
 
-## Hang another net style on this court, live (the pause menu's NET row).
-## A style of the wrong kind falls back to the hoop's stock net.
+## Hang another net style on this court, live (the pause menu's NET row, the
+## locker's sheet): any kind on any hoop.
 func set_net(ns: NetSet) -> void:
 	net_set = ns
 	if _net_mi == null:

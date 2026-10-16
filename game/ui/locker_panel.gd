@@ -2,9 +2,9 @@ class_name LockerPanel
 extends HomePage
 ## The locker page (the top-left ball icon), docs/LOCKER.md: the collection.
 ## Two tabs — BALLS, the balls you own (tap to equip, everywhere) — and
-## NETS, the nets you own, split by a COTTON / CHAIN sub-tab since each kind
-## hangs on different courts (tap to hang it on every court of its kind;
-## the pause menu swaps per court). Nothing unowned is listed: balls are won
+## NETS, the nets you own under a COTTON / CHAIN sub-tab (a filter: any net
+## hangs on any court — tap one and the NetAreaSheet asks which court, or
+## EVERYWHERE; the pause menu swaps per court). Nothing unowned is listed: balls are won
 ## on PEGGY (the PEGGY button beside the ticket chip opens its page) and the
 ## net store is a later page. The hoop counter is closed
 ## (App.HOOPS_IN_LOCKER). Opening the locker clears App.unseen_prizes(), which the
@@ -22,6 +22,7 @@ var _content: Control
 var _tab := "BALLS"
 var _net_kind := "cotton"
 var _list: VBoxContainer
+var _sheet: NetAreaSheet
 
 
 func _row_gap() -> int:
@@ -250,8 +251,7 @@ func _build_nets() -> void:
 		var k: String = kind
 		b.pressed.connect(func() -> void: show_kind.call_deferred(k))
 		subs.add_child(b)
-	var hangs := _upper(App.net_areas(_net_kind))
-	var head_ := chip("%s · HANGS ON %s" % [_net_kind.to_upper(), " + ".join(hangs)])
+	var head_ := chip("%s · TAP A NET TO HANG IT" % _net_kind.to_upper())
 	head_.name = "Head_net"
 	_list.add_child(head_)
 	var grid := _grid("NetGrid")
@@ -266,14 +266,40 @@ func _build_nets() -> void:
 		var vb: Control = parts[1]
 		vb.add_child(net_rect(net, 96))
 		_line(vb, "Name", str(net.display_name).to_upper(), 11)
-		_line(vb, "Kind", "%s · %s" % [net.kind.to_upper(), ", ".join(_upper(App.net_areas(net.kind)))], 9)
+		_line(vb, "Kind", net.kind.to_upper(), 9)
 		_line(vb, "Tag", "IN USE ON %s" % " + ".join(_upper(used)) if in_use else "EQUIP", 11)
 		var id := net.id
-		tile.pressed.connect(func() -> void:
-			if App.select_net_everywhere(id):
-				_fill()
-		)
+		tile.pressed.connect(func() -> void: open_area_sheet(id))
 		grid.add_child(tile)
+
+
+## The "hang it where?" sheet for a net; closing it refills the tab.
+func open_area_sheet(id: String) -> void:
+	close_area_sheet()
+	var sheet := NetAreaSheet.new()
+	sheet.name = "NetAreaSheet"
+	if not sheet.build(id):
+		sheet.free()
+		return
+	_sheet = sheet
+	add_child(sheet)
+	sheet.closed.connect(func() -> void:
+		close_area_sheet()
+		_fill()
+	)
+
+
+func close_area_sheet() -> void:
+	if _sheet != null:
+		if _sheet.get_parent() == self:
+			remove_child(_sheet)
+		_sheet.queue_free()
+		_sheet = null
+
+
+## The open sheet (null when none), for tests and QA.
+func area_sheet() -> NetAreaSheet:
+	return _sheet
 
 
 ## The id in use: the live set, else the starter.

@@ -38,32 +38,44 @@ purchase), **Ladder** (straight drops tied by hoop chains, 1000 — a
 *premium* one), **Wool** (a hand-knitted net in twelve yarn colours, 700 —
 *mid*, for the nylon courts), the **Neon Yellow** / **Neon Orange** cottons
 (the cotton body with a `NetSet.tint`, 400 each — *entry*) and **Red White
-Blue** (the heavy-duty polyester net in colour bands, 500 — *mid*). A style can only hang on a hoop of its kind, which is how a
-later chain area gets the chains you already own: areas resolve their kind
-through `App.AREA_MODES` → `App.net_kind_for_area`.
+Blue** (the heavy-duty polyester net in colour bands, 500 — *mid*). **Any
+net hangs on any hoop** (Ross, 2026-10-16): a chain on the park's nylon rim,
+cotton on the city's steel. What follows the choice is what you see and
+hear — the body `NetBodies` builds, swung by `NetSim` on the **knobs of
+that kind's reference hoop** (`CourtGeometry._knobs_hoop`: the chain hoop's
+for a chain, the hoop's own for its native kind), the chain rattle / cotton
+rustle (`Sfx.hang_net`), the thumbnail. What stays the area's: the hoop
+itself and the ball's physics (`SimGeometry` net drag / wall restitution,
+the AI calibration, the golden grid). `App.net_kind_for_area` still names a
+hoop's native kind, which is the stock fallback when nothing owned is hung.
 
-- The **NETS tab** lists the styles you own of the sub-tab's kind (tile
-  `Net_<id>`, the thumbnail from `assets/textures/nets/thumbs/<id>.png`,
-  rendered by `--qa-net-thumbs` — the net alone, no rim), under a head
-  "COTTON · HANGS ON CAGE + BEACH + PARK" / "CHAIN · HANGS ON CITY", with a
-  KIND · AREAS line ("CHAIN · CITY", "COTTON · CAGE, BEACH, PARK") and a
-  tag: **IN USE ON CITY** / **IN USE ON CAGE + BEACH + PARK** (the gold
-  tile) or **EQUIP**. The park (2026-10-15) hangs cotton like the cage and
-  the beach.
-  Tapping a net hangs it on **every area of its kind**
-  (`App.select_net_everywhere`). **Buying has no UI yet** (2026-10-15): the
+- The **NETS tab** lists the styles you own under the COTTON / CHAIN
+  sub-tab (a filter by kind; tile `Net_<id>`, the thumbnail from
+  `assets/textures/nets/thumbs/<id>.png`, rendered by `--qa-net-thumbs` —
+  the net alone, no rim), under a head "COTTON · TAP A NET TO HANG IT", with
+  the kind line ("CHAIN") and a tag: **IN USE ON PARK + CITY** (the gold
+  tile) or **EQUIP**.
+  Tapping a net opens the **hang-it-where sheet** (`game/ui/net_area_sheet.gd`,
+  `NetAreaSheet`, layer 35 over the locker; QA `locker_net_sheet.png`): the
+  net's name and thumbnail, one row per area in `App.AREA_MODES` order
+  (`Area_<id>`: the area, then what hangs there — gold **HANGING** when it is
+  this net; an area the level has not reached reads **LOCKED · LVL n** and
+  does nothing), **EVERYWHERE** (`App.select_net_everywhere`, now every
+  area — PEGGY's prize-card EQUIP uses it too) and **CLOSE**. A row hangs
+  the net on that area (`App.select_net(area, id)`, owned only) and the
+  rows restyle in place; closing refills the tab. **Buying has no UI yet** (2026-10-15): the
   locker is the collection; `App.try_buy("net", id)` stays wired for the
   store page to come, and the economy still prices every style.
-- The **pause menu**'s NET row (docs/HOME.md) cycles the owned nets of
-  that court's kind and hangs the pick on **that court only**
+- The **pause menu**'s NET row (docs/HOME.md) cycles every owned net and
+  hangs the pick on **that court only**
   (`App.select_net(area, id)`); its BALL row cycles the owned balls and the
   equip is global (`App.select("ball", id)`). Both swap live:
   `CourtGeometry.set_net`, `BallPool.set_ball_set`.
 - Saved in `cosmetics.net = {"owned": [...], "selected": {area: id}}`
   (`SaveService.default_nets`, `migrate_cosmetics` backfills older saves and
-  mirrored docs). `App.net_set_for(area)` falls back to the kind's stock net
-  when a selection is unowned or of the wrong kind. `App.net_override` hangs
-  a net everywhere it fits without the save (QA, `--qa-jack` / `--qa-ladder`).
+  mirrored docs). `App.net_set_for(area)` falls back to the hoop's kind's
+  stock net when a selection is unowned. `App.net_override` hangs a net
+  everywhere without the save (QA, `--qa-jack` / `--qa-ladder`).
 - Cosmetics never go on the wire: in an online heat each phone shows its own.
 
 Adding a net: a body class (`extends ChainNet` for a chain, `CottonNet` for

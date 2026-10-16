@@ -463,17 +463,18 @@ func _net_doc(c: Dictionary) -> Dictionary:
 	return c["net"] if c.has("net") and c["net"] is Dictionary else SaveService.default_nets()
 
 
-## The net hung on an area: the selection when it is owned and of the area's
-## kind, else the kind's stock net.
+## The net hung on an area: the selection when it is owned — any kind, cotton
+## or chain, hangs on any hoop (Ross, 2026-10-16) — else the hoop's own
+## kind's stock net. The hoop and the ball's physics stay the area's; the
+## net's body, look and sound follow the choice.
 func net_set_for(area: String) -> NetSet:
-	var kind := net_kind_for_area(area)
-	if net_override != null and net_override.kind == kind:
+	if net_override != null:
 		return net_override
 	var sel: Dictionary = _net_doc(SaveService.get_cosmetics()).get("selected", {})
 	var ns := CosmeticLibrary.get_net(str(sel.get(area, "")))
-	if ns != null and ns.kind == kind and owns("net", ns.id):
+	if ns != null and owns("net", ns.id):
 		return ns
-	return CosmeticLibrary.stock_net(kind)
+	return CosmeticLibrary.stock_net(net_kind_for_area(area))
 
 
 ## The net a mode plays with (its area's).
@@ -481,10 +482,11 @@ func net_for_mode(id: String) -> NetSet:
 	return net_set_for(str(mode_config(id).get("location", "cage")))
 
 
-## Hang an owned net of the right kind on one area. False otherwise.
+## Hang an owned net on one area (the locker's sheet, the pause menu's NET
+## row). False for an unknown or unowned net or an unknown area.
 func select_net(area: String, id: String) -> bool:
 	var ns := CosmeticLibrary.get_net(id)
-	if ns == null or not owns("net", id) or ns.kind != net_kind_for_area(area):
+	if ns == null or not owns("net", id) or not AREA_MODES["practice"].has(area):
 		return false
 	var c := SaveService.get_cosmetics()
 	_ensure_kind(c, "net")
@@ -495,7 +497,7 @@ func select_net(area: String, id: String) -> bool:
 	return true
 
 
-## The locker's equip: hang an owned net on every area of its kind.
+## The sheet's EVERYWHERE (and PEGGY's EQUIP): hang an owned net on every area.
 func select_net_everywhere(id: String) -> bool:
 	var ns := CosmeticLibrary.get_net(id)
 	if ns == null or not owns("net", id):
@@ -504,7 +506,7 @@ func select_net_everywhere(id: String) -> bool:
 	_ensure_kind(c, "net")
 	if not (c["net"].get("selected") is Dictionary):
 		c["net"]["selected"] = {}
-	for area in net_areas(ns.kind):
+	for area in AREA_MODES["practice"]:
 		c["net"]["selected"][area] = id
 	SaveService.put_cosmetics(c)
 	return true

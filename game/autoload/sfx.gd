@@ -71,6 +71,7 @@ static func _load_list(paths: PackedStringArray) -> Array:
 
 
 var _net_kind := "nylon"
+var _hoop_net_kind := "nylon"
 
 
 ## Load a hoop set's sounds (replacing the previous hoop's).
@@ -78,9 +79,11 @@ func load_hoop_set(set: HoopSet) -> void:
 	_hoop = {}
 	_hoop_id = ""
 	_net_kind = "nylon"
+	_hoop_net_kind = "nylon"
 	if set == null:
 		return
 	_net_kind = set.net_kind
+	_hoop_net_kind = set.net_kind
 	_hoop = {
 		"make": _load_list(set.make_clips),
 		"miss": _load_list(set.miss_clips),
@@ -112,9 +115,19 @@ func hoop_id() -> String:
 	return _hoop_id
 
 
-## The live hoop's net: "nylon" or "chain" (the links rattle under rim hits).
+## The live net: "nylon" or "chain" (the links rattle under rim hits). The
+## hoop's own kind until hang_net() says what the player hung on it.
 func net_kind() -> String:
 	return _net_kind
+
+
+## The net the player hung on the live hoop (any kind on any hoop): null
+## means the hoop's own.
+func hang_net(ns: NetSet) -> void:
+	if ns == null:
+		_net_kind = _hoop_net_kind
+	else:
+		_net_kind = "chain" if ns.kind == "chain" else "nylon"
 
 
 func ball_id() -> String:

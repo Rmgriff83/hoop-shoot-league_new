@@ -161,10 +161,10 @@ func _ball_ids() -> Array:
 	return out
 
 
-## The owned nets of this court's kind, in library order.
+## The owned nets, in library order (any kind hangs on any court).
 func _net_ids() -> Array:
 	var out: Array = []
-	for n in CosmeticLibrary.nets_of_kind(_net_kind):
+	for n in CosmeticLibrary.nets():
 		if App.owns("net", n.id):
 			out.push_back(n.id)
 	return out

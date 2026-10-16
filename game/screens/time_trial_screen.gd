@@ -62,6 +62,7 @@ func _ready() -> void:
 	_court.arena_set = _arena_set
 	_court.hoop_set = _hoop_set
 	_court.net_set = App.net_for_mode(App.next_mode)
+	Sfx.hang_net(_court.net_set)   # the rattle / rustle follow the hung net, not the hoop
 	add_child(_court)
 	_court.show_score(0)   # the hoop's board: the score, nothing else
 	if _mode["led_text"] != "":
@@ -235,6 +236,7 @@ func _on_net_changed(_id: String) -> void:
 	if _court == null:
 		return
 	_court.set_net(App.net_for_mode(App.next_mode))
+	Sfx.hang_net(_court.net_set)
 	if _overlay != null:
 		_overlay.net_sim = _court.net_sim
 

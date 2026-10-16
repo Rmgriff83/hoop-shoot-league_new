@@ -22,8 +22,9 @@ Ticker      flat strip at the very bottom, scrolling copy from the save
 No bottom nav: the phone's safe area would push one up, and the space goes to
 the cards. **Locker** (`game/ui/locker_panel.gd`, docs/LOCKER.md): a **page**
 over the area (below) — BALLS, the balls you own (equip via `App.select`),
-and NETS, the nets you own by kind (COTTON / CHAIN sub-tab, equip on every
-court of the kind); nothing unowned is listed. Its PEGGY button opens the
+and NETS, the nets you own (COTTON / CHAIN sub-tab; a tap opens the
+hang-it-where sheet — any net on any court, or EVERYWHERE); nothing unowned
+is listed. Its PEGGY button opens the
 **PEGGY page** (`game/ui/peggy_page.gd`), the carnival drop machine that
 wins balls and nets — tickets buy nothing else; the hoop counter is closed
 for now (`App.HOOPS_IN_LOCKER`). The locker icon carries a gold dot while a
@@ -351,8 +352,8 @@ the spot you stand on in orange, with a 44 × 56 chevron beside the column that
 slides the whole rail 200 px off the left edge and back (`--qa-spots` snaps
 `spots_00..02`). The pause menu is shared (`game/ui/pause_menu.gd`, `PauseMenu`):
 PAUSED, RESUME, SHOT HELP (taps cycle the value), BALL (taps cycle the owned
-balls; the equip is global), NET (taps cycle the owned nets of this court's
-kind; the equip is this court's — docs/LOCKER.md → NETS), QUIT TO TITLE — the old
+balls; the equip is global), NET (taps cycle every owned net, any kind on
+any court; the equip is this court's — docs/LOCKER.md → NETS), QUIT TO TITLE — the old
 BACK button lives there now.
 
 **League match** (design "League Match HUD", `game/screens/heat_screen.gd`):
