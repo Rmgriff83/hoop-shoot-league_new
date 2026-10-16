@@ -45,8 +45,6 @@ func _initialize() -> void:
 	_save("peggy_win", _peggy_win())
 	_save("match_loss", _match_loss())
 	_save("peggy_jackpot", _peggy_jackpot())
-	# The park's ambience (docs/HOME.md → the park): a winter wind loop.
-	_save("winter_wind", _winter_wind(), "res://assets/arena/park/ambience")
 	print("sfx done")
 	quit(0)
 
@@ -461,34 +459,6 @@ func _mix(dst: PackedFloat64Array, src: PackedFloat64Array, at_seconds: float) -
 		dst.resize(needed)
 	for i in src.size():
 		dst[offset + i] += src[i]
-
-
-## A winter wind, 10 s and loop-safe: white noise through a low-pass that
-## opens and closes with two slow gusts, a touch of a whistle in the mid.
-func _winter_wind() -> PackedFloat64Array:
-	var dur := 10.0
-	var n := int(dur * SR)
-	var bed := _biquad_lowpass(_noise(dur, 9101), 420.0, 0.7)
-	var whistle := _biquad_bandpass(_noise(dur, 9102), 900.0, 1400.0, dur, 6.0)
-	var out := PackedFloat64Array()
-	out.resize(n)
-	for i in n:
-		var t := float(i) / SR
-		var gust := 0.55 + 0.45 * sin(TAU * t / dur) * sin(TAU * t * 2.0 / dur + 0.7)
-		var g2 := 0.5 + 0.5 * sin(TAU * t * 3.0 / dur + 2.1)
-		out[i] = bed[i] * (0.35 + 0.65 * gust) * 0.9 + whistle[i] * 0.12 * g2 * gust
-	# A short crossfade at the ends so the loop seam is silent.
-	var fade := int(0.4 * SR)
-	for i in fade:
-		var k := float(i) / float(fade)
-		out[i] *= k
-		out[n - 1 - i] *= k
-	var peak := 0.0
-	for v in out:
-		peak = maxf(peak, absf(v))
-	for i in n:
-		out[i] = out[i] / maxf(peak, 1e-6) * 0.6
-	return out
 
 
 func _save(name: String, buf: PackedFloat64Array, dir := OUT_DIR) -> void:
