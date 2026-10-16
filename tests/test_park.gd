@@ -32,8 +32,9 @@ func _geometry(t) -> void:
 	t.ok(g.neck_is_rim == a.neck_is_rim and g.net_catch_depth == a.net_catch_depth and g.rim_log_impact == a.rim_log_impact, "park gym-rim fields = arcade")
 	t.ok(g.net_drag == a.net_drag and g.net_wall_e == a.net_wall_e, "the park hangs nylon")
 	t.close(g.net_rigidity(), 1.0, 1e-12, "nylon rigidity 1")
-	t.ok(g.has_walls() and g.wall_x_min == -7.0 and g.wall_x_max == 4.70 and g.wall_z_max == 6.0 and g.wall_z_min == -6.0 and g.wall_y_max == INF, "the slab's edge as soft walls, no roof")
-	t.ok(g.wall_e < SimGeometry.beach().wall_e and g.wall_mu > SimGeometry.beach().wall_mu, "the snow banks are softer and grippier than a fence (e %.2f, mu %.2f)" % [g.wall_e, g.wall_mu])
+	t.ok(g.has_walls() and g.wall_x_min == -7.0 and g.wall_x_max == SimGeometry.PARK_FENCE_X and g.wall_z_max == 6.0 and g.wall_z_min == -6.0 and g.wall_y_max == INF, "the split-rail fence behind the hoop, the slab's edge at the sides, no roof")
+	t.close(g.wall_x_max, 6.20, 1e-12, "the fence stands 2.5 m behind the rim")
+	t.ok(g.wall_e < SimGeometry.beach().wall_e and g.wall_mu > SimGeometry.beach().wall_mu, "cedar and snow banks: softer and grippier than chain-link (e %.2f, mu %.2f)" % [g.wall_e, g.wall_mu])
 	t.close(g.pole_r, 0.07, 1e-12, "the in-ground pole")
 	t.close(g.pole_off, 0.17, 1e-12, "…close behind the board")
 	t.ok(g.has_props() and g.props.size() == 1, "one prop: the drift at the pole's foot")
@@ -84,7 +85,7 @@ func _edge(t) -> void:
 				ShotSim.step_shot(s)
 				max_x = maxf(max_x, s.pos.x)
 				max_z = maxf(max_z, absf(s.pos.z))
-	t.ok(max_x <= g.wall_x_max + 1e-6, "the ball never passes the slab's back edge (%.2f)" % max_x)
+	t.ok(max_x <= g.wall_x_max + 1e-6, "the ball never passes the fence (%.2f)" % max_x)
 	t.ok(max_z <= g.wall_z_max + 1e-6, "…or its sides (%.2f)" % max_z)
 
 

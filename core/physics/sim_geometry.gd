@@ -150,16 +150,21 @@ const CITY_DIST := 2.9 * 1.25
 ## The park (Ross's "Park Area Concept", 2026-10-15): the photo's hoop at
 ## 3.70 m, cold steel a touch livelier than the city's iron, a slim 1.40 m
 ## park board, a nylon net, an in-ground pole close behind the board, no
-## fence — the open court is bounded at the asphalt slab's edge by soft,
-## grippy snow banks (soft invisible walls), and a drift at the pole's foot
-## is a prop box. Ross chose the slab bounds over a grass zone.
+## fence loop — behind the hoop a split-rail cedar fence on the slab
+## (x 6.20, the 2026-10-16 concept: collided as one solid wall, the rail
+## gaps ignored), the open sides bounded at the slab's edge by soft, grippy
+## snow banks (soft invisible walls; Ross chose these over a grass zone),
+## and a drift at the pole's foot is a prop box. The sim has one
+## restitution for every wall, so it sits between the wood (0.35) and the
+## snow (0.20).
 const PARK_DIST := 3.70
 const PARK_RIM_E := 0.60
 const PARK_BOARD_HALF_W := 0.70
 const PARK_POLE_R := 0.07
 const PARK_POLE_OFF := 0.17
-const PARK_WALL_E := 0.20
-const PARK_WALL_MU := 0.8
+const PARK_FENCE_X := 6.20
+const PARK_WALL_E := 0.30
+const PARK_WALL_MU := 0.6
 const PARK_PROP_E := 0.25
 
 
@@ -362,9 +367,10 @@ static func park(dist := PARK_DIST) -> SimGeometry:
 	var b_bottom := rim_h - 0.15
 	var g := _arcade_feel(SimGeometry.new(dist, rim_h, 1.85, PARK_BOARD_HALF_W, b_bottom, b_bottom + 1.05))
 	g.rim_e = PARK_RIM_E
-	# The asphalt slab (x -7.0 .. 4.70, z ±6.0): past its edge the snow banks.
+	# The slab's front edge and sides (x -7.0, z ±6.0) are snow banks; the
+	# back is the split-rail fence at x 6.20 (the slab runs 0.6 m past it).
 	g.wall_x_min = -7.0
-	g.wall_x_max = 4.70
+	g.wall_x_max = PARK_FENCE_X
 	g.wall_z_min = -6.0
 	g.wall_z_max = 6.0
 	g.wall_e = PARK_WALL_E

@@ -37,19 +37,9 @@ snow_amount = 500
 sky = "partly_cloudy"
 parked_cars = Array[Dictionary]([{
 "model": "compact_yellow",
-"x": 15.6,
-"yaw": 0.0,
-"z": 2.2
-}, {
-"model": "sedan_black",
 "x": 17.4,
-"yaw": 3.14159,
-"z": 0.2
-}, {
-"model": "van_grey",
-"x": 20.6,
 "yaw": 0.0,
-"z": -0.8
+"z": 0.95
 }])
 tree_layout = "res://data/park_layout.json"
 spot_names = PackedStringArray("KEY", "L ELBOW", "R ELBOW", "L BASE", "R BASE")

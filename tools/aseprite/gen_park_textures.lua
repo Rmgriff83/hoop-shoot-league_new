@@ -138,6 +138,36 @@ do
   save(spr, "park_board.png")
 end
 
+-- park_cedar.png 32x8 — weathered split-rail cedar: three grain tones along
+-- the length, specks, two knots, a few split checks.
+do
+  local W, H = 32, 8
+  local spr, img = newImage(W, H)
+  fill(img, 0, 0, W - 1, H - 1, hex("#8A7560"))
+  for y = 0, H - 1 do
+    local tone = (y % 3 == 0) and "#6E5C4A" or ((y % 3 == 1) and "#9C8670" or "#82705C")
+    local x = 0
+    while x < W do
+      if noise(x, y, 81) < 0.55 then
+        local run = 1 + math.floor(noise(x, y, 82) * 3)
+        fill(img, x, y, x + run - 1, y, hex(tone))
+        x = x + run
+      else
+        x = x + 1
+      end
+    end
+  end
+  for i = 1, 26 do
+    local x, y = math.floor(noise(i, 1, 83) * W), math.floor(noise(i, 2, 83) * H)
+    local c = ({"#5A4A3C", "#A8937C", "#B3A08A"})[math.floor(noise(i, 3, 83) * 3) + 1]
+    img:drawPixel(x, y, hex(c))
+  end
+  fill(img, 9, 3, 10, 4, hex("#4E3F33")); img:drawPixel(24, 5, hex("#4E3F33"))
+  local x = 3
+  while x < W do fill(img, x, 1 + (x % 4), math.min(W - 1, x + 4), 1 + (x % 4), hex("#3E332A")); x = x + 11 end
+  save(spr, "park_cedar.png")
+end
+
 -- park_treeline_strip.png 512x96 (RGBA) — three hazed rows of pines and
 -- rounded trees, palest at the back, hard-cut alpha; wraps on a ring at the
 -- horizon so the far distance reads as more woods.

@@ -47,7 +47,11 @@ TEX = lambda name: os.path.join(ROOT, "assets", "textures", name)  # noqa: E731
 
 # ---- the layout, mirrored from core/physics/sim_geometry.gd park() -------------
 PARK_DIST = 3.70
-COURT_X0, COURT_X1, COURT_HALF_W = -7.0, 4.70, 6.0      # the slab = the sim's soft walls
+COURT_X0, COURT_X1, COURT_HALF_W = -7.0, 6.80, 6.0      # the slab; its sides are the sim's soft walls
+FENCE_X = 6.20                                           # SimGeometry.PARK_FENCE_X: the slab runs 0.6 m past it
+FENCE_POSTS = [-6.0, -3.6, -1.2, 1.2, 3.6, 6.0]
+FENCE_RAILS = [0.20, 0.60, 1.00]
+STRIPES = [16.1, 18.7, 21.3]                             # the worn bay stripes on the lot
 DRIFT = (4.05, 4.50, 0.18, 0.40)                        # the pole-foot drift = the sim's prop box
 SKY_R = 400.0
 RING_R, RING_H, RING_C = 95.0, 11.0, (8.0, 4.3, -4.0)
@@ -70,7 +74,7 @@ def noise(x, z):
 
 
 def on_court(x, z, pad=0.0):
-    return x > COURT_X0 - 0.2 - pad and x < COURT_X1 + 0.2 + pad and abs(z) < COURT_HALF_W + 0.2 + pad
+    return x > -7.2 - pad and x < 7.0 + pad and abs(z) < 6.4 + pad
 
 
 def in_lot(x, z, pad=0.0):
@@ -100,6 +104,52 @@ def quad_xz(name, cx, cz, w, d, y, yaw, mat, coll, parent, repeat):
     for dx, dz in ((-w / 2, -d / 2), (w / 2, -d / 2), (w / 2, d / 2), (-w / 2, d / 2)):
         pts.append((cx + dx * c - dz * s, y, cz + dx * s + dz * c))
     return cage.add_quad(name, pts, (0, 1, 0), mat, coll, parent, uv_repeat=repeat)
+
+
+class MeshMerge:
+    """Boxes (jittered, rolled, yawed) merged into one mesh: the fence, the stripes."""
+
+    def __init__(self):
+        self.bm = bmesh.new()
+
+    def box(self, size, center, yaw=0.0, roll=0.0, jitter=0.0):
+        bm = bmesh.new()
+        bmesh.ops.create_cube(bm, size=1.0)
+        bmesh.ops.scale(bm, vec=cage.size2b(size), verts=bm.verts)
+        if jitter > 0.0:
+            for v in bm.verts:
+                v.co.x += R(-jitter, jitter)
+                v.co.z += R(-jitter, jitter)
+        if roll:
+            bmesh.ops.rotate(bm, cent=(0, 0, 0), matrix=Matrix.Rotation(roll, 3, "Y"), verts=bm.verts)   # about the rail's length (sim z = blender -y)
+        if yaw:
+            bmesh.ops.rotate(bm, cent=(0, 0, 0), matrix=Matrix.Rotation(yaw, 3, "Z"), verts=bm.verts)
+        bmesh.ops.translate(bm, vec=Vector(cage.s2b(center)), verts=bm.verts)
+        tmp = bpy.data.meshes.new("_merge_tmp")
+        bm.to_mesh(tmp)
+        bm.free()
+        self.bm.from_mesh(tmp)
+        bpy.data.meshes.remove(tmp)
+
+    def finish(self, name, mat, coll, parent):
+        me = bpy.data.meshes.new(name)
+        self.bm.to_mesh(me)
+        self.bm.free()
+        # box UVs so the cedar grain reads: project each face by its normal
+        o = bpy.data.objects.new(name, me)
+        me.materials.append(mat)
+        cage.link_obj(o, coll, parent, (0, 0, 0))
+        bpy.context.view_layer.objects.active = o
+        o.select_set(True)
+        try:
+            bpy.ops.object.mode_set(mode="EDIT")
+            bpy.ops.mesh.select_all(action="SELECT")
+            bpy.ops.uv.cube_project(cube_size=0.5)
+            bpy.ops.object.mode_set(mode="OBJECT")
+        except Exception:
+            pass
+        o.select_set(False)
+        return o
 
 
 class SnowMerge:
@@ -239,6 +289,8 @@ def build():
     lamp = cage.mat_flat("Park_Lamp", (106, 108, 112), roughness=0.7)
     fence = cage.mat_flat("Park_Fence", (120, 122, 126), roughness=0.8)
     sky = cage.mat_flat("Park_Sky", (204, 214, 224), roughness=1.0)
+    cedar = cage.mat_tex("Park_Cedar", TEX("park_cedar.png"))
+    stripe = cage.mat_flat("Park_Stripe", (233, 228, 214), roughness=0.95)
     ring = cage.mat_tex("Park_Treeline", TEX("park_treeline_strip.png"), alpha_clip=True, double_sided=True, emissive=True)
 
     root = cage.add_empty("Park", coll, None, (0, 0, 0))
@@ -275,6 +327,11 @@ def build():
         add_cyl("Bollard%d" % i, 0.06, 1.0, (x, 0.5, z), post, c_props, root, verts=6)
     cage.add_box("NoticePost", (0.08, 1.1, 0.08), (12.6, 0.55, 5.6), post, c_props, root)
     cage.add_box("NoticeBoard", (0.04, 0.42, 0.32), (12.57, 1.05, 5.6), sign, c_props, root)
+    # The parking bays: three worn stripes, two bays, the car in the left one.
+    stripes = MeshMerge()
+    for sx in STRIPES:
+        stripes.box((0.11, 0.012, 5.0), (sx, 0.012, 0.1))
+    stripes.finish("BayStripes", stripe, c_props, root)
 
     # Lying snow (toned down): short uneven plough piles at the court's edges,
     # the pole-foot drift (the sim's prop box), dustings on the corners, snow
@@ -304,6 +361,26 @@ def build():
     lying.patch(12.6, 5.6, .4, -.005)
     lying.drift(8.4, -6.3, .5, .08, .4)                 # by the stump
     lying.drift(13.2, -16, 1.6, .07, .3, 0.0)           # along the fallen log
+    lying.patch(18.7, 2.3, .4, .006)                     # drifted over a stripe end or two
+    lying.patch(21.2, -1.9, .3, .006)
+    # The split-rail cedar fence behind the hoop (the sim's back wall):
+    # mortised posts, three rails a bay overlapping inside each post, snow
+    # on the post tops and along the top rails, piled at every foot.
+    wood = MeshMerge()
+    for z in FENCE_POSTS:
+        ph = 1.22 + R(-.04, .04)
+        wood.box((0.15, ph, 0.13), (FENCE_X, ph / 2 - .02, z), yaw=R(-.08, .08))
+        lying.box((0.17, 0.025, 0.15), (FENCE_X, ph - .005, z))
+        lying.drift(FENCE_X + R(-.1, .1), z, .22, .06, .18)
+    for b in range(len(FENCE_POSTS) - 1):
+        z0, z1 = FENCE_POSTS[b], FENCE_POSTS[b + 1]
+        L = (z1 - z0) + .26
+        for k, y in enumerate(FENCE_RAILS):
+            sag = R(-.02, .015)
+            wood.box((0.06 + R(0, .02), 0.12 + R(-.015, .015), L), (FENCE_X + (.02 if k % 2 else -.02), y + sag, (z0 + z1) / 2), roll=R(-.25, .25), jitter=.008)
+            if k == len(FENCE_RAILS) - 1:
+                lying.box((0.05, 0.025, L * R(.55, .85)), (FENCE_X, y + sag + .07, (z0 + z1) / 2 + R(-.3, .3)))
+    wood.finish("SplitRailFence", cedar, c_props, root)
     lying.finish("SnowLying", snow, c_snow, root)
 
     # The far snow disc, the sky dome, the treeline ring.

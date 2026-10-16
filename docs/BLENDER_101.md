@@ -801,10 +801,15 @@ laid out from the reference photo. Three scripts and a layout file:
   the black pole, the white park board (edge band, shooting square, rust,
   the sticker), the sky's cloud mask and the treeline strip.
 - `tools/blender/build_park.py` (`-- --force`) → `assets/arena/park/park.glb`:
-  the slab (x −7.0…4.70, z ±6.0 — `SimGeometry.park()`'s soft walls), the
-  lawn, the lot, the road, the path, the pads, five horizon buildings with
-  snow roofs, the ballfield fence, the light poles, the bollards and the
-  notice board (the league banner's host), the lying snow merged into one
+  the slab (x −7.0…6.80, z ±6.0: the sides are `SimGeometry.park()`'s soft
+  snow-bank walls, the back is the **split-rail cedar fence** at x 6.20 —
+  `SplitRailFence`, one merged mesh in `park_cedar.png`, posts at z −6…6 in
+  2.4 m bays, three rails overlapping inside the posts, snow on the post
+  tops and the top rails, the slab running 0.6 m past it), the lawn, the lot
+  with its three worn `BayStripes` (one car parked in the left bay), the
+  road, the path, the pads, five horizon buildings with snow roofs, the
+  ballfield fence, the light poles, the bollards and the notice board (the
+  league banner's host), the lying snow merged into one
   mesh (plough piles at the court's edges, the pole-foot drift = the sim's
   prop box, kerbside piles, patches in the lawn's hollows), a far snow
   disc, the `Sky` dome (faces flipped, the sky shader goes on at runtime)
@@ -822,7 +827,7 @@ laid out from the reference photo. Three scripts and a layout file:
   aspen leaning in over the board, two stumps, the mossy rock, the fallen
   log along the lot). `game/view/park_fx.gd` builds one `MultiMeshInstance3D`
   per model surface from it (trees cast shadows, litter does not), stands
-  the three parked cars from the vehicle pool with a snow cap each, hangs
+  the parked car from the vehicle pool with a snow cap, hangs
   one points mesh of 500 flakes under `park_snow.gdshader` (all motion in
   the vertex shader, the box follows the camera) and puts
   `park_sky.gdshader` on the dome.

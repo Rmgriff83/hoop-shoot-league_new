@@ -32,7 +32,7 @@ func run(t) -> void:
 	t.ok(leaning, "the tall aspen leans in over the board")
 	# The dressing on the park arena, off-tree (the shaders compile headless).
 	var arena := CosmeticLibrary.get_arena("park")
-	t.ok(arena != null and arena.snow and arena.parked_cars.size() == 3, "the park ArenaSet asks for snow and three cars")
+	t.ok(arena != null and arena.snow and arena.parked_cars.size() == 1, "the park ArenaSet asks for snow and one parked car")
 	if arena == null:
 		return
 	var scene: PackedScene = load(arena.model_path)
@@ -40,14 +40,18 @@ func run(t) -> void:
 	if scene == null:
 		return
 	var inst: Node3D = scene.instantiate()
-	for n in ["Sky", "TreelineRing", "SnowLying", "Court", "Lawn", "ParkingLot", "Road", "NoticeBoard", "FarSnow", "PoleFooting"]:
+	for n in ["Sky", "TreelineRing", "SnowLying", "Court", "Lawn", "ParkingLot", "Road", "NoticeBoard", "FarSnow", "PoleFooting", "SplitRailFence", "BayStripes"]:
 		t.ok(inst.find_child(n, true, false) != null, "park glb has %s" % n)
 	t.ok(inst.find_child("Pole", true, false) == null, "no arena pole: the park hoop brings its own")
 	var fx := ParkFx.new()
 	t.ok(fx.setup(inst, arena), "ParkFx dresses the park")
 	t.eq(fx.instance_count(), rows.size(), "every layout row is instanced")
 	t.ok(fx.draw_count() >= models.size() and fx.draw_count() <= models.size() * 3, "a draw per model surface (%d draws for %d models)" % [fx.draw_count(), models.size()])
-	t.eq(fx.car_count(), 3, "three parked cars")
+	t.eq(fx.car_count(), 1, "one parked car, in its striped bay")
+	var fence: MeshInstance3D = inst.find_child("SplitRailFence", true, false)
+	var fa: AABB = fence.get_aabb()
+	t.ok(absf(fa.position.x + fa.size.x * 0.5 - SimGeometry.PARK_FENCE_X) < 0.08, "the fence stands on the sim's wall line (x %.2f)" % (fa.position.x + fa.size.x * 0.5))
+	t.ok(fa.size.z > 11.5 and fa.size.y > 1.1 and fa.size.y < 1.4, "…the slab's width, rail height")
 	t.eq(fx.snow_count(), 500, "five hundred flakes")
 	t.ok(fx.has_sky() and fx.sky_resource() is Sky and (fx.sky_resource() as Sky).sky_material is ShaderMaterial, "the design's sky shader is a Sky resource for the court's Environment")
 	t.ok(not (inst.find_child("Sky", true, false) as MeshInstance3D).visible, "the glb's dome is hidden under it")

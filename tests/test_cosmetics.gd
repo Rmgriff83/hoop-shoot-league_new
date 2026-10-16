@@ -279,8 +279,8 @@ func _street_and_arenas(t) -> void:
 			"the city resolves, validates, and is the one with traffic")
 		t.ok(not cage.emissive_nodes.has("Marquee"), "the HOOP SHOOT sign is gone (string lights replace it)")
 		var park := CosmeticLibrary.get_arena("park")
-		t.ok(park != null and park.validate() == PackedStringArray() and park.snow and park.sky == "partly_cloudy" and park.parked_cars.size() == 3 and park.tree_layout != "",
-			"the park resolves, validates, snows, has a sky, three parked cars and a tree layout")
+		t.ok(park != null and park.validate() == PackedStringArray() and park.snow and park.sky == "partly_cloudy" and park.parked_cars.size() == 1 and park.tree_layout != "",
+			"the park resolves, validates, snows, has a sky, one parked car and a tree layout")
 		t.ok(park != null and not park.traffic and not park.ocean and park.title_stars == 3, "…and nothing of the other areas' life")
 		var park_hoop := CosmeticLibrary.get_hoop("park")
 		t.ok(park_hoop != null and park_hoop.validate() == PackedStringArray() and park_hoop.net_kind == "nylon", "the park hoop resolves and hangs nylon")
