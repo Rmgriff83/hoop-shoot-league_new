@@ -33,7 +33,12 @@ func run(t) -> void:
 		elif str(r["model"]) == "aspen_tree_02" and float(r["x"]) >= 29.0 and float(r.get("s", 1.0)) >= 1.6:
 			far_small += 1
 	t.eq(big, 5, "five big aspens near the court")
-	t.eq(far_small, 6, "six far aspens are the small model scaled up to the big one's height")
+	t.eq(far_small, 5, "five far aspens are the small model scaled up to the big one's height (Ross deleted the sixth)")
+	var moved_pine := false
+	for r in rows:
+		if str(r["model"]) == "pine_tree_01_b" and absf(float(r["x"]) - 24.36) < 0.01 and absf(float(r["z"]) - 2.58) < 0.01 and absf(float(r.get("y", 0.0))) < 1e-6:
+			moved_pine = true
+	t.ok(moved_pine, "the pine Ross dragged beside the lot's row stands there, on the ground")
 	var behind_board := false
 	for r in rows:
 		if str(r["model"]).begins_with("aspen") and absf(float(r["x"]) - 25.4) < 0.3 and absf(float(r["z"]) - 0.9) < 0.3:

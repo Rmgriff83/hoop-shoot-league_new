@@ -52,7 +52,9 @@ while x <= 60.0:
     T(x + 2.5, -10.4 + R(-0.6, 0.6), 1.1)
     x += R(5, 7)
 # the big trees right
-for x, z, s, k in [(12.5, 9.5, 1.45, 0), (17.5, 14.5, 1.3, 1), (11, 17, 1.2, 5), (23, 19, 1.3, 0), (8.5, 13, 1.1, 4)]:
+# (the pine_tree_01_b that stood at (11, 17) is where Ross dragged it in
+# Blender on 2026-10-16: (24.36, 2.58), beside the lot's row)
+for x, z, s, k in [(12.5, 9.5, 1.45, 0), (17.5, 14.5, 1.3, 1), (24.36, 2.58, 1.2, 5), (23, 19, 1.3, 0), (8.5, 13, 1.1, 4)]:
     T(x, z, s, k)
 # left, past the path
 for x, z, s, k in [(16.5, -26, 1.3, 1), (8, -27, 1.2, 0), (21, -32, 1.1, 6), (3, -22, 1.25, 4)]:
@@ -88,6 +90,9 @@ for r in rows:
 # (x 25.4 / z 0.9 and x 25.2 / z 5.7); the one hidden behind the backboard
 # goes (Ross, 2026-10-16).
 rows = [r for r in rows if not (r["model"].startswith("aspen") and abs(r["x"] - 25.4) < 0.3 and abs(r["z"] - 0.9) < 0.3)]
+# …and the far aspen at (31.5, -10.9) on the left, the other half of the
+# brown pair from the key (Ross deleted it in Blender, 2026-10-16).
+rows = [r for r in rows if not (r["model"].startswith("aspen") and abs(r["x"] - 31.5) < 0.3 and abs(r["z"] + 10.9) < 0.3)]
 
 doc = {"generated_by": "tools/gen_park_layout.py", "seed": 7, "rows": rows}
 with open(OUT, "w") as f:
