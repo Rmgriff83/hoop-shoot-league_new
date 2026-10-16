@@ -34,8 +34,10 @@ extends CosmeticSet
 @export var shadow_distance := 30.0
 @export var shadow_size := 2048
 ## The 3D render scale CourtGeometry puts on its viewport while this area is
-## up (bilinear; the 2D HUD stays full-res). The park's 0.7 hides under the
-## pixel-art look and halves the sky's and the leaves' fill cost.
+## up (bilinear; the 2D HUD stays full-res). Every area runs 1.0: the park
+## tried 0.7 (2026-10-16) and Godot's bilinear upscale smeared the pixel
+## art — "everything all blurry" — so the knob stays for a nearest-neighbour
+## path some day, not for dropping below 1.0 as things stand.
 @export var render_scale := 1.0
 @export var fog_enabled := false
 @export var fog_color := Color(0.9, 0.58, 0.45)

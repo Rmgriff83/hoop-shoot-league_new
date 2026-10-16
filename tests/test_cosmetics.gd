@@ -282,7 +282,7 @@ func _street_and_arenas(t) -> void:
 		t.ok(park != null and park.validate() == PackedStringArray() and park.snow and park.sky == "partly_cloudy" and park.parked_cars.size() == 1 and park.tree_layout != "",
 			"the park resolves, validates, snows, has a sky, one parked car and a tree layout")
 		t.ok(park != null and not park.traffic and not park.ocean and park.title_stars == 3, "…and nothing of the other areas' life")
-		t.ok(park != null and park.sun_shadows and absf(park.shadow_distance - 20.0) < 1e-9 and park.shadow_size == 1024 and absf(park.render_scale - 0.7) < 1e-9, "the park runs lighter: 20 m shadows in a 1024 map, 3D at 0.7")
+		t.ok(park != null and park.sun_shadows and absf(park.shadow_distance - 20.0) < 1e-9 and park.shadow_size == 1024 and absf(park.render_scale - 1.0) < 1e-9, "the park runs lighter: 20 m shadows in a 1024 map, the 3D still full-res (0.7 blurred it)")
 		for a in [cage, beach, CosmeticLibrary.get_arena("city")]:
 			t.ok(a != null and absf(a.shadow_distance - 30.0) < 1e-9 and a.shadow_size == 2048 and absf(a.render_scale - 1.0) < 1e-9, "%s keeps the full shadows and scale" % (a.id if a != null else "?"))
 		var park_hoop := CosmeticLibrary.get_hoop("park")

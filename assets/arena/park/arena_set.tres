@@ -21,7 +21,6 @@ fill_color = Color(0.84, 0.88, 0.96, 1)
 sun_shadows = true
 shadow_distance = 20.0
 shadow_size = 1024
-render_scale = 0.7
 fog_enabled = true
 fog_color = Color(0.8, 0.86, 0.92, 1)
 fog_density = 0.0085

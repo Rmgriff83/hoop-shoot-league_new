@@ -190,7 +190,8 @@ deploys the Worker), `RanksCopy` (four tabs: `RanksPage.TAB_SIZE` shrank),
 its ArenaSet (2026-10-16): `shadow_distance` / `shadow_size` (the sun's
 reach and the directional atlas `CourtGeometry._build_lights` sets) and
 `render_scale` (the 3D scale the court puts on its viewport while it is up;
-the park runs 20 m / 1024 / 0.7 with near-only tree shadows). The park's dressing is
+the park runs 20 m / 1024 with near-only tree shadows and stays at 1.0 —
+0.7 under Godot's bilinear upscale blurred the pixel art). The park's dressing is
 `game/view/park_fx.gd` (`ArenaSet.snow` / `sky` / `parked_cars` /
 `tree_layout`): the PSX trees instanced from `data/park_layout.json`
 (docs/BLENDER_101.md → The park), the parked cars, the falling snow and the
