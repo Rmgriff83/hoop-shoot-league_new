@@ -63,7 +63,7 @@ func _ready() -> void:
 	_court.hoop_set = _hoop_set
 	_court.net_set = App.net_for_mode(App.next_mode)
 	add_child(_court)
-	_court.led.show_score(0)   # the hoop's board: the score, nothing else
+	_court.show_score(0)   # the hoop's board: the score, nothing else
 	if _mode["led_text"] != "":
 		_court.info.set_text(_mode["led_text"], _court.info.accent_color)
 
@@ -825,7 +825,7 @@ func _handle_event(ev: Dictionary) -> void:
 			if not _practice:
 				_hud.banner("GO!", Color(0.4, 0.9, 0.55))
 				_court.info.set_text("")
-				_court.led.show_score(0)
+				_court.show_score(0)
 				_court.info.flash("GO!", 2, _court.info.accent_color)
 		"ot_period":
 			# Overtime opens with everyone back at the key, no shuffle pending.
@@ -889,7 +889,7 @@ func _handle_event(ev: Dictionary) -> void:
 		"fire_off":
 			# The card's window closed (a miss already cooled it via the outcome).
 			_tier_shown = 1
-			_court.led.show_score(trial.score)
+			_court.show_score(trial.score)
 			if _court.fire_lit():
 				_court.set_fire(false)
 				_court.info.marquee("BURNED OUT" if str(ev.get("reason", "")) == "time" else "COOLED OFF", 24.0, _court.info.accent_color)
@@ -898,7 +898,7 @@ func _handle_event(ev: Dictionary) -> void:
 			_court.info.marquee("VORTEX", 24.0, _court.info.accent_color)
 			Sfx.score_pop(true)
 		"vortex_off":
-			_court.led.show_score(trial.score)
+			_court.show_score(trial.score)
 			_court.info.marquee("VORTEX SPENT" if str(ev.get("reason", "")) == "time" else "VORTEX ICED", 24.0, _court.info.accent_color)
 		"heat_up":
 			Sfx.score_pop(true)
@@ -932,7 +932,7 @@ func _on_outcome(outcome: Dictionary, buzzer_beater: bool) -> void:
 		var lit := StreakRules.is_lit(streak)
 		# (The make clip already played on the "enter" contact event.)
 		_hud.set_score(trial.score)
-		_court.led.show_score(trial.score, tier)
+		_court.show_score(trial.score, tier)
 		# The net reacts to the ball itself (NetSim); the pivot spring adds a
 		# little rim bounce even on a clean swish (rim contacts kick it harder).
 		_court.rim_nudge()
@@ -955,7 +955,7 @@ func _on_outcome(outcome: Dictionary, buzzer_beater: bool) -> void:
 			_court.set_fire(true, streak)
 	else:
 		_tier_shown = 1
-		_court.led.show_score(trial.score)
+		_court.show_score(trial.score)
 		if _court.fire_lit():
 			_court.set_fire(false)
 			_court.info.marquee("COOLED OFF", 24.0, accent)

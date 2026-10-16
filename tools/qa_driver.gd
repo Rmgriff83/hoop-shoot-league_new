@@ -741,6 +741,13 @@ func _run_park() -> void:
 		await _snap("park_ice")
 		pcourt.set_ice(false, "qa")
 		await _sleep(0.5)
+		# The flip-card scoreboard on the fence: a card mid-swing, then settled.
+		pcourt.show_score(12)
+		pcourt.set_visitor(7)
+		await _sleep(0.2)
+		await _snap("park_flip")
+		await _sleep(0.4)
+		await _snap("park_score")
 	for i in 8:
 		await _snap("park_%02d" % i)
 		print("QA park: %d fps at snap %d" % [int(Engine.get_frames_per_second()), i])

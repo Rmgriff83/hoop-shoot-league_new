@@ -168,6 +168,59 @@ do
   save(spr, "park_cedar.png")
 end
 
+-- park_scorecards.png 160x48 — the flip-card digit atlas: ten 16x24 cards a
+-- row, HOME's black row over AWAY's red; card stock with a shaded right and
+-- bottom edge, two ring holes, the design's 5x7 digits in 2 px blocks. The
+-- runtime picks a card with uv1_scale (0.1, 0.5) and uv1_offset (d/10, row/2).
+do
+  local W, H = 160, 48
+  local spr, img = newImage(W, H)
+  local D = {"01110100011001110101110011000101110", "00100011000010000100001000010001110", "01110100010000100010001000100011111", "11111000100010000010000011000101110", "00010001100101010010111110001000010",
+             "11111100001111000001000011000101110", "00110010001000011110100011000101110", "11111000010001000100010000100001000", "01110100011000101110100011000101110", "01110100011000101111000010001001100"}
+  for c = 0, 1 do
+    for d = 0, 9 do
+      local ox, oy = d * 16, c * 24
+      fill(img, ox, oy, ox + 15, oy + 23, hex("#F2F0EA"))
+      fill(img, ox, oy + 23, ox + 15, oy + 23, hex("#C9C6BE")); fill(img, ox + 15, oy, ox + 15, oy + 23, hex("#C9C6BE"))
+      img:drawPixel(ox + 4, oy + 1, hex("#8E8B84")); img:drawPixel(ox + 11, oy + 1, hex("#8E8B84"))
+      local ink = (c == 1) and "#C8302C" or "#232022"
+      local bits = D[d + 1]
+      for i = 0, 34 do
+        if bits:sub(i + 1, i + 1) == "1" then
+          local bx, by = ox + 3 + (i % 5) * 2, oy + 5 + math.floor(i / 5) * 2
+          fill(img, bx, by, bx + 1, by + 1, hex(ink))
+        end
+      end
+    end
+  end
+  save(spr, "park_scorecards.png")
+end
+
+-- park_scoreboard_face.png 96x50 — the white board the cards hang on: a grey
+-- border, a speckle, HOME in black and AWAY in red in the design's 5x5 font.
+do
+  local W, H = 96, 50
+  local spr, img = newImage(W, H)
+  fill(img, 0, 0, W - 1, H - 1, hex("#EDEBE4"))
+  for i = 1, 60 do
+    local x, y = math.floor(noise(i, 1, 91) * W), math.floor(noise(i, 2, 91) * H)
+    img:drawPixel(x, y, hex(({"#D9D6CE", "#C9C6BC", "#E2DFD6"})[math.floor(noise(i, 3, 91) * 3) + 1]))
+  end
+  fill(img, 0, 0, W - 1, 1, hex("#9A9A94")); fill(img, 0, H - 2, W - 1, H - 1, hex("#9A9A94"))
+  fill(img, 0, 0, 1, H - 1, hex("#9A9A94")); fill(img, W - 2, 0, W - 1, H - 1, hex("#9A9A94"))
+  local L = {H = "1000110001111111000110001", O = "0111010001100011000101110", M = "1000111011101011000110001", E = "1111110000111101000011111", A = "0111010001111111000110001", W = "1000110001101011101110001", Y = "1000101010001000010000100"}
+  local function word(str, X, col)
+    for k = 1, #str do
+      local bits = L[str:sub(k, k)]
+      for i = 0, 24 do
+        if bits:sub(i + 1, i + 1) == "1" then img:drawPixel(X + (k - 1) * 6 + (i % 5), 6 + math.floor(i / 5), hex(col)) end
+      end
+    end
+  end
+  word("HOME", 12, "#232022"); word("AWAY", 61, "#C8302C")
+  save(spr, "park_scoreboard_face.png")
+end
+
 -- park_treeline_strip.png 512x96 (RGBA) — three hazed rows of pines and
 -- rounded trees, palest at the back, hard-cut alpha; wraps on a ring at the
 -- horizon so the far distance reads as more woods.

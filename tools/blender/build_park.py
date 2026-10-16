@@ -52,6 +52,10 @@ FENCE_X = 6.20                                           # SimGeometry.PARK_FENC
 FENCE_POSTS = [-6.0, -3.6, -1.2, 1.2, 3.6, 6.0]
 FENCE_RAILS = [0.20, 0.60, 1.00]
 STRIPES = [16.1, 18.7, 21.3]                             # the worn bay stripes on the lot
+BOARD = (6.105, 0.82, 0.95)                              # the flip-card scoreboard's centre, on the court side of the top rail
+SLOTS = [-.335, -.15, .15, .335]                         # the four cards' lateral offsets (HOME, HOME, AWAY, AWAY)
+CARD_W, CARD_H, CARD_Y = 0.17, 0.24, 0.08                # a card hangs CARD_H below CARD_Y (the ring axle)
+SNOWMAN = (11.4, -3.2)                                   # on the lawn, back-left, facing the court
 DRIFT = (4.05, 4.50, 0.18, 0.40)                        # the pole-foot drift = the sim's prop box
 SKY_R = 400.0
 RING_R, RING_H, RING_C = 95.0, 11.0, (8.0, 4.3, -4.0)
@@ -104,6 +108,159 @@ def quad_xz(name, cx, cz, w, d, y, yaw, mat, coll, parent, repeat):
     for dx, dz in ((-w / 2, -d / 2), (w / 2, -d / 2), (w / 2, d / 2), (-w / 2, d / 2)):
         pts.append((cx + dx * c - dz * s, y, cz + dx * s + dz * c))
     return cage.add_quad(name, pts, (0, 1, 0), mat, coll, parent, uv_repeat=repeat)
+
+
+def mat_vcol(name):
+    """One material whose base colour is the mesh's Color attribute: the glTF
+    exporter emits COLOR_0 and Godot's importer flags albedo-from-vertex-colour,
+    so a many-coloured prop (the snowman, the scoreboard hardware) is one draw."""
+    m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
+    m.use_nodes = True
+    nodes, links = m.node_tree.nodes, m.node_tree.links
+    b = nodes["Principled BSDF"]
+    b.inputs["Roughness"].default_value = 0.9
+    b.inputs["Metallic"].default_value = 0.0
+    vc = nodes.new("ShaderNodeVertexColor")
+    vc.layer_name = "Color"
+    vc.location = (b.location.x - 300, b.location.y)
+    links.new(vc.outputs["Color"], b.inputs["Base Color"])
+    return m
+
+
+# ---- primitives in the design's (three.js) conventions: y up, centred -------------
+# Each returns (verts, faces) in a local frame; VcolMerge.add() runs the design's
+# geometry ops (scale / rotate / translate / lump) over them in order.
+
+
+def P_box(sx, sy, sz):
+    x, y, z = sx / 2, sy / 2, sz / 2
+    v = [(-x, -y, -z), (x, -y, -z), (x, y, -z), (-x, y, -z), (-x, -y, z), (x, -y, z), (x, y, z), (-x, y, z)]
+    f = [(0, 3, 2, 1), (4, 5, 6, 7), (0, 1, 5, 4), (1, 2, 6, 5), (2, 3, 7, 6), (3, 0, 4, 7)]
+    return v, f
+
+
+def P_sphere(r, ws, hs, theta_len=math.pi):
+    """Lat-long sphere (or a cap when theta_len < pi): one vertex at the top pole,
+    rows of ws vertices below, a pole vertex at the bottom only for a full sphere."""
+    v, f = [(0, r, 0)], []
+    full = theta_len >= math.pi - 1e-6
+    rows = hs - 1 if full else hs
+    for j in range(1, rows + 1):
+        th = theta_len * j / hs
+        for i in range(ws):
+            ph = 2 * math.pi * i / ws
+            v.append((r * math.sin(th) * math.cos(ph), r * math.cos(th), r * math.sin(th) * math.sin(ph)))
+    row = lambda j: 1 + (j - 1) * ws  # noqa: E731
+    for i in range(ws):
+        f.append((0, row(1) + (i + 1) % ws, row(1) + i))
+    for j in range(1, rows):
+        for i in range(ws):
+            a, b = row(j) + i, row(j) + (i + 1) % ws
+            f.append((a, b, b + ws, a + ws))
+    if full:
+        v.append((0, -r, 0))
+        bot = len(v) - 1
+        for i in range(ws):
+            f.append((row(rows) + i, row(rows) + (i + 1) % ws, bot))
+    return v, f
+
+
+def P_cyl(rt, rb, h, seg):
+    """Cylinder along y, centred; rt = 0 makes a cone with its apex at +h/2."""
+    v, f = [], []
+    if rt > 1e-6:
+        top = [(rt * math.cos(2 * math.pi * i / seg), h / 2, rt * math.sin(2 * math.pi * i / seg)) for i in range(seg)]
+    else:
+        top = [(0, h / 2, 0)]
+    bot = [(rb * math.cos(2 * math.pi * i / seg), -h / 2, rb * math.sin(2 * math.pi * i / seg)) for i in range(seg)]
+    v = top + bot
+    nb = len(top)
+    for i in range(seg):
+        a, b = nb + i, nb + (i + 1) % seg
+        if rt > 1e-6:
+            f.append((a, b, (i + 1) % seg, i))
+        else:
+            f.append((a, b, 0))
+    if rt > 1e-6:
+        f.append(tuple(range(seg)))
+    f.append(tuple(reversed(range(nb, nb + seg))))
+    return v, f
+
+
+def P_torus(R, r, rs, ts):
+    """three's TorusGeometry: the ring lies in the xy plane (axis z)."""
+    v, f = [], []
+    for j in range(rs):
+        a = 2 * math.pi * j / rs
+        for i in range(ts):
+            b = 2 * math.pi * i / ts
+            v.append(((R + r * math.cos(b)) * math.cos(a), (R + r * math.cos(b)) * math.sin(a), r * math.sin(b)))
+    for j in range(rs):
+        for i in range(ts):
+            a, b = j * ts + i, j * ts + (i + 1) % ts
+            c, d = ((j + 1) % rs) * ts + (i + 1) % ts, ((j + 1) % rs) * ts + i
+            f.append((a, b, c, d))
+    return v, f
+
+
+def P_circle(r, seg):
+    """A disc in the xy plane facing +z."""
+    v = [(r * math.cos(2 * math.pi * i / seg), r * math.sin(2 * math.pi * i / seg), 0) for i in range(seg)]
+    return v, [tuple(range(seg))]
+
+
+def _rot(p, axis, a):
+    c, s_ = math.cos(a), math.sin(a)
+    x, y, z = p
+    if axis == "x":
+        return (x, y * c - z * s_, y * s_ + z * c)
+    if axis == "y":
+        return (x * c + z * s_, y, -x * s_ + z * c)
+    return (x * c - y * s_, x * s_ + y * c, z)
+
+
+class VcolMerge:
+    """Primitives with a colour each, merged into one vertex-coloured mesh (one
+    draw). ops run in order like three.js geometry calls: ("s", (x, y, z)),
+    ("rx"|"ry"|"rz", rad), ("t", (x, y, z)), ("lump", amount)."""
+
+    def __init__(self):
+        self.verts, self.faces, self.cols = [], [], []
+
+    def add(self, prim, color, ops=()):
+        v, f = prim
+        v = list(v)
+        for op, arg in ops:
+            if op == "s":
+                v = [(p[0] * arg[0], p[1] * arg[1], p[2] * arg[2]) for p in v]
+            elif op == "t":
+                v = [(p[0] + arg[0], p[1] + arg[1], p[2] + arg[2]) for p in v]
+            elif op == "lump":
+                v = [(p[0] * (1 + R(-arg, arg)), p[1] * (1 + R(-arg, arg)), p[2] * (1 + R(-arg, arg))) for p in v]
+            else:
+                v = [_rot(p, op[1], arg) for p in v]
+        base = len(self.verts)
+        self.verts += v
+        self.faces += [tuple(base + i for i in face) for face in f]
+        self.cols += [cage.srgb(color)] * len(v)
+
+    def finish(self, name, coll, parent, mat):
+        me = bpy.data.meshes.new(name)
+        me.from_pydata([cage.s2b(p) for p in self.verts], [], self.faces)
+        me.validate()
+        attr = me.color_attributes.new(name="Color", type="FLOAT_COLOR", domain="POINT")
+        flat = []
+        for c in self.cols:
+            flat += list(c)
+        attr.data.foreach_set("color", flat)
+        me.materials.append(mat)
+        o = bpy.data.objects.new(name, me)
+        cage.link_obj(o, coll, parent, (0, 0, 0))
+        return o
+
+
+def hexrgb(h):
+    return ((h >> 16) & 255, (h >> 8) & 255, h & 255)
 
 
 class MeshMerge:
@@ -269,6 +426,86 @@ def add_ring(coll, parent, mat, repeats=7):
 # ---- the arena ----------------------------------------------------------------------
 
 
+def add_flip_board(coll, root, face_mat, cards_mat, card_back, board_back, vcol):
+    """The analog flip-card scoreboard (the design's FlipScoreboard) hung over
+    the fence's top rail just right of the hoop, facing the court: a white
+    board with HOME / AWAY, a grey back, four card stacks with their rings and
+    two hooks (one vertex-coloured mesh), four static cards and four hidden
+    flap pivots — FlipScoreboard (game/view/flip_scoreboard.gd) binds the
+    cards by name and swings a pivot when a digit changes. Board-local frame:
+    the design's (lateral x, up y, z toward the viewer) turned to face -x."""
+    bx, by, bz = BOARD
+    board = cage.add_empty("FlipBoard", coll, root, BOARD)
+    hw, hh = 0.475, 0.25
+    cage.add_quad("ScoreboardFace", [(bx, by - hh, bz - hw), (bx, by - hh, bz + hw), (bx, by + hh, bz + hw), (bx, by + hh, bz - hw)],
+                  (-1, 0, 0), face_mat, coll, board, origin=BOARD)
+    cage.add_box("ScoreboardBack", (0.025, hh * 2, hw * 2), (0.0135, 0.0, 0.0), board_back, coll, board)
+    hard = VcolMerge()
+    world = (("ry", -math.pi / 2), ("t", BOARD))     # design local -> sim
+    for sx in SLOTS:
+        hard.add(P_box(.172, .244, .014), hexrgb(0xCFCCC4), (("t", (sx, CARD_Y - .122, .007)),) + world)
+        for rx in (-.045, .045):
+            hard.add(P_torus(.016, .0035, 8, 4), hexrgb(0x9EA3A8), (("ry", math.pi / 2), ("t", (sx + rx, CARD_Y + .002, .02))) + world)
+    for hx in (-.38, .38):   # the hooks: up off the board's top, back over the rail, a leg down behind it
+        hard.add(P_box(.012, .08, .012), hexrgb(0x5A5E62), (("t", (hx, .265, -.02)),) + world)
+        hard.add(P_box(.012, .012, .17), hexrgb(0x5A5E62), (("t", (hx, .31, -.08)),) + world)
+        hard.add(P_box(.012, .13, .012), hexrgb(0x5A5E62), (("t", (hx, .245, -.165)),) + world)
+    hard.finish("ScoreboardHardware", coll, board, vcol)
+    for i, sx in enumerate(SLOTS):
+        z0, z1 = bz + sx - CARD_W / 2, bz + sx + CARD_W / 2
+        y0, y1 = by + CARD_Y - CARD_H, by + CARD_Y
+        cx = bx - .015
+        cage.add_quad("FlipCard%d" % i, [(cx, y0, z0), (cx, y0, z1), (cx, y1, z1), (cx, y1, z0)], (-1, 0, 0), cards_mat, coll, board, origin=BOARD)
+        piv_sim = (bx - .021, by + CARD_Y, bz + sx)
+        piv = cage.add_empty("FlipPivot%d" % i, coll, board, (-.021, CARD_Y, sx))
+        px = piv_sim[0]
+        cage.add_quad("FlipFront%d" % i, [(px, y0, z0), (px, y0, z1), (px, y1, z1), (px, y1, z0)], (-1, 0, 0), cards_mat, coll, piv, origin=piv_sim)
+        cage.add_quad("FlipBack%d" % i, [(px + .001, y0, z0), (px + .001, y0, z1), (px + .001, y1, z1), (px + .001, y1, z0)], (1, 0, 0), card_back, coll, piv, origin=piv_sim)
+    return board
+
+
+def add_snowman(coll, root, vcol, lying):
+    """The half-melted snowman (the design's primitive list, verbatim): a melt
+    puddle, three slumped lumpy balls, a top hat with a plaid band and snow on
+    it, a drooping carrot, coal eyes, cheeks, a sad five-coal mouth, three
+    buttons, a scarf with its tail slumped down one side, two sagging twig
+    arms. One vertex-coloured mesh, turned to face the court."""
+    SNOW, SLUSH, COAL, HAT, SCARF, PLAID = 0xF1F4F7, 0xD9E3EA, 0x1E1C1E, 0x1A1718, 0x4A4648, 0x9A2E2A
+    sx, sz = SNOWMAN
+    world = (("ry", math.atan2(-sx, -sz)), ("t", (sx, -.02, sz)))
+    m = VcolMerge()
+    A = lambda prim, col, ops=(): m.add(prim, hexrgb(col), tuple(ops) + world)  # noqa: E731
+    A(P_circle(.95, 11), SLUSH, [("rx", -math.pi / 2), ("s", (1.25, 1, 1)), ("t", (0, .006, .05))])
+    A(P_sphere(.62, 10, 6), SNOW, [("lump", .06), ("s", (1.18, .42, 1)), ("t", (0, .12, 0))])
+    A(P_sphere(.4, 9, 6), SNOW, [("lump", .06), ("s", (1, .72, .95)), ("t", (.02, .42, .03))])
+    A(P_sphere(.22, 8, 6), SNOW, [("lump", .05), ("s", (1, .9, 1)), ("rz", .14), ("t", (.05, .76, .06))])
+    hat = lambda y, pre=(): list(pre) + [("t", (0, y - .94, 0)), ("rz", .07), ("t", (.05, .94, .06))]  # noqa: E731
+    A(P_cyl(.21, .21, .025, 12), HAT, hat(.955))
+    A(P_cyl(.125, .135, .34, 12), HAT, hat(1.14))
+    A(P_cyl(.14, .14, .055, 12), PLAID, hat(.995))
+    A(P_sphere(.14, 8, 4, math.pi / 2), SNOW, hat(1.305, [("lump", .1), ("s", (1, .55, 1))]))
+    A(P_cyl(0, .035, .14, 5), 0xE8703A, [("rx", math.pi / 2 + .25), ("t", (.06, .74, .3))])
+    for s_ in (-1, 1):
+        A(P_box(.04, .04, .03), COAL, [("t", (.06 + s_ * .075, .82, .25))])
+        A(P_sphere(.035, 6, 4), 0xE9A3A6, [("s", (1, .7, .4)), ("t", (.06 + s_ * .13, .74, .23))])
+    for i in range(5):
+        t = (i - 2) / 2
+        A(P_box(.026, .026, .025), COAL, [("t", (.06 + t * .07, .68 - (1 - t * t) * .02, .265 - abs(t) * .02))])
+    A(P_box(.045, .045, .03), COAL, [("t", (.02, .52, .34))])
+    A(P_box(.045, .045, .03), COAL, [("t", (-.02, .36, .4))])
+    A(P_box(.05, .05, .03), COAL, [("t", (.04, .2, .6))])
+    A(P_torus(.2, .055, 12, 4), SCARF, [("rx", math.pi / 2), ("rz", .14), ("t", (.04, .6, .04))])
+    A(P_box(.16, .62, .04), SCARF, [("lump", .03), ("rz", -.45), ("rx", -.35), ("t", (-.32, .36, .28))])
+    for y in (-.12, .1):
+        A(P_box(.165, .035, .045), PLAID, [("t", (0, y, 0)), ("rz", -.45), ("rx", -.35), ("t", (-.32, .36, .28))])
+    for x, rz, ry in ((-.62, 1.15, .2), (.64, -1.32, -.15)):
+        A(P_cyl(.012, .018, .58, 4), 0x5A4030, [("rz", rz), ("ry", ry), ("t", (x, .3, .02))])
+        A(P_cyl(.007, .01, .16, 4), 0x5A4030, [("rz", rz + (.7 if x < 0 else -.7)), ("ry", ry), ("t", (x * 1.32, .38, .02))])
+    m.finish("Snowman", coll, root, vcol)
+    lying.drift(sx - .5, sz + .7, .45, .07, .35)
+    lying.patch(sx + .3, sz - .6, .7, .004)
+
+
 def build():
     bpy.ops.wm.read_homefile(use_empty=True)
     scene = bpy.context.scene
@@ -291,6 +528,11 @@ def build():
     sky = cage.mat_flat("Park_Sky", (204, 214, 224), roughness=1.0)
     cedar = cage.mat_tex("Park_Cedar", TEX("park_cedar.png"))
     stripe = cage.mat_flat("Park_Stripe", (233, 228, 214), roughness=0.95)
+    face_mat = cage.mat_tex("Park_ScoreboardFace", TEX("park_scoreboard_face.png"))
+    cards_mat = cage.mat_tex("Park_ScoreCards", TEX("park_scorecards.png"))
+    card_back = cage.mat_flat("Park_ScoreCardBack", (228, 225, 217), roughness=0.95)
+    board_back = cage.mat_flat("Park_ScoreboardBack", (189, 186, 178), roughness=0.95)
+    vcol = mat_vcol("Park_Vcol")
     ring = cage.mat_tex("Park_Treeline", TEX("park_treeline_strip.png"), alpha_clip=True, double_sided=True, emissive=True)
 
     root = cage.add_empty("Park", coll, None, (0, 0, 0))
@@ -381,6 +623,8 @@ def build():
             if k == len(FENCE_RAILS) - 1:
                 lying.box((0.05, 0.025, L * R(.55, .85)), (FENCE_X, y + sag + .07, (z0 + z1) / 2 + R(-.3, .3)))
     wood.finish("SplitRailFence", cedar, c_props, root)
+    add_flip_board(c_props, root, face_mat, cards_mat, card_back, board_back, vcol)
+    add_snowman(c_props, root, vcol, lying)
     lying.finish("SnowLying", snow, c_snow, root)
 
     # The far snow disc, the sky dome, the treeline ring.

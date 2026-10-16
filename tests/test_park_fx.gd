@@ -40,7 +40,7 @@ func run(t) -> void:
 	if scene == null:
 		return
 	var inst: Node3D = scene.instantiate()
-	for n in ["Sky", "TreelineRing", "SnowLying", "Court", "Lawn", "ParkingLot", "Road", "NoticeBoard", "FarSnow", "PoleFooting", "SplitRailFence", "BayStripes"]:
+	for n in ["Sky", "TreelineRing", "SnowLying", "Court", "Lawn", "ParkingLot", "Road", "NoticeBoard", "FarSnow", "PoleFooting", "SplitRailFence", "BayStripes", "FlipBoard", "ScoreboardFace", "ScoreboardHardware", "FlipCard0", "FlipCard3", "FlipPivot0", "FlipFront3", "FlipBack3", "Snowman"]:
 		t.ok(inst.find_child(n, true, false) != null, "park glb has %s" % n)
 	t.ok(inst.find_child("Pole", true, false) == null, "no arena pole: the park hoop brings its own")
 	var fx := ParkFx.new()
@@ -52,6 +52,14 @@ func run(t) -> void:
 	var fa: AABB = fence.get_aabb()
 	t.ok(absf(fa.position.x + fa.size.x * 0.5 - SimGeometry.PARK_FENCE_X) < 0.08, "the fence stands on the sim's wall line (x %.2f)" % (fa.position.x + fa.size.x * 0.5))
 	t.ok(fa.size.z > 11.5 and fa.size.y > 1.1 and fa.size.y < 1.4, "…the slab's width, rail height")
+	var snowman: MeshInstance3D = inst.find_child("Snowman", true, false)
+	var sc: Vector3 = snowman.get_aabb().get_center() if snowman != null else Vector3.ZERO
+	t.ok(snowman != null and absf(sc.x - 11.4) < 0.5 and absf(sc.z + 3.2) < 0.5, "the snowman slumps on the lawn back-left (built in place: %s)" % str(sc))
+	t.ok(snowman != null and snowman.mesh.get_surface_count() == 1 and (snowman.mesh.surface_get_format(0) & Mesh.ARRAY_FORMAT_COLOR) != 0, "…one vertex-coloured surface")
+	var hard: MeshInstance3D = inst.find_child("ScoreboardHardware", true, false)
+	t.ok(hard != null and (hard.mesh.surface_get_format(0) & Mesh.ARRAY_FORMAT_COLOR) != 0, "the board's stacks, rings and hooks: one vertex-coloured mesh")
+	var sa: AABB = snowman.get_aabb() if snowman != null else AABB()
+	t.ok(sa.size.y > 1.0 and sa.size.y < 1.6 and sa.size.x > 1.5, "…a slumped, hatted size (%.2f tall, %.2f wide)" % [sa.size.y, sa.size.x])
 	t.eq(fx.snow_count(), 500, "five hundred flakes")
 	t.ok(fx.has_sky() and fx.sky_resource() is Sky and (fx.sky_resource() as Sky).sky_material is ShaderMaterial, "the design's sky shader is a Sky resource for the court's Environment")
 	t.ok(not (inst.find_child("Sky", true, false) as MeshInstance3D).visible, "the glb's dome is hidden under it")

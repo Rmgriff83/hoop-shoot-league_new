@@ -83,6 +83,7 @@ var _crossbar: Node3D
 var _trolley: Node3D
 var _arena_pole: Node3D         # in-ground pole (beach), follows the board
 var _scoreboard: Node3D         # ground reader board rig (beach), turns to the shooter
+var _flip: FlipScoreboard       # the park's flip-card board on the fence (HOME / AWAY)
 var _led_surfaces := 0          # LedFace/BoardBand meshes bound (hoop or arena)
 var _fire: RimFire
 var _ice: RimIce              # on-fire flames/smoke/glow on the rim
@@ -180,6 +181,15 @@ func _build_arena_model() -> bool:
 	_arena_pole = _arena.find_child("Pole", true, false) as Node3D
 	_scoreboard = _arena.find_child("ScoreboardRig", true, false) as Node3D
 	_arena_anim = _arena.find_child("AnimationPlayer", true, false)
+	# The park's flip-card scoreboard (FlipBoard): HOME takes show_score(),
+	# AWAY set_visitor(); the LED stays the message channel.
+	var fb := FlipScoreboard.new()
+	fb.name = "FlipScoreboard"
+	if fb.setup(_arena):
+		add_child(fb)
+		_flip = fb
+	else:
+		fb.free()
 	# The city's fence scoreboard (Scoreboard): its clock window takes the
 	# hoop board's place — score, clock and every message — plus the
 	# HOME / VISITOR / PER digit windows.
@@ -693,6 +703,19 @@ func _matte(node_name: String) -> void:
 			(m as BaseMaterial3D).roughness = 1.0
 
 
+## The score on every board the court has: the LED's idle line (SCORE 12 x2)
+## and the park's flip cards' HOME. The screens call this, never led directly.
+func show_score(score: int, mult := 1) -> void:
+	led.show_score(score, mult)
+	if _flip != null:
+		_flip.set_home(score)
+
+
+## The park's flip-card board (null elsewhere).
+func flip_board() -> FlipScoreboard:
+	return _flip
+
+
 ## The city scoreboard's clock / VISITOR / PER windows; no-ops on a board
 ## without them (the hoop boards show the score and the messages only).
 func set_clock(seconds: float) -> void:
@@ -708,6 +731,8 @@ func clear_clock() -> void:
 func set_visitor(score: int) -> void:
 	if led is Scoreboard:
 		(led as Scoreboard).set_visitor(score)
+	if _flip != null:
+		_flip.set_visitor(score)
 
 
 func set_period(p: int) -> void:

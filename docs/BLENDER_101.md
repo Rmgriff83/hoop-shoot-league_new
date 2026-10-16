@@ -809,7 +809,19 @@ laid out from the reference photo. Three scripts and a layout file:
   with its three worn `BayStripes` (one car parked in the left bay), the
   road, the path, the pads, five horizon buildings with snow roofs, the
   ballfield fence, the light poles, the bollards and the notice board (the
-  league banner's host), the lying snow merged into one
+  league banner's host), the **flip-card scoreboard** (`FlipBoard` at
+  (6.105, 0.82, 0.95) on the court side of the top rail, right of the hoop:
+  `ScoreboardFace` in `park_scoreboard_face.png`, `ScoreboardBack`,
+  `ScoreboardHardware` — stacks, rings and hooks as one vertex-coloured mesh —
+  four static `FlipCard{i}` quads over the `park_scorecards.png` atlas and four
+  hidden `FlipPivot{i}` flaps with `FlipFront{i}` / `FlipBack{i}`; the game's
+  `FlipScoreboard` picks a digit with a uv1 offset and swings a pivot when it
+  changes), the half-melted **`Snowman`** at (11.4, −3.2) facing the court
+  (the design's primitive list through `VcolMerge`: `P_box`/`P_sphere`/
+  `P_cyl`/`P_torus`/`P_circle` in three.js conventions with the design's
+  op order, one `Park_Vcol` material whose base colour is the mesh's Color
+  attribute, so the exporter writes COLOR_0 and Godot reads it as albedo),
+  the lying snow merged into one
   mesh (plough piles at the court's edges, the pole-foot drift = the sim's
   prop box, kerbside piles, patches in the lawn's hollows), a far snow
   disc, the `Sky` dome (faces flipped, the sky shader goes on at runtime)

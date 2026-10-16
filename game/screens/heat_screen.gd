@@ -937,7 +937,7 @@ func _handle_event(ev: Dictionary) -> void:
 			_court.arcade_chase()
 			_hud.go_toast()
 			_court.info.set_text("")
-			_court.led.show_score(heat.player.score if heat.ot > 0 else 0)
+			_court.show_score(heat.player.score if heat.ot > 0 else 0)
 			_court.info.flash("GO!", 2, _court.info.accent_color)
 		"ot_start":
 			_hud.set_ot(int(ev["n"]))
@@ -969,10 +969,10 @@ func _handle_ai_event(ev: Dictionary) -> void:
 		"go":
 			_ai_court.arcade_chase()
 			if heat.ot > 0:
-				_ai_court.led.show_score(heat.score(Heat.AI))
+				_ai_court.show_score(heat.score(Heat.AI))
 			else:
 				_ai_court.info.set_text("")
-				_ai_court.led.show_score(0)
+				_ai_court.show_score(0)
 		"contact":
 			var c: Dictionary = ev["contact"]
 			if c["kind"] == "enter":
@@ -1015,14 +1015,14 @@ func _handle_ai_event(ev: Dictionary) -> void:
 			_ai_court.info.marquee("ON FIRE", 24.0, _ai_court.info.accent_color)
 		"fire_off":
 			_ai_tier_shown = 1
-			_ai_court.led.show_score(heat.score(Heat.AI))
+			_ai_court.show_score(heat.score(Heat.AI))
 			if _ai_court.fire_lit():
 				_ai_court.set_fire(false)
 				_ai_court.info.marquee("BURNED OUT" if str(ev.get("reason", "")) == "time" else "COOLED OFF", 24.0, _ai_court.info.accent_color)
 		"vortex_on":
 			_ai_court.info.marquee("VORTEX", 24.0, _ai_court.info.accent_color)
 		"vortex_off":
-			_ai_court.led.show_score(heat.score(Heat.AI))
+			_ai_court.show_score(heat.score(Heat.AI))
 			_ai_court.info.marquee("VORTEX SPENT" if str(ev.get("reason", "")) == "time" else "VORTEX ICED", 24.0, _ai_court.info.accent_color)
 		"card_played":
 			if ev.get("ok", false):
@@ -1043,7 +1043,7 @@ func _on_ai_outcome(outcome: Dictionary) -> void:
 		var tier := StreakRules.base_points(streak)
 		var lit := StreakRules.is_lit(streak)
 		_hud.set_opponent_score(heat.score(Heat.AI))
-		_ai_court.led.show_score(heat.score(Heat.AI), tier)
+		_ai_court.show_score(heat.score(Heat.AI), tier)
 		_ai_court.rim_nudge()
 		_ai_court.play_make()
 		# Their scoring pop in the PiP (design 5a: every mode).
