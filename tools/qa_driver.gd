@@ -729,6 +729,18 @@ func _run_park() -> void:
 	await _snap("park_home")
 	App.start_mode("trial_park")
 	await _sleep(4.4)
+	# The rim on fire against the pale sky (the flames must read; the ice too).
+	var pcourt: CourtGeometry = get_tree().root.find_child("Court", true, false)
+	if pcourt != null:
+		pcourt.set_fire(true, 2)
+		await _sleep(2.5)
+		await _snap("park_fire")
+		pcourt.set_fire(false)
+		pcourt.set_ice(true, "qa")
+		await _sleep(1.5)
+		await _snap("park_ice")
+		pcourt.set_ice(false, "qa")
+		await _sleep(0.5)
 	for i in 10:
 		await _snap("park_%02d" % i)
 		await _sleep(4.5)

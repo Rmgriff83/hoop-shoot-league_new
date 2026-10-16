@@ -3,8 +3,12 @@
 // (tools/blender/render_fire_flipbook.py, 8 x 4 frames, frame 0 top-left).
 // `tiles` frames wrap around the ring; u scrolls slowly so the tile seams never
 // sit still; `intensity` fades the flames in/out and stretches them taller.
+// Mixed, not added (2026-10-15): additive flames saturated to nothing over the
+// park's pale sky and snow. The colour is kept un-premultiplied so over a dark
+// court the result is the same as the old add; over a bright one the flame
+// covers it instead of whitening it.
 shader_type spatial;
-render_mode cull_disabled, unshaded, blend_add, depth_draw_never, fog_disabled;
+render_mode cull_disabled, unshaded, blend_mix, depth_draw_never, fog_disabled;
 
 uniform sampler2D sheet : source_color, filter_linear_mipmap, repeat_disable;
 uniform float t = 0.0;
@@ -36,6 +40,6 @@ void fragment() {
 	vec2 uv = vec2((c + u) / cols, (r + v) / rows);
 	vec4 s = texture(sheet, uv);
 	float a = s.a * clamp(intensity, 0.0, 1.0);
-	ALBEDO = s.rgb * a * 1.2;
+	ALBEDO = s.rgb * 1.2;
 	ALPHA = a;
 }
