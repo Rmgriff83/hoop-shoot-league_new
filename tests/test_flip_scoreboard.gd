@@ -55,7 +55,7 @@ func _board(t) -> void:
 	var front1: MeshInstance3D = board.find_child("FlipFront1", true, false)
 	t.ok(FlipScoreboard.offset_of(front1) == Vector3.ZERO, "the flap carries the old digit (0) up")
 	fb.advance(FlipScoreboard.FLIP_S / 2.0)
-	t.close(pivots[1].rotation.z, PI / 2.0, 1e-6, "halfway: the card stands straight up (ease-in-out)")
+	t.close(pivots[1].rotation.z, -PI / 2.0, 1e-6, "halfway: the card stands straight up, swung toward the viewer (ease-in-out)")
 	t.ok(fb.flipping(), "…still swinging")
 	fb.advance(FlipScoreboard.FLIP_S / 2.0 + 1e-4)
 	t.ok(not pivots[1].visible and pivots[1].rotation.z == 0.0 and not fb.flipping(), "after FLIP_S the flap hides and rests")

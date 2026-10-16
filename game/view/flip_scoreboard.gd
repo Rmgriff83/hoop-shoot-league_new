@@ -102,7 +102,10 @@ func _process(dt: float) -> void:
 
 
 ## Step every swing. The pivot turns about the lateral (z) axis: the card
-## hangs down from the axle and goes up and over toward the fence.
+## hangs down from the axle and its bottom edge comes up TOWARD the viewer
+## and over the rings (the design's rotation.x → -π), so the old digit stays
+## in front of the new card until the flap passes vertical and its plain
+## back shows. Swung the other way it would sink behind the card stack.
 func advance(dt: float) -> void:
 	for i in SLOTS:
 		if _t[i] < 0.0:
@@ -110,7 +113,7 @@ func advance(dt: float) -> void:
 		_t[i] += dt
 		var k := minf(1.0, _t[i] / FLIP_S)
 		var e := 2.0 * k * k if k < 0.5 else 1.0 - pow(-2.0 * k + 2.0, 2.0) / 2.0
-		_pivots[i].rotation = Vector3(0.0, 0.0, PI * e)
+		_pivots[i].rotation = Vector3(0.0, 0.0, -PI * e)
 		if k >= 1.0:
 			_pivots[i].visible = false
 			_pivots[i].rotation = Vector3.ZERO

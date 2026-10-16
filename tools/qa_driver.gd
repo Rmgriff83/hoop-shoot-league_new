@@ -744,7 +744,8 @@ func _run_park() -> void:
 		# The flip-card scoreboard on the fence: a card mid-swing, then settled.
 		pcourt.show_score(12)
 		pcourt.set_visitor(7)
-		await _sleep(0.2)
+		await _sleep(0.12)
+		print("QA park: flipping at the park_flip snap = %s" % str(pcourt.flip_board() != null and pcourt.flip_board().flipping()))
 		await _snap("park_flip")
 		await _sleep(0.4)
 		await _snap("park_score")
