@@ -84,6 +84,12 @@ func _resolve(color: Color) -> Color:
 
 var _img: Image
 var _tex: ImageTexture
+## The frame's blank (BG + every LED off) copied in whole each redraw, and
+## one 3×3 cell per colour blitted for every lit LED: a redraw is a few
+## hundred native blits, not ~2 300 GDScript set_pixel calls (the city's
+## clock window redraws once a second; a marquee 20 times, 2026-10-16).
+var _blank: Image
+var _cells := {}
 var _dirty := true
 
 # Scoreboard state.
@@ -381,10 +387,14 @@ func lit_count() -> int:
 
 func _render_frame() -> void:
 	_dirty = false
-	_img.fill(BG)
-	for r in ROWS:
-		for c in cols:
-			_led(c, r, OFF)
+	if _blank == null:
+		_blank = Image.create(width, HEIGHT, false, Image.FORMAT_RGBA8)
+		_blank.fill(BG)
+		var off := _cell(OFF)
+		for r in ROWS:
+			for c in cols:
+				_blank.blit_rect(off, Rect2i(0, 0, 3, 3), Vector2i(c * CELL, r * CELL))
+	_img.copy_from(_blank)
 	var text := _idle_text
 	var x0 := 0
 	var draw := true
@@ -423,8 +433,14 @@ func _draw_text(text: String, x0: int, color: Color) -> void:
 func _led(col: int, row: int, color: Color) -> void:
 	if col < 0 or col >= cols or row < 0 or row >= ROWS:
 		return
-	var x := col * CELL
-	var y := row * CELL
-	for dy in 3:
-		for dx in 3:
-			_img.set_pixel(x + dx, y + dy, color)
+	_img.blit_rect(_cell(color), Rect2i(0, 0, 3, 3), Vector2i(col * CELL, row * CELL))
+
+
+## The 3×3 dot of one colour, made once.
+func _cell(color: Color) -> Image:
+	var key := color.to_rgba32()
+	if not _cells.has(key):
+		var cell := Image.create(3, 3, false, Image.FORMAT_RGBA8)
+		cell.fill(color)
+		_cells[key] = cell
+	return _cells[key]

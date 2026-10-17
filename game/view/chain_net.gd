@@ -25,6 +25,10 @@ const LINK_COLORS := ["#A9AFB6", "#6E747C", "#E4E8EC", "#8C6A4E"]
 const RING_COLORS := ["#8E949C", "#5C6168", "#CDD2D8", "#7A5A40"]
 
 var links: MultiMeshInstance3D
+## The links' transforms as the MultiMesh buffer (12 floats a link: the
+## 3×4 transform's rows), written once a frame instead of a
+## set_instance_transform per link (2026-10-16).
+var _link_buf := PackedFloat32Array()
 var _run_a := PackedInt32Array()
 var _run_b := PackedInt32Array()
 var _run_len := PackedFloat32Array()
@@ -70,6 +74,9 @@ func build(lay: Dictionary) -> void:
 	links.name = "Net_Links"
 	links.multimesh = mm
 	links.extra_cull_margin = 0.5
+	# 400–700 links × 80 tris in the shadow pass for a shadow nobody reads.
+	links.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	_link_buf.resize(total * 12)
 	skeleton.add_child(links)
 	_link_xf.resize(total)
 	_tris += total * _link_tris(lm)
@@ -222,8 +229,21 @@ func _place_links_at(pos: PackedVector3Array) -> void:
 			var z := x.cross(y).normalized()
 			var basis := Basis(x, y, z) if k % 2 == 0 else Basis(z, y, -x)
 			_link_xf[idx] = Transform3D(basis, p)
-			mm.set_instance_transform(idx, _link_xf[idx])
+			var o := idx * 12
+			_link_buf[o] = basis.x.x
+			_link_buf[o + 1] = basis.y.x
+			_link_buf[o + 2] = basis.z.x
+			_link_buf[o + 3] = p.x
+			_link_buf[o + 4] = basis.x.y
+			_link_buf[o + 5] = basis.y.y
+			_link_buf[o + 6] = basis.z.y
+			_link_buf[o + 7] = p.y
+			_link_buf[o + 8] = basis.x.z
+			_link_buf[o + 9] = basis.y.z
+			_link_buf[o + 10] = basis.z.z
+			_link_buf[o + 11] = p.z
 			idx += 1
+	mm.buffer = _link_buf
 
 
 ## One link: an oval ring of wire (LINK_LEN × LINK_W, wire LINK_WIRE), its

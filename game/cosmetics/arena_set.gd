@@ -84,6 +84,13 @@ extends CosmeticSet
 @export var snow := false
 @export var snow_amount := 500
 @export var sky := ""
+## The shader sky's palette (AreaSky, the design's park values by default —
+## raw colours the shader converts to linear itself) and the direction
+## toward the sun (the glow); the city sets its own blue and haze.
+@export var sky_top := Color(0.30, 0.52, 0.84)
+@export var sky_mid := Color(0.55, 0.72, 0.90)
+@export var sky_horizon := Color(0.80, 0.86, 0.92)
+@export var sky_sun_dir := Vector3(-0.65204, 0.51232, -0.55890)
 @export var parked_cars: Array[Dictionary] = []
 @export var tree_layout := ""
 

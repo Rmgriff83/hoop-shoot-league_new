@@ -182,7 +182,7 @@ func _city(t) -> void:
 		return
 	var city: Node = load("res://assets/arena/city/city.glb").instantiate()
 	t.eq(_count(city, "StreetRig", false), 1, "one street line")
-	t.ok(_count(city, "Building") >= 10, "the pack's buildings stand around the court (%d)" % _count(city, "Building"))
+	t.eq(_count(city, "Building"), 1, "the pack's fourteen buildings are one merged Buildings mesh (one draw, 2026-10-16)")
 	t.ok(FileAccess.file_exists("res://assets/textures/city_facades.png"), "the facade atlas is conformed")
 	t.ok(not FileAccess.file_exists("res://game/court/windows.gdshader"), "the window-light shader is gone (it lagged the phone)")
 	t.eq(_count(city, "TreeRig", false), 4, "4 street trees")
@@ -193,13 +193,35 @@ func _city(t) -> void:
 	t.eq(cfx.facade_count(), _count(city, "Building") + _count(city, "Windows"), "every building is bound to the dusk material")
 	t.ok(cfx.facade_material_count() <= 3, "a shared material per texture, no more (%d)" % cfx.facade_material_count())
 	t.eq(_lights(city), 0, "midday: no spot or omni lights hung in the city (they lagged the phone)")
-	t.ok(_count(city, "LampHead") >= 5, "street lamps line the far sidewalk (%d)" % _count(city, "LampHead"))
-	t.ok(_count(city, "LampGlow") >= 5, "their bulbs glow toward the court")
+	t.eq(_count(city, "LampHead"), 1, "the street lamps' heads are one mesh")
+	t.eq(_count(city, "LampGlow"), 1, "…and their bulb glows one (hidden at midday)")
+	for n in ["LaneDashes", "FenceWork", "LampPosts", "Roads", "Sidewalks", "SidewalksFar", "Kerbs", "SpeakerScrews", "SpeakerDrivers", "ScoreVents", "FloodRigs"]:
+		t.ok(city.find_child(n, true, false) is MeshInstance3D, "merged %s" % n)
+	t.ok(_count(city, "LaneDash") == 1 and _count(city, "FencePost") == 0 and _count(city, "ScoreVent") == 1, "the repeated pieces are gone as nodes")
+	var meshes := 0
+	for c in BeachFx._descendants(city):
+		if c is MeshInstance3D:
+			meshes += 1
+	t.ok(meshes < 80, "the city is under 80 mesh nodes (%d; 263 before)" % meshes)
+	# The dressing with the set: the clouds, no shadows from the backdrop, the cars held ready.
+	var city2: Node = load("res://assets/arena/city/city.glb").instantiate()
+	var cfx2 := CityFx.new()
+	t.ok(cfx2.setup(city2, CosmeticLibrary.get_arena("city")), "CityFx sets up with the set")
+	t.ok(cfx2.sky_resource() is Sky and (cfx2.sky_resource() as Sky).sky_material is ShaderMaterial, "the city has the park's clouds (AreaSky)")
+	t.ok(not (city2.find_child("Sky", true, false) as MeshInstance3D).visible, "…its painted dome hidden under them")
+	var mat := (cfx2.sky_resource() as Sky).sky_material as ShaderMaterial
+	t.ok(Vector3(mat.get_shader_parameter("mid_color")).is_equal_approx(Vector3(0.6, 0.76, 0.95)), "…in the city's own blue")
+	t.eq((city2.find_child("Buildings", true, false) as MeshInstance3D).cast_shadow, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "the buildings cast no shadow")
+	t.eq((city2.find_child("Roads", true, false) as MeshInstance3D).cast_shadow, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "…nor the road")
+	t.eq((city2.find_child("FenceWork", true, false) as MeshInstance3D).cast_shadow, GeometryInstance3D.SHADOW_CASTING_SETTING_ON, "the fence still does")
+	t.eq(cfx2.scene_count(), CityFx.MODELS.size(), "every vehicle scene is loaded once, up front")
+	cfx2.free()
+	city2.free()
 	t.eq(_count(city, "BusSign"), 1, "the shelter's roof sign")
 	t.ok(_count(city, "BusStop", false) == 1 and _count(city, "BusPoster") == 1, "a bus shelter with a lit poster")
-	t.eq(_count(city, "ParkHead"), 3, "three park lamps behind the player")
+	t.eq(_count(city, "ParkHead"), 1, "the three park lamps behind the player, one merged mesh")
 	t.eq(_count(city, "Wall"), 0, "no knee wall: the fence runs to the ground")
-	t.eq(_count(city, "FenceFoot"), 4, "a bottom rail on every side")
+	t.ok(_count(city, "FenceFoot") == 0 and city.find_child("FenceWork", true, false) != null, "the fence's posts, corners, feet and rails are one FenceWork mesh")
 	t.ok(city.find_child("Fence", true, false) is MeshInstance3D and city.find_child("FenceBack", true, false) == null, "one chain-link loop (black, all four sides)")
 	# Pigeons: a loose bunch crosses over the street now and then (a
 	# different bird from the beach's gulls), glides included, freed past the edge.
@@ -228,7 +250,7 @@ func _city(t) -> void:
 	# Rooftop smoke: a chimney on the grand block, a persistent plume of a few
 	# cheap billboard puffs rising, drifting, growing and fading on the clock.
 	t.ok(FileAccess.file_exists("res://assets/textures/city_smoke.png"), "smoke puff generated")
-	t.eq(_count(city, "Chimney"), 2, "a chimney and its cap on the roof across the street")
+	t.eq(_count(city, "Chimney"), 1, "a chimney with its cap on the roof across the street (one mesh)")
 	t.ok(city.find_child("SmokeStack", true, false) != null, "the SmokeStack empty")
 	t.eq(cfx.smoke_count(), CityFx.SMOKE_N, "a handful of puffs, no particles")
 	cfx._step_smoke()

@@ -20,6 +20,23 @@ func run(t) -> void:
 	t.ok(skel.get_node_or_null("Net_Rings") is MeshInstance3D and skel.get_node_or_null("Net_Hooks") is MeshInstance3D, "Net_Rings and Net_Hooks are skinned meshes")
 	t.ok(chain.link_count() >= 400 and chain.link_count() <= 700, "hundreds of links (%d)" % chain.link_count())
 	t.eq((links as MultiMeshInstance3D).multimesh.instance_count, chain.link_count(), "an instance per link")
+	t.eq((links as MultiMeshInstance3D).cast_shadow, GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "the links cast no shadow (50k triangles nobody read)")
+	# The one buffer write: 12 floats a link, the transform's rows (the engine's
+	# multimesh layout: xx yx zx ox | xy yy zy oy | xz yz zz oz). Headless, the
+	# dummy renderer returns no instance transforms, so the buffer itself is read.
+	var buf: PackedFloat32Array = (links as MultiMeshInstance3D).multimesh.buffer
+	t.eq(buf.size(), chain.link_count() * 12, "the buffer holds every link")
+	var buf_ok := buf.size() == chain.link_count() * 12
+	for i in [0, 7, chain.link_count() / 2, chain.link_count() - 1]:
+		if not buf_ok:
+			break
+		var xf := chain.link_transform(int(i))
+		var o: int = int(i) * 12
+		var want := [xf.basis.x.x, xf.basis.y.x, xf.basis.z.x, xf.origin.x, xf.basis.x.y, xf.basis.y.y, xf.basis.z.y, xf.origin.y, xf.basis.x.z, xf.basis.y.z, xf.basis.z.z, xf.origin.z]
+		for k in 12:
+			if absf(buf[o + k] - float(want[k])) > 1e-5:
+				buf_ok = false
+	t.ok(buf_ok, "the buffer carries each link's transform rows where set_instance_transform put them")
 	t.close(ChainNet.LINK_PITCH, 0.0228, 1e-9, "the pitch is the link's inner length: links interlock")
 	# A diagonal run (~0.105 m) carries 5 links; a hook drop (0.025 m) one.
 	var diag_n := 0

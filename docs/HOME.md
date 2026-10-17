@@ -191,7 +191,11 @@ its ArenaSet (2026-10-16): `shadow_distance` / `shadow_size` (the sun's
 reach and the directional atlas `CourtGeometry._build_lights` sets) and
 `render_scale` (the 3D scale the court puts on its viewport while it is up;
 the park runs 20 m / 1024 with near-only tree shadows and stays at 1.0 —
-0.7 under Godot's bilinear upscale blurred the pixel art). The park's dressing is
+0.7 under Godot's bilinear upscale blurred the pixel art; the city runs
+20 m / 1024 too). A shader sky is `sky = "partly_cloudy"` plus the `sky_top`
+/ `sky_mid` / `sky_horizon` / `sky_sun_dir` palette (`game/view/area_sky.gd`,
+the park's design values by default; the city's match its background and
+fog). The park's dressing is
 `game/view/park_fx.gd` (`ArenaSet.snow` / `sky` / `parked_cars` /
 `tree_layout`): the PSX trees instanced from `data/park_layout.json`
 (docs/BLENDER_101.md → The park), the parked cars, the falling snow and the

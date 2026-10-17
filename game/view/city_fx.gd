@@ -20,6 +20,11 @@ const MODELS: Array[String] = [
 	"res://assets/vehicles/jalopy_brown.glb",
 ]
 const RNG_SEED := 0x0C17_0CA5
+## Flat ground, the backdrop and the billboard trees never cast a shadow
+## anyone sees (the buildings are 25–225 m out; the sun reaches 20 m).
+const NO_CAST: Array[String] = ["Building", "Windows", "Sky", "Road", "Sidewalk", "Ground", "Court", "LaneDash", "Kerb", "Tree"]
+var _scenes := {}   # the vehicle PackedScenes, loaded once (no disk load mid-trial)
+var _sky: Sky
 ## Pigeons: now and then a loose bunch crosses over the street beyond the
 ## fence — plump, quick shallow flaps with glides, lower and closer than the
 ## beach's gulls (a different bird: Ross, 2026-10-02).
@@ -115,10 +120,22 @@ var _t := 0.0
 
 ## Bind the city glb: the street line, the trees, the facades, the lamp heads.
 ## False when the arena has no street (nothing to animate).
-func setup(arena: Node) -> bool:
+func setup(arena: Node, set: ArenaSet = null) -> bool:
 	_rig = arena.find_child("StreetRig", true, false) as Node3D
 	if _rig == null:
 		return false
+	for n in BeachFx._descendants(arena):
+		if n is MeshInstance3D:
+			for prefix in NO_CAST:
+				if n.name.begins_with(prefix):
+					(n as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+					break
+	for path in MODELS:
+		if ResourceLoader.exists(path):
+			_scenes[path] = load(path)
+	if set != null and set.sky != "":
+		_sky = AreaSky.build(set)
+		AreaSky.hide_dome(arena)
 	_street_x = _rig.position.x
 	_street_z0 = _rig.position.z
 	_yaw = _rig.rotation.y
@@ -171,6 +188,16 @@ static func _unshade(mi: MeshInstance3D) -> void:
 		if m is BaseMaterial3D:
 			(m as BaseMaterial3D).shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
 			(m as BaseMaterial3D).disable_fog = true
+
+
+## The clouds (AreaSky) when the set asks for a sky; null otherwise.
+func sky_resource() -> Sky:
+	return _sky
+
+
+## The vehicle scenes held ready (tests).
+func scene_count() -> int:
+	return _scenes.size()
 
 
 func facade_count() -> int:
@@ -252,9 +279,9 @@ func spawn_car(dir := 0.0) -> void:
 	if not lane_clear(dir):
 		return
 	var path: String = MODELS[_draw_model()]
-	if not ResourceLoader.exists(path):
+	var scene: PackedScene = _scenes.get(path)
+	if scene == null:
 		return
-	var scene: PackedScene = load(path)
 	var car: Node3D = scene.instantiate() as Node3D
 	if car == null:
 		return
@@ -263,6 +290,8 @@ func spawn_car(dir := 0.0) -> void:
 	for b in car.find_children("*", "StaticBody3D", true, false):
 		b.get_parent().remove_child(b)
 		b.free()
+	for mi in car.find_children("*", "MeshInstance3D", true, false):
+		(mi as MeshInstance3D).cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	_light_lamps(car)
 	var has_spot := false
 	if _spots < HEADLIGHT_SPOTS:

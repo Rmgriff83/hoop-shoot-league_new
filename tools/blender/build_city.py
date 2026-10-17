@@ -30,6 +30,7 @@ CREATOR script: refuses to overwrite an existing city.blend unless run with
 """
 import math
 import os
+import re
 import sys
 import bmesh
 import bpy
@@ -570,7 +571,40 @@ def build():
         rig.keyframe_insert("scale", frame=1 + int(round(t * cage.FPS)))
     rig.animation_data.action.name = "ScorePop"
     cage.to_nla(rig, rig.animation_data.action, "ScorePop")
+
+    # ---- Fewer nodes (2026-10-16, the city running lighter): the repeated
+    # static pieces joined into one mesh each — one draw and one shadow draw
+    # instead of dozens (263 mesh nodes before). The merged names keep the
+    # prefixes CityFx and the tests bind by (Building…, LampGlow…, LampHead…);
+    # Building01 stays the surviving object so the chimney and the SmokeStack
+    # empty keep their parent. The vents stay under the reader rig (ScorePop).
+    for pattern, new_name in MERGES:
+        objs = sorted((o for o in coll.all_objects if o.type == "MESH" and re.match(pattern, o.name)), key=lambda o: o.name)
+        if len(objs) < 2:
+            continue
+        bpy.ops.object.select_all(action="DESELECT")
+        for o in objs:
+            o.select_set(True)
+        bpy.context.view_layer.objects.active = objs[0]
+        bpy.ops.object.join()
+        merged = bpy.context.view_layer.objects.active
+        merged.name = merged.data.name = new_name
+    bpy.ops.object.select_all(action="DESELECT")
+    print("city: %d mesh nodes after the merges" % sum(1 for o in coll.all_objects if o.type == "MESH"))
     return coll
+
+
+MERGES = [
+    (r"^LaneDash\d+$", "LaneDashes"), (r"^Fence(Post|Corner|Foot|Rail)\d", "FenceWork"),
+    (r"^Lamp(Post|Arm)\d+$", "LampPosts"), (r"^LampHead\d+$", "LampHeads"), (r"^LampGlow\d+$", "LampGlows"),
+    (r"^ParkPost\d+$", "ParkPosts"), (r"^ParkHead\d+$", "ParkHeads"), (r"^ParkGlow\d+$", "ParkGlows"),
+    (r"^BusPost\d+$", "BusPosts"), (r"^BusBench(Leg\d+)?$", "BusBench"),
+    (r"^Road\d+$", "Roads"), (r"^Sidewalk\d+$", "Sidewalks"), (r"^SidewalkFar\d+$", "SidewalksFar"), (r"^Kerb", "Kerbs"),
+    (r"^Flood(Post|Arm|Box)\d+$", "FloodRigs"),
+    (r"^Speaker(Woofer0|Mid0|Tweeter)Screw\d+$", "SpeakerScrews"),
+    (r"^Speaker(Woofer0|Mid0)(Cap|Cone|Flange|Surround)$|^SpeakerDome$|^SpeakerTweeter$", "SpeakerDrivers"),
+    (r"^ScoreVent[LR]\d$", "ScoreVents"), (r"^Building\d\d$", "Buildings"), (r"^Chimney(Cap)?$", "Chimney"),
+]
 
 
 if __name__ == "__main__" and bpy.app.background:

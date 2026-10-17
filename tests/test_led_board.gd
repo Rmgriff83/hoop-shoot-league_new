@@ -35,6 +35,21 @@ func run(t) -> void:
 	led.advance(0.0)
 	t.eq(led.mode(), "idle", "idle after show_score")
 	t.eq(led.lit_count(), _glyph_count("SCORE 12"), "SCORE 12 lit count")
+	# The blit renderer (2026-10-16): a lit dot is a 3×3 block of its colour in a 4×4 cell with a BG gap.
+	var lit_at := Vector2i(-1, -1)
+	for r in LedBoard.ROWS:
+		for c in led.cols:
+			var px := led._img.get_pixel(c * LedBoard.CELL + 1, r * LedBoard.CELL + 1)
+			if px != LedBoard.OFF and px != LedBoard.BG and lit_at.x < 0:
+				lit_at = Vector2i(c, r)
+	t.ok(lit_at.x >= 0, "a lit dot exists")
+	if lit_at.x >= 0:
+		var ok := true
+		for dy in 3:
+			for dx in 3:
+				if led._img.get_pixel(lit_at.x * LedBoard.CELL + dx, lit_at.y * LedBoard.CELL + dy) != led._img.get_pixel(lit_at.x * LedBoard.CELL + 1, lit_at.y * LedBoard.CELL + 1):
+					ok = false
+		t.ok(ok and led._img.get_pixel(lit_at.x * LedBoard.CELL + 3, lit_at.y * LedBoard.CELL + 3) == LedBoard.BG, "…3×3 of the colour, the gap pixel BG")
 	led.show_score(12, 3)
 	led.advance(0.0)
 	t.eq(led.lit_count(), _glyph_count("SCORE 12 x3"), "streak tier tag renders (SCORE 12 x3)")

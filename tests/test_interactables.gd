@@ -45,9 +45,10 @@ func run(t) -> void:
 	t.ok(cglb.find_child("Speakers", true, false) is Node3D and cglb.find_child("SpeakerLed", true, false) is MeshInstance3D, "Speakers + SpeakerLed in the city glb")
 	# The 2026-10-03 polish: woofer, mid, tweeter and badge; one cabinet since 2026-10-05.
 	for i in 1:
-		for part in ["SpeakerWoofer%dCone", "SpeakerWoofer%dCap", "SpeakerWoofer%dScrew5", "SpeakerMid%dCone", "SpeakerTweeter%d", "SpeakerDome%d", "SpeakerBadge%d", "SpeakerBaffle%d"]:
+		for part in ["SpeakerTweeter%d", "SpeakerDome%d", "SpeakerBadge%d", "SpeakerBaffle%d"]:
 			t.ok(cglb.find_child(part % i, true, false) is MeshInstance3D, "%s in the city glb" % (part % i))
 	t.eq(cglb.find_child("SpeakerBox1", true, false), null, "only one cabinet")
+	t.ok(cglb.find_child("SpeakerDrivers", true, false) is MeshInstance3D and cglb.find_child("SpeakerScrews", true, false) is MeshInstance3D, "the woofer and mid drivers and the screws are merged meshes (2026-10-16)")
 	t.ok(cglb.find_child("ScoreboardRig", true, false) == null and cglb.find_child("ScoreClock", true, false) is MeshInstance3D, "the city's scoreboard hangs on the fence (no turning rig; tests/test_scoreboard.gd)")
 	cglb.free()
 	# The glb has the boombox and its LED.

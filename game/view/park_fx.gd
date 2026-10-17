@@ -19,11 +19,9 @@ extends Node
 const TREES_DIR := "res://assets/arena/park/trees/%s.glb"
 const VEHICLE := "res://assets/vehicles/%s.glb"
 const SNOW_SHADER := preload("res://game/court/park_snow.gdshader")
-const SKY_SHADER := preload("res://game/court/park_sky.gdshader")
-## The concept's sun, normalize(-14, 11, -12); the clouds' clock starts here
-## so every load sees the same sky (the concept starts at page-load time).
-const SUN_DIR := Vector3(-0.65204, 0.51232, -0.55890)
-const CLOUD_T0 := 137.0
+## The sky is AreaSky's (shared with the city since 2026-10-16); the
+## palette and the sun are the ArenaSet's sky_* exports.
+const CLOUD_T0 := AreaSky.CLOUD_T0
 const SNOW_BOX := Vector3(14.0, 9.0, 14.0)
 const SNOW_CAP := 800
 const ASPEN_TINT := Color("#9A7650")
@@ -265,20 +263,10 @@ func _build_snow(n: int) -> void:
 ## The design's sky as a Sky resource (CourtGeometry hangs it on the court's
 ## Environment: background Sky, fog_sky_affect 0, linear tonemap). The glb's
 ## dome would hide it, so it goes.
-func _build_sky(arena: Node, _set: ArenaSet) -> void:
-	_sky_mat = ShaderMaterial.new()
-	_sky_mat.shader = SKY_SHADER
-	_sky_mat.set_shader_parameter("sun_dir", SUN_DIR)
-	_sky_mat.set_shader_parameter("cloud_time", _cloud_t)
-	_sky = Sky.new()
-	_sky.sky_material = _sky_mat
-	_sky.process_mode = Sky.PROCESS_MODE_AUTOMATIC
-	# The radiance map feeds reflections only (the ambient is a colour) and
-	# the clouds skip the cubemap pass: 64 is plenty, and it renders once.
-	_sky.radiance_size = Sky.RADIANCE_SIZE_64
-	var dome := arena.find_child("Sky", true, false) as MeshInstance3D
-	if dome != null:
-		dome.visible = false
+func _build_sky(arena: Node, set: ArenaSet) -> void:
+	_sky = AreaSky.build(set)
+	_sky_mat = _sky.sky_material as ShaderMaterial
+	AreaSky.hide_dome(arena)
 
 
 ## The Sky the court's Environment shows (null when the area has no sky).

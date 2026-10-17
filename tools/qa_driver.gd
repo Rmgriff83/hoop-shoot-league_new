@@ -711,6 +711,8 @@ func _run_city() -> void:
 		await _snap("city_pigeons")
 	for i in 10:
 		await _snap("city_%02d" % i)
+		if i == 3:
+			print("QA city (play): " + _render_stats())
 		await _sleep(4.5)
 	await _snap("city_last")
 	# The fence scoreboard up close, then the floor speakers (the camera
@@ -733,6 +735,7 @@ func _run_city() -> void:
 	var fx: Node = get_tree().root.find_child("CityFx", true, false)
 	if fx != null:
 		print("QA city: cars sent %d, on the road %d, facades %d" % [fx.sent(), fx.car_count(), fx.facade_count()])
+	print("QA city: " + _render_stats())
 	print("QA city: done")
 	get_tree().quit(0)
 
@@ -776,6 +779,7 @@ func _run_park() -> void:
 	if not fxs.is_empty():
 		var fx: ParkFx = fxs[0]
 		print("QA park: %d instances in %d draws, %d cars, %d flakes, sky %s, %d shadow casters, 3D scale %.2f" % [fx.instance_count(), fx.draw_count(), fx.car_count(), fx.snow_count(), str(fx.has_sky()), fx.shadow_caster_count(), get_viewport().scaling_3d_scale])
+	print("QA park: " + _render_stats())
 	print("QA park: done")
 	get_tree().quit(0)
 
@@ -1471,6 +1475,16 @@ func _hook_trial() -> void:
 
 func _sleep(seconds: float) -> void:
 	await get_tree().create_timer(seconds).timeout
+
+
+## The frame's cost on record: draw calls, primitives, objects (the last
+## rendered frame) and the fps — printed by the area QAs before/after a trim.
+func _render_stats() -> String:
+	return "render: %d draw calls, %d primitives, %d objects, %d fps" % [
+		RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_DRAW_CALLS_IN_FRAME),
+		RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_PRIMITIVES_IN_FRAME),
+		RenderingServer.get_rendering_info(RenderingServer.RENDERING_INFO_TOTAL_OBJECTS_IN_FRAME),
+		int(Engine.get_frames_per_second())]
 
 
 func _snap(name_: String) -> void:

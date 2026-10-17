@@ -678,6 +678,22 @@ or File > Export with the §8 settings.
 
 ## 14b. Lesson 5b — the city court and the chain hoop (2026-09-27)
 
+**The city running lighter (2026-10-16):** `build_city.py` ends with a
+merge pass (`MERGES`: name pattern → merged mesh) that joins the repeated
+static pieces — the 44 lane dashes, the fence posts/corners/feet/rails,
+the lamp posts and heads and glows, the road and sidewalk strips, the
+kerbs, the flood rigs, the speaker screws and drivers, both vent banks and
+the fourteen buildings — into one mesh each: 263 mesh nodes became ~60
+(one draw and one shadow draw per mesh). The merged names keep the
+prefixes CityFx binds by. At runtime `CityFx.NO_CAST` turns shadows off on
+the backdrop and the ground (the buildings are 25–225 m out; the sun
+reaches 20 m into a 1024 map, `ArenaSet.shadow_distance` / `shadow_size`),
+the chain net's links cast none and are written as one MultiMesh buffer a
+frame, the vehicles are preloaded, and `LedBoard` redraws with blits. The
+sky is `AreaSky` (the park's clouds) in the city's own blue and haze
+(`ArenaSet.sky_*`); the painted `Sky` cylinder stays in the glb, hidden.
+
+
 `tools/blender/build_city.py` (`-- --force`) forks the beach: the same sim
 frame, a fence loop on the beach's enclosure line (`ENC_X0..X1 -11.2..5.7`,
 `±8.6`, every side 3.6 m and down to the ground, no knee wall —

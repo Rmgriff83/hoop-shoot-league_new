@@ -74,7 +74,7 @@ func _board(t) -> void:
 
 func _city(t) -> void:
 	var glb: Node = load("res://assets/arena/city/city.glb").instantiate()
-	for n in ["ReaderRig", "ScoreTilt", "ScoreBezel", "ScoreHousing", "ScoreVentL5", "ScoreFace", "ScoreClock", "ScoreHome", "ScoreVisitor", "ScorePeriod"]:
+	for n in ["ReaderRig", "ScoreTilt", "ScoreBezel", "ScoreHousing", "ScoreVents", "ScoreFace", "ScoreClock", "ScoreHome", "ScoreVisitor", "ScorePeriod"]:
 		t.ok(glb.find_child(n, true, false) != null, "%s in the city glb" % n)
 	t.ok(glb.find_child("LedFace", true, false) == null, "the fence reader board is gone")
 	t.ok(glb.find_child("ReaderBracket0", true, false) == null, "…and its fence brackets")

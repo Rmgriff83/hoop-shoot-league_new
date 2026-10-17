@@ -274,7 +274,7 @@ func _build_arena_model() -> bool:
 	if arena_set.traffic:
 		_city_fx = CityFx.new()
 		_city_fx.name = "CityFx"
-		if _city_fx.setup(_arena):
+		if _city_fx.setup(_arena, arena_set):
 			add_child(_city_fx)
 		else:
 			_city_fx.free()
@@ -752,6 +752,15 @@ func flip_board() -> FlipScoreboard:
 	return _flip
 
 
+## The shader sky any dressing built (null when the area paints its own).
+func _area_sky() -> Sky:
+	if _park_fx != null and _park_fx.sky_resource() != null:
+		return _park_fx.sky_resource()
+	if _city_fx != null and _city_fx.sky_resource() != null:
+		return _city_fx.sky_resource()
+	return null
+
+
 ## The city scoreboard's clock / VISITOR / PER windows; no-ops on a board
 ## without them (the hoop boards show the score and the messages only).
 func set_clock(seconds: float) -> void:
@@ -955,12 +964,13 @@ func _build_lights() -> void:
 			env.fog_light_color = arena_set.fog_color
 			env.fog_density = arena_set.fog_density
 			env.fog_sky_affect = 0.0
-		# The park's sky (the design's shader, game/view/park_fx.gd): the
+		# The shader sky (AreaSky: the park's clouds, the city's too): the
 		# Environment draws it, with the tonemap left linear so the concept's
 		# colours survive.
-		if _park_fx != null and _park_fx.sky_resource() != null:
+		var sky := _area_sky()
+		if sky != null:
 			env.background_mode = Environment.BG_SKY
-			env.sky = _park_fx.sky_resource()
+			env.sky = sky
 			env.tonemap_mode = Environment.TONE_MAPPER_LINEAR
 	else:
 		# Primitive fallback court: the old bright gym.
