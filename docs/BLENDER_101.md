@@ -1380,8 +1380,8 @@ boards, the marquee bulbs, the runner lights) is untouched. `build_cage.py`:
   (`ARROW_XS` 7 steps, `ArcadeFx.ARROW_STEPS`).
 - **Skins**: the sides hang `cage_mesh_slate.png` (matte slate), the roof
   `cage_mesh_galv.png` (rough galvanised with pitting) — 32-px tiles, two
-  diagonal wire families, 1.25 repeats/m for 40 cm cells as the design
-  renders them; `cage_pad.png` is
+  diagonal wire families, 2.5 repeats/m for 20 cm cells (Ross kept the
+  finer cells over the design's 40 cm); `cage_pad.png` is
   the open-cell foam (near-white speckle pre-multiplied by charcoal
   #3A3532) mapped from position (`add_pad(world_uv=0.45)`) so the texture
   runs across the pyramids; `cage_arrow.png` is the LED chevron (two rows

@@ -108,7 +108,7 @@ HALL_HALF_W = 8.0
 HALL_H = 7.0
 FPS = 30
 HALL_WALL_SPLIT = 2.2               # textured cabinets below (2.2 m tall), dark above
-MESH_REPEATS_PER_M = 1.25           # 32-px tiles with 16-px diamonds (2 cells) -> 40 cm cells, as the design renders them (Ross, 2026-10-16)
+MESH_REPEATS_PER_M = 2.5            # 32-px tiles with 16-px diamonds (2 cells) -> 20 cm cells (finer shimmers on a phone; Ross kept these over the design's 40 cm, 2026-10-16)
 
 
 def s2b(p):
