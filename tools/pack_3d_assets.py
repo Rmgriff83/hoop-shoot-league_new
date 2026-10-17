@@ -145,11 +145,12 @@ areas can be designed in the same direction.
   return arrows that chase back to the player, string lights along the top
   rails, the arcade hall (cabinets, carpet, hall lights) glimpsed through the
   mesh. Rim at 2.90 m. The junior board (1.22 × 0.76) slides in the last 30 s.
-- **Beach** (`areas/beach`) — sunset over the ocean; a concrete street court
-  on the sand with a palm or two, a street hoop on an in-ground pole with a
-  nylon net, a fence around the court, boardwalk dressing (a boombox, a
-  towel, a pelican). Rim 3.41 m out. Five shooting spots; the last 30 s walk
-  you between them.
+- **Beach** (`areas/beach`) — sunset over the ocean; a weathered asphalt
+  court and pale concrete apron inside a knee-high board-formed concrete
+  wall, on rippled sand with ten 3D coconut palms (`palm.glb`, instanced),
+  a street hoop on an in-ground pole with a nylon net, beach dressing (a
+  boombox, towels, white-and-red umbrellas, a pelican). Rim 3.41 m out.
+  Five shooting spots; the last 30 s walk you between them.
 - **City court** (`areas/city`) — dusk in a city block: a fenced asphalt
   court among low-poly buildings (the third-party pack, re-graded into the
   palette), a chain-net hoop, a tabletop scoreboard and one floor speaker by

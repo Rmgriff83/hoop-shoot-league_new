@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ch5oyi47ixo3i"
-path="res://.godot/imported/beach_beach_palm.png-dfaa09a2d71ed137ea51f2b4fcd5dec7.ctex"
+uid="uid://pyiqr24d3pvk"
+path="res://.godot/imported/palm_beach_bark.png-c345220709f0286861b9b47d76e275d4.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "1a8387e269f3285caf5dc0fea93d43ae"
+"md5": "9aaaf80b57e56107c665bee78d90c71f"
 }
 
 [deps]
 
-source_file="res://assets/arena/beach/beach_beach_palm.png"
-dest_files=["res://.godot/imported/beach_beach_palm.png-dfaa09a2d71ed137ea51f2b4fcd5dec7.ctex"]
+source_file="res://assets/arena/beach/palm_beach_bark.png"
+dest_files=["res://.godot/imported/palm_beach_bark.png-c345220709f0286861b9b47d76e275d4.ctex"]
 
 [params]
 

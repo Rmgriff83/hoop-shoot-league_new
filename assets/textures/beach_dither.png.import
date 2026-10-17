@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ck3lq88owc0uj"
-path="res://.godot/imported/beach_palm.png-9b67a05d3a24b4d91b53a67c72145d8a.ctex"
+uid="uid://b6pp30savt4aw"
+path="res://.godot/imported/beach_dither.png-33c714cbbd29da33030dc3a910366383.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/textures/beach_palm.png"
-dest_files=["res://.godot/imported/beach_palm.png-9b67a05d3a24b4d91b53a67c72145d8a.ctex"]
+source_file="res://assets/textures/beach_dither.png"
+dest_files=["res://.godot/imported/beach_dither.png-33c714cbbd29da33030dc3a910366383.ctex"]
 
 [params]
 

@@ -93,8 +93,36 @@ func run(t) -> void:
 	t.eq(_count(beach, "TouristRig", false), 3, "3 tourist groups")
 	t.eq(_count(beach, "Towel"), 3, "3 towels")
 	t.eq(_count(beach, "Umbrella", false), 2, "2 umbrella rigs")
+	# Production pass (design 34a): the umbrellas are one vertex-coloured mesh
+	# each, the palms ten PalmRig handles drawn as two MultiMeshes from palm.glb.
+	t.eq(_count(beach, "UmbMesh"), 2, "each umbrella is one mesh")
+	t.eq(_count(beach, "UmbCanopy") + _count(beach, "UmbPole"), 0, "no cone + pole umbrellas")
+	t.eq(_count(beach, "PalmRig", false), 10, "10 palm rigs")
+	t.eq(_count(beach, "Palm"), 0, "no palm billboard quads")
+	for f in ["beach_bark", "beach_frond", "beach_curb", "beach_dither", "beach_concrete"]:
+		t.ok(FileAccess.file_exists("res://assets/textures/%s.png" % f), "%s skin generated" % f)
+	t.ok(not FileAccess.file_exists("res://assets/textures/beach_palm.png"), "the palm billboard sheet is gone")
+	var palm: Node = load("res://assets/arena/beach/palm.glb").instantiate()
+	var fronds := palm.find_child("PalmFronds", true, false) as MeshInstance3D
+	t.ok(palm.find_child("PalmTrunk", true, false) is MeshInstance3D and fronds != null, "palm.glb: PalmTrunk + PalmFronds")
+	t.ok(fronds != null and not (fronds.mesh.surface_get_arrays(0)[Mesh.ARRAY_TEX_UV2] as PackedVector2Array).is_empty(), "the fronds carry their flutter phase in UV2")
+	palm.free()
 	var bfx := BeachFx.new()
 	t.ok(bfx.setup(beach), "BeachFx sets up")
+	var umb := beach.find_child("UmbMesh0", true, false) as MeshInstance3D
+	t.ok(umb != null and (umb.mesh.surface_get_material(0) as BaseMaterial3D).vertex_color_use_as_albedo, "the umbrellas' gores take their vertex colours")
+	t.eq(bfx.palm_count(), 10, "ten palms")
+	t.eq(bfx.palm_draw_count(), 2, "…in two draws (trunks, fronds)")
+	var trunks := beach.find_child("PalmTrunks", true, false) as MultiMeshInstance3D
+	t.ok(trunks != null and trunks.multimesh.instance_count == 10, "PalmTrunks MultiMesh holds 10 instances")
+	if trunks != null:
+		var buf := trunks.multimesh.buffer
+		var rig0 := beach.find_child("PalmRig0", true, false) as Node3D
+		# buffer rows: xx yx zx ox | xy yy zy oy | xz yz zz oz (12 floats per instance)
+		t.close(buf[3], rig0.position.x, 1e-4, "instance 0 stands at PalmRig0 (x)")
+		t.close(buf[11], rig0.position.z, 1e-4, "instance 0 stands at PalmRig0 (z)")
+		t.ok(absf(buf[5] - rig0.scale.y) < 1e-3, "…scaled to the rig's height (%.2f)" % rig0.scale.y)
+		t.ok(trunks.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_ON, "palms cast shadows")
 	t.eq(bfx.arm_count(), 0, "nobody on the towels (no arms to wave)")
 	t.eq(bfx.bird_count(), 0, "no birds at first")
 	bfx.spawn_flock()

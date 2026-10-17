@@ -11,7 +11,12 @@ const WASH_AMP := 0.45        # m each wave washes up the sand (in step with the
 const WASH_RATE := 1.6        # rad/s — ocean.gdshader's w1
 const FOAM_SCROLL := 0.12     # texture repeats per second along the strip
 const SHADER := preload("res://game/court/ocean.gdshader")
-const PALM_SHADER := preload("res://game/court/palm.gdshader")
+## The 3D coconut palms (design "Beach Concept" 34a, 2026-10-16): the unit
+## model in palm.glb (PalmTrunk + PalmFronds) drawn at every `PalmRig*` empty
+## — the rig's transform is the tree's height and lean — in two MultiMeshes,
+## one ShaderMaterial each; palm3d.gdshader sways and flutters them.
+const PALM_SHADER := preload("res://game/court/palm3d.gdshader")
+const PALM_GLB := "res://assets/arena/beach/palm.glb"
 const WATER_FALLBACK := "res://assets/textures/beach_water.png"
 const FOAM_FALLBACK := "res://assets/textures/beach_foam.png"
 ## Birds: now and then a small flock crosses the sky over the water.
@@ -79,6 +84,7 @@ var _shore_base_x := 0.0
 var _t := 0.0
 var _palm_mats: Array[ShaderMaterial] = []
 var _palm_rigs: Array[Node3D] = []
+var _palm_multis: Array[MultiMeshInstance3D] = []
 var _birds: Array[MeshInstance3D] = []
 var _bird_mats: Array[ShaderMaterial] = []
 var _bird_vel: Array[Vector3] = []
@@ -138,26 +144,19 @@ func setup(arena: Node) -> bool:
 		_shore.material_override = _shore_mat
 		_shore_base_x = _shore.position.x
 
-	# Palms: every mesh named Palm* sways in the breeze, each with its own phase.
-	var i := 0
 	for n in _descendants(arena):
-		if n is MeshInstance3D and n.name.begins_with("Palm"):
-			var m := ShaderMaterial.new()
-			m.shader = PALM_SHADER
-			var ptex := _albedo_of(n)
-			if ptex != null:
-				m.set_shader_parameter("tex", ptex)
-			m.set_shader_parameter("phase", 1.3 * i)
-			(n as MeshInstance3D).material_override = m
-			_palm_mats.push_back(m)
-			i += 1
-		elif n is Node3D and n.name.begins_with("PalmRig"):
+		if n is Node3D and n.name.begins_with("PalmRig"):
 			_palm_rigs.push_back(n as Node3D)
 		elif n is Node3D and n.name.begins_with("Arm") and not (n is MeshInstance3D):
 			_arms.push_back(n as Node3D)
 			_arm_rest.push_back((n as Node3D).rotation)
 		elif n is Node3D and n.name.begins_with("Umbrella") and not (n is MeshInstance3D):
 			_umbrellas.push_back(n as Node3D)
+		elif n is MeshInstance3D and n.name.begins_with("UmbMesh"):
+			_skin_umbrella(n as MeshInstance3D)
+	# PalmRig0.. in order, so instance i is rig i (the walk above is a stack).
+	_palm_rigs.sort_custom(func(a: Node3D, b: Node3D) -> bool: return str(a.name) < str(b.name))
+	_build_palms(arena)
 	_bird_root = Node3D.new()
 	_bird_root.name = "Birds"
 	arena.add_child(_bird_root)
@@ -447,6 +446,110 @@ static func _descendants(root: Node) -> Array[Node]:
 	return out
 
 
+## The palms: palm.glb's two parts, each a MultiMesh with one instance per
+## PalmRig (transform = the rig's, relative to the arena, times the part's
+## own), under a `Palms` node on the arena. Two draws for all ten trees; both
+## cast shadows (the near pair frames the hoop from the key).
+func _build_palms(arena: Node) -> void:
+	if _palm_rigs.is_empty() or not ResourceLoader.exists(PALM_GLB):
+		return
+	var parts := _glb_parts(PALM_GLB)
+	if parts.is_empty():
+		return
+	var root := Node3D.new()
+	root.name = "Palms"
+	arena.add_child(root)
+	for part in parts:
+		var mesh: Mesh = part["mesh"]
+		var mmi := MultiMeshInstance3D.new()
+		var fronds: bool = str(part["name"]).begins_with("PalmFronds")
+		mmi.name = "PalmFronds" if fronds else "PalmTrunks"
+		var mm := MultiMesh.new()
+		mm.transform_format = MultiMesh.TRANSFORM_3D
+		mm.mesh = mesh
+		mm.instance_count = _palm_rigs.size()
+		# Written as the raw buffer (12 floats an instance, like ChainNet), which
+		# the headless renderer keeps where set_instance_transform is dropped.
+		var buf := PackedFloat32Array()
+		buf.resize(_palm_rigs.size() * 12)
+		for i in _palm_rigs.size():
+			var xf := _rel_xform(_palm_rigs[i], arena) * (part["xform"] as Transform3D)
+			var o := i * 12
+			buf[o] = xf.basis.x.x
+			buf[o + 1] = xf.basis.y.x
+			buf[o + 2] = xf.basis.z.x
+			buf[o + 3] = xf.origin.x
+			buf[o + 4] = xf.basis.x.y
+			buf[o + 5] = xf.basis.y.y
+			buf[o + 6] = xf.basis.z.y
+			buf[o + 7] = xf.origin.y
+			buf[o + 8] = xf.basis.x.z
+			buf[o + 9] = xf.basis.y.z
+			buf[o + 10] = xf.basis.z.z
+			buf[o + 11] = xf.origin.z
+		mm.buffer = buf
+		mmi.multimesh = mm
+		var m := ShaderMaterial.new()
+		m.shader = PALM_SHADER
+		var smat := mesh.surface_get_material(0) if mesh.get_surface_count() > 0 else null
+		if smat is BaseMaterial3D and (smat as BaseMaterial3D).albedo_texture != null:
+			m.set_shader_parameter("tex", (smat as BaseMaterial3D).albedo_texture)
+		m.set_shader_parameter("flutter", fronds)
+		mmi.material_override = m
+		mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON
+		root.add_child(mmi)
+		_palm_mats.push_back(m)
+		_palm_multis.push_back(mmi)
+
+
+## The umbrellas (design 34a): the glb carries COLOR_0 (the white / red gores,
+## the dark ribs) under the dither texture, but the importer leaves the
+## albedo-from-vertex-colour flag off when the material also has a texture,
+## so the canopy came in plain white. Set it here; the dither samples nearest.
+static func _skin_umbrella(mi: MeshInstance3D) -> void:
+	if mi.mesh == null or mi.mesh.get_surface_count() == 0:
+		return
+	var m := mi.mesh.surface_get_material(0)
+	if m is BaseMaterial3D:
+		(m as BaseMaterial3D).vertex_color_use_as_albedo = true
+		(m as BaseMaterial3D).texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST_WITH_MIPMAPS
+
+
+## A glb's mesh parts with their transforms inside it: [{name, mesh, xform}].
+static func _glb_parts(path: String) -> Array:
+	var out := []
+	var scene: PackedScene = load(path)
+	if scene == null:
+		return out
+	var inst: Node = scene.instantiate()
+	for n in _descendants(inst):
+		if n is MeshInstance3D and (n as MeshInstance3D).mesh != null:
+			out.push_back({"name": n.name, "mesh": (n as MeshInstance3D).mesh, "xform": _rel_xform(n as Node3D, inst)})
+	inst.free()
+	return out
+
+
+## A node's transform relative to an ancestor (the arena root), from the
+## node's own transform and its Node3D parents' up to, not including, `top`.
+static func _rel_xform(n: Node3D, top: Node) -> Transform3D:
+	var xf := Transform3D.IDENTITY
+	var walk: Node = n
+	while walk != null and walk != top:
+		if walk is Node3D:
+			xf = (walk as Node3D).transform * xf
+		walk = walk.get_parent()
+	return xf
+
+
+func palm_count() -> int:
+	return _palm_rigs.size()
+
+
+## MultiMeshes drawing the palms (2: trunks + nuts, fronds).
+func palm_draw_count() -> int:
+	return _palm_multis.size()
+
+
 static func _albedo_of(mi: MeshInstance3D) -> Texture2D:
 	if mi.mesh == null or mi.mesh.get_surface_count() == 0:
 		return null
@@ -464,11 +567,6 @@ func _process(dt: float) -> void:
 	_ocean_mat.set_shader_parameter("t", _t)
 	for m in _palm_mats:
 		m.set_shader_parameter("t", _t)
-	# Billboard: each palm turns about its trunk to face the active camera.
-	var cam := get_viewport().get_camera_3d() if is_inside_tree() else null
-	if cam != null:
-		for rig in _palm_rigs:
-			rig.rotation.y = CourtGeometry.yaw_toward(rig.global_position, cam.global_position)
 	_step_birds(dt)
 	_step_pelican(dt)
 	_step_tourists(dt)

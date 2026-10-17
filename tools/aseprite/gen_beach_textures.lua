@@ -152,6 +152,58 @@ do
       end
     end
   end
+  -- Production pass (design "Beach Concept" 34a, 2026-10-16): the asphalt
+  -- weathered. Aggregate speckle (single lighter / darker grains over the
+  -- plain asphalt), a few meandering cracks with a branch each (dark random
+  -- walks that keep out of the key), and paint wear: the lines thinned and
+  -- faded toward the asphalt by noise along their length.
+  local function is_line(c) return pc.rgbaR(c) > 200 and pc.rgbaG(c) > 200 and pc.rgbaB(c) > 190 end
+  for y = 0, H - 1 do
+    for x = 0, W - 1 do
+      local c = img:getPixel(x, y)
+      if sand_at(x, y) < 0.04 and not is_line(c) then
+        local n = noise(x, y, 401)
+        if n > 0.94 then
+          img:drawPixel(x, y, rgb(pc.rgbaR(c) + 14, pc.rgbaG(c) + 13, pc.rgbaB(c) + 10))
+        elseif n < 0.05 then
+          img:drawPixel(x, y, rgb(pc.rgbaR(c) - 12, pc.rgbaG(c) - 12, pc.rgbaB(c) - 10))
+        end
+      end
+    end
+  end
+  local CRACKS = {
+    {40, 60, 0.3, 110}, {120, 400, -1.2, 90}, {300, 30, 2.2, 80}, {430, 300, 1.9, 100},
+    {200, 490, 0.1, 70}, {60, 250, -0.6, 120}, {380, 470, 3.0, 85},
+  }
+  local function in_key(x, y) return x >= ft_c - 8 and x <= base_c and y >= mid - lane_half - 8 and y <= mid + lane_half + 8 end
+  local function crack(x, y, a, len, seed)
+    for i = 0, len do
+      a = a + (noise(i, seed, 402) - 0.5) * 0.9
+      x = x + math.cos(a); y = y + math.sin(a)
+      local px_, py_ = math.floor(x + 0.5), math.floor(y + 0.5)
+      if px_ < 0 or py_ < 0 or px_ >= W or py_ >= H or in_key(px_, py_) then return end
+      local c = img:getPixel(px_, py_)
+      local k = 0.55 + noise(i, seed, 403) * 0.35
+      img:drawPixel(px_, py_, rgb(pc.rgbaR(c) + (70 - pc.rgbaR(c)) * k, pc.rgbaG(c) + (71 - pc.rgbaG(c)) * k, pc.rgbaB(c) + (79 - pc.rgbaB(c)) * k))
+      if i == math.floor(len * 0.55) and seed < 100 then crack(x, y, a + 1.1, math.floor(len * 0.4), seed + 100) end
+    end
+  end
+  for i, cr in ipairs(CRACKS) do crack(cr[1], cr[2], cr[3], cr[4], i) end
+  for y = 0, H - 1 do
+    for x = 0, W - 1 do
+      local c = img:getPixel(x, y)
+      if is_line(c) then
+        local w = vnoise(x, y, 6, 404) * 0.55 + vnoise(x, y, 26, 405) * 0.45
+        local edge = math.max(0, 1 - math.min(x, W - 1 - x, y, H - 1 - y) / 70) * 0.15
+        local k = math.max(0, math.min(1, (w + edge - 0.6) / 0.3)) * 0.85
+        if k > 0 then
+          local n = vnoise(x, y, 24, 71) * 0.6 + noise(x, y, 72) * 0.4
+          local v = 84 + n * 18
+          img:drawPixel(x, y, rgb(pc.rgbaR(c) + (v - pc.rgbaR(c)) * k, pc.rgbaG(c) + (v + 4 - pc.rgbaG(c)) * k, pc.rgbaB(c) + (v + 14 - pc.rgbaB(c)) * k))
+        end
+      end
+    end
+  end
   save(spr, "beach_court.png")
 end
 
@@ -162,7 +214,14 @@ do
   for y = 0, H - 1 do
     for x = 0, W - 1 do
       local n = vnoise(x, y, 32, 81) * 0.7 + vnoise(x, y, 8, 82) * 0.3
-      img:drawPixel(x, y, rgb(214 + n * 24, 194 + n * 22, 150 + n * 22))
+      -- 2026-10-16 production pass: diagonal wind ripples (a sine warped by
+      -- value noise), fine grain, and the odd shell bit, bright or dark.
+      local ripple = math.sin(((x + y) * 0.7 / W + vnoise(x, y, 40, 84) * 0.12) * 2 * math.pi * 6) * 9
+      local grain = (noise(x, y, 85) - 0.5) * 14
+      local r, g, b = 214 + n * 24 + ripple + grain, 194 + n * 22 + ripple * 0.9 + grain, 150 + n * 22 + ripple * 0.7 + grain
+      local sh = noise(math.floor(x / 2), math.floor(y / 2), 86)
+      if sh > 0.994 then r, g, b = 248, 240, 226 elseif sh < 0.004 then r, g, b = 150, 132, 110 end
+      img:drawPixel(x, y, rgb(r, g, b))
     end
   end
   save(spr, "beach_sand.png")
@@ -257,60 +316,114 @@ do
   save(spr, "beach_sky.png")
 end
 
--- beach_palm.png 128x192 RGBA — trunk with a slight lean and a full crown of
--- tapered fronds. Billboard; the palm shader sways it by height.
+-- The 3D coconut palms (design "Beach Concept" 34a, 2026-10-16;
+-- build_beach.py builds the model, BeachFx instances it):
+-- beach_bark.png 32x64 — grey-brown bark with flecks and a dark ring line
+-- plus a highlight row every 16 px. The trunk's UV runs AROUND in u and
+-- ALONG in v (×9), so the rows read as rings.
 do
-  local W, H = 128, 192
-  local spr, img = newImage(W, H)
-  fill(img, 0, 0, W - 1, H - 1, pc.rgba(0, 0, 0, 0))
-  local cx, cy = 68, 40
-  for y = cy, H - 1 do
-    local t = (y - cy) / (H - 1 - cy)
-    local x0 = math.floor(cx - 6 - t * 10 + 0.5)
-    local wdt = 9 + math.floor(t * 4)
-    for x = x0, x0 + wdt do
-      local shade = (x - x0) / wdt
-      local ring = ((y - cy) % 9 < 2) and -18 or 0
-      img:drawPixel(x, y, rgb(122 + shade * 24 + ring, 86 + shade * 18 + ring, 52 + shade * 10 + ring))
-    end
-  end
-  local fronds = 9
-  for k = 0, fronds - 1 do
-    local ang = -math.pi * 1.02 + k * (math.pi * 1.04 / (fronds - 1))
-    local len = 52 + 8 * math.sin(k * 1.7)
-    for i = 0, len do
-      local droop = (i / len) ^ 2 * 22
-      local x = cx + math.cos(ang) * i
-      local y = cy + math.sin(ang) * i * 0.55 + droop
-      local half = math.max(1, math.floor(6 * (1 - i / len) + 1))
-      local g1 = rgb(58 + (i % 6) * 2, 128 - (i % 6) * 3, 66)
-      local g2 = rgb(34, 90, 48)
-      for s = -half, half do
-        local px = math.floor(x + 0.5)
-        local py = math.floor(y + s + 0.5)
-        if px >= 0 and px < W and py >= 0 and py < H then
-          img:drawPixel(px, py, (math.abs(s) < half - 1) and g1 or g2)
-        end
-      end
-    end
-  end
-  save(spr, "beach_palm.png")
-end
-
--- beach_concrete.png 128x128 — poured concrete: mottled gray with faint form lines.
-do
-  local W, H = 128, 128
+  local W, H = 32, 64
   local spr, img = newImage(W, H)
   for y = 0, H - 1 do
     for x = 0, W - 1 do
-      local n = vnoise(x, y, 28, 101) * 0.6 + vnoise(x, y, 7, 102) * 0.25 + noise(x, y, 103) * 0.15
-      local v = 128 + n * 34
-      if x % 64 == 0 then v = v - 22 end       -- form-board seams
-      if y % 32 == 31 then v = v - 10 end
-      img:drawPixel(x, y, rgb(v, v - 2, v - 6))
+      local c = rgb(106, 90, 72)
+      local n = noise(x, y, 201)
+      if n < 0.08 then c = rgb(98, 82, 64) elseif n > 0.92 then c = rgb(114, 98, 80) end
+      if y % 16 == 0 then c = rgb(70, 56, 40) elseif y % 16 == 1 then c = rgb(122, 106, 88) end
+      img:drawPixel(x, y, c)
     end
   end
+  save(spr, "beach_bark.png")
+end
+
+-- beach_frond.png 64x256 RGBA — one frond: a midrib down the centre and a
+-- leaflet every 3 px on each side, 2 px strokes in three greens, longest
+-- midway along and drooping more toward the tip. v = 0 at the frond's base.
+do
+  local W, H = 64, 256
+  local spr, img = newImage(W, H)
+  fill(img, 0, 0, W - 1, H - 1, pc.rgba(0, 0, 0, 0))
+  local greens = {rgb(44, 94, 32), rgb(56, 110, 40), rgb(70, 126, 46)}
+  for y = 6, H - 1, 3 do
+    local k = y / H
+    local len = 30 * math.sin(math.pi * math.min(1, k * 1.05)) * (1 - 0.35 * k) + 2
+    local droop = 10 + k * 8
+    for _, sgn in ipairs({-1, 1}) do
+      local c = greens[math.floor(noise(y, sgn + 2, 202) * 3) + 1]
+      local x0, y0 = 32, y
+      local cx, cy = 32 + sgn * len * 0.5, y + droop * 0.25
+      local x1, y1 = 32 + sgn * len, y + droop
+      local steps = math.max(4, math.floor(len + droop))
+      for i = 0, steps do
+        local t = i / steps
+        local xx = (1 - t) * (1 - t) * x0 + 2 * (1 - t) * t * cx + t * t * x1
+        local yy = (1 - t) * (1 - t) * y0 + 2 * (1 - t) * t * cy + t * t * y1
+        local ix, iy = math.floor(xx), math.floor(yy)
+        for oy = 0, 1 do for ox = 0, 1 do
+          if ix + ox >= 0 and ix + ox < W and iy + oy >= 0 and iy + oy < H then img:drawPixel(ix + ox, iy + oy, c) end
+        end end
+      end
+    end
+  end
+  fill(img, 31, 0, 32, H - 1, rgb(126, 124, 60))
+  save(spr, "beach_frond.png")
+end
+
+-- beach_dither.png 8x8 — the umbrellas' faint dither over their vertex colours.
+do
+  local spr, img = newImage(8, 8)
+  for y = 0, 7 do
+    for x = 0, 7 do
+      img:drawPixel(x, y, ((x + y) % 4 == 0) and rgb(220, 220, 220) or rgb(255, 255, 255))
+    end
+  end
+  save(spr, "beach_dither.png")
+end
+
+-- beach_concrete.png 128x128 — board-formed concrete (design "Beach Concept"
+-- 34a, 2026-10-16): six horizontal courses of ~21 px with the wood's grain
+-- printed in (long low-contrast streaks), a light row and a dark row at each
+-- seam, tie-hole dots, and a darker speckled damp base. One texture height =
+-- the wall's 0.45 m (build_beach.py maps the walls' UVs from position).
+do
+  local W, H = 128, 128
+  local spr, img = newImage(W, H)
+  local COURSE = H / 6
+  for y = 0, H - 1 do
+    local course = math.floor(y / COURSE)
+    local yy = y - course * COURSE
+    for x = 0, W - 1 do
+      local grain = vnoise(x + course * 37, y * 5, 18, 101 + course) * 0.5 + vnoise(x, y * 3, 6, 102) * 0.3 + noise(x, y, 103) * 0.2
+      local v = 146 + grain * 24
+      if yy < 1 then v = v + 20 elseif yy >= COURSE - 1 then v = v - 26 end
+      if y >= H - 20 then
+        v = v - 22 - (y - (H - 20)) * 0.4
+        local sp = noise(x, y, 104)
+        if sp > 0.93 then v = v + 18 elseif sp < 0.07 then v = v - 16 end
+      end
+      img:drawPixel(x, y, rgb(v + 4, v, v - 10))
+    end
+  end
+  for _, h in ipairs({{16, 10}, {112, 10}, {16, 74}, {112, 74}, {64, 52}}) do
+    fill(img, h[1] - 1, h[2] - 1, h[1] + 1, h[2] + 1, rgb(112, 108, 100))
+    img:drawPixel(h[1], h[2], rgb(96, 92, 84))
+  end
   save(spr, "beach_concrete.png")
+end
+
+-- beach_curb.png 64x64 — pale cast concrete, fine speckle: the wall caps and
+-- the apron between the lined slab and the wall (2026-10-16).
+do
+  local W, H = 64, 64
+  local spr, img = newImage(W, H)
+  for y = 0, H - 1 do
+    for x = 0, W - 1 do
+      local n = vnoise(x, y, 12, 111) * 0.35 + noise(x, y, 112) * 0.65
+      local v = 173 + (n - 0.5) * 30
+      img:drawPixel(x, y, rgb(v, v - 2, v - 11))
+    end
+  end
+  save(spr, "beach_curb.png")
 end
 
 -- beach_pole.png 32x8 — galvanised steel bands.

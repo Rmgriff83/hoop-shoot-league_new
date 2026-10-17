@@ -666,7 +666,8 @@ baseline corners. Switching spots moves the camera and the hand plane, turns the
 and leaves the hoop alone — the sim already shoots from any origin toward the fixed hoop, so
 a baseline shot really does come in from the side of the board. The court is a full half court
 (three-point line, lane, free-throw and centre circles) and the environment surrounds you: sand
-all round, a sky cylinder, palms that turn to face the camera (`PalmRig*` empties at each trunk).
+all round, a sky cylinder, ten 3D coconut palms (since 2026-10-16: `PalmRig*` empties carry each
+tree's height and lean, BeachFx instances `palm.glb` at them — §31).
 
 **Numbers.** The beach hoop is the arcade's 8 ft rim at 3.41 m (17.5 % farther), static, on a
 regulation 1.83 × 1.05 m board; `SimGeometry.beach()` holds the physics side, and the hoop set's
@@ -941,9 +942,9 @@ centroid so the game can tumble it.
   procedural attract-mode games, scanlines, flicker) and `marquee_chase.gdshader` (chasing
   bulbs), plus a faint warm light per wall. Add a cabinet: one more z in the `zs` list.
 - **Tourists**: `build_beach.py` adds a `Tourists` collection — three `TouristRig%d` groups
-  (towel quad, blocky lounger, `Arm%d` rig for the raised arm, optional `Umbrella%d` rig with an
-  8-segment two-tone canopy, a cooler). `BeachFx` waves a random arm every 12–25 s and sways
-  the umbrellas. Keep groups clear of the palm trunks at (6.5, ±3) and (8.8, ±4.8).
+  (towel quad, blocky lounger, `Arm%d` rig for the raised arm, optional `Umbrella%d` rig with
+  one vertex-coloured `UmbMesh%d` since 2026-10-16 — §31 — a cooler). `BeachFx` waves a random
+  arm every 12–25 s and sways the umbrellas. Keep groups clear of the palm trunks (§31's spots).
 - **Birds**: `tools/aseprite/gen_beach_textures.lua` draws `beach_bird.png` (4 flap frames);
   `BeachFx` spawns a 3–6 gull V every 18–35 s that crosses the sky over the water
   (`bird.gdshader`: camera-facing flipbook) and frees it past the far edge.
@@ -1392,3 +1393,44 @@ boards, the marquee bulbs, the runner lights) is untouched. `build_cage.py`:
   y 6.92 — just above the 6.9 m the cage's back panel hides from the key;
   ArcadeFx gives them an unshaded warm material).
 
+## 31. The beach's production pass: the skins, the 3D palms, the umbrellas (2026-10-16)
+
+Ross's "Beach Concept" 34a loads the production beach.glb and layers four changes on it; the
+hoop, the slab's painted lines, the boombox and its LED reader, the ocean / tide / foam, the
+sky cylinder, the towels and cooler and the sky life stay as they were.
+
+- **Skins** (`gen_beach_textures.lua`): `beach_concrete.png` is board-formed — six ~21 px
+  courses with the boards' grain, a light and a dark seam row, tie holes, a darker speckled
+  damp base — and `build_beach.add_box_uv()` maps the `Wall%d` boxes from their SIM position
+  in 0.45 m tiles (one texture height = the wall's height, v = 0 at the ground; vertical faces
+  along × height, tops along × across). New `beach_curb.png` (pale speckled concrete, 64²)
+  skins the `WallCap%d` boxes (0.5 m tiles) AND the `CourtApron` (0.5 m tiles; it was flat
+  blacktop). `beach_sand.png` gets diagonal wind ripples, grain and shell bits;
+  `beach_court.png` gets aggregate speckle, seven meandering cracks that keep out of the key,
+  and paint wear along the lines. The old fence material (cage_mesh.png) is gone with it.
+- **The palms** are 3D now. `build_palm_model()` builds a unit-height tree in its own
+  `PalmModel` collection, exported on its own to `assets/arena/beach/palm.glb`: `PalmTrunk`
+  (a 12 × 7 tube along a Catmull-Rom spine that leans along +x and curves up, tapered
+  1.35 → 0.85 with a flare at the foot, UV u around / v along × 9 so `beach_bark.png`'s rows
+  read as rings, plus five icosphere coconuts under the crown) and `PalmFronds` (eleven
+  V-folded strips arching out and drooping, three verts a ring, `beach_frond.png` alpha-cut,
+  with **UV2 = (phase / 32, direction / 2π)** per frond for the flutter). In beach.glb only
+  the ten `PalmRig%d` empties remain (`PALM_SPOTS` / `PALM_HEIGHTS`; the hoop pair moved in to
+  z ±2.1): each rig's scale is the tree's height (old quad height × 1.05, ±8 %) and its yaw the
+  lean, away from (3, 0) with a spread, from `random.Random(7)`. `BeachFx._build_palms()`
+  draws both parts at every rig as two `MultiMeshInstance3D` (`PalmTrunks`, `PalmFronds`, the
+  buffer written directly like ChainNet's) under a `Palms` node — two draws for ten trees,
+  shadows on — with `palm3d.gdshader` (replaces palm.gdshader): the sway runs in the unit
+  frame phased by `MODEL_MATRIX`'s world position (per instance in a MultiMesh), weighted by
+  height², and the fronds flutter by their UV2 phase and direction. Nearest sampling, like the
+  design's palm textures. The billboard turn-to-camera loop is gone.
+- **The umbrellas** are one vertex-coloured mesh each (`UmbMesh%d`, 1 draw, was 3), from
+  `build_umbrella()`'s `TriMerge`: six alternating white / red gores that dome
+  (0.30 (1 − t²) − 0.06 t over r 1.15), a 0.12 valance flap per gore, dark ribs under the seams
+  and stretchers to a hub at y −0.42, a four-sided finial, a 4-sided pole from −2.05 to 0.26
+  with a collar; UV = ((x + z) · 5, y · 10 + (x − z) · 5) over `beach_dither.png` (an 8 × 8
+  dot dither) through `mat_vcol_tex()` (Color Attribute × Image Texture → Base Color; the
+  exporter writes COLOR_0 and the texture, Godot multiplies them). The `Umbrella%d` rigs still
+  rock in BeachFx.
+- Tests: `test_ambient_life.gd`'s beach block (rigs, meshes, skins, palm.glb's UV2, the
+  MultiMesh buffer). QA: `--qa-beach`, then `--qa-area-snaps` for the archive cards.
