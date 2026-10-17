@@ -129,7 +129,67 @@ func _ready() -> void:
 	elif App.show_archive or stale:
 		App.show_archive = false
 		_open_archive(true)
-	_welcome()
+	if App.pending_walkthrough == "home" and _archive == null and not is_league_open():
+		App.pending_walkthrough = ""
+		_start_walkthrough("home")
+	else:
+		_welcome()
+
+
+## A walkthrough over the home (design 36a): the overlay dims everything but
+## the part each step explains; the home's own rects are resolved here. The
+## welcome toast waits until the tour closes.
+var _walkthrough: Walkthrough
+
+
+func _start_walkthrough(id: String) -> void:
+	if _walkthrough != null or App.walkthrough_seen(id):
+		_welcome()
+		return
+	_walkthrough = Walkthrough.new()
+	_walkthrough.name = "Walkthrough"
+	_walkthrough.closed.connect(func(_completed: bool) -> void:
+		_walkthrough = null
+		_welcome()
+	)
+	add_child(_walkthrough)
+	if not _walkthrough.start(id, _walkthrough_rect):
+		_walkthrough.queue_free()
+		_walkthrough = null
+		_welcome()
+
+
+## The home chrome's rectangle for a tour target (design px), Rect2() for none.
+func _walkthrough_rect(target: String) -> Rect2:
+	if _chrome == null:
+		return Rect2()
+	var league := _chrome_rect("LeagueCard")
+	league = Rect2(league.position - Vector2(0, 38), league.size + Vector2(0, 38))   # the chips float above it
+	match target:
+		"three":
+			return league.merge(_chrome_rect("Pair")).grow(12.0)
+		"league":
+			return league.grow(12.0)
+		"modes":
+			return _chrome_rect("Pair").grow(12.0)
+		"level":
+			return _chrome_rect("Level").grow(12.0)
+		"online":
+			return _chrome_rect("Ranks").merge(_chrome_rect("Multi")).grow(10.0)
+		"locker":
+			return _chrome_rect("Locker").grow(12.0)
+		"enter":
+			return _chrome_rect("Enter").grow(10.0)
+	return Rect2()
+
+
+func _chrome_rect(name_: String) -> Rect2:
+	var n := _chrome.find_child(name_, true, false) as Control
+	return n.get_global_rect() if n != null else Rect2()
+
+
+func walkthrough_running() -> bool:
+	return _walkthrough != null
 
 
 ## After NEW PLAYER (design 35a): "WELCOME, BRICK BARON · OAKRIDGE · FIRST

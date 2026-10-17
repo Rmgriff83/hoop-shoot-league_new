@@ -1287,8 +1287,12 @@ func _run_unlock() -> void:
 
 
 func _run_splash() -> void:
-	# A fresh install (design 35a): NEW GAME, the NEW PLAYER form, LET'S PLAY.
+	# A fresh install (design 35a): NEW GAME, the NEW PLAYER form, LET'S PLAY,
+	# then the home walkthrough (36a) — forget it was ever seen.
 	App.qa_fresh = true
+	var st: Dictionary = SaveService.get_settings()
+	st["walkthroughsSeen"] = []
+	SaveService.put_settings(st)
 	var marks := [0.2, 0.8, 1.5, 3.0, 5.2]
 	var at := 0.0
 	for i in marks.size():
@@ -1313,6 +1317,14 @@ func _run_splash() -> void:
 	await _sleep(0.35)
 	await _click_button_named("LET'S PLAY")
 	await _sleep(2.2)
+	# The home walkthrough (design 36a): the welcome, every step, the end.
+	await _snap("walkthrough_00")
+	for i in 6:
+		await _click_named("TourNext")
+		await _sleep(0.7)
+		await _snap("walkthrough_%02d" % (i + 1))
+	await _click_named("TourNext")
+	await _sleep(1.0)
 	await _snap("new_player_home")
 	print("QA splash: done (player %s, town %s)" % [Net.handle(), App.hometown()])
 	get_tree().quit(0)

@@ -243,7 +243,7 @@ func put_cosmetics(doc: Dictionary) -> void:
 ## Player preference toggles. New keys need no migration: every read site
 ## defaults with .get(), so an older save simply falls back.
 static func default_settings() -> Dictionary:
-	return {"updatedAt": 0, "shotHelp": 0, "newBalls": [], "visitedAreas": [], "unlocksSeen": [], "musicOn": false, "playerCreated": false, "hometown": ""}
+	return {"updatedAt": 0, "shotHelp": 0, "newBalls": [], "visitedAreas": [], "unlocksSeen": [], "musicOn": false, "playerCreated": false, "hometown": "", "walkthroughsSeen": []}
 
 
 func get_settings() -> Dictionary:

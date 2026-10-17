@@ -80,7 +80,8 @@ func run(t) -> void:
 	t.ok(a.get("playerId", "") != "" and a.get("secret", "") != "", "…with an identity minted")
 	t.eq(app.hometown(), "SALT HARBOR", "the hometown is a setting")
 	t.ok(app.player_created() and not app.qa_fresh, "the player exists now")
-	t.ok(app.home_open_league == "cage" and app.home_card == 0 and not app.show_archive, "lands on the Arcade Cage campaign home, no archive")
+	t.ok(app.home_open_league == "" and app.home_card == 0 and not app.show_archive, "lands on the Arcade Cage home with its cards, no archive (the walkthrough points at them)")
+	t.eq(app.pending_walkthrough, "home", "the home walkthrough is queued (design 36a)")
 	t.ok(app.pending_welcome.get("name", "") == "BRICK BARON" and app.pending_welcome.get("town", "") == "SALT HARBOR", "the welcome toast is queued")
 	t.ok(app.current_league == "cage" and not app.league_doc("cage").is_empty(), "the cage league is entered")
 	t.eq(load("res://game/screens/splash_screen.gd").primary_label(app.player_created()), "CONTINUE", "the splash says CONTINUE from now on")
@@ -88,6 +89,7 @@ func run(t) -> void:
 	# Put the world back.
 	app.pending_welcome = {}
 	app.home_open_league = ""
+	app.pending_walkthrough = ""
 	app.qa_fresh = was_fresh
 	save.put_settings(was_settings)
 	if was_account.is_empty():

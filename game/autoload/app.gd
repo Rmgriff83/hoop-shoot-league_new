@@ -42,6 +42,9 @@ var home_open_league := ""
 var pending_welcome := {}
 ## QA: pretend there is no player yet (the splash shows NEW GAME, the form).
 var qa_fresh := false
+## A walkthrough the next screen should run (its id, design 36a), set by
+## create_player ("home"); the title consumes it once the home shows.
+var pending_walkthrough := ""
 
 ## Stats of the run that just ended, for the results screen.
 var last_run: Dictionary = {}
@@ -558,6 +561,21 @@ func take_pending_unlock() -> String:
 	return id
 
 
+## Has the player seen a walkthrough (design 36a)? (settings.walkthroughsSeen)
+func walkthrough_seen(id: String) -> bool:
+	return Array(SaveService.get_settings().get("walkthroughsSeen", [])).has(id)
+
+
+func mark_walkthrough_seen(id: String) -> void:
+	var st := SaveService.get_settings()
+	var seen: Array = Array(st.get("walkthroughsSeen", [])).duplicate()
+	if seen.has(id):
+		return
+	seen.push_back(id)
+	st["walkthroughsSeen"] = seen
+	SaveService.put_settings(st)
+
+
 ## Has the player seen an area's unlock page? (settings.unlocksSeen)
 func unlock_seen(area: String) -> bool:
 	return Array(SaveService.get_settings().get("unlocksSeen", [])).has(area)
@@ -895,8 +913,9 @@ func create_player(name: String, tag: String, town: String, go := true) -> void:
 	pending_welcome = {"name": name, "tag": str(a.get("tag", tag)), "town": town}
 	home_card = 0
 	show_archive = false
-	if enter_league("cage"):
-		home_open_league = "cage"
+	home_open_league = ""   # the cards, not the open league: the walkthrough points at them
+	enter_league("cage")
+	pending_walkthrough = "home"
 	if bool(a.get("registered", false)):
 		Net.rename(name)
 	else:

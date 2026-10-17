@@ -1,0 +1,13 @@
+{
+  "home": {
+    "steps": [
+      {"id": "welcome", "kind": "welcome", "body": "Shoot hoops, win your league, earn new courts & extras, master the online leaderboard. Play for keeps.", "cta": "LET'S GO"},
+      {"id": "three", "title": "THREE WAYS TO PLAY", "body": "Every court has its own league, a time trial and practice. You'll find them all down here."},
+      {"id": "league", "title": "THE LEAGUE", "body": "90-second heats vs shooters from the Arcade Cage. Compete in 14-game seasons, make the playoffs and earn titles while gaining XP and tickets each match."},
+      {"id": "level", "title": "LEVEL UP", "body": "XP fills your level. New levels unlock power-up cards, bigger rewards and new courts beyond the cage."},
+      {"id": "online", "title": "PLAY ONLINE", "body": "Check the rankings and challenge other players head to head."},
+      {"id": "locker", "title": "YOUR LOCKER", "body": "Equip basketballs and nets from here, along with extras."},
+      {"id": "end", "kind": "end", "title": "THAT'S IT!", "body": "You're all set. Now get shooting.", "cta": "LET'S SHOOT"}
+    ]
+  }
+}

@@ -146,12 +146,42 @@ chevron (the footer says START INSIDE).
   refuses until `App.player_created()` — so the chosen name goes up in the register
   call), the hometown and `playerCreated` into the settings part (synced; the
   hometown is not a server field, and the league still says YOU), then straight onto
-  the Arcade Cage campaign home (`home_open_league = "cage"`, no archive) where the
-  title shows a `Toast`: "WELCOME, BRICK BARON · OAKRIDGE · FIRST STOP" for 3.4 s.
+  the Arcade Cage home with its cards (`enter_league("cage")`, no archive, the league
+  closed so the walkthrough can point at the cards) where the home walkthrough runs
+  (see Walkthroughs) and then the title shows two `Toast` chips: "WELCOME, BRICK
+  BARON" over "OAKRIDGE · FIRST STOP" for 3.4 s.
   `App.player_created()` is `playerCreated` or `has_save()` (older installs skip the
   form); `App.qa_fresh` forces a fresh install for QA (`--qa-splash` snaps
   `new_player`, `new_player_roll`, `new_player_invalid`, `new_player_home`). Tests:
   `tests/test_new_player.gd`, `tests/test_towns.gd`.
+- **Walkthroughs** (design "First Time Walkthrough" 36a, 2026-10-17;
+  `game/ui/walkthrough.gd` `Walkthrough`, CanvasLayer 50; data in
+  `data/walkthroughs.json` read by `core/ui/walkthroughs.gd` `Walkthroughs`): a
+  reusable spotlight tour over a live screen. Everything is dimmed (`#0E0B09`
+  at 82 %) except the part being explained, cut out with a 3 px gold outline and
+  a pulse ring expanding 18 px over 1.4 s; the spot glides 0.4 s between steps;
+  a cream card (x 36, 642 wide, pad 28) rises in under or over the spot — below
+  a spot in the upper half, above one in the lower half, so it never covers
+  what it points at — with the title (display 22, gold) and "n / N", the body
+  (bold 21), SKIP (150 × 68, every step but the last), `<` (from the second),
+  NEXT (orange, the step's `cta` or NEXT, a `>`); `welcome` / `end` steps are
+  centred bookends at y 380 with no spot ("WELCOME TO / HOOP SHOOT LEAGUE",
+  "THAT'S IT!" at display 40 gold, dithered). Taps underneath are blocked. SKIP
+  and the last NEXT both `App.mark_walkthrough_seen(id)`
+  (`settings.walkthroughsSeen`) and emit `closed(completed)`. **Hosting one:**
+  a screen builds `Walkthrough.new()`, `start(id, resolve)` with
+  `resolve(target_id) -> Rect2` in design px (Rect2() = no spot; a plain step's
+  `id` is its target), and listens for `closed`; new tours are new keys in the
+  JSON plus a resolver. **The home tour** (`"home"`): queued by
+  `App.create_player` (`pending_walkthrough`), run by the title once the home
+  shows its cards (no archive, league closed — which is why NEW PLAYER now lands
+  on the card home rather than the open league); targets `three` (LEAGUE card +
+  the pair, the chips above it), `league`, `level` (the LVL badge), `online`
+  (Ranks + Multi), `locker`, `enter`, resolved from `Chrome` by node name
+  (`title_screen._walkthrough_rect`). The welcome toast waits until the tour
+  closes. The tour's buttons are `TourSkip` / `TourBack` / `TourNext` (the home
+  has its own `Prev` / `Next` chevrons). `--qa-splash` snaps
+  `walkthrough_00..06`; `tests/test_walkthroughs.gd`.
 - **Settings** (`game/ui/settings_panel.gd`, a `HomePage` since 2026-10-15,
   design "Settings"): the menu button slides it in like the locker. Every
   row is a dotted face — cream, gold when a toggle is on, orange for SAVE /
