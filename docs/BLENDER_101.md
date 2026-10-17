@@ -1368,8 +1368,9 @@ boards, the marquee bulbs, the runner lights) is untouched. `build_cage.py`:
 - **The gutters** are 18 cm now (`RampCurb*`); the straight `DeckCurb*` went.
   `DeckFunnel` (red) curves in from the walls at the ramp foot (x 3.5) to
   ±0.85 at the gate (x 1.25) — `narrow + (full − narrow)·t^2.2`, 14 segments
-  a side — with 0.12-wide tops and front caps; `DeckFunnelFill` is the matte
-  black top out to the wall. **The sim follows it**: `SimGeometry.arcade()`
+  a side — with red tops running out to the cage wall and front caps (the
+  concept's code names a black fill beside a 12 cm strip, but it renders
+  all red and Ross wants it as it renders). **The sim follows it**: `SimGeometry.arcade()`
   carries `funnel_*` and `half_w_at(x)`, and `Colliders.wall_contact` uses
   the curve's normal on the deck (tests/test_ramp.gd `_the_funnel`).
 - **The ball gate** (`BallGate` at x 1.25: `GateFrame` — tubes r 0.018 and
@@ -1379,7 +1380,8 @@ boards, the marquee bulbs, the runner lights) is untouched. `build_cage.py`:
   (`ARROW_XS` 7 steps, `ArcadeFx.ARROW_STEPS`).
 - **Skins**: the sides hang `cage_mesh_slate.png` (matte slate), the roof
   `cage_mesh_galv.png` (rough galvanised with pitting) — 32-px tiles, two
-  diagonal wire families, 2.5 repeats/m for 20 cm cells; `cage_pad.png` is
+  diagonal wire families, 1.25 repeats/m for 40 cm cells as the design
+  renders them; `cage_pad.png` is
   the open-cell foam (near-white speckle pre-multiplied by charcoal
   #3A3532) mapped from position (`add_pad(world_uv=0.45)`) so the texture
   runs across the pyramids; `cage_arrow.png` is the LED chevron (two rows

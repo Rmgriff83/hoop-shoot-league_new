@@ -26,11 +26,12 @@ func run(t) -> void:
 	# The production pass (design "Arcade Cage Concept" 32a, 2026-10-16): the
 	# deck funnel and the ball gate, the hardwood, the rug, the ceiling lights.
 	t.eq(ArcadeFx.ARROW_STEPS, 7, "seven arrow steps: the two past the gate went")
-	for n in ["DeckFunnel", "DeckFunnelFill", "GateFrame", "GateMesh0", "GateMesh1", "HallRug", "HallLights", "HallLightWire"]:
+	for n in ["DeckFunnel", "GateFrame", "GateMesh0", "GateMesh1", "HallRug", "HallLights", "HallLightWire"]:
 		t.ok(cage.find_child(n, true, false) is MeshInstance3D, "the cage glb has %s" % n)
 	var gate: Node3D = cage.find_child("BallGate", true, false)
 	t.ok(gate != null and absf(gate.position.x - 1.25) < 1e-6, "the gate stands at x 1.25 (the sim's lip)")
 	t.eq(_count(cage, "DeckCurb"), 0, "the straight deck curbs are gone (the funnel replaces them)")
+	t.eq(cage.find_child("DeckFunnelFill", true, false), null, "no black fill: the gutters' red tops run out to the wall, as the design renders")
 	var rc: MeshInstance3D = cage.find_child("RampCurb0", true, false)
 	t.ok(rc != null and rc.get_aabb().size.y > 0.15, "the ramp gutters are 18 cm tall")
 	var deck_m := (cage.find_child("Deck", true, false) as MeshInstance3D).mesh.surface_get_material(0)

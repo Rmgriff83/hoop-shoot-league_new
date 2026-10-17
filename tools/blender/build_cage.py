@@ -108,7 +108,7 @@ HALL_HALF_W = 8.0
 HALL_H = 7.0
 FPS = 30
 HALL_WALL_SPLIT = 2.2               # textured cabinets below (2.2 m tall), dark above
-MESH_REPEATS_PER_M = 2.5            # 32-px tiles with 16-px diamonds (2 cells) -> 20 cm cells (finer shimmers on a phone)
+MESH_REPEATS_PER_M = 1.25           # 32-px tiles with 16-px diamonds (2 cells) -> 40 cm cells, as the design renders them (Ross, 2026-10-16)
 
 
 def s2b(p):
@@ -328,28 +328,25 @@ def funnel_half_w(x):
     return F["narrow"] + (F["full"] - F["narrow"]) * ((x - F["gate_x"]) / (F["foot_x"] - F["gate_x"])) ** F["pow"]
 
 
-def add_funnel(coll, parent, red, black):
-    """The deck funnel (design 32a): the red gutters' curved inner walls and
-    0.12-wide tops from the ramp foot in to the gate and straight on to the
-    front, with front caps (DeckFunnel), and the matte black fill from each
-    gutter out to the cage wall at gutter height (DeckFunnelFill)."""
+def add_funnel(coll, parent, red):
+    """The deck funnel (design 32a as it renders — Ross, 2026-10-16: the whole
+    shelf is red): the red gutters' curved inner walls from the ramp foot in
+    to the gate and straight on to the front, their tops running out to the
+    cage wall at gutter height, and front caps. One mesh, DeckFunnel."""
     F = FUNNEL
     xs = [F["front"], F["gate_x"]] + [F["gate_x"] + (F["foot_x"] - F["gate_x"]) * i / 14.0 for i in range(1, 15)]
-    bm_r, bm_k = bmesh.new(), bmesh.new()
+    bm_r = bmesh.new()
     for s in (-1, 1):
         for i in range(len(xs) - 1):
             x0, x1 = xs[i], xs[i + 1]
             z0, z1 = s * funnel_half_w(x0), s * funnel_half_w(x1)
             W = s * F["full"]
             _bm_face(bm_r, [(x0, 0, z0), (x1, 0, z1), (x1, F["h"], z1), (x0, F["h"], z0)], (0, 0, -s))
-            t0, t1 = z0 + s * F["t"], z1 + s * F["t"]
-            _bm_face(bm_r, [(x0, F["h"], z0), (x1, F["h"], z1), (x1, F["h"], t1), (x0, F["h"], t0)], (0, 1, 0))
-            if abs(W - t0) > 1e-4 or abs(W - t1) > 1e-4:
-                _bm_face(bm_k, [(x0, F["h"], t0), (x1, F["h"], t1), (x1, F["h"], W), (x0, F["h"], W)], (0, 1, 0))
+            if abs(W - z0) > 1e-4 or abs(W - z1) > 1e-4:
+                _bm_face(bm_r, [(x0, F["h"], z0), (x1, F["h"], z1), (x1, F["h"], W), (x0, F["h"], W)], (0, 1, 0))
         z, W = s * F["narrow"], s * F["full"]
         _bm_face(bm_r, [(F["front"], 0, z), (F["front"], F["h"], z), (F["front"], F["h"], W), (F["front"], 0, W)], (-1, 0, 0))
     _bm_finish(bm_r, "DeckFunnel", red, coll, parent)
-    _bm_finish(bm_k, "DeckFunnelFill", black, coll, parent)
 
 
 def add_gate(coll, parent, frame_mat, mesh_mat):
@@ -473,7 +470,6 @@ def build():
     mesh_top = mat_tex("Cage_Mesh_Galv", TEX("cage_mesh_galv.png"), alpha_clip=True, double_sided=True)
     hardwood = mat_tex("Cage_Hardwood", TEX("cage_hardwood.png"))
     rug = mat_tex("Hall_Rug", TEX("cage_rug.png"))
-    funnel_fill = mat_flat("Cage_FunnelFill", (23, 23, 26), roughness=0.95)
     gate_frame = mat_flat("Gate_Frame", (69, 78, 88), roughness=0.9)
     ceiling_bulb = mat_flat("Hall_LightBulb", (255, 230, 176), roughness=0.4)
     ceiling_wire = mat_flat("Hall_LightWire", (26, 22, 18))
@@ -539,7 +535,7 @@ def build():
         rc.rotation_euler = (0.0, -math.atan2(RAMP_TOP_Y, CAGE_X1 - RAMP_X0), 0.0)
     # The deck's gutters funnel in to the gate (DeckFunnel / DeckFunnelFill),
     # and the ball gate stands across the lane — both in the sim too.
-    add_funnel(c_deck, cage, accent, funnel_fill)
+    add_funnel(c_deck, cage, accent)
     add_gate(c_deck, cage, gate_frame, mesh_side)
     add_box("TrayLip", (0.06, 0.45, 2.0 * w), (DECK_X0, 0.225, 0.0), lip, c_deck, cage)
     # Return arrows down the centre lane (DeckArrow00 at the top of the ramp,
