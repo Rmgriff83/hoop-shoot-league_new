@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bipouk40vewx7"
-path="res://.godot/imported/cage_mesh.png-bb5873255f157e821ffaa02aeb33f5d6.ctex"
+uid="uid://ciicu78f35xs7"
+path="res://.godot/imported/cage_mesh_slate.png-d07b96c4961fa8d8df100674f2c6f01e.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/textures/cage_mesh.png"
-dest_files=["res://.godot/imported/cage_mesh.png-bb5873255f157e821ffaa02aeb33f5d6.ctex"]
+source_file="res://assets/textures/cage_mesh_slate.png"
+dest_files=["res://.godot/imported/cage_mesh_slate.png-d07b96c4961fa8d8df100674f2c6f01e.ctex"]
 
 [params]
 

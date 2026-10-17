@@ -2,16 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cy1ag20hr216m"
-path="res://.godot/imported/cage_deck.png-16eee5d03cc910467a5e9f67e0bd58d1.ctex"
+uid="uid://dxocmlnbeuuki"
+path="res://.godot/imported/cage_cage_hardwood.png-ee8af12763d68b04fa1ace1a33692a7c.ctex"
 metadata={
 "vram_texture": false
+}
+generator_parameters={
+"md5": "067ca3e1bd1561f03eeeed5264b4b1ef"
 }
 
 [deps]
 
-source_file="res://assets/textures/cage_deck.png"
-dest_files=["res://.godot/imported/cage_deck.png-16eee5d03cc910467a5e9f67e0bd58d1.ctex"]
+source_file="res://assets/arena/cage/cage_cage_hardwood.png"
+dest_files=["res://.godot/imported/cage_cage_hardwood.png-ee8af12763d68b04fa1ace1a33692a7c.ctex"]
 
 [params]
 
@@ -23,7 +26,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=false
+mipmaps/generate=true
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

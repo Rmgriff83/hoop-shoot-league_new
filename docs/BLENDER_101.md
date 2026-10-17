@@ -1355,3 +1355,38 @@ band — via `CottonNet._diag_color` / `_knot_color` / `_tail_color`; ~10 mm
 cord (r 5.2 mm, knots r 9.5 mm). The neons (`NetSet.tint`) are the plain
 cotton body painted one colour with a faint glow.
 
+
+## 30. The cage's production pass: the deck funnel and the ball gate, hardwood, the skins (2026-10-16)
+
+Ross's "Arcade Cage Concept" 32a loads the production cage and layers on
+it; everything he listed as unchanged (the cabinet row, the hoop, the reader
+boards, the marquee bulbs, the runner lights) is untouched. `build_cage.py`:
+
+- **Hardwood** (`cage_hardwood.png`, 128 px = 1 m: maple boards ~9 cm with
+  staggered butt joints and grain streaks) on `Deck` and `Ramp`, UVs 0.68
+  repeats per metre along and across so the boards run down the slope.
+- **The gutters** are 18 cm now (`RampCurb*`); the straight `DeckCurb*` went.
+  `DeckFunnel` (red) curves in from the walls at the ramp foot (x 3.5) to
+  ±0.85 at the gate (x 1.25) — `narrow + (full − narrow)·t^2.2`, 14 segments
+  a side — with 0.12-wide tops and front caps; `DeckFunnelFill` is the matte
+  black top out to the wall. **The sim follows it**: `SimGeometry.arcade()`
+  carries `funnel_*` and `half_w_at(x)`, and `Colliders.wall_contact` uses
+  the curve's normal on the deck (tests/test_ramp.gd `_the_funnel`).
+- **The ball gate** (`BallGate` at x 1.25: `GateFrame` — tubes r 0.018 and
+  a latch, one mesh — and two slate chain-link `GateMesh0/1` leaves, 0.6
+  tall) **is the sim's lip** (`ARCADE_LIP_X 1.25`, `ARCADE_LIP_H 0.6`): a
+  roll-out stops behind it. The two return arrows past it went
+  (`ARROW_XS` 7 steps, `ArcadeFx.ARROW_STEPS`).
+- **Skins**: the sides hang `cage_mesh_slate.png` (matte slate), the roof
+  `cage_mesh_galv.png` (rough galvanised with pitting) — 32-px tiles, two
+  diagonal wire families, 2.5 repeats/m for 20 cm cells; `cage_pad.png` is
+  the open-cell foam (near-white speckle pre-multiplied by charcoal
+  #3A3532) mapped from position (`add_pad(world_uv=0.45)`) so the texture
+  runs across the pyramids; `cage_arrow.png` is the LED chevron (two rows
+  of dots in a dark housing; the arrow shader still dims / lights it).
+- **The hall**: `HallRug` (x 9.5–11.2, z ±7.6, `cage_rug.png`: a dark runner
+  with an orange border and a diamond weave) and `HallLights` + `HallLightWire`
+  (64 warm bulbs in one mesh along the back wall / ceiling corner at x 11.92,
+  y 6.92 — just above the 6.9 m the cage's back panel hides from the key;
+  ArcadeFx gives them an unshaded warm material).
+

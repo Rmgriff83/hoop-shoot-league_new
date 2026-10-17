@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ddtsbn7du566o"
-path="res://.godot/imported/cage_ramp.png-3df82a18411e2601a45df875ac07a7b7.ctex"
+uid="uid://wmcvgowslxdr"
+path="res://.godot/imported/cage_mesh_galv.png-06c4a7be03c9eb5e316e9ec24e499cea.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/textures/cage_ramp.png"
-dest_files=["res://.godot/imported/cage_ramp.png-3df82a18411e2601a45df875ac07a7b7.ctex"]
+source_file="res://assets/textures/cage_mesh_galv.png"
+dest_files=["res://.godot/imported/cage_mesh_galv.png-06c4a7be03c9eb5e316e9ec24e499cea.ctex"]
 
 [params]
 

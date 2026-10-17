@@ -31,38 +31,50 @@ local function save(spr, name)
   print("wrote " .. name)
 end
 
--- cage_mesh.png 64x64 RGBA — chain-link lattice, 16 px diamond cells.
--- Two-pixel light cords with a darker lower edge; everything else transparent
--- (Godot alpha-scissors it). Tiled 2 repeats/m → 8 cm cells.
-do
-  local W, H = 64, 64
-  local spr, img = newImage(W, H)
-  local clear = pc.rgba(0, 0, 0, 0)
-  local cord  = pc.rgba(176, 172, 164, 255)
-  local dark  = pc.rgba(98, 94, 90, 255)
-  fill(img, 0, 0, W - 1, H - 1, clear)
-  local CELL = 16
-  for y = 0, H - 1 do
-    for x = 0, W - 1 do
-      local u, v = x % CELL, y % CELL
-      -- Two diagonals per cell: v == u and v == CELL-1-u (plus a 1 px neighbour).
-      local d1 = (v == u) or (v == u + 1)
-      local d2 = (v == CELL - 1 - u) or (v == CELL - u)
-      if d1 or d2 then
-        img:drawPixel(x, y, cord)
-      end
-    end
+local function clamp(v) return math.max(0, math.min(255, math.floor(v + 0.5))) end
+local function rgb(r, g, b) return pc.rgba(clamp(r), clamp(g), clamp(b), 255) end
+local function hex(h) return rgb(tonumber(h:sub(2, 3), 16), tonumber(h:sub(4, 5), 16), tonumber(h:sub(6, 7), 16)) end
+local function round(v) return math.floor(v + 0.5) end
+-- A clipped rectangle fill (the LED chevron's dots run off the tile's edge).
+local function rect(img, x0, y0, w, h, c)
+  for y = math.max(0, y0), math.min(img.height - 1, y0 + h - 1) do
+    for x = math.max(0, x0), math.min(img.width - 1, x0 + w - 1) do img:drawPixel(x, y, c) end
   end
-  -- Darker lower edge: any cord pixel whose neighbour below is clear.
-  for y = 0, H - 2 do
-    for x = 0, W - 1 do
-      if img:getPixel(x, y) == cord and img:getPixel(x, y + 1) == clear then
-        img:drawPixel(x, y, dark)
-      end
-    end
-  end
-  save(spr, "cage_mesh.png")
 end
+-- The design's seeded LCG (same numbers as the concept's canvas recipes).
+local function lcg(seed)
+  local s = seed
+  return function() s = (s * 16807) % 2147483647; return s / 2147483647 end
+end
+
+-- cage_mesh_slate.png / cage_mesh_galv.png 32x32 RGBA — the design's
+-- chain-link (Arcade Cage Concept 32a): two diagonal wire families -> 16 px
+-- diamonds, a light upper edge and a dark lower one; the sides matte slate,
+-- the roof rough galvanised with pitting. Tiled 2.5 repeats/m -> 20 cm cells.
+local function fence(name, wire, hi, lo, spots)
+  local W, H = 32, 32
+  local spr = Sprite(W, H, ColorMode.RGBA)
+  local img = spr.cels[1].image
+  local r = lcg(37)
+  fill(img, 0, 0, W - 1, H - 1, pc.rgba(0, 0, 0, 0))
+  for yy = 0, H - 1 do
+    for xx = 0, W - 1 do
+      local u = (xx + yy) % 16
+      local v = (xx - yy + 32) % 16
+      if not (u > 1 and v > 1) then
+        local col = wire
+        if u == 0 or v == 0 then col = hi elseif u == 1 and v == 1 then col = lo end
+        if spots > 0 and r() < spots then
+          if r() < 0.5 then col = lo else col = "#8A8A86" end
+        end
+        img:drawPixel(xx, yy, hex(col))
+      end
+    end
+  end
+  save(spr, name)
+end
+fence("cage_mesh_slate.png", "#454E58", "#5E6872", "#2C333B", 0)
+fence("cage_mesh_galv.png", "#C4C8CC", "#ECEFF2", "#7E8388", 0.08)
 
 -- cage_tube.png 32x8 — cool steel band wrapping the frame boxes.
 do
@@ -79,27 +91,55 @@ do
   save(spr, "cage_tube.png")
 end
 
--- cage_deck.png / cage_ramp.png 128x128 — rubber tread with two orange
--- chevrons per tile pointing toward -u (the shooter). The ramp variant is a
--- lighter gray so the raised return reads against the dark back panel.
-local function tread(name, rubber, dot, dip)
-  local W, H = 128, 128
-  local spr, img = newImage(W, H)
-  for y = 0, H - 1 do
-    for x = 0, W - 1 do
-      local c = rubber
-      if (x % 4 == 0) and (y % 4 == 0) then c = dot end
-      if noise(x, y, 31) < 0.03 then c = dip end
-      img:drawPixel(x, y, c)
+-- cage_hardwood.png 128x128 — the design's maple court boards (128 px = 1 m):
+-- ~9 cm boards along u with staggered butt joints, a few grain streaks per
+-- board, a slight tone shift board to board, a dark seam row and a lit edge.
+-- Deck and Ramp wear it at 0.68 repeats/m so the boards run down the slope.
+do
+  local S = 128
+  local spr, img = newImage(S, S)
+  local r = lcg(53)
+  local TONE = {{196, 142, 86}, {184, 130, 76}, {204, 152, 94}, {176, 122, 70}, {192, 138, 82}, {208, 158, 100}, {186, 134, 80}, {198, 146, 88}}
+  local boards = {}
+  for b = 0, S / 8 - 1 do
+    local joints = {}
+    local at = math.floor(r() * 64)
+    while at < S do joints[#joints + 1] = at; at = at + 48 + math.floor(r() * 56) end
+    local grain = {}
+    for g = 1, 3 do grain[g] = {1 + math.floor(r() * 6), math.floor(r() * S), 10 + math.floor(r() * 30)} end
+    boards[b] = {tone = TONE[math.floor(r() * #TONE) + 1], joints = joints, grain = grain}
+  end
+  for yy = 0, S - 1 do
+    for xx = 0, S - 1 do
+      local b = boards[math.floor(yy / 8)]
+      local row = yy % 8
+      local k = 1 + (r() - 0.5) * 0.05
+      if row == 0 then k = 0.55 elseif row == 1 then k = k * 1.08 elseif row == 7 then k = k * 0.9 end
+      for _, gr in ipairs(b.grain) do
+        if row == gr[1] and ((xx - gr[2] + S) % S) < gr[3] then k = k * 0.86 end
+      end
+      for _, j in ipairs(b.joints) do if xx == j then k = 0.6 end end
+      img:drawPixel(xx, yy, rgb(b.tone[1] * k, b.tone[2] * k, b.tone[3] * k))
     end
   end
-  -- (The old chevrons baked into this tile tiled badly across the deck and
-  -- were cut off at its edges; the deck's arrows are now their own decals,
-  -- cage_arrow.png below, lit in a chase by ArcadeFx.)
-  save(spr, name)
+  save(spr, "cage_hardwood.png")
 end
-tread("cage_deck.png", pc.rgba(36, 34, 34, 255), pc.rgba(48, 46, 45, 255), pc.rgba(26, 24, 24, 255))
-tread("cage_ramp.png", pc.rgba(78, 74, 72, 255), pc.rgba(92, 88, 86, 255), pc.rgba(62, 58, 56, 255))
+
+-- cage_rug.png 32x16 — the hall's dark runner in front of the cabinet row
+-- (HallRug, 16 px = 1 m along its length, tiled): a faint diamond weave, a
+-- thin orange border.
+do
+  local W, L = 32, 16
+  local spr, img = newImage(W, L)
+  for v = 0, L - 1 do
+    for u = 0, W - 1 do
+      local col = (((u + v) % 8 == 0) or ((u - v + 64) % 8 == 0)) and "#26222E" or "#1A1720"
+      if u == 1 or u == W - 2 then col = "#B8562A" elseif u == 0 or u == W - 1 or u == 2 or u == W - 3 then col = "#14121A" end
+      img:drawPixel(u, v, hex(col))
+    end
+  end
+  save(spr, "cage_rug.png")
+end
 
 -- cage_carpet.png 128x128 — navy 90s arcade carpet with dithered confetti.
 do
@@ -177,54 +217,50 @@ do
 end
 
 
--- cage_pad.png 32x32 — one cell of the back wall's egg-crate foam (the
--- BackPad in build_cage.py maps each pyramid cell to this tile): a charcoal
--- foam that is lightest on the peak at the centre and falls to the dark
--- valleys at the edges, with a fine open-cell speckle.
+-- cage_pad.png 32x32 — the design's open-cell foam over the egg-crate pad:
+-- a near-white speckle with pores and a few bright cells, pre-multiplied by
+-- the pad's charcoal #3A3532 (three.js multiplied the texture over the
+-- material colour; Godot gets the product). Mapped from position
+-- (build_cage.py add_pad world_uv 0.45) so it runs across the pyramids.
 do
-  local W, H = 32, 32
-  local spr, img = newImage(W, H)
-  -- Low contrast on purpose: the pyramids' flat-shaded faces already catch
-  -- the light differently, and a bright peak on top of that read as gloss.
-  local peak   = pc.rgba(66, 61, 58, 255)
-  local mid    = pc.rgba(56, 52, 50, 255)
-  local valley = pc.rgba(42, 38, 37, 255)
-  local pore   = pc.rgba(34, 31, 30, 255)
-  for y = 0, H - 1 do
-    for x = 0, W - 1 do
-      -- Chebyshev distance to the centre: square rings, like a pyramid's faces.
-      local dx = math.abs(x + 0.5 - W / 2) / (W / 2)
-      local dy = math.abs(y + 0.5 - H / 2) / (H / 2)
-      local d = math.max(dx, dy)
-      local c = valley
-      if d < 0.32 then c = peak elseif d < 0.72 then c = mid end
-      -- Dither the two ring edges so they do not read as hard bands.
-      if d >= 0.28 and d < 0.36 and (x + y) % 2 == 0 then c = (d < 0.32) and mid or peak end
-      if d >= 0.66 and d < 0.78 and (x + y) % 2 == 0 then c = (d < 0.72) and valley or mid end
-      if noise(x, y, 61) < 0.08 then c = pore end
-      img:drawPixel(x, y, c)
-    end
+  local T = 32
+  local spr, img = newImage(T, T)
+  local r = lcg(91)
+  for i = 0, T * T - 1 do
+    local v = 214 + (r() - 0.5) * 34
+    local n = r()
+    if n < 0.24 then v = v - (60 + r() * 40) elseif n > 0.94 then v = 255 end
+    v = math.max(0, math.min(255, math.floor(v / 12 + 0.5) * 12))
+    local f = v / 255
+    img:drawPixel(i % T, math.floor(i / T), rgb(58 * f, 53 * f, 50 * f))
   end
   save(spr, "cage_pad.png")
 end
 
--- cage_arrow.png 64x64 RGBA — one deck arrow (build_cage.py DeckArrow%02dL/R
--- decals, lit in succession by ArcadeFx.chase()): a minimal chevron pointing
--- toward -u (the shooter) — two thin arms, one flat yellow, no outline. The
--- lit state is the shader's (deck_arrow.gdshader), not the texture's.
+-- cage_arrow.png 64x64 RGBA — the design's LED chevron (DeckArrow%02dL/R
+-- decals, lit in succession by ArcadeFx.chase()): a dark housing with two
+-- rows of nine LED dots, the tip toward -u (the shooter). The dim / lit
+-- state is the shader's (deck_arrow.gdshader): white cores read as the lit
+-- LEDs under its glow.
 do
-  local W, H = 64, 64
-  local spr, img = newImage(W, H)
-  local fill_c = pc.rgba(250, 206, 70, 255)   -- yellow (Ross, 2026-10-03)
-  local apex, cy, thick, half = 10, 31.5, 7, 22
-  for y = 0, H - 1 do
-    for x = 0, W - 1 do
-      local dy = math.abs(y + 0.5 - cy - 0.5)
-      local lead = apex + dy
-      if dy <= half and x >= lead and x < lead + thick then
-        img:drawPixel(x, y, fill_c)
-      end
+  local S = 64
+  local spr = Sprite(S, S, ColorMode.RGBA)
+  local img = spr.cels[1].image
+  fill(img, 0, 0, S - 1, S - 1, pc.rgba(0, 0, 0, 0))
+  local function chev(t, off)
+    local v = (t < 0.5) and (t * 2) or ((1 - t) * 2)
+    return 50 - off - v * 26, 6 + t * 52
+  end
+  for i = 0, 60 do local u, v = chev(i / 60, 0); rect(img, round(u) - 5, round(v) - 3, 17, 7, hex("#1C1A1A")) end
+  for i = 0, 60 do local u, v = chev(i / 60, 0); rect(img, round(u) - 4, round(v) - 2, 15, 5, hex("#2E2A28")) end
+  for _, off in ipairs({0, 7}) do
+    for i = 0, 8 do
+      local u, v = chev(i / 8, off)
+      local U, V = round(u), round(v)
+      rect(img, U - 2, V - 2, 4, 4, hex("#9A9A9A"))
+      rect(img, U - 1, V - 1, 2, 2, hex("#FFFFFF"))
     end
   end
   save(spr, "cage_arrow.png")
 end
+

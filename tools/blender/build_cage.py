@@ -67,7 +67,14 @@ RAMP_TOP_Y = 0.9                    # mirrored by SimGeometry.arcade ramp_x0/ram
 # along x — three steps on the ramp's slope and six down the deck — each a
 # minimal 0.22 x 0.36 m chevron. Decals only (nothing in the sim);
 # ArcadeFx.ARROW_STEPS is the step count, two meshes per step.
-ARROW_XS = (4.2, 3.9, 3.62, 3.2, 2.75, 2.3, 1.85, 1.4, 0.95)
+ARROW_XS = (4.2, 3.9, 3.62, 3.2, 2.75, 2.3, 1.85)   # the two past the ball gate (1.4, 0.95) went, 2026-10-16
+# The deck funnel and the ball gate (design "Arcade Cage Concept" 32a,
+# 2026-10-16; mirrored by SimGeometry.arcade ARCADE_FUNNEL_* / ARCADE_LIP_*):
+# the red gutters curve in from the walls at the ramp foot to ±narrow at the
+# gate, narrow + (full − narrow)·t^pow, then run straight to the front.
+FUNNEL = dict(full=CAGE_HALF_W, narrow=0.85, gate_x=1.25, foot_x=RAMP_X0, front=DECK_X0, h=0.18, t=0.12, pow=2.2)
+GATE_H = 0.6
+HARDWOOD_REPEATS_PER_M = 0.68       # 128-px tile ≈ 1.47 m: ~9 cm boards
 ARROW_LEN = 0.22
 ARROW_HALF_W = 0.18
 ARROW_ROW_Z = 0.42
@@ -101,7 +108,7 @@ HALL_HALF_W = 8.0
 HALL_H = 7.0
 FPS = 30
 HALL_WALL_SPLIT = 2.2               # textured cabinets below (2.2 m tall), dark above
-MESH_REPEATS_PER_M = 1.25           # 4 cells per tile -> 20 cm cells (finer shimmers on a phone)
+MESH_REPEATS_PER_M = 2.5            # 32-px tiles with 16-px diamonds (2 cells) -> 20 cm cells (finer shimmers on a phone)
 
 
 def s2b(p):
@@ -229,7 +236,7 @@ def add_quad(name, sim_corners, toward, mat, coll, parent, uv_repeat=(1.0, 1.0),
     return o
 
 
-def add_pad(name, x_face, depth, y0, y1, z0, z1, cell, mat, coll, parent):
+def add_pad(name, x_face, depth, y0, y1, z0, z1, cell, mat, coll, parent, world_uv=None):
     """Egg-crate foam: a grid of square cells, each a four-sided pyramid whose
     peak stands `depth` toward the shooter (-x) of the valleys at the cell
     corners. Every cell maps to one full tile of the pad texture (peak at the
@@ -255,7 +262,12 @@ def add_pad(name, x_face, depth, y0, y1, z0, z1, cell, mat, coll, parent):
                 f = bm.faces.new([a, b, peak])
                 f.smooth = False
                 for loop in f.loops:
-                    if loop.vert is peak:
+                    if world_uv:
+                        # The texture runs across the pyramids, mapped from the
+                        # vertex's sim position (z + x along u, y along v).
+                        bx, by, bz = loop.vert.co
+                        loop[uv].uv = ((-by) / world_uv + bx / world_uv, bz / world_uv)
+                    elif loop.vert is peak:
                         loop[uv].uv = (0.5, 0.5)
                     elif loop.vert is a:
                         loop[uv].uv = cuv[k]
@@ -274,6 +286,112 @@ def add_pad(name, x_face, depth, y0, y1, z0, z1, cell, mat, coll, parent):
     o = bpy.data.objects.new(name, me)
     link_obj(o, coll, parent, (0, 0, 0))
     return o
+
+
+def _bm_face(bm, pts, want):
+    """A quad from four sim points, wound to face `want` (a sim direction)."""
+    vs = [bm.verts.new(s2b(p)) for p in pts]
+    f = bm.faces.new(vs)
+    bm.normal_update()
+    if f.normal.dot(Vector(s2b(want))) < 0.0:
+        bmesh.ops.reverse_faces(bm, faces=[f])
+    return f
+
+
+def _bm_finish(bm, name, mat, coll, parent):
+    me = bpy.data.meshes.new(name)
+    bm.to_mesh(me)
+    bm.free()
+    me.materials.append(mat)
+    o = bpy.data.objects.new(name, me)
+    link_obj(o, coll, parent, (0, 0, 0))
+    return o
+
+
+def _bm_tube(bm, a, b, r=0.018, seg=6):
+    """A capped tube between two sim points (relative to the mesh's parent)."""
+    va, vb = Vector(s2b(a)), Vector(s2b(b))
+    d = vb - va
+    geom = bmesh.ops.create_cone(bm, cap_ends=True, segments=seg, radius1=r, radius2=r, depth=d.length)
+    verts = geom["verts"]
+    rot = Vector((0.0, 0.0, 1.0)).rotation_difference(d.normalized())
+    bmesh.ops.rotate(bm, cent=(0, 0, 0), matrix=rot.to_matrix(), verts=verts)
+    bmesh.ops.translate(bm, vec=(va + vb) / 2.0, verts=verts)
+
+
+def funnel_half_w(x):
+    F = FUNNEL
+    if x <= F["gate_x"]:
+        return F["narrow"]
+    if x >= F["foot_x"]:
+        return F["full"]
+    return F["narrow"] + (F["full"] - F["narrow"]) * ((x - F["gate_x"]) / (F["foot_x"] - F["gate_x"])) ** F["pow"]
+
+
+def add_funnel(coll, parent, red, black):
+    """The deck funnel (design 32a): the red gutters' curved inner walls and
+    0.12-wide tops from the ramp foot in to the gate and straight on to the
+    front, with front caps (DeckFunnel), and the matte black fill from each
+    gutter out to the cage wall at gutter height (DeckFunnelFill)."""
+    F = FUNNEL
+    xs = [F["front"], F["gate_x"]] + [F["gate_x"] + (F["foot_x"] - F["gate_x"]) * i / 14.0 for i in range(1, 15)]
+    bm_r, bm_k = bmesh.new(), bmesh.new()
+    for s in (-1, 1):
+        for i in range(len(xs) - 1):
+            x0, x1 = xs[i], xs[i + 1]
+            z0, z1 = s * funnel_half_w(x0), s * funnel_half_w(x1)
+            W = s * F["full"]
+            _bm_face(bm_r, [(x0, 0, z0), (x1, 0, z1), (x1, F["h"], z1), (x0, F["h"], z0)], (0, 0, -s))
+            t0, t1 = z0 + s * F["t"], z1 + s * F["t"]
+            _bm_face(bm_r, [(x0, F["h"], z0), (x1, F["h"], z1), (x1, F["h"], t1), (x0, F["h"], t0)], (0, 1, 0))
+            if abs(W - t0) > 1e-4 or abs(W - t1) > 1e-4:
+                _bm_face(bm_k, [(x0, F["h"], t0), (x1, F["h"], t1), (x1, F["h"], W), (x0, F["h"], W)], (0, 1, 0))
+        z, W = s * F["narrow"], s * F["full"]
+        _bm_face(bm_r, [(F["front"], 0, z), (F["front"], F["h"], z), (F["front"], F["h"], W), (F["front"], 0, W)], (-1, 0, 0))
+    _bm_finish(bm_r, "DeckFunnel", red, coll, parent)
+    _bm_finish(bm_k, "DeckFunnelFill", black, coll, parent)
+
+
+def add_gate(coll, parent, frame_mat, mesh_mat):
+    """The ball gate across the deck (design 32a; the sim's lip): two slate
+    chain-link leaves on slate tube frames with a centre latch, at the
+    funnel's gate x."""
+    F = FUNNEL
+    X, W, H = F["gate_x"], 2.0 * F["narrow"], GATE_H
+    leaf = W / 2.0 - 0.03
+    gate = add_empty("BallGate", coll, parent, (X, 0.0, 0.0))
+    bm = bmesh.new()
+    for s in (-1, 1):
+        z0, z1 = s * 0.015, s * (W / 2.0)
+        _bm_tube(bm, (0, 0, z0), (0, H, z0))
+        _bm_tube(bm, (0, 0, z1), (0, H + 0.06, z1))
+        _bm_tube(bm, (0, H, z0), (0, H, z1))
+        _bm_tube(bm, (0, 0.04, z0), (0, 0.04, z1))
+    latch = bmesh.ops.create_cube(bm, size=1.0)
+    bmesh.ops.scale(bm, vec=size2b((0.05, 0.07, 0.07)), verts=latch["verts"])
+    bmesh.ops.translate(bm, vec=Vector(s2b((-0.02, H - 0.1, 0.0))), verts=latch["verts"])
+    _bm_finish(bm, "GateFrame", frame_mat, coll, gate)
+    for j, s in enumerate((-1, 1)):
+        zc = s * (W / 4.0 + 0.008)
+        z0, z1 = zc - leaf / 2.0, zc + leaf / 2.0
+        add_quad("GateMesh%d" % j, [(X, 0.02, z0), (X, 0.02, z1), (X, 0.02 + H - 0.04, z1), (X, 0.02 + H - 0.04, z0)],
+                 (-1, 0, 0), mesh_mat, coll, gate, (leaf / 0.12, (H - 0.04) / 0.12), origin=(X, 0.0, 0.0))
+    return gate
+
+
+def add_ceiling_lights(coll, parent, bulb_mat, wire_mat):
+    """The design's straight string of warm bulbs along the hall's back wall /
+    ceiling corner (x 11.92, y 6.92: just above the 6.9 m the cage's back
+    panel hides from the key), 64 bulbs in ONE mesh on a wire."""
+    X, Y, Z0, Z1, STEP = 11.92, 6.92, -HALL_HALF_W, HALL_HALF_W, 0.25
+    bm = bmesh.new()
+    n = int(round((Z1 - Z0) / STEP))
+    for i in range(n):
+        z = Z0 + STEP * (i + 0.5)
+        g = bmesh.ops.create_cube(bm, size=0.07)
+        bmesh.ops.translate(bm, vec=Vector(s2b((X, Y - 0.05, z))), verts=g["verts"])
+    _bm_finish(bm, "HallLights", bulb_mat, coll, parent)
+    add_box("HallLightWire", (0.02, 0.02, Z1 - Z0), (X, Y, 0.0), wire_mat, coll, parent)
 
 
 def to_nla(obj, action, track_name):
@@ -351,9 +469,14 @@ def build():
     c_lights, c_hall, c_carriage = sub(coll, "Lights"), sub(coll, "Hall"), sub(coll, "Carriage")
 
     steel = mat_tex("Cage_Tube", TEX("cage_tube.png"))
-    mesh = mat_tex("Cage_Mesh", TEX("cage_mesh.png"), alpha_clip=True, double_sided=True)
-    deck = mat_tex("Cage_Deck", TEX("cage_deck.png"))
-    ramp = mat_tex("Cage_Ramp", TEX("cage_ramp.png"))
+    mesh_side = mat_tex("Cage_Mesh_Slate", TEX("cage_mesh_slate.png"), alpha_clip=True, double_sided=True)
+    mesh_top = mat_tex("Cage_Mesh_Galv", TEX("cage_mesh_galv.png"), alpha_clip=True, double_sided=True)
+    hardwood = mat_tex("Cage_Hardwood", TEX("cage_hardwood.png"))
+    rug = mat_tex("Hall_Rug", TEX("cage_rug.png"))
+    funnel_fill = mat_flat("Cage_FunnelFill", (23, 23, 26), roughness=0.95)
+    gate_frame = mat_flat("Gate_Frame", (69, 78, 88), roughness=0.9)
+    ceiling_bulb = mat_flat("Hall_LightBulb", (255, 230, 176), roughness=0.4)
+    ceiling_wire = mat_flat("Hall_LightWire", (26, 22, 18))
     carpet = mat_tex("Hall_Carpet", TEX("cage_carpet.png"))
     hall = mat_tex("Hall_Wall", TEX("cage_hall.png"), emissive=True)
     bulb = mat_flat("Cage_Bulb", (255, 206, 140), roughness=0.4)   # ArcadeFx twinkles these
@@ -384,36 +507,40 @@ def build():
     reps_x = xl * MESH_REPEATS_PER_M
     reps_y = CAGE_H * MESH_REPEATS_PER_M
     add_quad("MeshWallL", [(CAGE_X0, 0, -w), (CAGE_X1, 0, -w), (CAGE_X1, CAGE_H, -w), (CAGE_X0, CAGE_H, -w)],
-             (0, 0, 1), mesh, c_walls, cage, (reps_x, reps_y))
+             (0, 0, 1), mesh_side, c_walls, cage, (reps_x, reps_y))
     add_quad("MeshWallR", [(CAGE_X0, 0, w), (CAGE_X1, 0, w), (CAGE_X1, CAGE_H, w), (CAGE_X0, CAGE_H, w)],
-             (0, 0, -1), mesh, c_walls, cage, (reps_x, reps_y))
+             (0, 0, -1), mesh_side, c_walls, cage, (reps_x, reps_y))
     add_quad("MeshTop", [(CAGE_X0, CAGE_H, -w), (CAGE_X1, CAGE_H, -w), (CAGE_X1, CAGE_H, w), (CAGE_X0, CAGE_H, w)],
-             (0, -1, 0), mesh, c_walls, cage, (reps_x, 2.0 * w * MESH_REPEATS_PER_M))
+             (0, -1, 0), mesh_top, c_walls, cage, (reps_x, 2.0 * w * MESH_REPEATS_PER_M))
     add_box("BackPanel", (0.04, CAGE_H, 2.0 * w), (CAGE_X1, CAGE_H / 2.0, 0.0), panel, c_walls, cage)
     # Egg-crate foam over the panel, from just above the ramp's top to just
     # under the roof tube, inboard of the corner posts.
     add_pad("BackPad", PAD_FACE_X, PAD_DEPTH, RAMP_TOP_Y + 0.02, CAGE_H - TUBE,
-            -(w - TUBE), w - TUBE, PAD_CELL, pad, c_walls, cage)
+            -(w - TUBE), w - TUBE, PAD_CELL, pad, c_walls, cage, world_uv=0.45)
     # Side rails the crossbar rides on.
     rl = RAIL_X1 - RAIL_X0
     for j, z in enumerate((-RAIL_Z, RAIL_Z)):
         add_box("Rail%d" % j, (rl, 0.08, 0.08), ((RAIL_X0 + RAIL_X1) / 2.0, RAIL_Y, z), accent, c_frame, cage)
     # Deck + ball-return lip.
+    hr = HARDWOOD_REPEATS_PER_M
     add_quad("Deck", [(DECK_X0, 0, -w), (RAMP_X0, 0, -w), (RAMP_X0, 0, w), (DECK_X0, 0, w)],
-             (0, 1, 0), deck, c_deck, cage, ((RAMP_X0 - DECK_X0), 2.0 * w))
+             (0, 1, 0), hardwood, c_deck, cage, ((RAMP_X0 - DECK_X0) * hr, 2.0 * w * hr))
     # Ball-return ramp: rises from the landing zone up to the back panel so the
     # ball comes down toward the shooter. The sim has the same plane
     # (SimGeometry.arcade ARCADE_RAMP_X0 / ARCADE_RAMP_H) and the TrayLip below
     # (ARCADE_LIP_X / ARCADE_LIP_H): a miss lands on it and rolls to the lip.
+    slope_len = math.hypot(CAGE_X1 - RAMP_X0, RAMP_TOP_Y)
     add_quad("Ramp", [(RAMP_X0, 0, -w), (CAGE_X1, RAMP_TOP_Y, -w), (CAGE_X1, RAMP_TOP_Y, w), (RAMP_X0, 0, w)],
-             (-1, 1, 0), ramp, c_deck, cage, (1.0, 2.0 * w))
+             (-1, 1, 0), hardwood, c_deck, cage, (slope_len * hr, 2.0 * w * hr))
     for j, z in enumerate((-w + 0.05, w - 0.05)):
-        # Low side curbs along the ramp so it reads as a channel.
-        rc = add_box("RampCurb%d" % j, (math.hypot(CAGE_X1 - RAMP_X0, RAMP_TOP_Y), 0.08, 0.08),
-                     ((RAMP_X0 + CAGE_X1) / 2.0, RAMP_TOP_Y / 2.0 + 0.04, z), accent, c_deck, cage)
+        # 18 cm side gutters along the ramp (design 32a; were 8 cm) so it reads as a channel.
+        rc = add_box("RampCurb%d" % j, (slope_len, FUNNEL["h"], 0.08),
+                     ((RAMP_X0 + CAGE_X1) / 2.0, RAMP_TOP_Y / 2.0 + FUNNEL["h"] / 2.0, z), accent, c_deck, cage)
         rc.rotation_euler = (0.0, -math.atan2(RAMP_TOP_Y, CAGE_X1 - RAMP_X0), 0.0)
-        add_box("DeckCurb%d" % j, (RAMP_X0 - DECK_X0, 0.08, 0.08),
-                ((DECK_X0 + RAMP_X0) / 2.0, 0.04, z), accent, c_deck, cage)
+    # The deck's gutters funnel in to the gate (DeckFunnel / DeckFunnelFill),
+    # and the ball gate stands across the lane — both in the sim too.
+    add_funnel(c_deck, cage, accent, funnel_fill)
+    add_gate(c_deck, cage, gate_frame, mesh_side)
     add_box("TrayLip", (0.06, 0.45, 2.0 * w), (DECK_X0, 0.225, 0.0), lip, c_deck, cage)
     # Return arrows down the centre lane (DeckArrow00 at the top of the ramp,
     # numbered toward the shooter): decals a few mm above the surface, the ones
@@ -459,6 +586,10 @@ def build():
     # ---- Arcade hall around the cage --------------------------------------
     hw = HALL_HALF_W
     _hall_lights(c_lights, cage, bulb, metal_dark)
+    add_ceiling_lights(c_lights, cage, ceiling_bulb, ceiling_wire)
+    # The dark runner rug along the back row of cabinets (design 32a).
+    add_quad("HallRug", [(9.5, 0.004, -7.6), (11.2, 0.004, -7.6), (11.2, 0.004, 7.6), (9.5, 0.004, 7.6)],
+             (0, 1, 0), rug, c_hall, cage, (1.0, 15.2))
     add_quad("HallFloor", [(HALL_X0, -0.02, -hw), (HALL_X1, -0.02, -hw), (HALL_X1, -0.02, hw), (HALL_X0, -0.02, hw)],
              (0, 1, 0), carpet, c_hall, cage, ((HALL_X1 - HALL_X0) * 0.6, 2.0 * hw * 0.6))
     ys = HALL_WALL_SPLIT

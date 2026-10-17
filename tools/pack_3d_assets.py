@@ -86,7 +86,7 @@ def geometry_md() -> str:
     r_rim = float(gd_const(sc, "R_RIM"))
     r_ball = float(gd_const(sc, "R_BALL"))
     rows = [
-        ("Arcade cage", cage_dist, rim_e, 0.61, 0.76, "mesh walls z ±1.26, front lip x −1.8, back x 4.4, roof 3.9; return ramp under the hoop; no prop boxes"),
+        ("Arcade cage", cage_dist, rim_e, 0.61, 0.76, "mesh walls z ±1.26 (the deck funnels to ±0.85 at the gate, x 1.25), front x −1.8, the ball gate at x 1.25 (0.6 tall) is the lip, back x 4.31 (the foam's peaks), roof 3.9; return ramp under the hoop; no prop boxes"),
         ("Beach", beach_dist, beach_e, half_w, 1.05, "fence x −11.2…5.7, z ±8.6; in-ground pole r 0.06 at +0.3 behind the board; nylon net"),
         ("City court", city_dist, city_e, half_w, 1.05, "same fence and pole; chain net; prop boxes: one floor speaker (x 4.32–4.78, z −1.75 ±0.26, 0.92 tall) and the tabletop scoreboard (x 5.20–5.65, z 1.45 ±0.38, 0.56 tall)"),
         ("Park", park_dist, park_e, 0.70, 1.05, "a split-rail fence behind the hoop at x 6.20 and soft snow banks at x −7.0 / z ±6.0 (one restitution 0.3); in-ground pole r 0.07 at +0.17; nylon net; prop box: the snow drift at the pole's foot (x 4.05–4.50, z ±0.40, 0.18 tall)"),

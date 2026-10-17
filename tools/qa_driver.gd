@@ -436,6 +436,17 @@ func _run_hud() -> void:
 	# the rim, snapped through their 1.1 s life.
 	await _pop_snaps("_court", "hud_pop")
 	await _ramp_snaps()
+	# The ball gate and the deck funnel up close (design 32a): the camera
+	# parked beside the gate, then put back.
+	var gcam: Camera3D = get_viewport().get_camera_3d()
+	if gcam != null:
+		var was := gcam.global_transform
+		gcam.global_position = Vector3(3.6, 1.3, 0.9)
+		gcam.look_at(Vector3(1.25, 0.3, 0.0))
+		await _sleep(0.3)
+		await _snap("cage_gate")
+		gcam.global_transform = was
+		await _sleep(0.2)
 	var pause: Button = get_tree().root.find_child("PauseButton", true, false)
 	if pause != null:
 		var c := (pause.global_position + pause.size / 2.0) * 0.5

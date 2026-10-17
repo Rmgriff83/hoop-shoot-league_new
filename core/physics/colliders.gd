@@ -180,12 +180,26 @@ static func wall_contact(p: SimVec3, geo: SimGeometry) -> Contact:
 	depth = geo.wall_x_min + r - p.x
 	if depth > 0.0 and (best == null or depth > best.depth):
 		best = Contact.new(KIND_WALL, depth, 1.0, 0.0, 0.0, geo.wall_x_min, p.y, p.z)
-	depth = p.z + r - geo.wall_z_max
-	if depth > 0.0 and (best == null or depth > best.depth):
-		best = Contact.new(KIND_WALL, depth, 0.0, 0.0, -1.0, p.x, p.y, geo.wall_z_max)
-	depth = geo.wall_z_min + r - p.z
-	if depth > 0.0 and (best == null or depth > best.depth):
-		best = Contact.new(KIND_WALL, depth, 0.0, 0.0, 1.0, p.x, p.y, geo.wall_z_min)
+	if geo.has_funnel() and p.x < geo.funnel_x1:
+		# The deck funnel (SimGeometry.half_w_at): the side bound is the
+		# gutters' curve z = ±h(x); the inward normal leans up the lane by the
+		# slant and the depth is measured along it.
+		var hz := geo.half_w_at(p.x)
+		var sl := geo.half_w_slope(p.x)
+		var inv := 1.0 / sqrt(1.0 + sl * sl)
+		depth = (p.z + r - hz) * inv
+		if depth > 0.0 and (best == null or depth > best.depth):
+			best = Contact.new(KIND_WALL, depth, sl * inv, 0.0, -inv, p.x, p.y, hz)
+		depth = (r - p.z - hz) * inv
+		if depth > 0.0 and (best == null or depth > best.depth):
+			best = Contact.new(KIND_WALL, depth, sl * inv, 0.0, inv, p.x, p.y, -hz)
+	else:
+		depth = p.z + r - geo.wall_z_max
+		if depth > 0.0 and (best == null or depth > best.depth):
+			best = Contact.new(KIND_WALL, depth, 0.0, 0.0, -1.0, p.x, p.y, geo.wall_z_max)
+		depth = geo.wall_z_min + r - p.z
+		if depth > 0.0 and (best == null or depth > best.depth):
+			best = Contact.new(KIND_WALL, depth, 0.0, 0.0, 1.0, p.x, p.y, geo.wall_z_min)
 	depth = p.y + r - geo.wall_y_max
 	if depth > 0.0 and (best == null or depth > best.depth):
 		best = Contact.new(KIND_WALL, depth, 0.0, -1.0, 0.0, p.x, geo.wall_y_max, p.z)

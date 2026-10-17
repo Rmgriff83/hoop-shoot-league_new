@@ -23,6 +23,23 @@ func run(t) -> void:
 	t.eq(_count(cage, "BackPad"), 1, "the egg-crate foam over the back panel")
 	t.eq(_count(cage, "LeagueHousing"), 1, "the ribbon board's housing on the foam")
 	t.eq(_count(cage, "DeckArrow"), 2 * ArcadeFx.ARROW_STEPS, "two rows of %d return arrows" % ArcadeFx.ARROW_STEPS)
+	# The production pass (design "Arcade Cage Concept" 32a, 2026-10-16): the
+	# deck funnel and the ball gate, the hardwood, the rug, the ceiling lights.
+	t.eq(ArcadeFx.ARROW_STEPS, 7, "seven arrow steps: the two past the gate went")
+	for n in ["DeckFunnel", "DeckFunnelFill", "GateFrame", "GateMesh0", "GateMesh1", "HallRug", "HallLights", "HallLightWire"]:
+		t.ok(cage.find_child(n, true, false) is MeshInstance3D, "the cage glb has %s" % n)
+	var gate: Node3D = cage.find_child("BallGate", true, false)
+	t.ok(gate != null and absf(gate.position.x - 1.25) < 1e-6, "the gate stands at x 1.25 (the sim's lip)")
+	t.eq(_count(cage, "DeckCurb"), 0, "the straight deck curbs are gone (the funnel replaces them)")
+	var rc: MeshInstance3D = cage.find_child("RampCurb0", true, false)
+	t.ok(rc != null and rc.get_aabb().size.y > 0.15, "the ramp gutters are 18 cm tall")
+	var deck_m := (cage.find_child("Deck", true, false) as MeshInstance3D).mesh.surface_get_material(0)
+	var ramp_m := (cage.find_child("Ramp", true, false) as MeshInstance3D).mesh.surface_get_material(0)
+	t.ok(deck_m != null and deck_m == ramp_m, "the deck and the ramp share the hardwood")
+	for gone in ["cage_deck.png", "cage_ramp.png", "cage_mesh.png"]:
+		t.ok(not FileAccess.file_exists("res://assets/textures/" + gone), "%s is gone (the hardwood and the slate / galvanised mesh replaced it)" % gone)
+	for kept in ["cage_hardwood.png", "cage_mesh_slate.png", "cage_mesh_galv.png", "cage_rug.png", "cage_pad.png", "cage_arrow.png"]:
+		t.ok(FileAccess.file_exists("res://assets/textures/" + kept), "%s ships" % kept)
 	# The front console (2026-10-04) came out again on 2026-10-07: nothing of it in the glb.
 	t.eq(cage.find_child("ConsoleBody", true, false), null, "no console in the cage glb")
 	var lface: MeshInstance3D = cage.find_child("LeagueFace", true, false)
@@ -45,6 +62,7 @@ func run(t) -> void:
 	# String lights replaced the HOOP SHOOT sign.
 	t.eq(_count(cage, "Marquee", false), 0, "the HOOP SHOOT sign is gone")
 	t.ok(afx.bulb_count() > 20, "the hall's runner lights are bound (%d bulbs)" % afx.bulb_count())
+	t.ok((cage.find_child("HallLights", true, false) as MeshInstance3D).material_override is StandardMaterial3D, "the ceiling string lights glow unshaded (one mesh, no chase)")
 	t.close(afx._bulb_mat.get_shader_parameter("count"), float(afx.bulb_count()), 1e-6,
 		"the shader knows how many are in the loop")
 	t.ok(afx._bulb_mat != null, "the bulbs share ONE material so they still batch")

@@ -21,7 +21,7 @@ const FLARE_S := 0.9
 ## CHASE_PASSES sweeps, each step flashing CHASE_HOLD and the next starting
 ## CHASE_STAGGER later.
 const ARROW_SHADER := preload("res://game/court/deck_arrow.gdshader")
-const ARROW_STEPS := 9
+const ARROW_STEPS := 7   # the two past the ball gate went (design 32a, 2026-10-16)
 const CHASE_STAGGER := 0.11
 const CHASE_HOLD := 0.3
 const CHASE_GAP := 0.3
@@ -83,6 +83,18 @@ func setup(arena: Node) -> bool:
 	if _bulb_mat != null:
 		_bulb_mat.set_shader_parameter("count", float(bulbs))
 	_bulbs = bulbs
+	# The ceiling string lights (HallLights, one mesh along the hall's back
+	# wall / ceiling corner, design 32a): a steady warm glow, no chase.
+	var ceil_lights := arena.find_child("HallLights", true, false) as MeshInstance3D
+	if ceil_lights != null:
+		var lm := StandardMaterial3D.new()
+		lm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		lm.albedo_color = Color(1.0, 0.9, 0.69)
+		lm.emission_enabled = true
+		lm.emission = Color(1.0, 0.9, 0.69)
+		lm.emission_energy_multiplier = 0.8
+		ceil_lights.material_override = lm
+		ceil_lights.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 	# The return arrows: the step is the ordinal in the name (00 is the top of
 	# the ramp, the last step is at the shooter's feet; L/R are its two rows).
 	var arrows: Array[MeshInstance3D] = []

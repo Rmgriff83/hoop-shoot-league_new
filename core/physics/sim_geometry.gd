@@ -94,6 +94,15 @@ var floor_log_impact: float = 0.0
 ## shooter. -INF = none.
 var lip_x: float = -INF
 var lip_h: float = 0.0
+## The deck funnel (build_cage.py DeckFunnel, design "Arcade Cage Concept"
+## 32a, 2026-10-16): in front of the ramp foot (funnel_x1) the red gutters
+## curve in from the full width (wall_z_max) to funnel_half_w at the gate
+## (funnel_x0) — narrow + (full − narrow)·t^funnel_pow — and run straight
+## from there. The lane's z bound follows them (half_w_at). 0 = no funnel.
+var funnel_x0: float = 0.0
+var funnel_x1: float = 0.0
+var funnel_half_w: float = 0.0
+var funnel_pow: float = 2.2
 ## Solid props on the court: axis-aligned boxes the ball bounces off (the
 ## city's floor speaker and tabletop scoreboard). Each is a Dictionary
 ## {x0, x1, y0, y1, z0, z1} in sim metres (scalars only — no Vector3 under
@@ -118,10 +127,18 @@ const ARCADE_RAMP_H := 0.9
 const ARCADE_RAMP_E := 0.35
 const ARCADE_DECK_ROLL_DECEL := 2.0
 const ARCADE_FLOOR_LOG_IMPACT := 0.35
-## The tray lip (build_cage.py DECK_X0 / TrayLip 0.45 tall) catches the
-## roll-out at the shooter's feet.
-const ARCADE_LIP_X := -0.4
-const ARCADE_LIP_H := 0.45
+## The ball gate across the deck (build_cage.py BallGate, 2026-10-16: two
+## slate chain-link leaves 0.6 tall at x 1.25) is the sim's lip: a roll-out
+## stops behind it, short of the shooter. (Before: the tray lip at the deck's
+## front edge, x −0.4, 0.45 tall.)
+const ARCADE_LIP_X := 1.25
+const ARCADE_LIP_H := 0.6
+## The deck funnel (DeckFunnel): ±0.85 at the gate, the full ±1.26 at the ramp
+## foot, the curve between hugging the narrow side first.
+const ARCADE_FUNNEL_X0 := 1.25
+const ARCADE_FUNNEL_X1 := ARCADE_RAMP_X0
+const ARCADE_FUNNEL_HALF_W := 0.85
+const ARCADE_FUNNEL_POW := 2.2
 const ARCADE_RIM_E := 0.38
 const ARCADE_RIM_MU := 0.08
 const ARCADE_RIM_SPIN_DECAY := 0.70
@@ -226,6 +243,10 @@ func with_pose(dist: float, lateral: float) -> SimGeometry:
 	g.floor_log_impact = floor_log_impact
 	g.lip_x = lip_x
 	g.lip_h = lip_h
+	g.funnel_x0 = funnel_x0
+	g.funnel_x1 = funnel_x1
+	g.funnel_half_w = funnel_half_w
+	g.funnel_pow = funnel_pow
 	g.props = props.duplicate(true)
 	g.prop_e = prop_e
 	return g
@@ -251,6 +272,30 @@ func with_vortex(on: bool) -> SimGeometry:
 ## Does this geometry have an enclosure at all?
 func has_walls() -> bool:
 	return wall_x_max < INF or wall_x_min > -INF or wall_z_max < INF or wall_z_min > -INF
+
+
+func has_funnel() -> bool:
+	return funnel_half_w > 0.0 and funnel_x1 > funnel_x0
+
+
+## The lane's half width at x: the full wall beyond the ramp foot, the
+## gutters' curve across the deck, funnel_half_w from the gate forward.
+func half_w_at(x: float) -> float:
+	if not has_funnel() or x >= funnel_x1:
+		return wall_z_max
+	if x <= funnel_x0:
+		return funnel_half_w
+	var t := (x - funnel_x0) / (funnel_x1 - funnel_x0)
+	return funnel_half_w + (wall_z_max - funnel_half_w) * pow(t, funnel_pow)
+
+
+## d(half width)/dx at x — the gutters' slant, for the contact normal.
+func half_w_slope(x: float) -> float:
+	if not has_funnel() or x >= funnel_x1 or x <= funnel_x0:
+		return 0.0
+	var span := funnel_x1 - funnel_x0
+	var t := (x - funnel_x0) / span
+	return (wall_z_max - funnel_half_w) * funnel_pow * pow(t, funnel_pow - 1.0) / span
 
 
 func has_ramp() -> bool:
@@ -309,6 +354,10 @@ static func arcade(dist := 2.6) -> SimGeometry:
 	g.floor_log_impact = ARCADE_FLOOR_LOG_IMPACT
 	g.lip_x = ARCADE_LIP_X
 	g.lip_h = ARCADE_LIP_H
+	g.funnel_x0 = ARCADE_FUNNEL_X0
+	g.funnel_x1 = ARCADE_FUNNEL_X1
+	g.funnel_half_w = ARCADE_FUNNEL_HALF_W
+	g.funnel_pow = ARCADE_FUNNEL_POW
 	return g
 
 

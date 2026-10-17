@@ -2,19 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bppnl8vfptg7i"
-path="res://.godot/imported/cage_cage_mesh.png-959dd9e1a990fb9c523663f08c92079f.ctex"
+uid="uid://c32kbdrytxhkf"
+path="res://.godot/imported/cage_rug.png-93c249e0d776403a493c7c2fb80febe0.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "0cf72ec2cffa5dc01e5c18d077d260c1"
 }
 
 [deps]
 
-source_file="res://assets/arena/cage/cage_cage_mesh.png"
-dest_files=["res://.godot/imported/cage_cage_mesh.png-959dd9e1a990fb9c523663f08c92079f.ctex"]
+source_file="res://assets/textures/cage_rug.png"
+dest_files=["res://.godot/imported/cage_rug.png-93c249e0d776403a493c7c2fb80febe0.ctex"]
 
 [params]
 
@@ -26,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""

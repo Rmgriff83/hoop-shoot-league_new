@@ -12,6 +12,7 @@ func run(t) -> void:
 	_rolls_down(t)
 	_deck_roll_out(t)
 	_the_lip(t)
+	_the_funnel(t)
 	_short_miss_unchanged_elsewhere(t)
 
 
@@ -75,26 +76,67 @@ func _rolls_down(t) -> void:
 	t.ok(Colliders.is_ramp(c) and not Colliders.is_ramp(Colliders.Contact.new(Colliders.KIND_FLOOR, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 0.0)), "a leaning floor normal is the ramp")
 
 
-## The tray lip at the shooter's feet stops a roll-out.
+## The ball gate across the deck (design 32a, 2026-10-16: x 1.25, 0.6 tall)
+## is the sim's lip: a roll-out stops behind it, short of the shooter.
 func _the_lip(t) -> void:
 	var g := SimGeometry.arcade()
-	t.ok(g.lip_x == -0.4 and g.lip_h == 0.45, "the arcade carries the lip (x −0.4, 0.45 tall)")
+	t.ok(g.lip_x == 1.25 and g.lip_h == 0.6, "the arcade's lip is the gate (x 1.25, 0.6 tall)")
 	t.ok(Colliders.lip_contact(SimVec3.new(0.0, 0.2, 0.0), SimGeometry.regulation()) == null, "regulation has none")
-	var face := Colliders.lip_contact(SimVec3.new(-0.3, 0.2, 0.0), g)
-	t.ok(face != null and face.kind == Colliders.KIND_WALL and face.nx == 1.0 and absf(face.depth - 0.021) < 1e-9, "a ball against its face is pushed back (+x)")
-	var top := Colliders.lip_contact(SimVec3.new(-0.43, 0.55, 0.0), g)
-	t.ok(top != null and top.ny == 1.0, "a ball on its top edge is pushed up")
-	t.ok(Colliders.lip_contact(SimVec3.new(0.5, 0.2, 0.0), g) == null, "clear of it on the deck")
-	# A slow roll toward the shooter stops at the lip and rests in front of it.
-	var s := ShotSim.create_shot({"angle_deg": 0.0, "speed": 1.5, "rx": 1.0, "ry": SimConstants.R_BALL + 0.001, "rz": 0.0, "bx": -1.0, "bz": 0.0}, g)
+	var face := Colliders.lip_contact(SimVec3.new(1.35, 0.2, 0.0), g)
+	t.ok(face != null and face.kind == Colliders.KIND_WALL and face.nx == 1.0 and absf(face.depth - 0.021) < 1e-9, "a ball against the gate is pushed back (+x)")
+	var top := Colliders.lip_contact(SimVec3.new(1.22, 0.70, 0.0), g)
+	t.ok(top != null and top.ny == 1.0, "a ball on its top rail is pushed up")
+	t.ok(Colliders.lip_contact(SimVec3.new(2.0, 0.2, 0.0), g) == null, "clear of it up the deck")
+	# A roll toward the shooter stops at the gate and rests behind it.
+	var s := ShotSim.create_shot({"angle_deg": 0.0, "speed": 3.0, "rx": 2.5, "ry": SimConstants.R_BALL + 0.001, "rz": 0.0, "bx": -1.0, "bz": 0.0}, g)
 	var min_x := INF
 	for i in int(SimConstants.MAX_SHOT_TIME / SimConstants.SIM_DT) + 1:
 		if s.settled:
 			break
 		ShotSim.step_shot(s)
 		min_x = minf(min_x, s.pos.x)
-	t.ok(s.settled and min_x > g.lip_x + SimConstants.R_BALL - 0.01, "never through the lip (min x %.3f)" % min_x)
-	t.ok(s.pos.x < 1.0, "…it rolled toward the tray (x %.2f)" % s.pos.x)
+	t.ok(s.settled and min_x > g.lip_x + SimConstants.R_BALL - 0.01, "never through the gate (min x %.3f)" % min_x)
+	t.ok(s.pos.x < 2.5, "…it rolled toward the gate (x %.2f)" % s.pos.x)
+
+
+## The deck funnel: the gutters curve in from the ramp foot to the gate and
+## the sim's side bound follows them, so a ball rolling out near a wall is
+## steered into the lane.
+func _the_funnel(t) -> void:
+	var g := SimGeometry.arcade()
+	t.ok(g.has_funnel() and g.funnel_x0 == 1.25 and g.funnel_x1 == 3.5 and absf(g.funnel_half_w - 0.85) < 1e-12, "the deck funnel: ±0.85 at the gate, full width at the ramp foot")
+	t.close(g.half_w_at(3.5), 1.26, 1e-9, "full width at the foot")
+	t.close(g.half_w_at(4.0), 1.26, 1e-9, "…and up the ramp")
+	t.close(g.half_w_at(1.25), 0.85, 1e-9, "the lane at the gate")
+	t.close(g.half_w_at(0.0), 0.85, 1e-9, "…straight from there")
+	var mid := g.half_w_at(2.375)
+	t.ok(mid > 0.85 and mid < 1.26 and mid < (0.85 + 1.26) / 2.0, "between: the curve hugs the narrow side first (%.3f)" % mid)
+	t.ok(g.half_w_slope(2.375) > 0.0 and g.half_w_slope(1.0) == 0.0 and g.half_w_slope(3.6) == 0.0, "the slant is only on the curve")
+	t.ok(not SimGeometry.regulation().has_funnel() and not SimGeometry.city().has_funnel() and not SimGeometry.park().has_funnel(), "nothing of it elsewhere")
+	t.ok(g.with_pose(3.2, 0.3).has_funnel(), "…and the moving board keeps it")
+	var c := Colliders.wall_contact(SimVec3.new(2.0, SimConstants.R_BALL, 1.15), g)
+	t.ok(c != null and c.kind == Colliders.KIND_WALL and c.nz < 0.0 and c.nx > 0.0, "a ball at z 1.15 on the deck meets the gutter: pushed inward, and up the lane by the slant")
+	var c2 := Colliders.wall_contact(SimVec3.new(2.0, SimConstants.R_BALL, -1.15), g)
+	t.ok(c2 != null and c2.nz > 0.0 and c2.nx > 0.0, "…the other side mirrors it")
+	t.ok(Colliders.wall_contact(SimVec3.new(2.0, SimConstants.R_BALL, 0.5), g) == null, "…the lane itself is clear")
+	t.ok(Colliders.wall_contact(SimVec3.new(4.0, 0.5, 1.1), g) == null, "…and the ramp keeps its full width")
+	# A roll-out from the ramp foot beside the wall (clear of it there) meets
+	# the curving gutter on the way: it is turned inward, never passes through
+	# it, and rests inside the lane. (How far it rolls is the deck's floor
+	# friction, not the funnel's business.)
+	var s := ShotSim.create_shot({"angle_deg": 0.0, "speed": 4.0, "backspin": 0.0, "rx": 3.4, "ry": SimConstants.R_BALL + 0.001, "rz": 1.05, "bx": -1.0, "bz": 0.0}, g)
+	var worst := -INF
+	var turned := false
+	for i in int(SimConstants.MAX_SHOT_TIME / SimConstants.SIM_DT) + 1:
+		if s.settled:
+			break
+		ShotSim.step_shot(s)
+		worst = maxf(worst, absf(s.pos.z) + SimConstants.R_BALL - g.half_w_at(s.pos.x))
+		if s.vel.z < -0.3:
+			turned = true
+	t.ok(turned, "…the gutter turns it inward (toward the lane's centre)")
+	t.ok(worst < 0.01, "…and it never passes through the gutter (worst overlap %.4f m)" % worst)
+	t.ok(s.settled and absf(s.pos.z) + SimConstants.R_BALL <= g.half_w_at(s.pos.x) + 1e-3 and absf(s.pos.z) < 1.05, "…resting inside the lane, nearer the centre than it started (x %.2f, z %.2f)" % [s.pos.x, s.pos.z])
 
 
 ## A ball rolling on the deck slows down and stops short of the ramp.
