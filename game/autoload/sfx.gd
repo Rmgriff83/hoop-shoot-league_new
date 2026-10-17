@@ -318,6 +318,34 @@ func track_id() -> String:
 	return _track_id
 
 
+# ---- level music (2026-10-16): App.LEVEL_MUSIC on the track channel --------------
+
+const LEVEL_TRACK_ID := "music"
+var _music_rng := RandomNumberGenerator.new()
+
+
+## Start a level track beside the ambience: a random pick from the shared
+## playlist (or `index`), looping; a repeat tap draws a fresh one. Leaving
+## the level (stop_ambience) drops it like the old radios.
+func start_level_music(index := -1) -> void:
+	var tracks: Array = App.LEVEL_MUSIC["tracks"]
+	if tracks.is_empty():
+		return
+	if index < 0:
+		_music_rng.randomize()
+		index = _music_rng.randi_range(0, tracks.size() - 1)
+	# play_track skips a same-id call, so the id carries the pick.
+	play_track("%s%d" % [LEVEL_TRACK_ID, index % tracks.size()], str(tracks[index % tracks.size()]), float(App.LEVEL_MUSIC["gain_db"]))
+
+
+func stop_level_music() -> void:
+	stop_track()
+
+
+func level_music_on() -> bool:
+	return _track_id.begins_with(LEVEL_TRACK_ID)
+
+
 ## The area whose layers are playing ("" while fading out or silent).
 func ambience_id() -> String:
 	return "" if _amb_stopping else _amb_id

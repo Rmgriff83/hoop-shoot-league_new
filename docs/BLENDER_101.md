@@ -653,8 +653,9 @@ required now. The score lives on the HUD. The script builds the board, arm and y
 `add_gym_rim.apply()` for the neck, spring box, flange and hooks, so the rim is identical to the
 classic's. The beach mode mandates this hoop regardless of what is selected in the shop.
 
-**The ground scoreboard.** The beach's score lives on a little LED cabinet on the sand beside
-the pole (`ScoreboardRig` → `ScoreboardBase`/`ScoreboardBody`/`LedFace`/`ScoreboardTrim`). An
+**The ground scoreboard.** The beach's score lives on a little LED cabinet on the wall's cap,
+left of the pole line (`ScoreboardRig` → `ScoreboardBody`/`LedFace`/`ScoreboardTrim`; it sat on
+the boombox until 2026-10-16, when the boombox came off). An
 arena may host a `LedFace` (and `BoardBand`) just like a hoop can; Godot paints it with the same
 48 × 8 matrix. `ScoreboardRig` is the animation handle: the shipped `ScorePop` NLA track hops and
 squashes it, and the game plays it on every make (`CourtGeometry.play_arena("ScorePop")`). Add
@@ -716,18 +717,12 @@ and takes every message in the time area, and `ScoreHome` / `ScoreVisitor` /
 `game/view/scoreboard.gd`, `Scoreboard extends LedBoard`, bound by
 `CourtGeometry` as the city's `led`/`info`; the screens tick
 `CourtGeometry.set_clock/set_visitor/set_period`; `tests/test_scoreboard.gd`;
-`--qa-city` snaps `city_scoreboard`; the ball bounces off it and the
-speaker: `SimGeometry.city()` carries their boxes as `props`,
-`Colliders.prop_contact`, kind `prop`, `prop_e 0.5`, the board's thud —
-move a prop in Blender and in `city()` together; `tests/test_props.gd`), one floor speaker left of the hoop's base as the city's radio (a pair until 2026-10-05)
-(`Speakers`, `SpeakerLed`, `ArenaSet.interactables`; polished 2026-10-03 to
-Ross's walnut-bookshelf reference: a veneered cabinet (`city_speaker_wood.png`)
-whose lip frames a black textured baffle (`city_speaker_baffle.png`), a big
-woofer low and centred with a screwed flange, rubber surround, sunk cone and
-dome cap, a small mid upper-left, a tweeter in a square plate upper-right
-with a gold badge under it — `spk_driver()` in `build_city.py`; `--qa-city`
-snaps `city_speakers` up close; the lo-fi playlist is
-Ross's to fill — `assets/music/` placeholders for now), a 14.6 × 15.2 m slab whose lines
+`--qa-city` snaps `city_scoreboard`; the ball bounces off it:
+`SimGeometry.city()` carries its box as a `prop`, `Colliders.prop_contact`,
+kind `prop`, `prop_e 0.5`, the board's thud — move it in Blender and in
+`city()` together; `tests/test_props.gd`. The floor speaker that stood left
+of the hoop's base as the city's radio came out on 2026-10-16, box and all —
+level music is the HUD's note now), a 14.6 × 15.2 m slab whose lines
 `gen_city_textures.lua` paints with the rim at x 3.625 and the baseline at
 4.6, then, behind the back fence, kerb → sidewalk → a two-lane road
 (`STREET_X 11.1`, an empty `StreetRig` on its centre line for
@@ -865,7 +860,7 @@ laid out from the reference photo. Three scripts and a layout file:
   2562 triangles, the small one 945; the big aspen that doubled up behind
   the backboard from the key is gone) — stands
   the parked car from the vehicle pool with a snow cap, hangs
-  one points mesh of 500 flakes under `park_snow.gdshader` (all motion in
+  one points mesh of 300 flakes (500 until 2026-10-16) under `park_snow.gdshader` (all motion in
   the vertex shader, the box follows the camera) and puts
   `park_sky.gdshader` on the dome.
 - `tools/blender/build_park_hoop.py` (`-- --force`) → `assets/hoops/park/hoop.glb`:
@@ -962,10 +957,11 @@ and settle, on the same `bird.gdshader`. `spawn_pelican()` /
 
 ## 18. Interactable props (2026-09-19)
 
-The beach boombox (`Boombox` + flat sibling parts `BoomboxFace/Speaker/Ring/Deck/Led/Antenna`
-on the wall ledge, with the ground scoreboard rig on top) is tappable: see
+No area ships a tappable prop since 2026-10-16: the beach boombox (the radio) and the city's
+floor speaker came out when level music moved to the HUD's bottom-left note (`App.LEVEL_MUSIC`,
+`Sfx.start_level_music`, remembered as `musicOn`). The framework stays: see
 `docs/INTERACTABLES.md`. A prop only needs a stable node name in the build script; the tap box
-comes from its mesh bounds. Keep the little `BoomboxLed` — it is the radio's only indicator.
+comes from its mesh bounds; give the radio kind an LED part for its indicator.
 
 ## 19. Every other ball
 
@@ -1397,7 +1393,7 @@ boards, the marquee bulbs, the runner lights) is untouched. `build_cage.py`:
 ## 31. The beach's production pass: the skins, the 3D palms, the umbrellas (2026-10-16)
 
 Ross's "Beach Concept" 34a loads the production beach.glb and layers four changes on it; the
-hoop, the slab's painted lines, the boombox and its LED reader, the ocean / tide / foam, the
+hoop, the slab's painted lines, the LED reader (the boombox under it came off later that day), the ocean / tide / foam, the
 sky cylinder, the towels and cooler and the sky life stay as they were.
 
 - **Skins** (`gen_beach_textures.lua`): `beach_concrete.png` is board-formed — six ~21 px

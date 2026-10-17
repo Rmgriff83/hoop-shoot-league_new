@@ -16,6 +16,11 @@ var badge := false:
 	set(v):
 		badge = v
 		queue_redraw()
+## The "music" kind's state: the note alone while true, a strike bar over it while false.
+var active := true:
+	set(v):
+		active = v
+		queue_redraw()
 
 
 func _init(p_kind := "locker") -> void:
@@ -53,6 +58,12 @@ func _draw() -> void:
 				var at := Vector2(c.x - 9 + i * 12, c.y - 10)
 				draw_rect(Rect2(at + Vector2(2, 2), Vector2(6, 20)), RetroTheme.SCENE_OUTLINE)
 				draw_rect(Rect2(at, Vector2(6, 20)), COLOR)
+		"music":
+			_note(c + Vector2(2, 2), RetroTheme.SCENE_OUTLINE)
+			_note(c, COLOR)
+			if not active:
+				draw_line(c + Vector2(-13, 13), c + Vector2(13, -13), RetroTheme.SCENE_OUTLINE, 6.0)
+				draw_line(c + Vector2(-13, 13), c + Vector2(13, -13), RetroTheme.LIGHT["gold"], 3.0)
 		_:
 			_icon("icon_ball", c, Vector2(22, 22), 0.0)
 	if badge:
@@ -70,3 +81,11 @@ func _icon(name_: String, c: Vector2, px: Vector2, shadow: float) -> void:
 	if shadow > 0.0:
 		draw_texture_rect(t, Rect2(at + Vector2.ONE * shadow, px), false, RetroTheme.SCENE_OUTLINE)
 	draw_texture_rect(t, Rect2(at, px), false)
+
+
+## An eighth note: a filled head, a stem up its right side, a flag off the top.
+func _note(c: Vector2, col: Color) -> void:
+	draw_circle(c + Vector2(-5, 9), 6.0, col)
+	draw_rect(Rect2(c + Vector2(-1, -14), Vector2(4, 24)), col)
+	draw_rect(Rect2(c + Vector2(3, -14), Vector2(8, 4)), col)
+	draw_rect(Rect2(c + Vector2(7, -11), Vector2(4, 8)), col)

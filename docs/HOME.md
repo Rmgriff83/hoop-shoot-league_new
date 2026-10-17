@@ -327,7 +327,10 @@ and gets only HOME.
 
 `game/view/hud.gd` (`Hud`, a CanvasLayer over the live game; copy in
 `game/view/hud_copy.gd`, `tests/test_hud.gd`): the top row — PAUSE
-(`IconButton("pause")`), the clock card (stopwatch + seconds, gold in the last
+(`IconButton("pause")`; and since 2026-10-16 the MUSIC note, `IconButton("music")`, at the
+bottom-left (36, 1192) on every court: a tap toggles the shared level playlist
+(`App.LEVEL_MUSIC` → `Sfx.start_level_music`, a random track, looping, beside the ambience),
+struck through in gold while off; remembered as the `musicOn` setting, off on a fresh install), the clock card (stopwatch + seconds, gold in the last
 ten; `OT1 12.3` in overtime) or the teal PRACTICE card, the orange SCORE card
 with the springy count-up and, in a trial, the gold BEST chip (`NEW BEST`
 once you pass it) — and the **toast chips** (designs 4a / 5a, 2026-10-14;

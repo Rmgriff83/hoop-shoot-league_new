@@ -432,6 +432,17 @@ func _run_hud() -> void:
 	await _sleep(1.6)
 	await _snap("hud_live")
 	print("QA hud: " + _render_stats())
+	# The level music note (bottom-left): on, then off again.
+	var note: Button = get_tree().root.find_child("MusicButton", true, false)
+	if note != null:
+		note.pressed.emit()
+	await _sleep(0.3)
+	print("QA hud: music on = %s, track %s" % [str(App.music_on), Sfx.track_id()])
+	await _snap("hud_music")
+	if note != null:
+		note.pressed.emit()
+	await _sleep(0.3)
+	print("QA hud: music off = %s, track '%s'" % [str(not App.music_on), Sfx.track_id()])
 	# The TIME! chip (design 5a), shown by hand: the small toast at the top.
 	var sc_t := get_tree().current_scene
 	if sc_t != null and "_hud" in sc_t:

@@ -35,7 +35,7 @@ title_stars = 3
 top_wash = 0.6
 wall_sound = false
 snow = true
-snow_amount = 500
+snow_amount = 300
 sky = "partly_cloudy"
 parked_cars = Array[Dictionary]([{
 "model": "compact_yellow",

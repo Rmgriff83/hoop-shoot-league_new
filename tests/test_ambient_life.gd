@@ -244,7 +244,7 @@ func _city(t) -> void:
 	t.eq(_lights(city), 0, "midday: no spot or omni lights hung in the city (they lagged the phone)")
 	t.eq(_count(city, "LampHead"), 1, "the street lamps' heads are one mesh")
 	t.eq(_count(city, "LampGlow"), 1, "…and their bulb glows one (hidden at midday)")
-	for n in ["LaneDashes", "FenceWork", "LampPosts", "Roads", "Sidewalks", "SidewalksFar", "Kerbs", "SpeakerScrews", "SpeakerDrivers", "ScoreVents", "FloodRigs"]:
+	for n in ["LaneDashes", "FenceWork", "LampPosts", "Roads", "Sidewalks", "SidewalksFar", "Kerbs", "ScoreVents", "FloodRigs"]:
 		t.ok(city.find_child(n, true, false) is MeshInstance3D, "merged %s" % n)
 	t.ok(_count(city, "LaneDash") == 1 and _count(city, "FencePost") == 0 and _count(city, "ScoreVent") == 1, "the repeated pieces are gone as nodes")
 	var meshes := 0

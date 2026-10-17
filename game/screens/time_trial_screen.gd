@@ -55,6 +55,8 @@ func _ready() -> void:
 		Sfx.load_hoop_set(_hoop_set)  # the mode's hoop owns make/miss here
 	Sfx.rim_rigidity = base_geo.rim_rigidity()  # the iron rings to match how it bounces
 	Sfx.start_ambience(_arena_set)  # the area's background layers (a no-op if already playing)
+	if App.music_on:
+		Sfx.start_level_music()
 	Sfx.wall_sound = _arena_set.wall_sound if _arena_set != null else true
 	_court = CourtGeometry.new()
 	_court.name = "Court"
@@ -180,6 +182,7 @@ func _add_back_button() -> void:
 	layer.layer = 11
 	add_child(layer)
 	_add_pause_button(layer)
+	_add_music_button(layer)
 
 
 ## PAUSE (every mode): freezes the whole tree — sim, AI, clocks, animations —
@@ -204,6 +207,46 @@ func _add_pause_button(layer: CanvasLayer) -> void:
 		App.to_title()
 	)
 	add_child(_pause_layer)
+
+
+## MUSIC (every mode, 2026-10-16): the note at the bottom-left toggles the
+## shared level playlist (App.LEVEL_MUSIC on Sfx's track channel) and the
+## choice is remembered (App.music_on). It sits inside the flick input's
+## grab zone, but a Button takes the press before _unhandled_input sees it,
+## so a tap on the note never becomes a grab.
+const MUSIC_POS := Vector2(36, 1192)
+var _music_button: IconButton
+
+
+func _add_music_button(layer: CanvasLayer) -> void:
+	_music_button = IconButton.new("music")
+	_music_button.name = "MusicButton"
+	_music_button.position = MUSIC_POS
+	_music_button.active = App.music_on
+	_music_button.pressed.connect(toggle_music)
+	layer.add_child(_music_button)
+
+
+## The setting can change under a running screen (a cloud pull of the
+## settings part, App._on_save_pulled): keep the note and the channel on it.
+func _follow_music_setting() -> void:
+	if _music_button == null or _music_button.active == App.music_on:
+		return
+	_music_button.active = App.music_on
+	if App.music_on:
+		Sfx.start_level_music()
+	else:
+		Sfx.stop_level_music()
+
+
+func toggle_music() -> void:
+	App.set_music_on(not App.music_on)
+	if App.music_on:
+		Sfx.start_level_music()
+	else:
+		Sfx.stop_level_music()
+	if _music_button != null:
+		_music_button.active = App.music_on
 
 
 func pause_game() -> void:
@@ -786,6 +829,7 @@ const MAX_FRAME_DT := 0.05
 func _process(dt: float) -> void:
 	_step_rules(minf(dt, MAX_FRAME_DT))
 	_process_shuffle(dt)
+	_follow_music_setting()
 
 	# Board slide: TimeTrial swaps in a fresh geo instance each moving step —
 	# object identity is the cheap change signal.

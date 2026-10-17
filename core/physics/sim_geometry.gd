@@ -396,14 +396,11 @@ static func city(dist := CITY_DIST) -> SimGeometry:
 	g.pole_r = 0.06
 	g.pole_off = 0.3
 	g.pole_top = g.board_top + 0.05
-	# The props the ball can hit (2026-10-03): the floor speaker to the
-	# shooter's left of the pole's base and the tabletop scoreboard on the
-	# ground to its right, against the fence — the boxes build_city.py draws
-	# (Speakers at ENC_X1 − 1.15 / z −1.75, 0.46 × 0.92 × 0.52 — one cabinet
-	# since 2026-10-05;
-	# ReaderRig at ENC_X1 − 0.45 / z 1.45, plate + wedge 0.45 deep, 0.56 tall,
-	# 0.76 wide). Move them there and here together.
-	g.props.push_back(_box(4.32, 4.78, 0.0, 0.92, -1.75 - 0.26, -1.75 + 0.26))
+	# The prop the ball can hit (2026-10-03): the tabletop scoreboard on the
+	# ground to the shooter's right of the pole, against the fence — the box
+	# build_city.py draws (ReaderRig at ENC_X1 − 0.45 / z 1.45, plate + wedge
+	# 0.45 deep, 0.56 tall, 0.76 wide). Move it there and here together. The
+	# floor speaker to the left came off on 2026-10-16 (Ross), box and all.
 	g.props.push_back(_box(5.20, 5.65, 0.0, 0.56, 1.45 - 0.38, 1.45 + 0.38))
 	return g
 

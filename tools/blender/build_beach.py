@@ -463,43 +463,16 @@ def build():
         prig.rotation_euler = (0.0, 0.0, math.atan2(-z, x - 3.0) + (prnd.random() - 0.5) * 1.2)
 
     led_off = cage.mat_tex("Beach_LedOff", TEX("hoop_led_off.png"))
-    # An old-school boombox sits on the wall's ledge (left of the pole line); the
-    # reader board sits on top of it.
+    # The reader board stands on the wall's ledge, left of the pole line (the
+    # boombox it sat on came off on 2026-10-16: level music is the HUD's
+    # bottom-left icon now, no in-world radio).
     ledge_y = WALL_H + 0.06
-    bb_w, bb_h, bb_d = 0.70, 0.28, 0.22
-    bb_x, bb_z = ENC_X1 - 0.115, -0.72          # back edge just in front of the fence line
-    bb_body = cage.mat_flat("Boombox_Body", (44, 44, 48), roughness=0.7)
-    bb_face = cage.mat_flat("Boombox_Face", (96, 98, 104), roughness=0.8)
-    bb_grille = cage.mat_flat("Boombox_Grille", (22, 22, 24), roughness=1.0)
-    bb_ring = cage.mat_flat("Boombox_Ring", (150, 150, 158), roughness=0.5)
-    bb_red = cage.mat_flat("Boombox_Red", (220, 60, 50), roughness=0.6)
-    cage.add_box("Boombox", (bb_d, bb_h, bb_w), (bb_x, ledge_y + bb_h / 2.0, bb_z), bb_body, c_props, root)
-    face_x = bb_x - bb_d / 2.0 - 0.006
-    cage.add_box("BoomboxFace", (0.012, bb_h - 0.04, bb_w - 0.04), (face_x, ledge_y + bb_h / 2.0, bb_z), bb_face, c_props, root)
-    for i, dz in enumerate((-0.23, 0.23)):
-        # Speaker: a short cylinder poking out of the face, with a bright ring.
-        bpy.ops.mesh.primitive_cylinder_add(vertices=16, radius=0.095, depth=0.014, location=(0, 0, 0))
-        spk = bpy.context.active_object
-        spk.name = spk.data.name = "BoomboxSpeaker%d" % i
-        spk.rotation_euler = (0.0, math.pi / 2, 0.0)       # axis along blender x = sim x
-        spk.data.materials.append(bb_grille)
-        cage.link_obj(spk, c_props, root, cage.s2b((face_x - 0.01, ledge_y + bb_h / 2.0 - 0.01, bb_z + dz)))
-        bpy.ops.mesh.primitive_torus_add(major_radius=0.095, minor_radius=0.008, major_segments=16, minor_segments=4, location=(0, 0, 0))
-        ring = bpy.context.active_object
-        ring.name = ring.data.name = "BoomboxRing%d" % i
-        ring.rotation_euler = (0.0, math.pi / 2, 0.0)
-        ring.data.materials.append(bb_ring)
-        cage.link_obj(ring, c_props, root, cage.s2b((face_x - 0.014, ledge_y + bb_h / 2.0 - 0.01, bb_z + dz)))
-    cage.add_box("BoomboxDeck", (0.01, 0.07, 0.16), (face_x - 0.006, ledge_y + bb_h / 2.0 + 0.02, bb_z), bb_grille, c_props, root)
-    cage.add_box("BoomboxLed", (0.01, 0.015, 0.015), (face_x - 0.008, ledge_y + bb_h - 0.05, bb_z + 0.1), bb_red, c_props, root)
-    ant = cage.add_box("BoomboxAntenna", (0.012, 0.42, 0.012), (bb_x + 0.04, ledge_y + bb_h + 0.2, bb_z - 0.3), bb_ring, c_props, root)
-    ant.rotation_euler = (0.35, 0.0, 0.0)
-    sb_x, sb_y, sb_z = bb_x, ledge_y + bb_h, bb_z          # straight on the boombox's top
-    rig = cage.add_empty("ScoreboardRig", c_props, root, (sb_x, sb_y, sb_z))
-    cage.add_box("ScoreboardBody", (0.14, 0.30, 0.66), (0.0, 0.15, 0.0), dark, c_props, rig)
+    sb_x, sb_y, sb_z = ENC_X1 - 0.115, ledge_y, -0.72
+    sb_rig = cage.add_empty("ScoreboardRig", c_props, root, (sb_x, sb_y, sb_z))
+    cage.add_box("ScoreboardBody", (0.14, 0.30, 0.66), (0.0, 0.15, 0.0), dark, c_props, sb_rig)
     cage.add_quad("LedFace", [(-0.072, 0.105, -0.30), (-0.072, 0.105, 0.30), (-0.072, 0.205, 0.30), (-0.072, 0.205, -0.30)],
-                  (-1, 0, 0), led_off, c_props, rig, (1.0, 1.0), origin=(0, 0, 0))
-    cage.add_box("ScoreboardTrim", (0.15, 0.02, 0.68), (0.0, 0.305, 0.0), curb, c_props, rig)
+                  (-1, 0, 0), led_off, c_props, sb_rig, (1.0, 1.0), origin=(0, 0, 0))
+    cage.add_box("ScoreboardTrim", (0.15, 0.02, 0.68), (0.0, 0.305, 0.0), curb, c_props, sb_rig)
 
     # ---- Tourists lounging on the sand between the fence and the shore (clear
     # of the palm trunks). Blocky N64 people on towels; two groups have an
@@ -546,10 +519,10 @@ def build():
     # ScorePop: the cabinet hops and squashes on every make (one NLA track = one
     # Godot clip, played by CourtGeometry.play_arena("ScorePop")).
     for t, sz, sy in [(0.0, 1.0, 1.0), (0.06, 1.12, 0.86), (0.16, 0.94, 1.10), (0.28, 1.03, 0.97), (0.4, 1.0, 1.0)]:
-        rig.scale = (sz, sz, sy)   # blender z = sim y
-        rig.keyframe_insert("scale", frame=1 + int(round(t * cage.FPS)))
-    rig.animation_data.action.name = "ScorePop"
-    cage.to_nla(rig, rig.animation_data.action, "ScorePop")
+        sb_rig.scale = (sz, sz, sy)   # blender z = sim y
+        sb_rig.keyframe_insert("scale", frame=1 + int(round(t * cage.FPS)))
+    sb_rig.animation_data.action.name = "ScorePop"
+    cage.to_nla(sb_rig, sb_rig.animation_data.action, "ScorePop")
     return coll
 
 

@@ -37,10 +37,3 @@ spot_positions = PackedVector3Array(0, 0, 0, 1.039, 0, -2.45, 1.039, 0, 2.45, 2.
 ambient_clips = PackedStringArray("res://assets/arena/beach/ambience/seagulls.ogg")
 ambient_gains_db = PackedFloat32Array(12.0)
 ambient_fade_s = 1.2
-interactables = Array[Dictionary]([{
-"gain_db": -14.0,
-"kind": "radio",
-"node": "Boombox",
-"pad": 0.08,
-"tracks": ["res://assets/music/title_moog.ogg", "res://assets/music/zero_mass.ogg", "res://assets/music/scarpeta.ogg", "res://assets/music/footloose.ogg", "res://assets/music/synthwave_beat.ogg", "res://assets/music/anabell.ogg"]
-}])

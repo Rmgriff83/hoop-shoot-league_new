@@ -20,7 +20,7 @@ func run(t) -> void:
 			music = c
 	t.eq(CreditsScreen.attribution_line(music), "Moog_SEM 110bpm by fonoskop -- https://freesound.org/s/856449/ -- License: Attribution 4.0", "title music attribution, verbatim")
 	t.ok(FileAccess.file_exists(str(App.TITLE_MUSIC["clip"])), "title music clip exists")
-	# The beach radio's five extra tracks, credited verbatim and shipped.
+	# The level playlist's five other tracks, credited verbatim and shipped.
 	var expect := {
 		"https://freesound.org/s/860354/": ["zero mass 110 by fonoskop -- https://freesound.org/s/860354/ -- License: Attribution 4.0", "res://assets/music/zero_mass.ogg"],
 		"https://freesound.org/s/865348/": ["Scarpeta 110 by fonoskop -- https://freesound.org/s/865348/ -- License: Attribution 4.0", "res://assets/music/scarpeta.ogg"],
@@ -33,9 +33,9 @@ func run(t) -> void:
 		var u := str(c.get("url", ""))
 		if expect.has(u):
 			seen += 1
-			t.eq(CreditsScreen.attribution_line(c), expect[u][0], "radio track attribution, verbatim")
-			t.ok(FileAccess.file_exists(expect[u][1]), "radio track shipped: %s" % expect[u][1])
-	t.eq(seen, 5, "five radio tracks credited")
+			t.eq(CreditsScreen.attribution_line(c), expect[u][0], "level track attribution, verbatim")
+			t.ok(FileAccess.file_exists(expect[u][1]), "level track shipped: %s" % expect[u][1])
+	t.eq(seen, 5, "five level tracks credited")
 	var cage: ArenaSet = CosmeticLibrary.get_arena("cage")
 	t.eq(cage.ambient_clips.size(), 1, "cage has its ambience now")
 	t.eq(cage.validate(), PackedStringArray(), "cage arena validates")

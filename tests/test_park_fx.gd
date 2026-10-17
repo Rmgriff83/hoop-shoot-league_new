@@ -91,7 +91,7 @@ func run(t) -> void:
 	t.ok(hard != null and (hard.mesh.surface_get_format(0) & Mesh.ARRAY_FORMAT_COLOR) != 0, "the board's stacks, rings and hooks: one vertex-coloured mesh")
 	var sa: AABB = snowman.get_aabb() if snowman != null else AABB()
 	t.ok(sa.size.y > 1.0 and sa.size.y < 1.6 and sa.size.x > 1.5, "…a slumped, hatted size (%.2f tall, %.2f wide)" % [sa.size.y, sa.size.x])
-	t.eq(fx.snow_count(), 500, "five hundred flakes")
+	t.eq(fx.snow_count(), 300, "three hundred flakes (toned down from 500, Ross 2026-10-16)")
 	t.ok(fx.has_sky() and fx.sky_resource() is Sky and (fx.sky_resource() as Sky).sky_material is ShaderMaterial, "the design's sky shader is a Sky resource for the court's Environment")
 	t.ok(not (inst.find_child("Sky", true, false) as MeshInstance3D).visible, "the glb's dome is hidden under it")
 	fx._process(0.5)

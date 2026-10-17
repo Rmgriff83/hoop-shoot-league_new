@@ -13,6 +13,13 @@ const HEAT_RESULT_SCENE := "res://game/screens/heat_result_screen.tscn"
 const CREDITS_SCENE := "res://game/screens/credits_screen.tscn"
 ## The intro loop (title + credits); an area's ambience replaces it.
 const TITLE_MUSIC := {"id": "title", "clip": "res://assets/music/title_moog.ogg", "gain_db": -15.0}
+## Level music (2026-10-16): one shared playlist on every court, toggled by
+## the HUD's bottom-left note (Sfx.start_level_music / stop_level_music),
+## remembered as the `musicOn` setting — off on a fresh install. The in-world
+## radios (the beach boombox, the city speaker) came out with it.
+const LEVEL_MUSIC := {"gain_db": -14.0, "tracks": [
+	"res://assets/music/title_moog.ogg", "res://assets/music/zero_mass.ogg", "res://assets/music/scarpeta.ogg",
+	"res://assets/music/footloose.ogg", "res://assets/music/synthwave_beat.ogg", "res://assets/music/anabell.ogg"]}
 
 ## Level gating for leagues and areas (docs/PROGRESSION.md: a league's
 ## `unlock` level, reached by playing the league before it). On.
@@ -158,6 +165,7 @@ func _ready() -> void:
 	tuning_mode = bool(saved.get("tuningMode", false))
 	shot_help = shot_help_from_saved(SaveService.get_settings().get("shotHelp", SHOT_HELP_OFF))
 	dark_mode = bool(SaveService.get_settings().get("darkMode", false))
+	music_on = bool(SaveService.get_settings().get("musicOn", false))
 	tuning.apply_dict(saved.get("fields", {}))
 	_resolve_cosmetics()
 	# The device account (docs/BACKEND.md): minted locally now, registered
@@ -172,6 +180,7 @@ func _on_save_pulled(parts: Array) -> void:
 	if parts.has(SaveService.SETTINGS_PART):
 		shot_help = shot_help_from_saved(SaveService.get_settings().get("shotHelp", SHOT_HELP_OFF))
 		dark_mode = bool(SaveService.get_settings().get("darkMode", false))
+		music_on = bool(SaveService.get_settings().get("musicOn", false))
 	if parts.has(SaveService.COSMETICS_PART):
 		_resolve_cosmetics()
 	var scene := get_tree().current_scene
@@ -205,6 +214,17 @@ static func shot_help_from_saved(raw: Variant) -> int:
 	if raw is int or raw is float:
 		return clampi(int(raw), SHOT_HELP_OFF, SHOT_HELP_FULL)
 	return SHOT_HELP_OFF
+
+
+## Level music on the courts (the HUD's note): remembered across levels and launches.
+var music_on := false
+
+
+func set_music_on(on: bool) -> void:
+	music_on = on
+	var s := SaveService.get_settings()
+	s["musicOn"] = on
+	SaveService.put_settings(s)
 
 
 func set_dark_mode(on: bool) -> void:

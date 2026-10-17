@@ -1,6 +1,7 @@
 extends RefCounted
-## Area interactables: ray-vs-box picking, the beach radio's data, the
-## playlist cycle on Sfx's track channel, and the leave hook.
+## Area interactables: ray-vs-box picking, the radio kind's playlist cycle on
+## Sfx's track channel and the leave hook (over a stand-in: no area ships a
+## prop since 2026-10-16), and the sets without their radios.
 
 
 func run(t) -> void:
@@ -22,40 +23,45 @@ func run(t) -> void:
 	t.ok(padded.hit(Vector3(-3.0, 0.0, 0.4), Vector3(1.0, 0.0, 0.0)) > 0.0, "pad grows the tap box")
 	it.free()
 	padded.free()
-	# Data: the beach declares one radio on the boombox with six tracks that exist.
+	# No area ships an interactable since 2026-10-16: the beach boombox and the
+	# city speaker came out (level music is the HUD's note, test_level_music).
+	# The radio kind stays for a future prop, exercised here over a stand-in rig.
 	var beach: ArenaSet = CosmeticLibrary.get_arena("beach")
-	t.eq(beach.interactables.size(), 1, "beach has one interactable")
-	var row: Dictionary = beach.interactables[0]
-	t.eq(str(row["kind"]), "radio", "it is the radio")
-	t.eq(str(row["node"]), "Boombox", "on the boombox")
-	t.eq(Array(row["tracks"]).size(), 6, "six tracks")
-	t.eq(str(row["tracks"][0]), str(App.TITLE_MUSIC["clip"]), "the title loop leads the playlist")
-	for tp in row["tracks"]:
-		t.ok(FileAccess.file_exists(str(tp)), "track shipped: %s" % tp)
-	t.eq(beach.validate(), PackedStringArray(), "beach arena validates with its tracks")
-	t.ok(beach.referenced_paths().has(str(row["tracks"][3])), "tracks are referenced paths")
+	t.eq(beach.interactables.size(), 0, "the beach has no interactable (no boombox)")
+	t.eq(beach.validate(), PackedStringArray(), "beach arena validates")
 	t.ok(InteractableKinds.make("radio") is RadioInteractable, "radio kind builds")
 	t.eq(InteractableKinds.make("nope"), null, "unknown kind → null")
 	var cage: ArenaSet = CosmeticLibrary.get_arena("cage")
-	t.eq(cage.interactables.size(), 0, "cage has none yet")
+	t.eq(cage.interactables.size(), 0, "cage has none")
 	var city: ArenaSet = CosmeticLibrary.get_arena("city")
-	t.eq(city.interactables.size(), 1, "the city has one interactable")
-	t.ok(str(city.interactables[0]["kind"]) == "radio" and str(city.interactables[0]["node"]) == "Speakers", "the floor speaker is its radio")
+	t.eq(city.interactables.size(), 0, "the city has no interactable (no speaker)")
 	var cglb: Node = load(city.model_path).instantiate()
-	t.ok(cglb.find_child("Speakers", true, false) is Node3D and cglb.find_child("SpeakerLed", true, false) is MeshInstance3D, "Speakers + SpeakerLed in the city glb")
-	# The 2026-10-03 polish: woofer, mid, tweeter and badge; one cabinet since 2026-10-05.
-	for i in 1:
-		for part in ["SpeakerTweeter%d", "SpeakerDome%d", "SpeakerBadge%d", "SpeakerBaffle%d"]:
-			t.ok(cglb.find_child(part % i, true, false) is MeshInstance3D, "%s in the city glb" % (part % i))
-	t.eq(cglb.find_child("SpeakerBox1", true, false), null, "only one cabinet")
-	t.ok(cglb.find_child("SpeakerDrivers", true, false) is MeshInstance3D and cglb.find_child("SpeakerScrews", true, false) is MeshInstance3D, "the woofer and mid drivers and the screws are merged meshes (2026-10-16)")
+	t.ok(cglb.find_child("Speakers", true, false) == null and cglb.find_child("SpeakerLed", true, false) == null and cglb.find_child("SpeakerBox0", true, false) == null, "no speaker in the city glb")
 	t.ok(cglb.find_child("ScoreboardRig", true, false) == null and cglb.find_child("ScoreClock", true, false) is MeshInstance3D, "the city's scoreboard hangs on the fence (no turning rig; tests/test_scoreboard.gd)")
 	cglb.free()
-	# The glb has the boombox and its LED.
+	# The beach glb: no boombox; the reader board stands on the wall's cap.
 	var glb: Node = load(str(beach.model_path)).instantiate()
-	var bb := glb.find_child("Boombox", true, false)
-	t.ok(bb is Node3D, "Boombox node in the beach glb")
-	t.ok(glb.find_child("BoomboxLed", true, false) is MeshInstance3D, "BoomboxLed mesh in the glb")
+	t.ok(glb.find_child("Boombox", true, false) == null and glb.find_child("BoomboxLed", true, false) == null, "no boombox in the beach glb")
+	var sb := glb.find_child("ScoreboardRig", true, false) as Node3D
+	t.ok(sb != null and absf(sb.position.y - 0.51) < 0.02, "the reader board sits on the wall cap (y %.2f)" % (sb.position.y if sb != null else -1.0))
+	glb.free()
+	# A stand-in boombox: a box with an LED part beside it, as the glb had.
+	var bb := Node3D.new()
+	bb.name = "Boombox"
+	var bbm := MeshInstance3D.new()
+	var bbox := BoxMesh.new()
+	bbox.size = Vector3(0.22, 0.28, 0.7)
+	bbm.mesh = bbox
+	bb.add_child(bbm)
+	var hold := Node3D.new()
+	hold.add_child(bb)
+	var led := MeshInstance3D.new()
+	led.name = "BoomboxLed"
+	var lbox := BoxMesh.new()
+	lbox.material = StandardMaterial3D.new()
+	led.mesh = lbox
+	hold.add_child(led)
+	var row := {"kind": "radio", "node": "Boombox", "pad": 0.08, "gain_db": -14.0, "tracks": App.LEVEL_MUSIC["tracks"]}
 	# Radio cycle with a pinned seed: off → 0 → a permutation of 1..5 → off → …
 	var radio := RadioInteractable.new()
 	var seeded := row.duplicate()
@@ -115,5 +121,5 @@ func run(t) -> void:
 	radio2.on_leave()
 	radio.free()
 	radio2.free()
-	glb.free()
+	hold.free()
 	target.free()

@@ -2,6 +2,11 @@
 
 Tappable props that are unique to an area. Presentation only — nothing here touches the sim.
 
+**No area ships one since 2026-10-16.** The beach boombox and the city speaker came out when
+level music moved to the HUD's bottom-left note (`docs/HOME.md` → HUD; `App.LEVEL_MUSIC`,
+`Sfx.start_level_music`). The framework and the radio kind stay for a future prop;
+`tests/test_interactables.gd` runs the radio over a stand-in rig.
+
 - **Data**: `ArenaSet.interactables` (the area's `arena_set.tres`), one row per prop:
   `{"kind": "radio", "node": "Boombox", "pad": 0.08, ...params}`. `node` is the glb node name
   (`find_child`), `pad` grows the tap box in metres; the rest is the kind's own parameters.
@@ -20,8 +25,8 @@ Tappable props that are unique to an area. Presentation only — nothing here to
   the ray pick and calls `on_icon(id, court)`.
 - **Radio** (`game/court/interactables/radio.gd`): params `tracks`, `gain_db`, optional `seed`.
   Tap cycle: off → track 0 (the title loop) → the rest in a random order drawn per lap → off.
-  Feedback is minimal: the hint discs above the boombox, the `BoomboxLed` glow, and a 0.15 s
-  nudge on the tap.
+  Feedback is minimal: the hint discs above the prop, the LED part's glow (`led` param, default
+  `BoomboxLed`), and a 0.15 s nudge on the tap.
   Audio rides `Sfx.play_track / stop_track / track_id` — its own looping player beside the
   area's ambience layers; `stop_ambience` (leaving the area) clears it too. Tracks are encoded
   with `tools/import_music.sh` and credited in `data/credits.json`.

@@ -78,7 +78,7 @@ extends CosmeticSet
 ## (CabScreen*/CabMarquee* meshes; game/view/arcade_fx.gd).
 @export var arcade_life := false
 ## The park (game/view/park_fx.gd): falling snow (one points mesh, `snow_amount`
-## flakes, capped at 800), a shader sky on the `Sky` mesh (`sky` names the
+## flakes — the park asks for 300 — capped at 800), a shader sky on the `Sky` mesh (`sky` names the
 ## look: "partly_cloudy"), parked cars [{model, x, z, yaw}] and the PSX
 ## trees / litter instanced from a layout JSON.
 @export var snow := false
