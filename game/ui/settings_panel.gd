@@ -5,8 +5,9 @@ extends HomePage
 ## right — with every row a dotted face: cream by default, gold when a
 ## toggle is on, orange for SAVE / CLAIM. The player settings (shot help,
 ## dark mode), the PLAYER section (your handle, editable; MOVE TO NEW
-## PHONE's one-time code; ENTER CODE on the new one — docs/BACKEND.md →
-## Identity), the dev-only tuning toggle (debug builds — the phone build
+## PHONE's one-time code; ENTER CODE on the new one; the platform link row,
+## hidden until a store backend exists; DELETE ACCOUNT, two taps —
+## docs/BACKEND.md → Identity / Platform identity), the dev-only tuning toggle (debug builds — the phone build
 ## Ross deploys is one; a store build hides it), credits, and CLOSE.
 ## `closed` fires when it goes away; `dark_mode_changed` when the theme
 ## flips so the screen behind can rebuild (the page itself wears the scene
@@ -27,6 +28,11 @@ var _enter: ShadowCard
 var _code_row: HBoxContainer
 var _code_edit: LineEdit
 var _list: VBoxContainer
+var _link_row: ShadowCard
+var _delete: ShadowCard
+var _delete_armed_at := -1.0
+## DELETE ACCOUNT needs a second tap within this many seconds.
+const DELETE_ARM_S := 8.0
 
 
 func _build() -> void:
@@ -125,6 +131,17 @@ func _build_player() -> void:
 	var claim := _action("Claim", "CLAIM")
 	claim.pressed.connect(_claim_code)
 	_code_row.add_child(claim)
+	# The platform link (docs/BACKEND.md → Platform identity): hidden while
+	# the backend is the null one (no Game Center / Play Games plugin yet).
+	_link_row = _row("PlatformLink", _link_text(), Platform.is_linked())
+	_link_row.visible = Platform.backend.is_available()
+	_link_row.pressed.connect(_toggle_link)
+	_list.add_child(_link_row)
+	# Account deletion (Apple 5.1.1(v)): armed by one tap, done by a second.
+	_delete = _row("DeleteAccount", "DELETE ACCOUNT", false)
+	_delete.color = RetroTheme.LIGHT["orange"]
+	_delete.pressed.connect(_delete_account)
+	_list.add_child(_delete)
 
 
 ## A see-through field: a cream rule around a dark wash, bold cream words.
@@ -203,6 +220,57 @@ func _claim_code() -> void:
 
 func has_player() -> bool:
 	return _name_edit != null
+
+
+func _link_text() -> String:
+	var label := Platform.backend.display_name()
+	if label == "":
+		label = Platform.backend.provider_id().to_upper()
+	return ("LINKED · %s" % label) if Platform.is_linked() else ("LINK %s" % label)
+
+
+## LINK: sign in (if needed) and link; LINKED: tap unlinks.
+func _toggle_link() -> void:
+	if Platform.is_linked():
+		_link_row.text = "UNLINKING..."
+		var ok: bool = await Platform.unlink()
+		if not is_instance_valid(_link_row):
+			return
+		_link_row.text = _link_text() if ok else "NO SIGNAL · TRY AGAIN LATER"
+		_tone(_link_row, Platform.is_linked())
+		return
+	if not Platform.backend.is_signed_in():
+		Platform.backend.sign_in()
+	_link_row.text = "LINKING..."
+	await Platform.sync_link()
+	if not is_instance_valid(_link_row):
+		return
+	_link_row.text = _link_text()
+	_tone(_link_row, Platform.is_linked())
+
+
+## First tap arms it (DELETE_ARM_S); the second deletes the server account,
+## wipes this phone's save and goes back to the title as a fresh install.
+func _delete_account() -> void:
+	var now := Time.get_ticks_msec() / 1000.0
+	if _delete_armed_at < 0.0 or now - _delete_armed_at > DELETE_ARM_S:
+		_delete_armed_at = now
+		_delete.text = "TAP AGAIN TO DELETE EVERYTHING"
+		return
+	_delete_armed_at = -1.0
+	_delete.text = "DELETING..."
+	var ok: bool = await Net.delete_account()
+	if not is_instance_valid(_delete):
+		return
+	if ok:
+		_delete.text = "ACCOUNT DELETED"
+		App.to_title()
+	else:
+		_delete.text = "NO SIGNAL · TRY AGAIN LATER"
+
+
+func delete_armed() -> bool:
+	return _delete_armed_at >= 0.0
 
 
 ## A full-width row: cream, or gold while its toggle is on.

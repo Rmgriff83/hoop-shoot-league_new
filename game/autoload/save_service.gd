@@ -24,7 +24,8 @@ const CARDS_PART := "cards"
 ## The player's level: XP from league matches (docs/PROGRESSION.md).
 const PROGRESS_PART := "progress"
 ## The anonymous device account (docs/BACKEND.md → Identity): {playerId,
-## secret, name, tag, registered}. Device-local: the secret never syncs.
+## secret, name, tag, registered, linked: ["gamecenter"…]}. Device-local: the
+## secret never syncs; `linked` names providers only, never a proof.
 const ACCOUNT_PART := "account"
 const LIVE_GAMES_KEEP := 50
 ## Leaderboard submissions waiting for the server; the oldest fall off.
@@ -418,6 +419,45 @@ func clear_dirty(part: String) -> void:
 	parts.erase(part)
 	_outbox["dirtyParts"] = parts
 	_write_json("outbox", _outbox)
+
+
+## A platform link that waited for the signal (docs/BACKEND.md → Platform
+## identity): the provider name only; Net.flush replays it once registered.
+func set_pending_link(provider: String) -> void:
+	_outbox["pendingLink"] = provider
+	_write_json("outbox", _outbox)
+
+
+func pending_link() -> String:
+	return str(_outbox.get("pendingLink", ""))
+
+
+func clear_pending_link() -> void:
+	if _outbox.has("pendingLink"):
+		_outbox.erase("pendingLink")
+		_write_json("outbox", _outbox)
+
+
+## Account deletion (Ross, 2026-10-17: a fresh install): every part on disk
+## goes, the in-memory parts reset, a new clientId is minted. The next
+## Net.ensure_account mints a new identity.
+func wipe_all() -> void:
+	var dir := DirAccess.open(SAVE_DIR)
+	if dir != null:
+		for f in dir.get_files():
+			dir.remove(f)
+	_meta = {}
+	_scores = {}
+	_outbox = {}
+	_account = {}
+	_tuning = {}
+	_cosmetics = {}
+	_settings = {}
+	_campaign = {}
+	_live_games = {}
+	_cards = {}
+	_progress = {}
+	load_all()
 
 
 func set_last_sync(ms: int) -> void:

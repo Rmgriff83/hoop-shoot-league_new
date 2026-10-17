@@ -12,6 +12,10 @@ export interface Env {
   FEATURE_SAVE?: string;
   FEATURE_MATCH?: string;
   FEATURE_CARDS?: string;
+  /** Platform identity link/restore/unlink (platform_routes.ts); DELETE /v1/me has no switch. */
+  FEATURE_PLATFORM?: string;
+  /** Vitest only: enables the `test` proof verifier (platform.ts). Never a wrangler var. */
+  PLATFORM_TEST_VERIFIER?: string;
   /** Per-IP wall on every /v1 route (layer 2: a workers.dev host has no WAF). */
   RL_IP?: RateLimiter;
   /** Per-player minute buckets; absent locally, where limits.ts falls back to memory. */

@@ -13,6 +13,7 @@ FEATURE_TRANSFER = "on"
 FEATURE_SAVE = "on"
 FEATURE_MATCH = "on"
 FEATURE_CARDS = "on"
+FEATURE_PLATFORM = "on"
 
 [[durable_objects.bindings]]
 name = "ROOM"
@@ -42,6 +43,7 @@ FEATURE_TRANSFER = "on"
 FEATURE_SAVE = "on"
 FEATURE_MATCH = "on"
 FEATURE_CARDS = "on"
+FEATURE_PLATFORM = "on"
 
 [[env.production.durable_objects.bindings]]
 name = "ROOM"

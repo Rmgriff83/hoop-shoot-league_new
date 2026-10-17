@@ -8,7 +8,8 @@ export default defineConfig(async () => {
     plugins: [
       cloudflareTest({
         wrangler: { configPath: "./wrangler.toml" },
-        miniflare: { bindings: { TEST_MIGRATIONS: migrations } },
+        // PLATFORM_TEST_VERIFIER lives here only: the `test` proof verifier never exists in a deploy.
+        miniflare: { bindings: { TEST_MIGRATIONS: migrations, PLATFORM_TEST_VERIFIER: "on" } },
       }),
     ],
     test: { setupFiles: ["./test/apply_migrations.ts"] },

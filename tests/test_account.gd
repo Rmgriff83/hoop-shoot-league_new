@@ -79,3 +79,21 @@ func run(t) -> void:
 	svc.free()
 	svc2.free()
 	_wipe()
+	# Platform identity prep (2026-10-17): linked providers ride the account
+	# part (names only), a waiting link rides the outbox, wipe_all is a fresh install.
+	svc = _fresh()
+	svc.put_account({"playerId": "p", "secret": "s", "name": "A", "tag": "01", "registered": true})
+	var acc: Dictionary = svc.get_account()
+	acc["linked"] = ["gamecenter"]
+	svc.put_account(acc)
+	t.eq(Array(svc.get_account()["linked"]), ["gamecenter"], "linked providers round-trip")
+	svc.set_pending_link("playgames")
+	t.eq(svc.pending_link(), "playgames", "a pending link waits in the outbox")
+	svc.clear_pending_link()
+	t.eq(svc.pending_link(), "", "…and clears")
+	var old_client: String = svc.get_client_id()
+	svc.wipe_all()
+	t.ok(svc.get_account().is_empty() and svc.pending_link() == "" and svc.dirty_parts().is_empty(), "wipe_all: no account, an empty outbox")
+	t.ok(svc.get_client_id() != "" and svc.get_client_id() != old_client, "…and a new clientId")
+	svc.free()
+	_wipe()

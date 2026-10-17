@@ -6,7 +6,8 @@
  */
 import { Hono } from "hono";
 import type { Env, PlayerRow } from "./env";
-import { authenticate, sha256Hex } from "./auth";
+import { authenticate, matchSecret, replaceSecretsStatements, secretsOf, sha256Hex } from "./auth";
+import { deleteAccountStatements, link, providersOf } from "./platform_routes";
 import { minuteLimit, longLimit, type Verdict } from "./limits";
 import {
   AREAS, SCORE_FIELDS, SECRET_RE, TAG_RE, UUID_RE, normalizeName, onlyFields, plausible, validName, weekOf,
@@ -77,7 +78,8 @@ app.post("/v1/register", async (c) => {
   const hash = await sha256Hex(secret);
   const existing = await c.env.DB.prepare("SELECT * FROM players WHERE id = ?1").bind(playerId).first<PlayerRow>();
   if (existing) {
-    if (existing.secret_hash !== hash) return c.json({ error: "forbidden" }, 403);
+    // A known id with a secret this player holds (any device) is a repeat; any other secret is a stranger.
+    if (!matchSecret(await secretsOf(c.env.DB, playerId), hash)) return c.json({ error: "forbidden" }, 403);
     return c.json({ playerId, name: existing.name, tag: existing.tag, created: false });
   }
   let handle = randomHandle();
@@ -88,11 +90,12 @@ app.post("/v1/register", async (c) => {
   if (typeof b.tag === "string" && TAG_RE.test(b.tag)) handle.tag = b.tag;
   const level = validLevel(b.level) ? (b.level as number) : 1;
   const now = Date.now();
-  await c.env.DB.prepare(
-    "INSERT INTO players (id, secret_hash, name, tag, client_id, created_at, last_seen, level) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6, ?7)",
-  )
-    .bind(playerId, hash, handle.name, handle.tag, clientId, now, level)
-    .run();
+  await c.env.DB.batch([
+    c.env.DB.prepare(
+      "INSERT INTO players (id, secret_hash, name, tag, client_id, created_at, last_seen, level) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6, ?7)",
+    ).bind(playerId, hash, handle.name, handle.tag, clientId, now, level),
+    c.env.DB.prepare("INSERT INTO player_secrets (player_id, secret_hash, created_at, last_seen, label) VALUES (?1, ?2, ?3, ?3, 'first')").bind(playerId, hash, now),
+  ]);
   return c.json({ playerId, name: handle.name, tag: handle.tag, created: true });
 });
 
@@ -100,7 +103,24 @@ app.get("/v1/me", authenticate, async (c) => {
   const p = c.get("player");
   const lim = await minuteLimit(c.env.RL_ME, `me:${p.id}`, 5);
   if (!lim.allowed) return throttled(c, lim);
-  return c.json({ playerId: p.id, name: p.name, tag: p.tag });
+  return c.json({ playerId: p.id, name: p.name, tag: p.tag, level: p.level ?? 1, providers: await providersOf(c.env.DB, p.id) });
+});
+
+/**
+ * Account deletion (Apple 5.1.1(v): an app that creates accounts — ours does,
+ * silently — must let the player delete it in-app, data and all). No kill
+ * switch: the owner can always leave. Match history keeps the room rows (the
+ * other player's record of the game). Afterwards the bearer is dead and the
+ * game wipes its local save and mints a fresh identity on the next launch.
+ */
+app.delete("/v1/me", authenticate, async (c) => {
+  const p = c.get("player");
+  const perIp = await longLimit(c.env.DB, `me:del:ip:${ip(c)}`, 3, 3600);
+  if (!perIp.allowed) return throttled(c, perIp);
+  const perPlayer = await longLimit(c.env.DB, `me:del:${p.id}`, 2, 3600);
+  if (!perPlayer.allowed) return throttled(c, perPlayer);
+  await c.env.DB.batch(deleteAccountStatements(c.env.DB, p.id));
+  return c.json({ deleted: true });
 });
 
 /** The game's level (docs/PROGRESSION.md), reported so the online card cap can hold. */
@@ -261,8 +281,9 @@ app.post("/v1/transfer/claim", async (c) => {
     return c.json({ error: "expired" }, 410);
   }
   const hash = await sha256Hex(b.newSecret);
+  // A move: every other device's secret dies with the claim (per-device secrets, auth.ts).
   await c.env.DB.batch([
-    c.env.DB.prepare("UPDATE players SET secret_hash = ?1 WHERE id = ?2").bind(hash, row.player_id),
+    ...replaceSecretsStatements(c.env.DB, row.player_id, hash, "transfer", Date.now()),
     c.env.DB.prepare("DELETE FROM transfer_codes WHERE player_id = ?1").bind(row.player_id),
   ]);
   const p = await c.env.DB.prepare("SELECT id, name, tag FROM players WHERE id = ?1").bind(row.player_id).first<PlayerRow>();
@@ -272,6 +293,9 @@ app.post("/v1/transfer/claim", async (c) => {
 
 // ---- the cloud save mirror (save.ts) ----------------------------------------------------
 app.route("/v1/save", save);
+
+// ---- platform identities (platform_routes.ts): link / restore / unlink ------------------
+app.route("/v1/link", link);
 
 // ---- 1v1 rooms (match_room.ts, lobby.ts) ---------------------------------------------------
 

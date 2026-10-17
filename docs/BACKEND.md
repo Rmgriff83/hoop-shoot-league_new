@@ -9,7 +9,7 @@ referee, never authoritative mid-session).
 
 ```
 phone ── HTTPS (JSON) ──► Cloudflare Worker (server/, TypeScript, Hono)
-                             ├─ D1 (SQLite): players, tt_best, tt_week_best, seen_runs, transfer_codes, rl
+                             ├─ D1 (SQLite): players, player_secrets, player_identities, tt_best, tt_week_best, seen_runs, transfer_codes, rl, save_parts, online_*
                              └─ Durable Objects (phase 3): one MatchRoom per 1v1, WebSocket hibernation
 ```
 
@@ -35,9 +35,13 @@ No sign-up, no email, no store sign-in. On the first launch the game mints
 handle drawn from `data/handle_words.json` (`HandleWords`), and
 `POST /v1/register`s when the net allows (`Net.ensure_account`). Every later
 call carries `Authorization: Bearer <playerId>.<secret>` over TLS; the server
-stores SHA-256(secret) and refuses a known id with another secret (403 → the
-game mints a fresh identity). Nothing in the repo or the APK is a shared
-secret.
+stores SHA-256(secret) — since 2026-10-17 one row per device in
+`player_secrets` (see Platform identity) — and refuses a known id with a
+secret it does not hold (403). On a 403 at registration or a 401 on any
+authenticated call the game recovers in this order: a linked, signed-in
+platform restores the account (`Net._recover_identity` →
+`restore_from_platform`); otherwise it mints a fresh identity. Nothing in the
+repo or the APK is a shared secret.
 
 - **Handle**: `BRICK BARON 42` — two words and a two-digit tag; editable in
   Settings → PLAYER (`PATCH /v1/me`; 3–24 of A–Z, 0–9, single spaces, no
@@ -91,12 +95,15 @@ Every request has a budget and a hit degrades to the device board.
    domain Ross owns, the zone's one free rate-limiting rule is a bonus layer.
 3. **Worker** — per-player buckets: `scores` 6/min (binding) + 120/day (D1),
    `leaderboard` 20/min, `me` 5/min, `register` 5/hour per IP,
-   `transfer/code` 3/hour, `transfer/claim` 5/hour per IP. Minute buckets use
+   `transfer/code` 3/hour, `transfer/claim` 5/hour per IP, `link` 5/hour,
+   `link/restore` 5/hour per IP, `link/<provider>` (unlink) 5/hour,
+   `DELETE /v1/me` 3/hour per IP + 2/hour per player. Minute buckets use
    the Workers Rate Limiting binding in production and an in-isolate window
    locally; hour/day windows are D1 counters (`rl`). Bodies ≤ 4 KB, JSON only,
    unknown fields → 400. Kill switches `FEATURE_SUBMIT` / `FEATURE_BOARD` /
-   `FEATURE_TRANSFER` (anything but `on` → 503, which the game reads as
-   offline).
+   `FEATURE_TRANSFER` / `FEATURE_SAVE` / `FEATURE_MATCH` / `FEATURE_CARDS` /
+   `FEATURE_PLATFORM` (anything but `on` → 503, which the game reads as
+   offline); account deletion has none.
 4. **D1** — indexed queries only, `LIMIT ≤ 50`, rank by one indexed COUNT,
    writes only on improvement; the nightly cron prunes `seen_runs` (30 d),
    dead codes, stale counters and weeks older than eight. Turn on Cloudflare's
@@ -272,3 +279,124 @@ other phone must trust what hits its rim.
   LOADOUT (tap a spare to equip), SHOP (rarity, the level chip gold once
   reached, OWNED, BUY). `--qa-multi` seeds the cache, snaps the deck, and the
   fake peer brings an ice it plays on us.
+
+## Platform identity (prep, 2026-10-17)
+
+Groundwork for Game Center (iOS) and Play Games (Android) sign-in: no store
+plugin, achievements or leaderboards yet. A platform link is an optional
+upgrade on top of the anonymous account, never a requirement; when the
+plugins land, all that is left is "get a proof from the platform, hand it to
+the server". Ross's calls: per-device secrets, deletion wipes the phone too,
+`FEATURE_PLATFORM` on, deletion independent of it.
+
+**Tables (`server/migrations/0005_platform_identities.sql`).**
+- `player_identities (provider, subject, player_id, linked_at, meta)`,
+  PK `(provider, subject)`, `UNIQUE (player_id, provider)`: one identity maps
+  to exactly one player, one player has at most one identity per provider.
+  `provider` is `gamecenter` | `playgames` (`test` only under Vitest).
+  `meta` is JSON (a display name, Apple's gamePlayerID) — never a proof.
+- `player_secrets (player_id, secret_hash, created_at, last_seen, label)`,
+  PK `(player_id, secret_hash)`: **a secret per device**, at most
+  `MAX_SECRETS` 5 (the oldest is evicted). Registration makes the first, a
+  platform restore ADDS one (the other phone stays signed in: one account on
+  two phones), the transfer code REPLACES them all (a move: the old phone
+  dies, as before), unlink changes none, deletion removes all. Seeded from
+  `players.secret_hash`, which stays as the first secret's copy; `authenticate`
+  reads this table (any matching hash, constant-time per row).
+
+**Which platform id is the subject, and why.**
+- Apple: `GKLocalPlayer.fetchItems(forIdentityVerificationSignature:)` signs
+  the **teamPlayerID** — the same id for every game we ship under our Apple
+  team, stable per Apple account; it changes only if the app is transferred
+  to another team. `gamePlayerID` is per-game and is *not* covered by the
+  signature (kept in `meta`); the legacy `playerID` is deprecated.
+- Google: the next-generation Play Games player id is **per-game and stable
+  within our PGS project** across devices (read server-side from
+  `games/v1/players/me`). The cross-game `developer_player_key` changes on a
+  developer-account transfer and must never be a key.
+
+**Routes (`server/src/platform_routes.ts`, behind `FEATURE_PLATFORM`, bodies
+≤ 4 KB, unknown fields → 400).**
+- `POST /v1/link {provider, proof}` (auth, 5/hour): the verifier turns the
+  proof into a subject (501 `not_implemented` for gamecenter/playgames today,
+  401 `proof_rejected`, 400 `provider`). Already bound to the caller → 200
+  `{linked, already: true}`; unbound → bound, 200; bound to **another**
+  player → 409 `{error: "conflict", provider, name, tag, level}` — accounts
+  are never merged, the game asks. A re-link with a new subject replaces the
+  caller's old identity for that provider.
+- `POST /v1/link/restore {provider, proof, newSecret}` (no auth, 5/hour per
+  IP): the identity's player gets `newSecret` added → 200 `{playerId, name,
+  tag}`; unknown identity → 404.
+- `DELETE /v1/link/:provider` (auth, 5/hour): unlink, idempotent.
+- `GET /v1/me` → `{playerId, name, tag, level, providers}`.
+- `DELETE /v1/me` (auth, 3/hour per IP + 2/hour per player, **no kill
+  switch**): one batch deletes the player's rows from players,
+  player_secrets, player_identities, transfer_codes, save_parts, tt_best,
+  tt_week_best, seen_runs, online_wallet, online_cards, online_ledger →
+  `{deleted: true}`; the bearer is dead after. Match history (`matches`) keeps
+  the room rows: they are the other player's record of the game and carry no
+  handle. Apple's guideline 5.1.1(v) applies to us: the app creates an
+  account on first launch (guest / auto-generated accounts count), so
+  in-app deletion of the account *and its data* is required, not a
+  deactivation; this is Settings → PLAYER → DELETE ACCOUNT (two taps).
+
+**Verifiers (`server/src/platform.ts`).** `ProofVerifier.verify(proof) →
+{subject, displayName?, meta?}`; `gamecenter` and `playgames` throw
+`NotImplemented` (→ 501) with the real check written out in their comment
+blocks; `test` exists only when `PLATFORM_TEST_VERIFIER = "on"`, a Miniflare
+binding in `vitest.config.ts` that is never a wrangler var, so every flow is
+under test now (`server/test/platform.test.ts`: link, 409, restore,
+per-device vs transfer, cap, unlink, deletion, throttles, kill switch, 501).
+
+**Game.**
+- `Platform` (autoload, `game/net/platform.gd`) owns one `PlatformBackend`
+  (`game/net/platform_backend.gd`; the base class is the null backend — never
+  available — on desktop, headless, QA and the phone until a plugin exists).
+  A real backend implements `provider_id()`, `display_name()`,
+  `is_available()`, `is_signed_in()`, `sign_in()`, `get_identity_proof()`
+  and emits `signed_in`.
+- Flow: launch → `Net.ensure_account` as today (then `fetch_me` refreshes
+  the linked providers onto the account part — names only, never a proof)
+  → `Platform.sync_link()`: signed in and not linked → `Net.link_platform`.
+  409 → `conflict` + the `AccountFoundSheet` ("FOUND YOUR ACCOUNT · BRICK
+  BARON 42 · LVL 7 · USE IT?"). USE IT → `Platform.accept_conflict()` →
+  `Net.restore_from_platform` (a new device secret on that account, the
+  account part rewritten, `pull_save(true)` — the claimed-code path) →
+  "WELCOME BACK". NOT NOW keeps this account unlinked. The handle stays
+  ours; the platform display name is never adopted.
+- Offline: an unregistered or offline link waits in the outbox
+  (`pendingLink`, provider only) and `Net.flush` hands it back to
+  `Platform.sync_link` once registered.
+- Recovery: a 403 on register or a 401 on push / pull / me / link → restore
+  from the platform when linked and signed in, else a fresh identity
+  (`Net._recover_identity`, `_mint_fresh`).
+- Settings → PLAYER: `PlatformLink` (LINK GAME CENTER / LINKED · GAME CENTER,
+  tap unlinks; hidden while the backend is null) and `DeleteAccount` (first
+  tap arms "TAP AGAIN TO DELETE EVERYTHING" for 8 s, second tap →
+  `Net.delete_account` → `SaveService.wipe_all()` → the title; the next
+  `ensure_account` mints a new identity).
+- Tests: `tests/test_platform.gd` drives it with `FakePlatformBackend`
+  (`tests/fake_platform_backend.gd`) and `Net.transport`, a scripted stand-in
+  for HTTPRequest; `tests/test_account.gd` covers `linked`, `pendingLink`,
+  `wipe_all`.
+
+**What is left, per platform.**
+- iOS: a GameKit plugin (GDExtension or the iOS export plugin) exposing
+  `authenticate` and `fetchItems(forIdentityVerificationSignature:)` →
+  `GameCenterBackend` (`provider_id "gamecenter"`, proof `{publicKeyURL,
+  signature, salt, timestamp, teamPlayerID, gamePlayerID, bundleID}`); Game
+  Center enabled on the app record in App Store Connect; the verifier:
+  fetch + validate the Apple certificate (apple.com host, chain, expiry,
+  cached), RSA-SHA256 over `teamPlayerID ‖ bundleID ‖ timestamp (big-endian
+  UInt64) ‖ salt`, timestamp freshness, our bundle id; the deletion flow
+  needs nothing extra (no Sign in with Apple tokens to revoke).
+- Android: the Play Games Services v2 plugin → `PlayGamesBackend`
+  (`provider_id "playgames"`, proof `{serverAuthCode, playerId}` from
+  `GamesSignInClient.requestServerSideAccess(WEB_CLIENT_ID, false)`); in the
+  Play Console a Game server credential (OAuth web client) whose id and secret
+  become Worker secrets (`wrangler secret put`); the verifier: exchange the
+  code at `https://oauth2.googleapis.com/token`, `GET
+  https://www.googleapis.com/games/v1/players/me`, subject = its `playerId`,
+  equal to the client's claim.
+- Both: flip the verifier from `NotImplemented` to real, keep the `test`
+  one Vitest-only, run the Worker migration `0005` and deploy (Ross).

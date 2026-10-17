@@ -28,6 +28,11 @@ const PULL_GAP_S := 60.0
 
 ## Off headless (the suite) and under --no-net (QA); the QA driver may flip it.
 var enabled := DisplayServer.get_name() != "headless" and not NetConfig.disabled_by_args()
+## Tests: when valid, `transport.call(method, path, body, headers)` answers
+## {code, json, bytes} in place of an HTTPRequest; the busy / backoff / online
+## bookkeeping is unchanged.
+var transport := Callable()
+var _recovering := false
 ## Did the last request reach the server (any HTTP answer counts)?
 var online := false
 
@@ -97,6 +102,7 @@ func ensure_account() -> void:
 		await pull_save(true)
 		push_save(true)
 		report_level(App.level())
+		fetch_me()
 
 
 func _register() -> bool:
@@ -120,12 +126,39 @@ func _register() -> bool:
 		return true
 	if r["code"] == 403:
 		# Someone registered this id with another secret (a restored backup
-		# of a transferred account): start over with a fresh identity.
-		a["playerId"] = SaveService.uuid4()
-		a["secret"] = _new_secret()
-		SaveService.put_account(a)
+		# of a transferred account): the platform may still know us; else
+		# start over with a fresh identity.
+		await _recover_identity()
 	_back_off(r)
 	return false
+
+
+## The server no longer takes this identity (a 403 on register, a 401 on an
+## authenticated call: a transfer claimed elsewhere, a deleted account, an
+## evicted device secret). A linked, signed-in platform restores the account
+## with a new device secret; otherwise a fresh identity is minted.
+func _recover_identity() -> void:
+	if _recovering:
+		return
+	_recovering = true
+	if Platform.is_linked() and Platform.backend.is_signed_in():
+		var proof: Dictionary = await Platform.backend.get_identity_proof()
+		if not proof.is_empty() and await restore_from_platform(Platform.backend.provider_id(), proof):
+			_recovering = false
+			return
+	_mint_fresh()
+	_recovering = false
+
+
+## A fresh anonymous identity (same handle); registers on the next call.
+func _mint_fresh() -> void:
+	var a := account()
+	a["playerId"] = SaveService.uuid4()
+	a["secret"] = _new_secret()
+	a["registered"] = false
+	a["linked"] = []
+	SaveService.put_account(a)
+	_board_cache.clear()
 
 
 ## Rename on the server; the local copy follows on success.
@@ -170,6 +203,111 @@ func claim_transfer(code: String) -> bool:
 	_board_cache.clear()
 	account_ready.emit(a["name"], a["tag"])
 	await pull_save(true)   # their progress, onto this phone
+	return true
+
+
+# ---- platform identities (docs/BACKEND.md → Platform identity; driven by Platform) --------
+
+
+## GET /v1/me: the linked providers onto the account part (never the proof).
+func fetch_me() -> void:
+	if not registered():
+		return
+	var r := await _request("me", HTTPClient.METHOD_GET, "/v1/me")
+	if r["ok"]:
+		if r["json"].has("providers"):
+			var a := account()
+			a["linked"] = Array(r["json"]["providers"])
+			SaveService.put_account(a)
+	elif r["code"] == 401:
+		await _recover_identity()
+
+
+## POST /v1/link: bind the platform identity to this account. {ok, code, json};
+## a 409 carries the other account's {name, tag, level}. Offline, the link
+## waits in the outbox and flush() retries it once registered.
+func link_platform(provider: String, proof: Dictionary) -> Dictionary:
+	if not registered():
+		SaveService.set_pending_link(provider)
+		return {"ok": false, "code": -1, "json": {}}
+	var r := await _request("link", HTTPClient.METHOD_POST, "/v1/link", {"provider": provider, "proof": proof})
+	if r["ok"]:
+		var a := account()
+		var linked: Array = Array(a.get("linked", []))
+		if not linked.has(provider):
+			linked.push_back(provider)
+		a["linked"] = linked
+		SaveService.put_account(a)
+		SaveService.clear_pending_link()
+		_fails = 0
+	elif r["code"] == -1 or r["code"] == 0:
+		SaveService.set_pending_link(provider)
+		if r["code"] == 0:
+			_back_off(r)
+	else:
+		SaveService.clear_pending_link()
+		if r["code"] == 401:
+			await _recover_identity()
+		elif r["code"] != 409 and r["code"] != 400 and r["code"] != 501:
+			_back_off(r)
+	return {"ok": r["ok"], "code": r["code"], "json": r["json"]}
+
+
+## POST /v1/link/restore: become the account the platform knows — a new device
+## secret added there (the other phone stays signed in), their id and handle,
+## then their progress (the claimed-code path).
+func restore_from_platform(provider: String, proof: Dictionary) -> bool:
+	var secret := _new_secret()
+	var r := await _request("link", HTTPClient.METHOD_POST, "/v1/link/restore",
+		{"provider": provider, "proof": proof, "newSecret": secret}, false)
+	if not r["ok"]:
+		if r["code"] == 0:
+			_back_off(r)
+		return false
+	var a := {"playerId": str(r["json"].get("playerId", "")), "secret": secret,
+		"name": str(r["json"].get("name", "")), "tag": str(r["json"].get("tag", "")), "registered": true, "linked": [provider]}
+	SaveService.put_account(a)
+	SaveService.clear_pending_link()
+	_board_cache.clear()
+	_fails = 0
+	account_ready.emit(a["name"], a["tag"])
+	await pull_save(true)   # their progress, onto this phone
+	return true
+
+
+## DELETE /v1/link/<provider>: unlink (the account and its secrets stay).
+func unlink_platform(provider: String) -> bool:
+	if not registered():
+		return false
+	var r := await _request("link", HTTPClient.METHOD_DELETE, "/v1/link/" + provider)
+	if r["ok"]:
+		var a := account()
+		var linked: Array = Array(a.get("linked", []))
+		linked.erase(provider)
+		a["linked"] = linked
+		SaveService.put_account(a)
+		return true
+	if r["code"] == 401:
+		await _recover_identity()
+	elif r["code"] != -1 and r["code"] != 404:
+		_back_off(r)
+	return false
+
+
+## DELETE /v1/me (Apple 5.1.1(v)): the account and everything under it on the
+## server; then this phone's save is wiped (Ross: a fresh install) and the next
+## ensure_account mints a new identity.
+func delete_account() -> bool:
+	if not registered():
+		return false
+	var r := await _request("me", HTTPClient.METHOD_DELETE, "/v1/me")
+	if not (r["ok"] or r["code"] == 401):
+		if r["code"] != -1:
+			_back_off(r)
+		return false
+	SaveService.wipe_all()
+	_board_cache.clear()
+	_fails = 0
 	return true
 
 
@@ -268,12 +406,16 @@ func flush(force := false) -> void:
 		return
 	if not force and not Backoff.can_fire(_now(), _last_flush, FLUSH_GAP_S):
 		return
-	if SaveService.pending_scores().is_empty():
+	if SaveService.pending_scores().is_empty() and SaveService.pending_link() == "":
 		return
 	_flushing = true
 	_last_flush = _now()
 	if not registered():
 		await _register()
+	if registered() and SaveService.pending_link() != "" and Platform.backend.is_signed_in():
+		# A link that waited for the signal: Platform asks the backend afresh.
+		SaveService.clear_pending_link()
+		Platform.sync_link()
 	if registered():
 		for p in SaveService.pending_scores():
 			var r := await _request("scores", HTTPClient.METHOD_POST, "/v1/scores", p)
@@ -334,6 +476,10 @@ func push_save(force := false) -> void:
 		elif r["code"] == 400 or r["code"] == 413:
 			push_warning("Net: %s refused by the mirror (%d)" % [part, r["code"]])
 			SaveService.clear_dirty(part)
+		elif r["code"] == 401:
+			_pushing = false
+			await _recover_identity()
+			return
 		else:
 			_back_off(r)
 			break
@@ -375,6 +521,10 @@ func pull_save(force := false) -> void:
 				continue
 			if SaveService.restore_part(str(part), doc):
 				pulled.push_back(str(part))
+	elif m["code"] == 401:
+		_pulling = false
+		await _recover_identity()
+		return
 	elif m["code"] != -1:
 		_back_off(m)
 	if not pulled.is_empty():
@@ -459,6 +609,21 @@ func _request(key: String, method: int, path: String, body: Variant = null, auth
 	if not _can_call() or _busy.get(key, false):
 		return out
 	_busy[key] = true
+	if transport.is_valid():
+		var th := PackedStringArray()
+		if auth:
+			var ta := account()
+			th.append("Authorization: Bearer %s.%s" % [str(ta.get("playerId", "")), str(ta.get("secret", ""))])
+		var tr: Dictionary = transport.call(method, path, body if raw.is_empty() else raw, th)
+		_busy[key] = false
+		var tcode := int(tr.get("code", 0))
+		online = tcode != 0
+		out["code"] = tcode
+		out["json"] = tr.get("json", {}) if tr.get("json", {}) is Dictionary else {}
+		out["bytes"] = tr.get("bytes", PackedByteArray())
+		out["ok"] = tcode >= 200 and tcode < 300
+		out["retry_after"] = float(tr.get("retry_after", -1.0))
+		return out
 	var req := HTTPRequest.new()
 	req.timeout = TIMEOUT_S
 	req.accept_gzip = false
