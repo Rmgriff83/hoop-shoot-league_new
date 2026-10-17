@@ -431,6 +431,7 @@ func _run_hud() -> void:
 	await _flick(1.9, 0.30, 0.0)
 	await _sleep(1.6)
 	await _snap("hud_live")
+	print("QA hud: " + _render_stats())
 	# The TIME! chip (design 5a), shown by hand: the small toast at the top.
 	var sc_t := get_tree().current_scene
 	if sc_t != null and "_hud" in sc_t:
@@ -664,6 +665,7 @@ func _run_beach() -> void:
 		await _snap("beach_%02d" % i)
 		await _sleep(4.5)
 	await _snap("beach_last")
+	print("QA beach: " + _render_stats())
 	# The pelican, forced over the water and placed mid-view for the snap.
 	var bfx: BeachFx = get_tree().root.find_child("BeachFx", true, false)
 	if bfx != null:
