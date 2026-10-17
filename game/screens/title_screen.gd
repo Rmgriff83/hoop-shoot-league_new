@@ -144,8 +144,10 @@ var _board: BoardPreview
 
 
 ## The preview's rows: the cached server board for this area (THIS WEEK),
-## else the device's own runs; a fresh board is asked for when stale.
-func _refresh_board() -> void:
+## else the device's own runs. `fetch` asks the server once when the chrome
+## builds; the board_loaded handler below only re-renders — asking again
+## from it would loop (a cached board answers on a deferred emit).
+func _refresh_board(fetch := true) -> void:
 	if _board == null:
 		return
 	var area := str(CARDS[_index]["area"])
@@ -154,13 +156,13 @@ func _refresh_board() -> void:
 		_board.set_rows(RanksCopy.rows(data), Dictionary(data.get("me", {})) if data.get("me") is Dictionary else {})
 	else:
 		_board.set_rows(RanksCopy.local_rows(SaveService.top_scores(RanksCopy.BOARD_SIZE, area)))
-	if Net.enabled and Net.registered():
+	if fetch and Net.enabled and Net.registered():
 		Net.load_board(area, "week")
 
 
 func _on_board_for_preview(area: String, period: String, _data: Dictionary) -> void:
 	if period == "week" and _board != null and area == str(CARDS[_index]["area"]):
-		_refresh_board()
+		_refresh_board(false)
 
 
 ## A walkthrough over the home (design 36a): the overlay dims everything but
@@ -241,6 +243,11 @@ func _welcome() -> void:
 	stop.set_small("%s · FIRST STOP" % str(w.get("town", "")))
 	_ui.add_child(stop)
 	stop.show_once.call_deferred(WELCOME_S)
+
+
+func _exit_tree() -> void:
+	if Net.board_loaded.is_connected(_on_board_for_preview):
+		Net.board_loaded.disconnect(_on_board_for_preview)
 
 
 func _process(dt: float) -> void:
