@@ -21,6 +21,7 @@ const FIELD_BG := Color(34.0 / 255.0, 28.0 / 255.0, 24.0 / 255.0, 0.55)
 var _shot_help: ShadowCard
 var _dark: ShadowCard
 var _tuning: ShadowCard
+var _gates: ShadowCard
 var _name_edit: LineEdit
 var _town_edit: LineEdit
 var _player_status: Label
@@ -74,6 +75,15 @@ func _build() -> void:
 			_tone(_tuning, App.tuning_mode)
 		)
 		_list.add_child(_tuning)
+		# LEVEL GATES (Ross, 2026-10-17): play with the areas and leagues locked
+		# by level, the way a release build does — a new user's game.
+		_gates = _row("Gates", _gates_label(), App.league_gating)
+		_gates.pressed.connect(func() -> void:
+			App.set_league_gating(not App.league_gating)
+			_gates.text = _gates_label()
+			_tone(_gates, App.league_gating)
+		)
+		_list.add_child(_gates)
 		var dev := words("DEV BUILD ONLY", 16)
 		dev.name = "DevLine"
 		_list.add_child(dev)
@@ -342,3 +352,11 @@ func _dark_label() -> String:
 
 func _tuning_label() -> String:
 	return "TUNING: ON" if App.tuning_mode else "TUNING: OFF"
+
+
+func _gates_label() -> String:
+	return "LEVEL GATES: ON" if App.league_gating else "LEVEL GATES: OFF"
+
+
+func has_gates() -> bool:
+	return _gates != null

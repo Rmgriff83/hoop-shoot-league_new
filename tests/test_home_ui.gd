@@ -497,6 +497,15 @@ func _widgets(t) -> void:
 	t.ok(panel.has_dark_mode(), "settings has the dark-mode row")
 	t.ok(panel.find_child("ShotHelp", true, false) != null, "settings has shot help")
 	t.eq(panel.has_tuning(), OS.is_debug_build(), "tuning toggle only in a debug build")
+	t.eq(panel.has_gates(), OS.is_debug_build(), "the LEVEL GATES toggle only in a debug build")
+	if OS.is_debug_build():
+		var was_gating: bool = _app().league_gating
+		var gates: ShadowCard = panel.find_child("Gates", true, false)
+		gates.pressed.emit()
+		t.eq(_app().league_gating, not was_gating, "tapping flips the gates")
+		t.eq(bool(SaveService.get_tuning().get("gates", false)), _app().league_gating, "…and the tuning part remembers")
+		t.ok(gates.text.begins_with("LEVEL GATES: "), "the row reads its state (%s)" % gates.text)
+		_app().set_league_gating(was_gating)
 	t.ok(panel.has_player() and panel.find_child("MoveToPhone", true, false) != null, "the PLAYER section with MOVE TO NEW PHONE")
 	t.ok(panel.find_child("TownRow", true, false) != null and panel.find_child("SaveTown", true, false) != null, "the HOMETOWN row with SAVE (design 35a)")
 	var link_row: ShadowCard = panel.find_child("PlatformLink", true, false)

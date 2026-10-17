@@ -190,7 +190,9 @@ chevron (the footer says START INSIDE).
   handle and cloud-save lines, MOVE TO NEW PHONE, ENTER CODE, the platform
   link row — hidden until a Game Center / Play Games backend exists — and
   DELETE ACCOUNT, two taps — docs/BACKEND.md → Identity / Phase 2 / Platform
-  identity), TUNING (debug builds only) over DEV BUILD ONLY,
+  identity), TUNING and LEVEL GATES (debug builds only — the gates toggle plays
+  the dev build with areas and leagues locked by level like a release build,
+  `App.set_league_gating`, remembered on the tuning part) over DEV BUILD ONLY,
   CREDITS, the full-width CLOSE. Flipping DARK MODE rebuilds the home chrome
   behind it (still slid out); the page itself wears the scene colours.
 - **Ranks** (`game/ui/ranks_page.gd` `RanksPage`, copy in `ranks_copy.gd`):

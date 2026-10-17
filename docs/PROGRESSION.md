@@ -92,7 +92,8 @@ the title at the cap; the suite runs it.
   the ticker's `LEVEL 2 · 64/100 XP`. A locked area's LEAGUE, TIME TRIAL and
   PRACTICE cards are disabled with `LOCKED · LEVEL 3`; the league card
   reads `LOCKED · REACH LEVEL 3`. `App.start_area` and `enter_league` refuse
-  a locked area / league (`App.league_gating`, on in release builds only).
+  a locked area / league (`App.league_gating`, on in release builds; a debug
+  build turns it on with Settings → LEVEL GATES to play like a new user).
 - **Match** — a card above your level sits in the tray dimmed with a
   `LVL 3` chip and will not play; the loadout float greys its name with the
   level; the shop shows a `LVL n` chip per card (gold once you have it).

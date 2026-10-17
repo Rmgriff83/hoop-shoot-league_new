@@ -25,7 +25,9 @@ const LEVEL_MUSIC := {"gain_db": -14.0, "tracks": [
 ## `unlock` level, reached by playing the league before it). On.
 ## Level gates on areas and leagues (docs/PROGRESSION.md). OFF in debug builds
 ## — the editor and the phone dev APK (tools/android_deploy.sh exports debug)
-## can reach every area; a release build gates as designed.
+## can reach every area — unless the dev LEVEL GATES toggle in Settings turns
+## them on (the tuning part's `gates`), to play like a new user would; a
+## release build gates as designed, always.
 var league_gating: bool = not OS.is_debug_build()
 ## The league whose dashboard / heat is active ("" outside leagues).
 var current_league := ""
@@ -171,6 +173,8 @@ func hoop_for_mode(id: String) -> HoopSet:
 func _ready() -> void:
 	var saved := SaveService.get_tuning()
 	tuning_mode = bool(saved.get("tuningMode", false))
+	if OS.is_debug_build():
+		league_gating = bool(saved.get("gates", false))
 	shot_help = shot_help_from_saved(SaveService.get_settings().get("shotHelp", SHOT_HELP_OFF))
 	dark_mode = bool(SaveService.get_settings().get("darkMode", false))
 	music_on = bool(SaveService.get_settings().get("musicOn", false))
@@ -211,6 +215,17 @@ func _resolve_cosmetics() -> void:
 func set_tuning_mode(on: bool) -> void:
 	tuning_mode = on
 	SaveService.put_tuning(on, SaveService.get_tuning().get("fields", {}))
+
+
+## Dev builds only: the level gates on or off (a release build ignores this).
+func set_league_gating(on: bool) -> void:
+	if not OS.is_debug_build():
+		return
+	league_gating = on
+	SaveService.put_tuning_gates(on)
+	# A card the gate just closed should not stay as the home's page.
+	if on and not area_unlocked(str(AreaArchiveCopy.AREAS[clampi(home_card, 0, AreaArchiveCopy.AREAS.size() - 1)].get("area", "cage"))):
+		home_card = 0
 
 
 ## Coerce a saved value into a mode. The setting was a BOOL before it grew a

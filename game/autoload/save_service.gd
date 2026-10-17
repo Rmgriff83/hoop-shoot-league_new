@@ -268,7 +268,15 @@ func get_tuning() -> Dictionary:
 ## undo snapshot (below) rides along untouched.
 func put_tuning(mode: bool, fields: Dictionary) -> void:
 	_tuning = {"updatedAt": _now_ms(), "tuningMode": mode, "fields": fields.duplicate(),
-		"undo": _tuning.get("undo", {}), "net": _tuning.get("net", {})}
+		"undo": _tuning.get("undo", {}), "net": _tuning.get("net", {}), "gates": _tuning.get("gates", false)}
+	_write_json(TUNING_PART, _tuning)
+
+
+## Dev: play with the level gates on, like a release build (Ross, 2026-10-17).
+## Device-local, on the tuning part so a store build never carries it.
+func put_tuning_gates(on: bool) -> void:
+	_tuning["gates"] = on
+	_tuning["updatedAt"] = _now_ms()
 	_write_json(TUNING_PART, _tuning)
 
 
