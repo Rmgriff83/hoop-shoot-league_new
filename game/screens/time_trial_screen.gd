@@ -215,7 +215,11 @@ func _add_pause_button(layer: CanvasLayer) -> void:
 ## grab zone, but a Button takes the press before _unhandled_input sees it,
 ## so a tap on the note never becomes a grab.
 const MUSIC_POS := Vector2(36, 1192)
+## The next-song chevron, smaller, on the note's right (Ross, 2026-10-17).
+const NEXT_SIZE := 44.0
+const NEXT_POS := Vector2(36 + IconButton.SIZE + 10, 1192 + (IconButton.SIZE - NEXT_SIZE))
 var _music_button: IconButton
+var _next_button: IconButton
 
 
 func _add_music_button(layer: CanvasLayer) -> void:
@@ -225,6 +229,21 @@ func _add_music_button(layer: CanvasLayer) -> void:
 	_music_button.active = App.music_on
 	_music_button.pressed.connect(toggle_music)
 	layer.add_child(_music_button)
+	_next_button = IconButton.new("next", NEXT_SIZE)
+	_next_button.name = "NextTrackButton"
+	_next_button.position = NEXT_POS
+	_next_button.pressed.connect(next_track)
+	layer.add_child(_next_button)
+
+
+## The chevron: the next song in the playlist; with the music off it turns
+## it on (and remembers that) and starts from the first song.
+func next_track() -> void:
+	if not App.music_on:
+		App.set_music_on(true)
+		if _music_button != null:
+			_music_button.active = true
+	Sfx.next_level_music()
 
 
 ## The setting can change under a running screen (a cloud pull of the

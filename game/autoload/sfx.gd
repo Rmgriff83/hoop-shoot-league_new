@@ -338,6 +338,22 @@ func start_level_music(index := -1) -> void:
 	play_track("%s%d" % [LEVEL_TRACK_ID, index % tracks.size()], str(tracks[index % tracks.size()]), float(App.LEVEL_MUSIC["gain_db"]))
 
 
+## The playing level track's index in the playlist, -1 when none.
+func level_music_index() -> int:
+	if not _track_id.begins_with(LEVEL_TRACK_ID):
+		return -1
+	return int(_track_id.substr(LEVEL_TRACK_ID.length()))
+
+
+## The next song in the playlist (the HUD's chevron beside the note): after
+## the one playing, wrapping; from nothing, the first.
+func next_level_music() -> void:
+	var n: int = Array(App.LEVEL_MUSIC["tracks"]).size()
+	if n == 0:
+		return
+	start_level_music((level_music_index() + 1) % n)
+
+
 func stop_level_music() -> void:
 	stop_track()
 
