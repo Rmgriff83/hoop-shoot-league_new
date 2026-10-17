@@ -202,17 +202,35 @@ chevron (the footer says START INSIDE).
   your row on orange; `YOU · #7 · 29` pinned under the list. Opens on the
   current area's tab; the page only emits `request(area, period)` and the
   title feeds it from `Net`. QA: `--qa-ranks`.
-- **1v1** (`game/ui/match_lobby_page.gd` `MatchLobbyPage`, copy in
-  `match_copy.gd`; docs/BACKEND.md → Phase 3): the multiplayer icon beside
-  Ranks opens the lobby for the current area — a card strip (`120 COINS`,
-  your three online slots, `CARDS >` into `CardDeckSheet`: slots, LOADOUT,
-  SHOP), QUICK MATCH, CREATE CODE, ENTER CODE + GO — then the wait (`CODE AB CDE · TELL YOUR FRIEND` /
-  `FINDING A PLAYER...`), FOUND and the failure lines. `App.start_online`
-  arranges the room and tips off into a heat with the other phone in the
-  opponent slot; the post-match page reads `ONLINE MATCH · BEACH` with the
-  online coins card (`+110 · ONLINE COINS · WIN · UPSET · X2.2`) and the
-  REMATCH? card (orange to ask, gold when they asked, teal once both have,
-  THEY LEFT when the other phone went home). QA: `--qa-multi`.
+- **1v1** (`game/ui/match_lobby_page.gd` `MatchLobbyPage`, a `HomePage` since
+  2026-10-17 — design "Online Lobby" 37a; copy in `match_copy.gd`;
+  docs/BACKEND.md → Phase 3): the ONLINE card beside the area name opens the
+  lobby with the locker move (the home slides out left, the lobby in from the
+  right, every face see-through and dotted). `<` ONLINE · 1V1; **COURT**: ANY
+  and the four courts in a row (a locked court dimmed with a lock; the whole
+  row dimmed and fixed on the cage with `UNLOCK MORE COURTS TO CHOOSE` while
+  only the cage is open, else `n OF 4 OWNED`; the chosen one gold, the home's
+  court picked at open); QUICK MATCH (orange; `FIRST OPEN MATCH ON YOUR COURTS`
+  / `PLAY WHOEVER IS ON …`), CREATE CODE (teal, `PLAY A FRIEND`), ENTER CODE
+  + GO (gold) over `GOT A CODE FROM A FRIEND? TYPE IT IN`; at the foot the
+  **LOADOUT** panel (gold: three 84 × 112 slots, tap one to remove it, names
+  beside, `n OF 3 · TAP TO REMOVE`) and **YOUR CARDS** (the spares at 66 × 88
+  with a ×n badge, tap one to add it; `TAP TO ADD` / `NONE LEFT · WIN MORE IN
+  LEAGUES`) — the online deck sheet is no longer opened from here. The waits:
+  `FINDING A PLAYER…` over `USUALLY UNDER 30 SECONDS` with CANCEL; a code:
+  `TELL A FRIEND THIS CODE`, the code at 72 px gold, `WAITING…` over `THE MATCH
+  STARTS AS SOON AS THEY JOIN`; `PLAYER FOUND` (gold) over `NAME 42 · LVL 07 ·
+  STARTING…`; a failure big in `#FF8A6A` (`CODE NOT FOUND` / `NOBODY CAME` / …)
+  over what to do, under BACK. The page emits `quick(area)`, `create(area)`,
+  `join(area, code)` and `cancel`; `App.start_online` arranges the room — for
+  ANY it sends the owned courts and the Lobby pairs on a court both own (the
+  joiner is told the court; an any-court host's room takes the joiner's) — and
+  tips off into a heat with the other phone in the opponent slot; the
+  post-match page reads `ONLINE MATCH · BEACH` with the online coins card
+  (`+110 · ONLINE COINS · WIN · UPSET · X2.2`) and the REMATCH? card (orange to
+  ask, gold when they asked, teal once both have, THEY LEFT when the other
+  phone went home). QA: `--qa-multi` (`multi_menu`, `multi_code`,
+  `multi_found`, `multi_failed`, `multi_finding`, `multi_cards`).
 
 ## Placeholders (present, not wired)
 

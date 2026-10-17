@@ -66,13 +66,60 @@ describe("lobby", () => {
     const qc = await lobby(c, "quick", { area: "city" }); // another area, another queue
     expect(qc.json.room).not.toBe(qa.json.room);
     const qb = await lobby(b, "quick", { area: "beach" });
-    expect(qb.json).toEqual({ room: qa.json.room, host: false });
+    expect(qb.json).toEqual({ room: qa.json.room, host: false, area: "beach" });
     const next = await lobby(a, "quick", { area: "beach" }); // the queue is empty again
     expect(next.json.host).toBe(true);
     expect(next.json.room).not.toBe(qa.json.room);
     await lobby(a, "leave", { area: "beach" });
     const after = await lobby(b, "quick", { area: "beach" });
     expect(after.json.host).toBe(true); // a left, so b waits
+  });
+  it("any court: a waiter on one of my courts, else another any-court player on a common court", async () => {
+    const a = await register();
+    const b = await register();
+    const c = await register();
+    const d = await register();
+    // The lobby is one object for every test: empty every queue first.
+    const x = await register();
+    for (const area of ["cage", "beach", "park", "city", "any"]) {
+      const r = await lobby(x, "quick", { area, areas: ["cage", "beach", "park", "city"] });
+      if (r.json.host) await lobby(x, "leave", { area });
+    }
+    // b waits on the park; a (any of cage/park) takes that room on the park.
+    const qb = await lobby(b, "quick", { area: "park" });
+    const qa = await lobby(a, "quick", { area: "any", areas: ["cage", "park"] });
+    expect(qa.json).toEqual({ room: qb.json.room, host: false, area: "park" });
+    // c waits for any of its courts; d, on the beach, is paired with c (beach is one of c's).
+    const qc = await lobby(c, "quick", { area: "any", areas: ["cage", "beach"] });
+    expect(qc.json).toEqual({ room: qc.json.room, host: true, area: "any" });
+    const qd = await lobby(d, "quick", { area: "beach" });
+    expect(qd.json).toEqual({ room: qc.json.room, host: false, area: "beach" });
+    // Two any-court players: the second lands on a court both own.
+    const qa2 = await lobby(a, "quick", { area: "any", areas: ["cage", "park"] });
+    expect(qa2.json.host).toBe(true);
+    const qb2 = await lobby(b, "quick", { area: "any", areas: ["park", "city"] });
+    expect(qb2.json).toEqual({ room: qa2.json.room, host: false, area: "park" });
+    // A court I don't own is not matched; leaving an any queue works; bad lists are 400.
+    const qc2 = await lobby(c, "quick", { area: "any", areas: ["cage"] });
+    expect(qc2.json.host).toBe(true);
+    expect((await lobby(d, "quick", { area: "city" })).json.host).toBe(true);
+    await lobby(c, "leave", { area: "any" });
+    expect((await lobby(a, "quick", { area: "any", areas: ["cage"] })).json.host).toBe(true);
+    expect((await lobby(b, "quick", { area: "any", areas: ["moon"] })).status).toBe(400);
+    expect((await lobby(b, "code", { area: "any" })).status).toBe(400);
+  });
+  it("an any-court room takes the joiner's court", async () => {
+    const a = await register();
+    const b = await register();
+    const room = uuid();
+    const A = await join(a, room, "any");
+    const B = await join(b, room, "beach");
+    const sa = await A.until((m) => m.t === "start");
+    const sb = await B.until((m) => m.t === "start");
+    expect(sa.area).toBe("beach");
+    expect(sb.area).toBe("beach");
+    A.ws.close();
+    B.ws.close();
   });
   it("makes and joins codes", async () => {
     const a = await register();

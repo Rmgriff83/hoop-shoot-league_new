@@ -231,6 +231,14 @@ build at any server.
 - **Later**: a ranked ladder from `matches`, rejoin after a drop (the room
   already re-sends `start` to a reconnect), an online card-drop system.
 
+- **ANY court (2026-10-17, design 37a):** `POST /v1/match/quick {area: "any",
+  areas: [owned courts]}` (and `leave`). The Lobby pairs an any-court player
+  with the first waiter on one of their courts, else with another any-court
+  player on a court both own (`cage` when none); the reply carries `area`
+  (the joiner's court) and the room, created by an any-court host with
+  `x-area: any`, takes the court the joiner brings. `areas` is validated
+  (unknown court → 400); a code is never "any".
+
 ## Cards online (phase 3b, built 2026-10-07)
 
 The same power-up cards as leagues, from an **online-only inventory that

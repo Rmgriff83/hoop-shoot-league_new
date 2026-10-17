@@ -92,15 +92,12 @@ func run(t) -> void:
 	t.eq(App.loadout_slots("online"), [null, null, null], "a slot the ledger no longer covers empties")
 	fake_net.free()
 	sheet.free()
-	# The lobby strip.
+	# The lobby's cards (design 37a): the loadout and the spares on the page.
 	var lobby := MatchLobbyPage.new()
 	var root := lobby.build("cage")
-	t.eq((root.find_child("OnlineCoins", true, false) as Label).text, "0 COINS", "the strip's coins")
-	t.ok(root.find_child("Cards", true, false) != null, "CARDS >")
-	var opened := [0]
-	lobby.cards.connect(func() -> void: opened[0] += 1)
-	(root.find_child("Cards", true, false) as Button).pressed.emit()
-	t.eq(opened[0], 1, "…opens the deck")
+	t.ok(root.find_child("Slot0", true, false) != null and root.find_child("Slot2", true, false) != null, "three loadout slots")
+	t.ok(root.find_child("Spares", true, false) != null, "the spares row")
+	t.ok((root.find_child("LoadoutLine", true, false) as Label).text.ends_with("OF 3 · TAP TO REMOVE"), "n OF 3 · TAP TO REMOVE")
 	lobby.free()
 	# Clean the cache we seeded.
 	d = svc.get_cards()

@@ -1189,10 +1189,9 @@ func ranks() -> RanksPage:
 func _open_lobby() -> void:
 	if _lobby != null or _ranks != null or _archive != null or _locker != null or _settings != null or _peggy != null or _switching:
 		return
-	var area := str(CARDS[_index]["area"])
 	_lobby = MatchLobbyPage.new()
 	_lobby.name = "MatchLobby"
-	_lobby.build(area)
+	_lobby.build(str(CARDS[_index]["area"]))
 	var on_state := func(kind: String, a: Variant = null, b: Variant = null) -> void:
 		if _lobby == null:
 			return
@@ -1200,36 +1199,23 @@ func _open_lobby() -> void:
 			"waiting": _lobby.show_waiting(str(a), str(b) if b != null else "")
 			"found": _lobby.show_found(Dictionary(a) if a is Dictionary else {})
 			"failed": _lobby.show_failed(str(a))
-	_lobby.quick.connect(func() -> void: App.start_online(area, "quick", "", on_state))
-	_lobby.create.connect(func() -> void: App.start_online(area, "create", "", on_state))
-	_lobby.join.connect(func(code: String) -> void: App.start_online(area, "join", code, on_state))
+	_lobby.quick.connect(func(area: String) -> void: App.start_online(area, "quick", "", on_state))
+	_lobby.create.connect(func(area: String) -> void: App.start_online(area, "create", "", on_state))
+	_lobby.join.connect(func(area: String, code: String) -> void: App.start_online(area, "join", code, on_state))
 	_lobby.cancel.connect(App.cancel_online)
-	_lobby.cards.connect(_open_online_deck)
 	var on_cards := func() -> void:
 		if _lobby != null:
-			_lobby.refresh_strip()
+			_lobby.refresh_cards()
 	Net.cards_changed.connect(on_cards)
 	_lobby.closed.connect(func() -> void:
 		Net.cards_changed.disconnect(on_cards)
 		_lobby = null
+		_slide_home(false)
 	)
 	add_child(_lobby)
+	_slide_home(true)
 	_lobby.slide_in()
 	Net.refresh_cards()   # the ledger's word on coins and cards
-
-
-## The online deck over the lobby (docs/BACKEND.md → Cards online).
-func _open_online_deck() -> void:
-	if _lobby == null or get_node_or_null("OnlineDeck") != null:
-		return
-	var sheet := CardDeckSheet.new()
-	sheet.name = "OnlineDeck"
-	sheet.build(Net.ONLINE_BUCKET, "ONLINE CARDS")
-	sheet.changed.connect(func() -> void:
-		if _lobby != null:
-			_lobby.refresh_strip()
-	)
-	add_child(sheet)
 
 
 func lobby() -> MatchLobbyPage:

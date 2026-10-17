@@ -275,6 +275,15 @@ func area_unlocked(area: String) -> bool:
 	return not league_gating or Progression.area_unlocked(level(), area)
 
 
+## The courts open to this player, in play order.
+func unlocked_areas() -> Array:
+	var out := []
+	for a in ["cage", "beach", "park", "city"]:
+		if area_unlocked(a):
+			out.push_back(a)
+	return out
+
+
 # ---- tickets (global, the locker money) + cosmetics ----------------------------
 # docs/ECONOMY.md: tickets are earned by time trials and league heats and
 # spent on balls / hoops in the locker; coins (below) are per league.
@@ -701,7 +710,13 @@ func start_online(area: String, how: String, code: String, on_state: Callable) -
 		on_state.call("failed", "offline")
 		return
 	var path := "/v1/match/" + ("quick" if how == "quick" else ("code" if how == "create" else "join"))
-	var r: Dictionary = await Net.request_json("match", HTTPClient.METHOD_POST, path, {"area": area, "code": code} if how == "join" else {"area": area})
+	var body := {"area": area}
+	if how == "join":
+		body["code"] = code
+	elif how == "quick" and area == "any":
+		# ANY court (design 37a): the Lobby pairs us on a court we both own.
+		body["areas"] = unlocked_areas()
+	var r: Dictionary = await Net.request_json("match", HTTPClient.METHOD_POST, path, body)
 	if not r["ok"]:
 		var why := "offline"
 		if r["code"] == 404:
@@ -712,7 +727,10 @@ func start_online(area: String, how: String, code: String, on_state: Callable) -
 			why = "throttled"
 		on_state.call("failed", why)
 		return
-	if _open_room(str(r["json"].get("room", "")), area, on_state):
+	# A joiner is told the court the Lobby paired on; an any-court host learns it from the room.
+	var court := str(r["json"].get("area", area))
+	match_area = court
+	if _open_room(str(r["json"].get("room", "")), court, on_state):
 		on_state.call("waiting", how, str(r["json"].get("code", "")))
 	else:
 		on_state.call("failed", "offline")

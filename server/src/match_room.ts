@@ -93,6 +93,9 @@ export class MatchRoom extends DurableObject<Env> {
     if (!m) {
       m = { area, created: now, status: "waiting", seed: 0, started: 0, last: now, a: null, b: null, ends: { a: {}, b: {} }, hands: { a: [], b: [] }, leftWaiting: null, rematch: { a: false, b: false }, reason: "", recorded: false };
       await this.ctx.storage.setAlarm(now + WAIT_MS);
+    } else if (m.area === "any" && area !== "any") {
+      // An any-court host: the room takes the court the Lobby paired on, which the joiner brings.
+      m.area = area;
     }
     if (m.status === "done") return new Response("over", { status: 410 });
     let side: Side;

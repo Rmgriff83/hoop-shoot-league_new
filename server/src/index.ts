@@ -313,19 +313,30 @@ app.use("/v1/match/*", authenticate, async (c, next) => {
   await next();
 });
 
-/** Quick match / make a code / join a code / leave the queue: the Lobby decides. */
+/**
+ * Quick match / make a code / join a code / leave the queue: the Lobby decides.
+ * `area` may be "any" for quick / leave (design "Online Lobby" 37a): then
+ * `areas` lists the courts this phone owns and the Lobby picks one on pairing.
+ */
 app.post("/v1/match/:action{quick|code|join|leave}", async (c) => {
   const p = c.get("player");
-  const b = await body(c, ["area", "code"]);
+  const b = await body(c, ["area", "code", "areas"]);
   if (!b) return c.json({ error: "bad_request" }, 400);
-  const area = typeof b.area === "string" ? b.area : "cage";
-  if (!(MATCH_AREAS as readonly string[]).includes(area)) return c.json({ error: "area" }, 400);
   const action = c.req.param("action");
+  const area = typeof b.area === "string" ? b.area : "cage";
+  const anyOk = area === "any" && (action === "quick" || action === "leave");
+  if (!anyOk && !(MATCH_AREAS as readonly string[]).includes(area)) return c.json({ error: "area" }, 400);
+  let areas: string[] = [];
+  if (b.areas !== undefined) {
+    if (!Array.isArray(b.areas) || b.areas.some((a) => !(MATCH_AREAS as readonly string[]).includes(a as string))) return c.json({ error: "areas" }, 400);
+    areas = b.areas as string[];
+  }
+  if (area === "any" && areas.length === 0) areas = ["cage"];
   if (action === "join" && typeof b.code !== "string") return c.json({ error: "code" }, 400);
   const stub = c.env.LOBBY.get(c.env.LOBBY.idFromName("lobby"));
   const res = await stub.fetch(`https://lobby/${action}`, {
     method: "POST",
-    body: JSON.stringify({ playerId: p.id, area, code: b.code ?? "" }),
+    body: JSON.stringify({ playerId: p.id, area, code: b.code ?? "", areas }),
   });
   return new Response(res.body, { status: res.status, headers: { "content-type": "application/json" } });
 });
@@ -337,7 +348,8 @@ app.get("/v1/match/room/:id", async (c) => {
   if (!ROOM_RE.test(id)) return c.json({ error: "room" }, 400);
   const p = c.get("player");
   const area = c.req.query("area") ?? "cage";
-  if (!(MATCH_AREAS as readonly string[]).includes(area)) return c.json({ error: "area" }, 400);
+  // "any": the host of an any-court queue; the room takes the joiner's court.
+  if (area !== "any" && !(MATCH_AREAS as readonly string[]).includes(area)) return c.json({ error: "area" }, 400);
   // The hand this phone brings (docs/BACKEND.md → Cards online): only what
   // the ledger holds, under the level cap; anything else comes in blank.
   const wanted = (c.req.query("slots") ?? "").split(",").slice(0, SLOTS);

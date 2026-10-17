@@ -1089,27 +1089,20 @@ func _run_multi() -> void:
 	lobby.show_failed("expired")
 	await _sleep(0.2)
 	await _snap("multi_failed")
+	lobby.show_waiting("quick")
+	await _sleep(0.2)
+	await _snap("multi_finding")
 	lobby.show_menu()
-	# The online deck: a seeded cache (coins + a spare), LOADOUT then SHOP.
+	# The cards on the page (design 37a): a seeded cache (a spare, one set).
 	var cd: Dictionary = SaveService.get_cards()
 	var ob := CardDefs.league_doc(cd, "online")
 	ob["coins"] = 260
 	ob["inventory"] = {"ice": 1}
 	ob["loadout"] = ["fire7", null, null]
 	SaveService.put_cards(cd)
-	lobby.refresh_strip()
+	lobby.refresh_cards()
 	await _sleep(0.2)
-	await _snap("multi_strip")
-	var deck := CardDeckSheet.new()
-	deck.name = "OnlineDeck"
-	deck.build("online", "ONLINE CARDS")
-	add_child(deck)
-	await _sleep(0.3)
-	await _snap("deck_loadout")
-	deck.build("online", "ONLINE CARDS", "SHOP")
-	await _sleep(0.3)
-	await _snap("deck_shop")
-	deck.queue_free()
+	await _snap("multi_cards")
 	lobby.close()
 	await _sleep(0.4)
 	# The staged match: a 20 s beach heat against the fake peer, hands dealt
