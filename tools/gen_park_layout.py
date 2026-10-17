@@ -93,6 +93,13 @@ rows = [r for r in rows if not (r["model"].startswith("aspen") and abs(r["x"] - 
 # …and the far aspen at (31.5, -10.9) on the left, the other half of the
 # brown pair from the key (Ross deleted it in Blender, 2026-10-16).
 rows = [r for r in rows if not (r["model"].startswith("aspen") and abs(r["x"] - 31.5) < 0.3 and abs(r["z"] + 10.9) < 0.3)]
+# Six more Ross deleted in Blender (2026-10-16, second pass): a lot-row pine
+# at (26.3, -17.2), three far aspens on the right at (35.9, -19.6),
+# (38.4, -10.6) and (48.5, -19.1), the aspen at (17.5, 14.5) on the left,
+# and the fallen pine along the lot at (13.5, -13.6).
+CUT_2 = [("pine", 26.27, -17.21), ("aspen", 35.85, -19.58), ("aspen", 38.35, -10.56),
+         ("aspen", 48.45, -19.07), ("aspen", 17.5, 14.5), ("fallen", 13.5, -13.6)]
+rows = [r for r in rows if not any(r["model"].startswith(m) and abs(r["x"] - x) < 0.3 and abs(r["z"] - z) < 0.3 for m, x, z in CUT_2)]
 
 doc = {"generated_by": "tools/gen_park_layout.py", "seed": 7, "rows": rows}
 with open(OUT, "w") as f:

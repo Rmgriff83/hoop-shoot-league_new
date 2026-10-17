@@ -22,8 +22,9 @@ func run(t) -> void:
 		if m.find("tree_0") >= 0 and m.find("stump") < 0 and m.find("fallen") < 0:
 			trees += 1
 		t.ok(FileAccess.file_exists("res://assets/arena/park/trees/%s.glb" % m), "the layout's %s ships conformed" % m)
-	t.ok(trees >= 25 and trees <= 50, "a few dozen trees (%d)" % trees)
-	# The park running lighter: the six far aspens are the small model scaled to height.
+	# 23 since Ross's second Blender cut (2026-10-16): six more rows out.
+	t.ok(trees >= 20 and trees <= 50, "a couple of dozen trees (%d)" % trees)
+	# The park running lighter: the far aspens are the small model scaled to height.
 	var big := 0
 	var far_small := 0
 	for r in rows:
@@ -33,7 +34,7 @@ func run(t) -> void:
 		elif str(r["model"]) == "aspen_tree_02" and float(r["x"]) >= 29.0 and float(r.get("s", 1.0)) >= 1.6:
 			far_small += 1
 	t.eq(big, 5, "five big aspens near the court")
-	t.eq(far_small, 5, "five far aspens are the small model scaled up to the big one's height (Ross deleted the sixth)")
+	t.eq(far_small, 3, "three far aspens are the small model scaled up to the big one's height (Ross cut the other three)")
 	var moved_pine := false
 	for r in rows:
 		if str(r["model"]) == "pine_tree_01_b" and absf(float(r["x"]) - 24.36) < 0.01 and absf(float(r["z"]) - 2.58) < 0.01 and absf(float(r.get("y", 0.0))) < 1e-6:
@@ -44,8 +45,8 @@ func run(t) -> void:
 		if str(r["model"]).begins_with("aspen") and absf(float(r["x"]) - 25.4) < 0.3 and absf(float(r["z"]) - 0.9) < 0.3:
 			behind_board = true
 	t.ok(not behind_board, "the aspen that doubled up behind the backboard is gone")
-	t.ok(models.has("aspen_tree_01") and models.has("pine_tree_01_a") and models.has("pine_tree_stump_01") and models.has("rock_01_large_mossy") and models.has("fallen_pine_tree_01"),
-		"aspens, pines, a stump, the mossy rock and the fallen log")
+	t.ok(models.has("aspen_tree_01") and models.has("pine_tree_01_a") and models.has("pine_tree_stump_01") and models.has("rock_01_large_mossy") and not models.has("fallen_pine_tree_01"),
+		"aspens, pines, a stump, the mossy rock; the fallen log went with the second cut")
 	var leaning := false
 	for r in rows:
 		if str(r["model"]) == "aspen_tree_01" and absf(float(r["x"]) - 4.6) < 1e-6:

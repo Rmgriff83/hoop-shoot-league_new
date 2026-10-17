@@ -853,8 +853,9 @@ laid out from the reference photo. Three scripts and a layout file:
 - `tools/gen_park_layout.py` → `data/park_layout.json`: the design's seeded
   placement (aspens on the avenue rows, pines in the gaps, the big trees
   right, the group past the path, the trees behind the camera, the tall
-  two stumps, the mossy rock, the fallen
-  log along the lot). `game/view/park_fx.gd` builds one `MultiMeshInstance3D`
+  two stumps, the mossy rock; the fallen
+  log along the lot went with Ross's second Blender cut of 2026-10-16, six
+  rows out — 26 rows, 23 trees). `game/view/park_fx.gd` builds one `MultiMeshInstance3D`
   per model surface from it — split near/far at `ParkFx.SHADOW_R` (16 m
   from the hoop): only the two trees by the court cast shadows (the photo's
   leaning aspen over the board went on 2026-10-16: it doubled up on the left
