@@ -131,10 +131,32 @@ chevron (the footer says START INSIDE).
   states, coins, next_up)` → `ARCADE CAGE BEST 29 · ARCADE LEAGUE · SEASON 2
   · DAY 4 · 3RD PLACE · NEXT UP: PRUDENCE CHIME · 1,240 TICKETS`, laid twice
   around a `★` seam and scrolled at 80 px/s.
+- **New player** (design "New Game Flow" 35a, 2026-10-17; `game/ui/new_player_page.gd`
+  `NewPlayerPage`, a `HomePage`): on a fresh install the splash's NEW GAME slides the
+  splash out left (sign and all) and the form in from the right. A gold card on top
+  previews name over hometown (`icon_jersey`); PLAYER NAME is pre-filled from
+  `HandleWords.generate` with its two-digit tag shown grey after the field; HOMETOWN
+  from `data/towns.json` (`Towns`, ≤ 16); each has a die (`DieGlyph`, a drawn die that
+  spins a turn) to re-roll, or is typed over — typing is tidied in place (upper-case,
+  A–Z 0–9 and single spaces). The name follows the settings rules (3–24, no blocked
+  word), the hometown cannot be empty; the status line says why ("NAME NEEDS 3 OR
+  MORE LETTERS" / "NAME NOT ALLOWED" / "PICK A HOMETOWN", in `#FF8A6A`) and LET'S PLAY
+  dims until both pass. LET'S PLAY → `App.create_player(name, tag, town)`: the name and
+  tag onto the account part (registration waits for this step — `Net._register`
+  refuses until `App.player_created()` — so the chosen name goes up in the register
+  call), the hometown and `playerCreated` into the settings part (synced; the
+  hometown is not a server field, and the league still says YOU), then straight onto
+  the Arcade Cage campaign home (`home_open_league = "cage"`, no archive) where the
+  title shows a `Toast`: "WELCOME, BRICK BARON · OAKRIDGE · FIRST STOP" for 3.4 s.
+  `App.player_created()` is `playerCreated` or `has_save()` (older installs skip the
+  form); `App.qa_fresh` forces a fresh install for QA (`--qa-splash` snaps
+  `new_player`, `new_player_roll`, `new_player_invalid`, `new_player_home`). Tests:
+  `tests/test_new_player.gd`, `tests/test_towns.gd`.
 - **Settings** (`game/ui/settings_panel.gd`, a `HomePage` since 2026-10-15,
   design "Settings"): the menu button slides it in like the locker. Every
   row is a dotted face — cream, gold when a toggle is on, orange for SAVE /
-  CLAIM: SHOT HELP, DARK MODE, the PLAYER section (your handle + SAVE, the
+  CLAIM: SHOT HELP, DARK MODE, the PLAYER section (your handle + SAVE, your
+  HOMETOWN + SAVE (a setting, saved on the spot), the
   handle and cloud-save lines, MOVE TO NEW PHONE, ENTER CODE, the platform
   link row — hidden until a Game Center / Play Games backend exists — and
   DELETE ACCOUNT, two taps — docs/BACKEND.md → Identity / Phase 2 / Platform
@@ -218,9 +240,10 @@ black background — Ross's call for now; the frosted-cage version was cut.
 It plays the moment the screen appears, on the design's timeline: the chain
 tug at 0.35–1.2 s, dark until 1.3 s, four uneven blinks, a 2.6 s swell to
 full, then a 7 % breath; a tap replays it. At 4.6 s the two full-width
-orange buttons rise in 0.15 s apart: CONTINUE (NEW GAME on a fresh install,
-`App.has_save()`) → the title, which opens the archive as the front door;
-SETTINGS → the home's sheet. Discord and Reddit icons sit top-left (the
+orange buttons rise in 0.15 s apart: CONTINUE (`App.player_created()`) → the
+title, which opens the archive as the front door — on a fresh install the
+button reads NEW GAME and opens the NEW PLAYER form instead (design 35a, see
+New player above); SETTINGS → the settings sheet. Discord and Reddit icons sit top-left (the
 links come later). Title music starts here and carries into the title.
 
 ## Area unlock (design "Area Unlock" 18a, 2026-10-05)

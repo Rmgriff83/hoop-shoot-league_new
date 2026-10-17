@@ -33,7 +33,10 @@ No sign-up, no email, no store sign-in. On the first launch the game mints
 `playerId` (UUIDv4) and a 32-byte `secret`, stores them in
 `user://save/account.json` (`SaveService.ACCOUNT_PART`, never synced) with a
 handle drawn from `data/handle_words.json` (`HandleWords`), and
-`POST /v1/register`s when the net allows (`Net.ensure_account`). Every later
+`POST /v1/register`s when the net allows (`Net.ensure_account`) — since
+2026-10-17 only once NEW PLAYER has picked the name (`App.player_created()`;
+design 35a), so the register call carries the chosen name; the hometown the
+form also asks for is a synced setting, not a server field. Every later
 call carries `Authorization: Bearer <playerId>.<secret>` over TLS; the server
 stores SHA-256(secret) — since 2026-10-17 one row per device in
 `player_secrets` (see Platform identity) — and refuses a known id with a

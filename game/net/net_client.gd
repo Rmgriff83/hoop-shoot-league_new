@@ -106,7 +106,9 @@ func ensure_account() -> void:
 
 
 func _register() -> bool:
-	if _registering or not _can_call():
+	# A fresh install registers once NEW PLAYER has picked the name (design
+	# 35a): the register call carries it, no rename round-trip.
+	if _registering or not _can_call() or not App.player_created():
 		return false
 	_registering = true
 	var a := account()

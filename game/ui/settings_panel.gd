@@ -22,6 +22,7 @@ var _shot_help: ShadowCard
 var _dark: ShadowCard
 var _tuning: ShadowCard
 var _name_edit: LineEdit
+var _town_edit: LineEdit
 var _player_status: Label
 var _move: ShadowCard
 var _enter: ShadowCard
@@ -104,6 +105,18 @@ func _build_player() -> void:
 	var save := _action("SaveName", "SAVE")
 	save.pressed.connect(_save_name)
 	name_row.add_child(save)
+	# HOMETOWN (design 35a): a synced setting, saved on the spot.
+	var town_row := HBoxContainer.new()
+	town_row.name = "TownRow"
+	town_row.add_theme_constant_override("separation", 12)
+	_list.add_child(town_row)
+	_town_edit = _edit("TownEdit", App.hometown(), Towns.TOWN_MAX)
+	_town_edit.placeholder_text = "HOMETOWN"
+	_town_edit.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	town_row.add_child(_town_edit)
+	var save_town := _action("SaveTown", "SAVE")
+	save_town.pressed.connect(_save_town)
+	town_row.add_child(save_town)
 	_player_status = words(_player_status_text(), 14)
 	_player_status.name = "PlayerStatus"
 	_list.add_child(_player_status)
@@ -186,6 +199,16 @@ func _save_name() -> void:
 		return
 	_player_status.text = "SAVED · %s" % Net.handle() if ok else "NO SIGNAL · TRY AGAIN LATER"
 	_name_edit.text = str(Net.account().get("name", name))
+
+
+func _save_town() -> void:
+	var town := Towns.normalize(_town_edit.text)
+	if not Towns.valid(town):
+		_player_status.text = "PICK A HOMETOWN"
+		return
+	App.set_hometown(town)
+	_town_edit.text = town
+	_player_status.text = "SAVED · %s" % town
 
 
 func _move_to_phone() -> void:

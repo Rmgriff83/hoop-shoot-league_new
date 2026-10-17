@@ -4,9 +4,11 @@ extends Node3D
 ## leads. The design's own 3D neon sign (NeonSign3D) hangs in a 720×720
 ## viewport over black — Ross's call for now: no court, no frosted glass —
 ## and lights up the moment the screen appears; as it reaches full glow the
-## two orange buttons rise in: CONTINUE (NEW GAME with no save) → the title,
-## which opens the archive as the front door, and SETTINGS → the campaign
-## home's sheet. Discord and Reddit icons sit top-left (links to come).
+## two orange buttons rise in: CONTINUE → the title, which opens the archive
+## as the front door — or, on a fresh install, NEW GAME → the NEW PLAYER form
+## (design 35a: the splash slides out left, the form in from the right, and
+## LET'S PLAY lands on the Arcade Cage campaign home) — and SETTINGS → the
+## settings sheet. Discord and Reddit icons sit top-left (links to come).
 ## A tap on the sign replays it.
 
 const SIGN_VIEW := Vector2i(720, 720)
@@ -32,12 +34,13 @@ var _ui: CanvasLayer
 var _buttons: Array[Control] = []
 var _risen := false
 var _settings: SettingsPanel
+var _new_player: NewPlayerPage
 var _leaving := false
 
 
-## CONTINUE with a save behind it, NEW GAME without.
-static func primary_label(has_save: bool) -> String:
-	return "CONTINUE" if has_save else "NEW GAME"
+## CONTINUE once a player exists, NEW GAME before (App.player_created).
+static func primary_label(created: bool) -> String:
+	return "CONTINUE" if created else "NEW GAME"
 
 
 func _ready() -> void:
@@ -130,7 +133,7 @@ func _build_ui() -> void:
 		b.add_child(ic)
 		_ui.add_child(b)
 	# The two buttons, parked low and clear until the sign is lit.
-	var primary := _button(primary_label(App.has_save()), "icon_ball", BUTTON_TOP)
+	var primary := _button(primary_label(App.player_created()), "icon_ball", BUTTON_TOP)
 	primary.name = "Primary"
 	primary.pressed.connect(_continue)
 	var settings := _button("SETTINGS", "icon_gear", BUTTON_TOP + BUTTON_H + BUTTON_GAP)
@@ -199,11 +202,37 @@ func _replay() -> void:
 
 
 func _continue() -> void:
-	if _leaving or _settings != null:
+	if _leaving or _settings != null or _new_player != null:
+		return
+	if not App.player_created():
+		_open_new_player()
 		return
 	_leaving = true
 	App.show_archive = true
 	App.to_title()
+
+
+## NEW GAME: the splash (sign and all) slides out to the left while the NEW
+## PLAYER form slides in from the right; its < brings the splash back.
+func _open_new_player() -> void:
+	_new_player = NewPlayerPage.new()
+	_new_player.name = "NewPlayerPage"
+	_new_player.closed.connect(func() -> void:
+		_new_player = null
+		_slide_ui(false)
+	)
+	add_child(_new_player)
+	_new_player.slide_in()
+	_slide_ui(true)
+
+
+func _slide_ui(out: bool) -> void:
+	var tw := create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tw.tween_property(_ui, "offset:x", -HomePage.SLIDE if out else 0.0, HomePage.OPEN_S)
+
+
+func new_player_open() -> bool:
+	return _new_player != null
 
 
 func _open_settings() -> void:

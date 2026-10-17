@@ -484,6 +484,7 @@ func _widgets(t) -> void:
 	t.ok(panel.find_child("ShotHelp", true, false) != null, "settings has shot help")
 	t.eq(panel.has_tuning(), OS.is_debug_build(), "tuning toggle only in a debug build")
 	t.ok(panel.has_player() and panel.find_child("MoveToPhone", true, false) != null, "the PLAYER section with MOVE TO NEW PHONE")
+	t.ok(panel.find_child("TownRow", true, false) != null and panel.find_child("SaveTown", true, false) != null, "the HOMETOWN row with SAVE (design 35a)")
 	var link_row: ShadowCard = panel.find_child("PlatformLink", true, false)
 	t.ok(link_row != null and not link_row.visible, "the platform link row exists but hides behind the null backend")
 	var del_row: ShadowCard = panel.find_child("DeleteAccount", true, false)

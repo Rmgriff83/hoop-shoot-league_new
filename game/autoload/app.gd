@@ -37,6 +37,11 @@ var show_archive := true
 ## A league the home page should open straight into (its id), set by
 ## to_league_hub() — the heat result's CONTINUE SEASON. Cleared once used.
 var home_open_league := ""
+## The welcome toast the title shows once after NEW PLAYER (design 35a):
+## {name, tag, town}. Cleared once shown.
+var pending_welcome := {}
+## QA: pretend there is no player yet (the splash shows NEW GAME, the form).
+var qa_fresh := false
 
 ## Stats of the run that just ended, for the results screen.
 var last_run: Dictionary = {}
@@ -843,6 +848,61 @@ func to_splash() -> void:
 ## a fresh install.
 func has_save() -> bool:
 	return xp() > 0 or not SaveService.top_scores(1).is_empty() or not visited_areas().is_empty()
+
+
+# ---- the new player (design "New Game Flow" 35a, 2026-10-17; docs/HOME.md) -------------
+
+
+## Has this install been through NEW PLAYER (or does it predate it)? The
+## splash shows NEW GAME until then, and registration waits for it so the
+## chosen name goes up in the register call itself.
+func player_created() -> bool:
+	if qa_fresh:
+		return false
+	return bool(SaveService.get_settings().get("playerCreated", false)) or has_save()
+
+
+## The player's hometown (a synced setting; shown on the NEW PLAYER card and
+## editable in Settings → PLAYER).
+func hometown() -> String:
+	return str(SaveService.get_settings().get("hometown", ""))
+
+
+func set_hometown(town: String) -> void:
+	var s := SaveService.get_settings()
+	s["hometown"] = town
+	SaveService.put_settings(s)
+
+
+## LET'S PLAY: the name and tag onto the account (unregistered: the register
+## call carries them; registered: a rename), the hometown and the created
+## flag into the settings, then straight onto the Arcade Cage campaign home
+## with a welcome toast.
+func create_player(name: String, tag: String, town: String, go := true) -> void:
+	var a := Net.account()
+	if not a.has("playerId"):
+		a = {"playerId": SaveService.uuid4(), "secret": Net._new_secret(), "name": name, "tag": tag, "registered": false}
+	else:
+		a["name"] = name
+		if not bool(a.get("registered", false)):
+			a["tag"] = tag
+	SaveService.put_account(a)
+	set_hometown(town)
+	var s := SaveService.get_settings()
+	s["playerCreated"] = true
+	SaveService.put_settings(s)
+	qa_fresh = false
+	pending_welcome = {"name": name, "tag": str(a.get("tag", tag)), "town": town}
+	home_card = 0
+	show_archive = false
+	if enter_league("cage"):
+		home_open_league = "cage"
+	if bool(a.get("registered", false)):
+		Net.rename(name)
+	else:
+		Net.ensure_account()
+	if go:
+		to_title()
 
 
 func start_mode(id: String) -> void:

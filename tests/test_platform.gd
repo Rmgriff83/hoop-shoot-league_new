@@ -32,6 +32,13 @@ func run(t) -> void:
 	var was_backend = plat.backend
 	net.enabled = true
 	net.transport = _transport
+	# Registration waits for NEW PLAYER (design 35a): this install has one.
+	var was_fresh: bool = plat.get_parent().get_node("App").qa_fresh
+	var app_node: Node = sfx_root.get_node("App")
+	app_node.qa_fresh = false
+	var st: Dictionary = save.get_settings()
+	st["playerCreated"] = true
+	save.put_settings(st)
 	net._blocked_until = 0.0
 	net._fails = 0
 	var fake := FakePlatformBackend.new()
@@ -150,6 +157,7 @@ func run(t) -> void:
 	sheet.free()
 
 	# Put the world back.
+	app_node.qa_fresh = was_fresh
 	net.transport = Callable()
 	net.enabled = was_enabled
 	plat.backend = was_backend

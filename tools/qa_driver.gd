@@ -28,6 +28,7 @@ func _ready() -> void:
 	if not args.has("--qa-splash"):
 		App.to_title.call_deferred()
 	if args.has("--qa-splash"):
+		App.qa_fresh = true   # before the splash builds: NEW GAME, not CONTINUE
 		_run_splash.call_deferred()
 	elif args.has("--qa-unlock"):
 		_run_unlock.call_deferred()
@@ -1286,17 +1287,34 @@ func _run_unlock() -> void:
 
 
 func _run_splash() -> void:
+	# A fresh install (design 35a): NEW GAME, the NEW PLAYER form, LET'S PLAY.
+	App.qa_fresh = true
 	var marks := [0.2, 0.8, 1.5, 3.0, 5.2]
 	var at := 0.0
 	for i in marks.size():
 		await _sleep(float(marks[i]) - at)
 		at = float(marks[i])
 		await _snap("splash_%02d" % i)
-	await _click_button_named("CONTINUE")
 	await _click_button_named("NEW GAME")
-	await _sleep(1.5)
-	await _snap("splash_after")
-	print("QA splash: done")
+	await _sleep(0.6)
+	await _snap("new_player")
+	await _click_named("RollName")
+	await _click_named("RollTown")
+	await _sleep(0.35)
+	await _snap("new_player_roll")
+	var page: NewPlayerPage = get_tree().root.find_child("NewPlayerPage", true, false)
+	var ne: LineEdit = page.find_child("NameEdit", true, false) if page != null else null
+	if ne != null:
+		ne.text = "AB"
+		ne.text_changed.emit("AB")
+	await _sleep(0.2)
+	await _snap("new_player_invalid")
+	await _click_named("RollName")
+	await _sleep(0.35)
+	await _click_button_named("LET'S PLAY")
+	await _sleep(2.2)
+	await _snap("new_player_home")
+	print("QA splash: done (player %s, town %s)" % [Net.handle(), App.hometown()])
 	get_tree().quit(0)
 
 

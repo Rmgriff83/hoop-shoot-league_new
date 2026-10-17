@@ -129,6 +129,31 @@ func _ready() -> void:
 	elif App.show_archive or stale:
 		App.show_archive = false
 		_open_archive(true)
+	_welcome()
+
+
+## After NEW PLAYER (design 35a): "WELCOME, BRICK BARON · OAKRIDGE · FIRST
+## STOP" slides down over the campaign home for a few seconds, once.
+const WELCOME_TOP := 44.0
+const WELCOME_S := 3.4
+
+
+func _welcome() -> void:
+	if App.pending_welcome.is_empty():
+		return
+	var w: Dictionary = App.pending_welcome
+	App.pending_welcome = {}
+	# Two chips, one under the other: the row shape would run past the screen.
+	var toast := Toast.new(RetroTheme.SCENE_TEXT, WELCOME_TOP)
+	toast.name = "Welcome"
+	toast.set_small(str(w.get("name", "")), "", "icon_jersey", "WELCOME,")   # a long name still fits the width
+	_ui.add_child(toast)
+	toast.show_once.call_deferred(WELCOME_S)
+	var stop := Toast.new(RetroTheme.LIGHT["gold"], WELCOME_TOP + Toast.SMALL_H + 12.0)
+	stop.name = "WelcomeStop"
+	stop.set_small("%s · FIRST STOP" % str(w.get("town", "")))
+	_ui.add_child(stop)
+	stop.show_once.call_deferred(WELCOME_S)
 
 
 func _process(dt: float) -> void:
