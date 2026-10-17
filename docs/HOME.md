@@ -8,7 +8,7 @@ current area**. `game/screens/title_screen.gd` (a `Node3D`), widgets in `game/ui
 Court       full-screen CourtGeometry + Camera3D (TitlePan), under a mild scrim (0.25)
 TopBar      [LVL01 + meter] [ball = locker]                   [coin 1,240] [menu]
 AreaZone    ★ (one star per difficulty step, ArenaSet.title_stars)
-            ARCADE CAGE (52 px, wraps at 430, dithered drop shadow) [ranks] [multiplayer]
+            ARCADE CAGE (52 px, wraps at 430, dithered drop shadow) [⚔ ONLINE]
             big < > chevrons at the screen edges (y 520), dithered shadows too
 Float       over the court above the area, only while the league is open (per tab)
 Wash        a vertical gradient from clear at y 781 to dark gray (0.72) at the ticker
@@ -29,7 +29,7 @@ is listed. Its PEGGY button opens the
 wins balls and nets — tickets buy nothing else; the hoop counter is closed
 for now (`App.HOOPS_IN_LOCKER`). The locker icon carries a gold dot while a
 won prize has not been looked at.
-**Ranks** is an icon beside the area name: the global boards (below).
+**The board** sits mid-court (`BoardPreview`, (140, 440), 440 wide — design 3a, 2026-10-17): the area's top five this week and YOUR row after a gap; a tap opens the global boards (below). It slides off left as the league opens. **ONLINE** is the one cream card beside the area name (the 1v1 icon + the word): the lobby.
 **Shop is not on the home page**: it will live inside each league, selling
 cards usable only in that league (so the easy league can't farm cards for the
 hard one); the pill shows TICKETS, the locker money.
@@ -177,7 +177,7 @@ chevron (the footer says START INSIDE).
   shows its cards (no archive, league closed — which is why NEW PLAYER now lands
   on the card home rather than the open league); targets `three` (LEAGUE card +
   the pair, the chips above it), `league`, `level` (the LVL badge), `online`
-  (Ranks + Multi), `locker`, `enter`, resolved from `Chrome` by node name
+  (the ONLINE card), `locker`, `enter`, resolved from `Chrome` by node name
   (`title_screen._walkthrough_rect`). The welcome toast waits until the tour
   closes. The tour's buttons are `TourSkip` / `TourBack` / `TourNext` (the home
   has its own `Prev` / `Next` chevrons). `--qa-splash` snaps

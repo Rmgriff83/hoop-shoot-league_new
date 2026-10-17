@@ -230,6 +230,20 @@ func _widgets(t) -> void:
 	badge.set_level(7, 0.5)
 	t.eq(badge.level_text(), "LVL07", "level pads to two digits")
 	badge.free()
+	# The home board (design 3a, 2026-10-17): the top five, then YOU after a gap.
+	var bp := BoardPreview.new()
+	var brows := []
+	for i in 8:
+		brows.push_back({"rank": "#%d" % (i + 1), "name": "PLAYER %d" % (i + 1), "score": str(40 - i), "me": false})
+	bp.set_rows(brows, {"rank": 212, "score": 29})
+	t.eq(bp.row_count(), 6, "five rows and YOU")
+	var you: HBoxContainer = bp.find_child("Row212", true, false)
+	t.ok(you != null and (you.find_child("Name", true, false) as Label).text == "YOU" and (you.find_child("Pts", true, false) as Label).text == "29", "YOU · 212 · 29 pinned under the five")
+	bp.set_rows(brows.slice(0, 3))
+	t.eq(bp.row_count(), 3, "fewer rows, no YOU row without a rank")
+	bp.set_rows(RanksCopy.local_rows([{"score": 31}, {"score": 20}]))
+	t.eq(bp.row_count(), 2, "the device board: YOU rows, no pinned line")
+	bp.free()
 	for kind in ["locker", "ranks", "shop", "multi"]:
 		var ib := IconButton.new(kind)
 		t.eq(ib.kind, kind, "%s icon button builds" % kind)

@@ -89,7 +89,7 @@ func handle() -> String:
 ## allows. Idempotent; safe to call every launch.
 func ensure_account() -> void:
 	var a := account()
-	if a.is_empty():
+	if not a.has("playerId"):   # none yet (a fresh install, or a wiped part that kept only its stamp)
 		var rng := DetRng.new(int(Time.get_ticks_usec()) ^ DetRng.hash_seed(SaveService.get_client_id()))
 		var h := HandleWords.generate(rng)
 		a = {"playerId": SaveService.uuid4(), "secret": _new_secret(), "name": h["name"], "tag": h["tag"], "registered": false}

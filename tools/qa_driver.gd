@@ -1072,7 +1072,7 @@ func _run_multi() -> void:
 	if archive != null:
 		archive.pick("beach")
 		await _sleep(1.0)
-	await _click_named("Multi")
+	await _click_named("Online")
 	await _sleep(0.5)
 	var lobby: MatchLobbyPage = get_tree().root.find_child("MatchLobby", true, false)
 	if lobby == null:
@@ -1164,7 +1164,7 @@ func _run_ranks() -> void:
 	if archive != null:
 		archive.pick("cage")   # closing the front door leads back to the splash
 		await _sleep(1.0)
-	await _click_named("Ranks")
+	await _click_named("BoardPreview")
 	await _sleep(0.05)
 	await _snap("ranks_loading")
 	await _sleep(0.5)
@@ -1333,6 +1333,14 @@ func _run_splash() -> void:
 func _run_title() -> void:
 	await _sleep(1.0)
 	await _close_archive()
+	# The home board mid-court (design 3a): filled with a stand-in top five
+	# and a YOU row so the look can be judged without a server.
+	var bp: BoardPreview = get_tree().root.find_child("BoardPreview", true, false)
+	if bp != null:
+		var rows := []
+		for r in [["NEON OWL", 41], ["CLUTCH HAWK", 38], ["GLASS DUKE", 36], ["TURBO COMET", 35], ["LUCKY FOX", 34]]:
+			rows.push_back({"rank": "#%d" % (rows.size() + 1), "name": r[0], "score": str(r[1]), "me": false})
+		bp.set_rows(rows, {"rank": 212, "score": 29})
 	for i in 4:
 		await _snap("title_cage_%02d" % i)
 		if i < 3:

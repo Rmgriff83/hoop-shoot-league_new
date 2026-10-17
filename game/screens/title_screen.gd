@@ -121,6 +121,7 @@ func _ready() -> void:
 				_index = i
 				break
 		App.home_card = _index
+	Net.board_loaded.connect(_on_board_for_preview)
 	rebuild_chrome()
 	_ui.add_child(_cover)
 	_build_court(_index)
@@ -134,6 +135,32 @@ func _ready() -> void:
 		_start_walkthrough("home")
 	else:
 		_welcome()
+
+
+## The home board (BoardPreview): the design's (140, 440), 440 wide.
+const BOARD_X := 140.0
+const BOARD_Y := 440.0
+var _board: BoardPreview
+
+
+## The preview's rows: the cached server board for this area (THIS WEEK),
+## else the device's own runs; a fresh board is asked for when stale.
+func _refresh_board() -> void:
+	if _board == null:
+		return
+	var area := str(CARDS[_index]["area"])
+	var data: Dictionary = Net.cached_board(area, "week")
+	if not data.is_empty():
+		_board.set_rows(RanksCopy.rows(data), Dictionary(data.get("me", {})) if data.get("me") is Dictionary else {})
+	else:
+		_board.set_rows(RanksCopy.local_rows(SaveService.top_scores(RanksCopy.BOARD_SIZE, area)))
+	if Net.enabled and Net.registered():
+		Net.load_board(area, "week")
+
+
+func _on_board_for_preview(area: String, period: String, _data: Dictionary) -> void:
+	if period == "week" and _board != null and area == str(CARDS[_index]["area"]):
+		_refresh_board()
 
 
 ## A walkthrough over the home (design 36a): the overlay dims everything but
@@ -175,7 +202,7 @@ func _walkthrough_rect(target: String) -> Rect2:
 		"level":
 			return _chrome_rect("Level").grow(12.0)
 		"online":
-			return _chrome_rect("Ranks").merge(_chrome_rect("Multi")).grow(10.0)
+			return _chrome_rect("Online").grow(10.0)
 		"locker":
 			return _chrome_rect("Locker").grow(12.0)
 		"enter":
@@ -332,14 +359,30 @@ func rebuild_chrome() -> void:
 			_open_archive()
 	)
 	name_row.add_child(_area_name)
-	var ranks := IconButton.new("ranks")
-	ranks.name = "Ranks"
-	ranks.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	name_row.add_child(ranks)
-	var multi := IconButton.new("multi")
-	multi.name = "Multi"
-	multi.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	name_row.add_child(multi)
+	# ONLINE (design 3a, 2026-10-17): one cream card — the 1v1 icon and the
+	# word — where the ranks and multiplayer icons stood; the board moved
+	# mid-court (BoardPreview).
+	var online := ShadowCard.new(RetroTheme.SCENE_TEXT)
+	online.name = "Online"
+	online.custom_minimum_size = Vector2(0, 56 + ShadowStyle.OFFSET)
+	online.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var orow := HBoxContainer.new()
+	orow.name = "Row"
+	orow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	orow.add_theme_constant_override("separation", 14)
+	online.add_child(orow)
+	orow.position = Vector2(18, 0)
+	var oicon := PixelIcon.new("icon_multiplayer", Vector2(30, 23), 2.0)
+	oicon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	orow.add_child(oicon)
+	var oword := RetroTheme.on_scene(RetroTheme.display("ONLINE", 16))
+	oword.name = "Word"
+	oword.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	oword.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	orow.add_child(oword)
+	orow.size = Vector2(18 + 30 + 14 + oword.get_combined_minimum_size().x, 56)
+	online.custom_minimum_size.x = orow.size.x + 18 + ShadowStyle.OFFSET
+	name_row.add_child(online)
 	var soon := RetroTheme.on_scene(RetroTheme.caps("SOON", 16))
 	soon.name = "Soon"
 	soon.visible = false
@@ -350,8 +393,7 @@ func rebuild_chrome() -> void:
 		var tw := create_tween()
 		tw.tween_interval(0.8)
 		tw.tween_callback(func() -> void: soon.visible = false)
-	ranks.pressed.connect(_open_ranks)
-	multi.pressed.connect(_open_lobby)
+	online.pressed.connect(_open_lobby)
 	# `▾ ALL AREAS · 2/3 OPEN`: the archive's door.
 	_all_areas = Button.new()
 	_all_areas.name = "AllAreas"
@@ -440,6 +482,13 @@ func rebuild_chrome() -> void:
 	_cards_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_area.add_child(_cards_row)
 	_fill_cards()
+	# The leaderboard mid-court (design 3a): the area's top five and YOU; a
+	# tap opens the full board. Slides off left while the league is open.
+	_board = BoardPreview.new()
+	_board.position = Vector2(BOARD_X, BOARD_Y)
+	_board.pressed.connect(_open_ranks)
+	_chrome.add_child(_board)
+	_refresh_board()
 	# The floating layer over the court, above the area (the open tab's data).
 	_float = Control.new()
 	_float.name = "Float"
@@ -523,6 +572,11 @@ func _apply_area(f: float) -> void:
 		_season_chip.visible = f > 0.0 and _chip_a.text != ""
 		_season_chip.position = Vector2(lerpf(-1.3 * maxf(_season_chip.size.x, 1.0), CHIP_POS.x, f), CHIP_POS.y)
 		_season_chip.modulate.a = f
+	if _board != null:
+		# The board slides off left and fades as the league opens (design 3a).
+		_board.position.x = BOARD_X - 1.3 * BoardPreview.WIDTH * f
+		_board.modulate.a = 1.0 - f
+		_board.visible = f < 1.0
 
 
 func _make_league(tab := "HEAT", sub := "LOADOUT") -> LeagueContext:
