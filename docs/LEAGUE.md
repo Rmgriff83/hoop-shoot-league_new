@@ -163,9 +163,11 @@ so simulated box scores match live volume.
 
 ## League boards (2026-09-18)
 
-Both areas show the standings (regular season) / bracket (playoffs) on an in-world board in
-league heats (`game/view/league_banner.gd`, Caveat handwriting with per-line jitter). The
-beach fence carries a chalkboard (`chalkboard.png`, chalk palette); the arcade cage hangs a slim
+The park and the city show the standings (regular season) / bracket (playoffs) on an in-world
+chalkboard in league heats (`game/view/league_banner.gd`, Caveat handwriting with per-line
+jitter; `chalkboard.png`, chalk palette). The beach's chalkboard came down on 2026-10-16
+(Ross: "remove the chalkboard from the beach league mode" — its `league_banner_*` fields are
+gone from the beach set, so beach league heats hang nothing); the arcade cage hangs a slim
 **hand-painted sash** at the back panel's bottom-right (`league_banner_kind = "sash"`,
 `sash.png` from `tools/aseprite/gen_sash.lua`: cream cloth, brushed red bands, gold fringe)
 with one painted line — league name plus "4th · 3-3" / "semis · 1-0" / "champs!"
@@ -238,9 +240,10 @@ opponent's clock not running or rim already iced); played cards leave the tray.
 
 ## League banners (environment dressing, league heats only)
 
-`game/view/league_banner.gd` hangs a quad textured by a one-shot 2D SubViewport. The beach board is a **chalkboard**: a slate texture from `tools/aseprite/gen_chalkboard.lua`, the Caveat handwriting font (OFL, `assets/fonts/caveat/`, credited), chalk colours, per-line jitter/tilt and hand-drawn underlines. The cage label stays cloth. The
-beach's back fence (to the shooter's back-right of the hoop) shows the **standings** in the
-regular season and the **playoff bracket** in the playoffs; the cage's left wall carries a small
+`game/view/league_banner.gd` hangs a quad textured by a one-shot 2D SubViewport. The park's and the city's boards are **chalkboards**: a slate texture from `tools/aseprite/gen_chalkboard.lua`, the Caveat handwriting font (OFL, `assets/fonts/caveat/`, credited), chalk colours, per-line jitter/tilt and hand-drawn underlines. The cage label stays cloth. The
+city's back fence (to the shooter's back-right of the hoop) shows the **standings** in the
+regular season and the **playoff bracket** in the playoffs (the beach showed the same until
+2026-10-16, when its chalkboard came down); the cage's left wall carries a small
 **LEAGUE MATCH** banner. Anchors live on the arena sets (`league_banner_kind / pos / size /
 yaw_deg / lit / label` in `assets/arena/*/arena_set.tres`), so moving a banner is a data edit.
 The heat screen builds it in `_after_ready()` only when the heat belongs to a league, from the

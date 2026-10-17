@@ -400,8 +400,8 @@ def build():
         add_box_uv("Wall%d" % k, size, (cx, WALL_H / 2.0, cz), concrete, c_court, root, WALL_H)
         add_box_uv("WallCap%d" % k, (size[0] + 0.06, 0.06, size[2] + 0.06), (cx, WALL_H + 0.03, cz), curb, c_court, root, 0.5)
     # No chain-link on the beach (Ross, 2026-10-02): just the concrete
-    # embankment. The league standings banner stands on the wall cap (its
-    # pos.y in the beach ArenaSet), no frame, nothing to read as a fence post.
+    # embankment. The league chalkboard that stood on the wall cap came down
+    # on 2026-10-16 (no league_banner_* fields in the beach ArenaSet now).
 
     # Sand everywhere around the court (the slab sits 5 mm above it), out to the shoreline.
     cage.add_quad("Sand", [(-40, -0.005, -WIDE), (SAND_X1, -0.005, -WIDE), (SAND_X1, -0.005, WIDE), (-40, -0.005, WIDE)],

@@ -5,11 +5,15 @@ extends RefCounted
 
 func run(t) -> void:
 	var beach: ArenaSet = CosmeticLibrary.get_arena("beach")
+	var city: ArenaSet = CosmeticLibrary.get_arena("city")
 	var cage: ArenaSet = CosmeticLibrary.get_arena("cage")
-	t.eq(beach.league_banner_kind, "standings", "beach shows the standings/bracket banner")
-	t.eq(beach.league_banner_style, "chalk", "beach board is a chalkboard")
-	t.ok(beach.league_banner_size.x > 0.5 and beach.league_banner_size.y > 0.3, "beach banner has a size")
-	t.ok(beach.league_banner_pos.x > 5.0 and beach.league_banner_pos.z > 0.5, "beach banner on the back fence, shooter's right")
+	# The beach's chalkboard came down (Ross, 2026-10-16): no in-world board
+	# in beach league heats. The city (and the park) still hang theirs.
+	t.eq(beach.league_banner_kind, "", "beach hangs no league board any more")
+	t.eq(city.league_banner_kind, "standings", "city shows the standings/bracket banner")
+	t.eq(city.league_banner_style, "chalk", "city board is a chalkboard")
+	t.ok(city.league_banner_size.x > 0.5 and city.league_banner_size.y > 0.3, "city banner has a size")
+	t.ok(city.league_banner_pos.x > 5.0 and city.league_banner_pos.z > 0.5, "city banner on the back fence, shooter's right")
 	# The cage's painted sash is gone: it now carries a live LED ribbon board
 	# across the back wall instead (see test_ticker_text.gd).
 	t.eq(cage.league_banner_kind, "", "cage hangs no cloth banner any more")
@@ -17,9 +21,9 @@ func run(t) -> void:
 
 	var b := LeagueBanner.new()
 	b._ready()
-	b.set_layout(beach.league_banner_pos, beach.league_banner_size, beach.league_banner_yaw_deg, beach.league_banner_lit)
-	t.eq((b.mesh_instance.mesh as QuadMesh).size, beach.league_banner_size, "quad sized from the arena set")
-	t.eq(b.position, beach.league_banner_pos, "placed at the anchor")
+	b.set_layout(city.league_banner_pos, city.league_banner_size, city.league_banner_yaw_deg, city.league_banner_lit)
+	t.eq((b.mesh_instance.mesh as QuadMesh).size, city.league_banner_size, "quad sized from the arena set")
+	t.eq(b.position, city.league_banner_pos, "placed at the anchor")
 	var league := LeagueData.league("cage")
 	var ids := LeagueData.team_ids(league)
 	var state := Season.create(league, ids, 1, 3)
