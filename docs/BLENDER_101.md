@@ -1140,7 +1140,7 @@ Three cage changes, all in `build_cage.py` (`-- --force`) and
   (`DeckArrow%02dL` / `%02dR`, `cage_arrow.png`, `ARROW_XS`: three steps on
   the ramp's slope, six down the deck, 0.22 × 0.36 m, rows at z ±0.42) a few
   millimetres above the surface. `ArcadeFx` gives each its own
-  `deck_arrow.gdshader` material (the decal dim at `idle`, glowing at `lit`)
+  `deck_arrow.gdshader` material (the LED dots coloured by a ramp over `lit`: a dim brown ember at rest, then low, orange and warm white at the chase's head — the design's four states, 2026-10-16)
   and `chase()` — called by the screens on GO (`CourtGeometry.arcade_chase()`)
   — lights the steps in succession from the top of the ramp back to the
   shooter, three passes, as if guiding the ball home. From the shooting spot

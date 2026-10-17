@@ -419,9 +419,15 @@ func _run_hud() -> void:
 	var screen_c := get_tree().current_scene
 	if screen_c != null and "_court" in screen_c:
 		(screen_c.get("_court") as CourtGeometry).arcade_chase()
+		var afx_q: Node = get_tree().root.find_child("ArcadeFx", true, false)
 		for i in 3:
 			await _sleep([0.05, 0.45, 0.5][i])
 			await _snap("chase_%02d" % i)
+			if afx_q != null:
+				var lits := []
+				for st in afx_q.arrow_steps():
+					lits.push_back("%.2f" % afx_q.arrow_lit(st))
+				print("QA chase_%02d: lit per step %s" % [i, " ".join(lits)])
 	await _flick(1.9, 0.30, 0.0)
 	await _sleep(1.6)
 	await _snap("hud_live")

@@ -77,6 +77,8 @@ func run(t) -> void:
 	# The return arrows' chase (GO): top of the ramp first, down to the
 	# shooter's feet, three passes, then dim again.
 	t.ok(not afx.chasing() and afx.arrow_lit(0) == 0.0, "arrows idle dim")
+	var arrow_src := FileAccess.get_file_as_string("res://game/court/deck_arrow.gdshader")
+	t.ok(arrow_src.contains("led_off") and arrow_src.contains("led_on") and arrow_src.contains("ramp(lit)"), "the chase colours the LEDs: an off-ember to warm-white ramp over lit (design 32a)")
 	afx.chase()
 	t.ok(afx.chasing() and afx.arrow_lit(0) > 0.99 and afx.arrow_lit(ArcadeFx.ARROW_STEPS - 1) == 0.0, "GO: the top-of-ramp arrow lights first")
 	afx._process((ArcadeFx.ARROW_STEPS - 1) * ArcadeFx.CHASE_STAGGER + 0.01)

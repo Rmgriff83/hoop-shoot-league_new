@@ -195,8 +195,11 @@ func _step_chase(dt: float) -> void:
 			for pass_i in CHASE_PASSES:
 				var since := _chase_t - (pass_i * period + i * CHASE_STAGGER)
 				if since >= 0.0 and since < CHASE_HOLD:
-					# Snap on, ease off.
-					lit = maxf(lit, 1.0 - (since / CHASE_HOLD) * (since / CHASE_HOLD))
+					# Snap on, fade off linearly: with the stagger a third of the
+					# hold, the trail behind the head sits at ~0.63 and ~0.27 —
+					# the design's ON / MID (orange) / LOW (ember) steps on the
+					# shader's colour ramp (2026-10-16).
+					lit = maxf(lit, 1.0 - since / CHASE_HOLD)
 		_arrows[k].set_shader_parameter("lit", lit)
 	if done:
 		_chase_t = -1.0
