@@ -999,6 +999,7 @@ func _handle_ai_event(ev: Dictionary) -> void:
 			_ai_court.set_ice(false, str(ev["by"]))
 			_ai_court.info.marquee("ICE BROKEN", 24.0, _ai_court.info.accent_color)
 		"buzzer":
+			_ai_court.arcade_chase_stop()
 			_ai_court.info.set_text("TIME")
 		"heat_up":
 			_ai_court.info.marquee("HEATING UP", 24.0, _ai_court.info.accent_color)

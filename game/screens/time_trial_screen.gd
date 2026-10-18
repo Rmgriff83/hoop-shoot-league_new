@@ -971,6 +971,7 @@ func _handle_event(ev: Dictionary) -> void:
 			_court.info.marquee("HEATING UP", 24.0, _court.info.accent_color)
 			_court.flare_lights()
 		"buzzer":
+			_court.arcade_chase_stop()
 			Sfx.buzzer()
 			_hud.banner("TIME!", RetroTheme.LIGHT["orange"])
 			_court.info.set_text("TIME")

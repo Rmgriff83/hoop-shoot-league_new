@@ -52,7 +52,10 @@ func _build() -> void:
 	h.move_child(spacer, 2)
 	# The stage: the body's expanding row reserves the room; the machine
 	# itself sits UNDER the body in the frame (so the head's `<` and chip
-	# take their taps) and spills past the stage on every side.
+	# take their taps) and spills past the stage on every side. The body
+	# must IGNORE the mouse: HomePage's PASS swallowed every tap over the
+	# stage and handed it up to the frame, never down to the joystick/DROP.
+	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var stage := Control.new()
 	stage.name = "Stage"
 	stage.size_flags_vertical = Control.SIZE_EXPAND_FILL

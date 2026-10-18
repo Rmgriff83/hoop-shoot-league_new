@@ -684,6 +684,14 @@ func bulb_count() -> int:
 	return _bulbs.size()
 
 
+## QA: a control's centre in window (design px) coordinates.
+func debug_screen_pos(which: String) -> Vector2:
+	var n: Node3D = _knob if which == "knob" else _cap
+	if n == null or _cam == null:
+		return Vector2.ZERO
+	return get_global_transform_with_canvas() * _cam.unproject_position(n.global_position)
+
+
 func cabinet() -> Node3D:
 	return _root
 

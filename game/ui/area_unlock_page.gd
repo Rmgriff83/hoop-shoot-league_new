@@ -398,6 +398,12 @@ func step(dt: float) -> void:
 				node.modulate.a = p
 				if c != null:
 					c.position = base + Vector2(0, 36.0 * (1.0 - _ease_out(p)))
+					# GO THERE / LATER take taps only once they are up: the
+					# tap that skips the match-end page (a touch, then its
+					# emulated click) used to land on them while invisible,
+					# and the page closed before it was ever seen.
+					if _buttons.has(c):
+						c.mouse_filter = Control.MOUSE_FILTER_STOP if p >= 1.0 else Control.MOUSE_FILTER_IGNORE
 			"fadein":
 				node.modulate.a = p
 			"fadeout":

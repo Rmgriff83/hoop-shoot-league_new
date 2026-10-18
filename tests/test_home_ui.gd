@@ -229,6 +229,14 @@ func _widgets(t) -> void:
 	t.eq(badge.level_text(), "LVL01", "LVL · 01 to start")
 	badge.set_level(7, 0.5)
 	t.eq(badge.level_text(), "LVL07", "level pads to two digits")
+	# The meter follows the share, not "any XP = full": straight under the
+	# bar's PanelContainer the fill was stretched to the whole bar.
+	badge.set_level(3, 0.5)
+	var fill: ColorRect = badge.find_child("Fill", true, false)
+	t.ok(not (fill.get_parent() is Container), "the fill's parent is a plain Control, not a Container")
+	t.ok(absf(badge.fill_fraction() - 0.5) < 0.001 and is_equal_approx(fill.anchor_right, 0.5), "half a level = half a meter")
+	badge.set_level(3, 0.0)
+	t.ok(not fill.visible, "no XP into the level, no fill")
 	badge.free()
 	# The home board (design 3a, 2026-10-17): the top five, then YOU after a gap.
 	var bp := BoardPreview.new()
@@ -403,6 +411,7 @@ func _widgets(t) -> void:
 	t.ok(page.machine() != null and page.machine().peg_count() == 84, "the drop machine is built with its 84 pegs")
 	t.eq(page.machine().slots().size(), 7, "seven plates are set")
 	t.ok(page.find_child("Stage", true, false) != null and page.find_child("Back", true, false) != null, "the machine's stage and the `<` back")
+	t.eq(page.body.mouse_filter, Control.MOUSE_FILTER_IGNORE, "the body lets taps through to the joystick and DROP under it")
 	t.ok(page.badge() != null, "the level chip with its meter sits in the head")
 	t.ok(page.find_child("Close", true, false) == null and page.find_child("Hint", true, false) == null, "no CLOSE, no hint line")
 	t.ok(page.play_button() != null and page.play_button().visible and page.play_button().disabled, "with no tickets PLAY shows, greyed")

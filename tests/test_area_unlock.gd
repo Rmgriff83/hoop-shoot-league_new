@@ -52,6 +52,9 @@ func _page(t) -> void:
 	t.eq(page.confetti_count(), 60, "sixty pieces of confetti")
 	var lock: Control = root.find_child("Lock", true, false)
 	t.close(lock.modulate.a, 0.0, 1e-9, "the lock is not there at 0")
+	var go_b: Control = root.find_child("GoThere", true, false)
+	var later_b: Control = root.find_child("Later", true, false)
+	t.ok(go_b.mouse_filter == Control.MOUSE_FILTER_IGNORE and later_b.mouse_filter == Control.MOUSE_FILTER_IGNORE, "the hidden buttons take no taps (the skip tap's click used to close the page unseen)")
 	page.step(1.0)
 	t.ok(lock.modulate.a > 0.99 and not page.lock_open(), "at 1 s the closed lock is up")
 	t.ok(root.find_child("LockClosed", true, false).visible, "…closed")
@@ -71,6 +74,7 @@ func _page(t) -> void:
 	t.ok(not page.buttons_shown(), "…buttons not yet")
 	page.step(1.1)
 	t.ok(page.buttons_shown(), "the buttons are up by 3.7 s")
+	t.ok(go_b.mouse_filter == Control.MOUSE_FILTER_STOP and later_b.mouse_filter == Control.MOUSE_FILTER_STOP, "…and take taps once up")
 	var went := []
 	page.go_there.connect(func(id: String) -> void: went.push_back(id))
 	var later_n := [0]

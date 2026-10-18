@@ -839,7 +839,13 @@ func _run_peggy() -> void:
 	await _sleep(0.08)
 	_mouse_button(lc, false)
 	await _sleep(0.8)
+	var ts := get_tree().current_scene
+	if ts.call("locker") == null:
+		print("QA peggy: locker tap missed (home mid-transition); opening directly")
+		ts.call("_open_locker")
+		await _sleep(0.8)
 	await _snap("locker_open")
+	await _sleep(0.4)
 	await _click_button_named("PEGGY")
 	await _sleep(0.15)
 	await _snap("peggy_slide")
@@ -858,6 +864,36 @@ func _run_peggy() -> void:
 	await _snap("peggy_feed_b")
 	await _sleep(1.0)
 	await _snap("peggy_credited")
+	# Real taps: drag the knob, then press the cap (window coords at 360x640).
+	var knob_px := m.debug_screen_pos("knob")
+	var cap_px := m.debug_screen_pos("cap")
+	print("QA peggy: knob ", knob_px, " cap ", cap_px, " aim ", m.aim())
+	_mouse_button(knob_px * 0.5, true)
+	await _sleep(0.05)
+	for i in 10:
+		_mouse_move(knob_px * 0.5 + Vector2(6.0 * (i + 1), 0.0), Vector2(6.0, 0.0))
+		await _sleep(0.05)
+	await _sleep(0.4)
+	_mouse_button(knob_px * 0.5 + Vector2(60.0, 0.0), false)
+	print("QA peggy: aim after drag ", m.aim(), " hovered ", get_viewport().gui_get_hovered_control())
+	await _sleep(0.2)
+	_mouse_button(cap_px * 0.5, true)
+	await _sleep(0.05)
+	_mouse_button(cap_px * 0.5, false)
+	await _sleep(0.1)
+	print("QA peggy: DROP tapped, playing ", m.playing())
+	while m.playing() or panel.prize_card() == null:
+		await _sleep(0.2)
+		if panel.prize_card() != null:
+			break
+	var keep0: Button = get_tree().root.find_child("Keep", true, false)
+	if keep0 != null:
+		keep0.pressed.emit()
+	else:
+		panel._dismiss_card()
+	await _sleep(0.3)
+	await _click_button_named("PLAY")
+	await _sleep(PeggyMachine.FEED_S + 0.4)
 	# The joystick drives the crane to the left wall.
 	m.tilt = -1.0
 	await _sleep(0.7)

@@ -387,8 +387,13 @@ func rebuild_chrome() -> void:
 	oword.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	oword.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	orow.add_child(oword)
-	orow.size = Vector2(18 + 30 + 14 + oword.get_combined_minimum_size().x, 56)
-	online.custom_minimum_size.x = orow.size.x + 18 + ShadowStyle.OFFSET
+	# Measured from the font itself plus the ink outline on both sides: the
+	# label's own minimum size, read before it is in the tree, came up short
+	# and the word ran past the card's edge.
+	var word_w := UiFont.display().get_string_size("ONLINE", HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + 2.0 * RetroTheme.OUTLINE
+	oword.custom_minimum_size.x = word_w
+	orow.size = Vector2(30 + 14 + word_w, 56)
+	online.custom_minimum_size.x = 18 + orow.size.x + 22 + ShadowStyle.OFFSET
 	name_row.add_child(online)
 	var soon := RetroTheme.on_scene(RetroTheme.caps("SOON", 16))
 	soon.name = "Soon"

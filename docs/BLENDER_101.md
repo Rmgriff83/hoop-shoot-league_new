@@ -1141,7 +1141,7 @@ Three cage changes, all in `build_cage.py` (`-- --force`) and
   `deck_arrow.gdshader` material (the LED dots coloured by a ramp over `lit`: a dim brown ember at rest, then low, orange and warm white at the chase's head — the design's four states, 2026-10-16)
   and `chase()` — called by the screens on GO (`CourtGeometry.arcade_chase()`)
   — lights the steps in succession from the top of the ramp back to the
-  shooter, three passes, as if guiding the ball home. From the shooting spot
+  shooter, looping until the buzzer, as if guiding the ball home. From the shooting spot
   the deck is below the frame, so what the player sees run are the three
   ramp steps and the first deck step. Tests in `tests/test_ambient_life.gd`;
   `--qa-hud` snaps `hud_go` and `chase_00..02`.

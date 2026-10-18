@@ -17,15 +17,15 @@ const BULB_SHADER := preload("res://game/court/bulb.gdshader")
 const FLARE_S := 0.9
 ## The return arrows down the deck, two rows (DeckArrow%02dL / %02dR,
 ## build_cage.py ARROW_XS): chase() lights each step — both rows together —
-## one after another from the top of the ramp back to the shooter,
-## CHASE_PASSES sweeps, each step flashing CHASE_HOLD and the next starting
-## CHASE_STAGGER later.
+## one after another from the top of the ramp back to the shooter, sweep
+## after sweep for the whole game (Ross, 2026-10-18: it used to stop after
+## three) until stop_chase() at the buzzer, each step flashing CHASE_HOLD
+## and the next starting CHASE_STAGGER later.
 const ARROW_SHADER := preload("res://game/court/deck_arrow.gdshader")
 const ARROW_STEPS := 7   # the two past the ball gate went (design 32a, 2026-10-16)
 const CHASE_STAGGER := 0.11
 const CHASE_HOLD := 0.3
 const CHASE_GAP := 0.3
-const CHASE_PASSES := 3
 var _t := 0.0
 var _screens: Array[ShaderMaterial] = []
 var _marquees: Array[ShaderMaterial] = []
@@ -174,7 +174,7 @@ func chase_period() -> float:
 
 
 ## Run the return arrows: lit in succession from the top of the ramp back to
-## the shooter, CHASE_PASSES times — the screens call this on GO.
+## the shooter, looping until stop_chase() — the screens call this on GO.
 func chase() -> void:
 	if _arrows.is_empty():
 		return
@@ -182,27 +182,27 @@ func chase() -> void:
 	_step_chase(0.0)
 
 
+## The buzzer: the arrows go dim.
+func stop_chase() -> void:
+	_chase_t = -1.0
+	for a in _arrows:
+		a.set_shader_parameter("lit", 0.0)
+
+
 func _step_chase(dt: float) -> void:
 	if _chase_t < 0.0:
 		return
-	_chase_t += dt
 	var period := chase_period()
-	var done := _chase_t >= CHASE_PASSES * period
+	_chase_t = fmod(_chase_t + dt, period)
 	for k in _arrows.size():
-		var i := _arrow_steps[k]
-		var lit := 0.0
-		if not done:
-			for pass_i in CHASE_PASSES:
-				var since := _chase_t - (pass_i * period + i * CHASE_STAGGER)
-				if since >= 0.0 and since < CHASE_HOLD:
-					# Snap on, fade off linearly: with the stagger a third of the
-					# hold, the trail behind the head sits at ~0.63 and ~0.27 —
-					# the design's ON / MID (orange) / LOW (ember) steps on the
-					# shader's colour ramp (2026-10-16).
-					lit = maxf(lit, 1.0 - since / CHASE_HOLD)
+		var since := _chase_t - _arrow_steps[k] * CHASE_STAGGER
+		# Snap on, fade off linearly: with the stagger a third of the hold,
+		# the trail behind the head sits at ~0.63 and ~0.27 — the design's
+		# ON / MID (orange) / LOW (ember) steps on the shader's colour ramp
+		# (2026-10-16). The period ends a gap after the last step's flash, so
+		# one sweep never overlaps the next.
+		var lit := 1.0 - since / CHASE_HOLD if since >= 0.0 and since < CHASE_HOLD else 0.0
 		_arrows[k].set_shader_parameter("lit", lit)
-	if done:
-		_chase_t = -1.0
 
 
 ## The string lights surge. Replaces the old marquee sign's MarqueePulse clip,

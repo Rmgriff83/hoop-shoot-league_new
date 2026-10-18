@@ -792,6 +792,12 @@ func arcade_chase() -> void:
 		_arcade_fx.chase()
 
 
+## The buzzer: the cage's return arrows stop their chase.
+func arcade_chase_stop() -> void:
+	if _arcade_fx != null:
+		_arcade_fx.stop_chase()
+
+
 ## The cage's string lights surge. Replaces the marquee sign's MarqueePulse
 ## clip, which went with the sign; a no-op on any arena without string lights.
 func flare_lights() -> void:

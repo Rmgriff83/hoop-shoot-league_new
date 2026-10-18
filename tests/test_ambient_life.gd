@@ -75,7 +75,7 @@ func run(t) -> void:
 	afx._process(ArcadeFx.FLARE_S + 0.1)
 	t.close(afx._bulb_mat.get_shader_parameter("flare"), 0.0, 1e-6, "the flare decays back out")
 	# The return arrows' chase (GO): top of the ramp first, down to the
-	# shooter's feet, three passes, then dim again.
+	# shooter's feet, sweep after sweep until the buzzer.
 	t.ok(not afx.chasing() and afx.arrow_lit(0) == 0.0, "arrows idle dim")
 	var arrow_src := FileAccess.get_file_as_string("res://game/court/deck_arrow.gdshader")
 	t.ok(arrow_src.contains("led_off") and arrow_src.contains("led_on") and arrow_src.contains("ramp(lit)"), "the chase colours the LEDs: an off-ember to warm-white ramp over lit (design 32a)")
@@ -83,8 +83,12 @@ func run(t) -> void:
 	t.ok(afx.chasing() and afx.arrow_lit(0) > 0.99 and afx.arrow_lit(ArcadeFx.ARROW_STEPS - 1) == 0.0, "GO: the top-of-ramp arrow lights first")
 	afx._process((ArcadeFx.ARROW_STEPS - 1) * ArcadeFx.CHASE_STAGGER + 0.01)
 	t.ok(afx.arrow_lit(ArcadeFx.ARROW_STEPS - 1) > 0.9 and afx.arrow_lit(0) < 0.05, "…and the chase reaches the shooter's feet")
-	afx._process(ArcadeFx.CHASE_PASSES * afx.chase_period())
-	t.ok(not afx.chasing() and afx.arrow_lit(0) == 0.0 and afx.arrow_lit(4) == 0.0, "after %d passes the arrows go dim" % ArcadeFx.CHASE_PASSES)
+	# It loops for the whole game (2026-10-18: it used to stop after three
+	# sweeps): many periods on, a sweep is still running from the top.
+	afx._process(20.0 * afx.chase_period() - ((ArcadeFx.ARROW_STEPS - 1) * ArcadeFx.CHASE_STAGGER + 0.01) + 0.005)
+	t.ok(afx.chasing() and afx.arrow_lit(0) > 0.9, "twenty sweeps on, the top arrow lights again")
+	afx.stop_chase()
+	t.ok(not afx.chasing() and afx.arrow_lit(0) == 0.0 and afx.arrow_lit(4) == 0.0, "the buzzer stops the chase: the arrows go dim")
 	afx.free()
 	cage.free()
 	# Beach: three tourist groups with arms and umbrellas; birds spawn and cross.
