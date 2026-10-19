@@ -238,6 +238,13 @@ build at any server.
   (the joiner's court) and the room, created by an any-court host with
   `x-area: any`, takes the court the joiner brings. `areas` is validated
   (unknown court → 400); a code is never "any".
+- **The face-off (2026-10-18, design 37a):** the phone sends its hometown on
+  the room URL (`&town=`); the room route cleans it (`src/towns.ts`
+  `cleanTown`: A–Z, 0–9, single spaces, ≤ 16) and always sets
+  `x-player-town`, so the player record — `joined.peer` / `peer.peer` —
+  carries `town` ("" when none). The `peer` message also carries the room's
+  `area`, so an any-court host learns its court. Needs a Worker deploy; the
+  old Worker just sends no town (the card shows the level alone).
 
 ## Cards online (phase 3b, built 2026-10-07)
 

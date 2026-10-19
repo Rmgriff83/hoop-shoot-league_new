@@ -2,6 +2,7 @@ import { SELF, env, runDurableObjectAlarm } from "cloudflare:test";
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetMemoryLimits } from "../src/limits";
 import { MAX_PER_S } from "../src/match_room";
+import { cleanTown, TOWN_MAX } from "../src/towns";
 
 const uuid = () => crypto.randomUUID();
 const secret = () => [...crypto.getRandomValues(new Uint8Array(40))].map((b) => "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[b % 62]).join("");
@@ -29,8 +30,9 @@ async function lobby(p: Player, action: string, body: Record<string, unknown> = 
 }
 
 /** Open the room socket and collect its messages as they come. */
-async function join(p: Player, room: string, area = "cage") {
-  const res = await SELF.fetch(`https://api/v1/match/room/${room}?area=${area}`, { headers: { ...auth(p), upgrade: "websocket" } });
+async function join(p: Player, room: string, area = "cage", town?: string) {
+  const q = town === undefined ? "" : `&town=${encodeURIComponent(town)}`;
+  const res = await SELF.fetch(`https://api/v1/match/room/${room}?area=${area}${q}`, { headers: { ...auth(p), upgrade: "websocket" } });
   expect(res.status).toBe(101);
   const ws = res.webSocket!;
   const inbox: any[] = [];
@@ -139,20 +141,34 @@ describe("lobby", () => {
   });
 });
 
+describe("hometown", () => {
+  it("is cleaned like the client does: A-Z, 0-9, single spaces, at most 16", () => {
+    expect(cleanTown("salt  harbor!!")).toBe("SALT HARBOR");
+    expect(cleanTown("  eugene or ")).toBe("EUGENE OR");
+    expect(cleanTown("a very long town name indeed").length).toBeLessThanOrEqual(TOWN_MAX);
+    expect(cleanTown("<script>")).toBe("SCRIPT");
+    expect(cleanTown(undefined)).toBe("");
+    expect(cleanTown("")).toBe("");
+  });
+});
+
 describe("match room", () => {
   it("seats two phones, starts them on one seed, relays shots, records the result", async () => {
     const a = await register();
     const b = await register();
     const room = uuid();
-    const A = await join(a, room, "beach");
+    const A = await join(a, room, "beach", "salt  harbor!!");
     const ja = await A.until((m) => m.t === "joined");
     expect(ja).toMatchObject({ side: "a", area: "beach", peer: null, status: "waiting" });
     const B = await join(b, room, "beach");
     const jb = await B.until((m) => m.t === "joined");
     expect(jb.side).toBe("b");
-    expect(jb.peer).toMatchObject({ id: a.playerId, name: a.name, tag: a.tag });
+    // The face-off card (design 37a): the hometown comes cleaned.
+    expect(jb.peer).toMatchObject({ id: a.playerId, name: a.name, tag: a.tag, town: "SALT HARBOR" });
     const peer = await A.until((m) => m.t === "peer");
     expect(peer.peer.id).toBe(b.playerId);
+    expect(peer.peer.town).toBe(""); // no town sent
+    expect(peer.area).toBe("beach"); // the court rides on the peer message
     const sa = await A.until((m) => m.t === "start");
     const sb = await B.until((m) => m.t === "start");
     expect(sa.seed).toBe(sb.seed);

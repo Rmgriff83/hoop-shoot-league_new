@@ -24,7 +24,7 @@ export const OT_SECONDS = 20;
 export const BALL_RETURN_S = 1.0;
 
 type Side = "a" | "b";
-interface Player { id: string; name: string; tag: string; level: number }
+interface Player { id: string; name: string; tag: string; level: number; town?: string }
 interface Meta {
   area: string;
   created: number;
@@ -81,6 +81,7 @@ export class MatchRoom extends DurableObject<Env> {
       name: request.headers.get("x-player-name") ?? "THEM",
       tag: request.headers.get("x-player-tag") ?? "",
       level: Number.parseInt(request.headers.get("x-player-level") ?? "1", 10) || 1,
+      town: request.headers.get("x-player-town") ?? "",
     };
     let hand: string[] = [];
     try { hand = JSON.parse(request.headers.get("x-hand") ?? "[]"); } catch { hand = []; }
@@ -113,7 +114,8 @@ export class MatchRoom extends DurableObject<Env> {
     m.last = now;
     const peer = m[other(side)];
     this.send(server, { t: "joined", side, room, area: m.area, peer, status: m.status });
-    if (peer) this.sendSide(other(side), { t: "peer", peer: player });
+    // The court rides along: an any-court host learns here where it plays.
+    if (peer) this.sendSide(other(side), { t: "peer", peer: player, area: m.area });
     if (m.status === "waiting" && m.a && m.b) {
       m.status = "playing";
       m.seed = Math.floor(Math.random() * 2_147_483_647) + 1;

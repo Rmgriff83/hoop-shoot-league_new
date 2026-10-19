@@ -221,9 +221,22 @@ chevron (the footer says START INSIDE).
   LEAGUES`) — the online deck sheet is no longer opened from here. The waits:
   `FINDING A PLAYER…` over `USUALLY UNDER 30 SECONDS` with CANCEL; a code:
   `TELL A FRIEND THIS CODE`, the code at 72 px gold, `WAITING…` over `THE MATCH
-  STARTS AS SOON AS THEY JOIN`; `PLAYER FOUND` (gold) over `NAME 42 · LVL 07 ·
-  STARTING…`; a failure big in `#FF8A6A` (`CODE NOT FOUND` / `NOBODY CAME` / …)
-  over what to do, under BACK. The page emits `quick(area)`, `create(area)`,
+  STARTS AS SOON AS THEY JOIN`; `PLAYER FOUND` (gold) over `STARTING…`; a
+  failure big in `#FF8A6A` (`CODE NOT FOUND` / `NOBODY CAME` / …) over what to
+  do, under BACK. **The face-off (2026-10-18)**: the quick wait and PLAYER
+  FOUND put YOUR card (jersey, `NAME #42`, `TOWN · LVL 07`, the gold online
+  line, YOU in the corner), a VS rule (orange, dithered) and THEIR card on
+  the page. While searching theirs is a "?" box and a "..." blinking every
+  0.45 s beside a reel of made-up faces (`MatchCopy.reel_entry`) flicking in
+  from 36 px above every 0.11 s. Once found, the gold card pops in (0.85 →
+  1.04 → 1 over 0.45 s, OPP in the corner), VS slams down from 1.6× in
+  three steps over 0.3 s, and `★ COURT · BEACH` slides in after 0.35 s
+  (`MatchLobbyPage.advance` runs it all off one clock). The room tips off the
+  moment both phones are in, so App holds a lobby tip-off `FOUND_HOLD_S`
+  (2.4 s) on both phones to let the reveal play; rematches and resumes go at
+  once. The online line is a placeholder, `ONLINE · UNRANKED`, until the
+  online ladder lands (`MatchCopy.card_online` already reads `rank` / `w` /
+  `l`). Hometowns travel as typed (Ross's call), cleaned by the room. The page emits `quick(area)`, `create(area)`,
   `join(area, code)` and `cancel`; `App.start_online` arranges the room — for
   ANY it sends the owned courts and the Lobby pairs on a court both own (the
   joiner is told the court; an any-court host's room takes the joiner's) — and

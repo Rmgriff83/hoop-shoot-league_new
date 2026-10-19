@@ -713,6 +713,13 @@ var room: Node = null
 ## How the current lobby attempt was started: quick | create | join.
 var match_how := ""
 var match_area := ""
+## The lobby's face-off reveal (design 37a, 2026-10-18): the room sends the
+## tip-off the moment the second phone is in, so both phones hold it this
+## long after it lands — the same on both, so they stay in step. Rematches
+## and resumed rooms go at once.
+const FOUND_HOLD_S := 2.4
+## True while a tip-off is being held for the reveal (tests read it).
+var tip_off_held := false
 
 
 ## Ask the Lobby, open the room, and play when the other phone arrives.
@@ -768,12 +775,16 @@ func _open_room(room_id: String, area: String, on_state: Callable) -> bool:
 			return
 		match str(msg["t"]):
 			MatchProtocol.PEER:
-				on_state.call("found", Dictionary(msg.get("peer", {})))
+				on_state.call("found", _with_area(Dictionary(msg.get("peer", {})), msg))
 			MatchProtocol.JOINED:
 				if msg.get("peer", null) is Dictionary:
-					on_state.call("found", Dictionary(msg["peer"]))
+					on_state.call("found", _with_area(Dictionary(msg["peer"]), msg))
 			MatchProtocol.START:
-				_tip_off(client, msg)
+				if match_how in ["quick", "create", "join"] and not bool(msg.get("resumed", false)):
+					on_state.call("court", str(msg.get("area", match_area)))
+					_hold_tip_off(client, msg)
+				else:
+					_tip_off(client, msg)
 			MatchProtocol.SETTLED:
 				settled_online(msg)
 			MatchProtocol.REMATCH:
@@ -816,6 +827,24 @@ func offer_rematch() -> void:
 		return
 	room.send(MatchProtocol.rematch())
 	_set_rematch("both" if rematch_state == "wanted" else "offered")
+
+
+## The found peer with the court it is on: the message's `area` (a joiner's
+## `joined`, the room's `peer` on a new Worker), else the court we asked for.
+func _with_area(peer: Dictionary, msg: Dictionary) -> Dictionary:
+	var a := str(msg.get("area", ""))
+	peer["area"] = a if a != "" and a != "any" else match_area
+	return peer
+
+
+## Let the face-off play, then tip off — unless the room went away meanwhile.
+func _hold_tip_off(client: MatchClient, start: Dictionary) -> void:
+	tip_off_held = true
+	await (Engine.get_main_loop() as SceneTree).create_timer(FOUND_HOLD_S).timeout
+	tip_off_held = false
+	if room != client:
+		return
+	_tip_off(client, start)
 
 
 ## Both asked: the old room hands us a fresh one; the lobby path from here.

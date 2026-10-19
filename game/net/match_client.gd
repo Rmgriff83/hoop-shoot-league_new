@@ -47,6 +47,10 @@ func open(p_room: String, p_area: String, slots: Array = []) -> bool:
 	for i in CardDefs.SLOTS:
 		ids.append("" if i >= slots.size() or slots[i] == null else str(slots[i]).uri_encode())
 	var url := base.replace("https://", "wss://").replace("http://", "ws://") + "/v1/match/room/%s?area=%s&slots=%s" % [room, area, ",".join(ids)]
+	# The hometown for the other phone's face-off card (design 37a); the room cleans it.
+	var town := App.hometown()
+	if town != "":
+		url += "&town=" + town.uri_encode()
 	_ws = WebSocketPeer.new()
 	var a: Dictionary = Net.account()
 	_ws.handshake_headers = PackedStringArray(["Authorization: Bearer %s.%s" % [str(a.get("playerId", "")), str(a.get("secret", ""))]])

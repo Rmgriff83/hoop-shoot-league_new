@@ -17,6 +17,7 @@ import { BLOCKED, randomHandle } from "./handles";
 import * as db from "./db";
 import { save } from "./save";
 import { AREAS as MATCH_AREAS } from "./rules";
+import { cleanTown } from "./towns";
 export { MatchRoom } from "./match_room";
 export { Lobby } from "./lobby";
 import { CARDS, SLOTS, inventoryOf, validHand } from "./cards";
@@ -360,6 +361,7 @@ app.get("/v1/match/room/:id", async (c) => {
   headers.set("x-player-name", p.name);
   headers.set("x-player-tag", p.tag);
   headers.set("x-player-level", String(inv.level));
+  headers.set("x-player-town", cleanTown(c.req.query("town")));   // always set: no client header gets through
   headers.set("x-hand", JSON.stringify(hand));
   headers.set("x-area", area);
   headers.set("x-room", id);

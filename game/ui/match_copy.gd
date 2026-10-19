@@ -1,8 +1,8 @@
 class_name MatchCopy
 extends RefCounted
 ## The online match words (docs/BACKEND.md → Phase 3; design "Online Lobby"
-## 37a, 2026-10-17): the lobby page's buttons and states, the code display,
-## the result header. Pure.
+## 37a, 2026-10-17, the face-off 2026-10-18): the lobby page's buttons and
+## states, the face-off cards, the code display, the result header. Pure.
 
 const AREAS := ["any", "cage", "beach", "park", "city"]
 
@@ -64,11 +64,66 @@ static func found_big() -> String:
 	return "PLAYER FOUND"
 
 
-## `NEON OWL 42 · LVL 07 · STARTING` (dots added live).
-static func found_line(peer: Dictionary) -> String:
-	var who := HandleWords.display(str(peer.get("name", "THEM")), str(peer.get("tag", "")))
-	var lvl := int(peer.get("level", 0))
-	return ("%s · LVL %02d · STARTING" % [who, lvl]) if lvl > 0 else ("%s · STARTING" % who)
+## Under PLAYER FOUND: STARTING (dots added live). Who it is sits on the
+## opponent's card now (design 37a, 2026-10-18).
+static func found_line() -> String:
+	return "STARTING"
+
+
+# ---- the face-off (design 37a, 2026-10-18) ----------------------------------------------
+
+
+static func you_label() -> String:
+	return "YOU"
+
+
+static func opp_label() -> String:
+	return "OPP"
+
+
+static func vs_word() -> String:
+	return "VS"
+
+
+## `#42`: the tag beside the name on a face-off card.
+static func card_tag(rec: Dictionary) -> String:
+	var tag := str(rec.get("tag", ""))
+	return "#" + tag if tag != "" else ""
+
+
+## `SALT HARBOR · LVL 09`, or `LVL 09` without a town (an old Worker sends none).
+static func card_place(rec: Dictionary) -> String:
+	var town := str(rec.get("town", "")).strip_edges()
+	var lvl := "LVL %02d" % maxi(1, int(rec.get("level", 1)))
+	return "%s · %s" % [town, lvl] if town != "" else lvl
+
+
+## `ONLINE #988 · 21-14` once the online ladder lands (`rank`, `w`, `l` on
+## the record); a placeholder until then (Ross, 2026-10-18: the ladder is
+## being planned separately).
+static func card_online(rec: Dictionary) -> String:
+	if not rec.has("rank"):
+		return "ONLINE · UNRANKED"
+	var line := "ONLINE #%s" % RetroTheme.thousands(int(rec["rank"]))
+	if rec.has("w") and rec.has("l"):
+		line += " · %d-%d" % [int(rec["w"]), int(rec["l"])]
+	return line
+
+
+## `COURT · BEACH` under the found card ("ANY OPEN COURT" until it is known).
+static func found_court(area: String) -> String:
+	return "COURT · %s" % court_full(area if area != "" else "any")
+
+
+## One face on the search reel: a handle, a town, a level and a rank, all
+## made up — the spinner, not real players.
+static func reel_entry(rng: DetRng) -> Dictionary:
+	var h := HandleWords.generate(rng)
+	return {
+		"name": str(h["name"]),
+		"place": "%s · LVL %02d" % [str(rng.pick(Towns.list())), rng.range_i(1, 12)],
+		"online": "ONLINE #%s" % RetroTheme.thousands(rng.range_i(100, 5000)),
+	}
 
 
 static func failed_big(reason: String) -> String:
@@ -145,13 +200,16 @@ const REMATCH_STATES := ["", "offered", "wanted", "both", "gone"]
 static func strings() -> Array:
 	var out := ["QUICK MATCH", "CREATE CODE", "ENTER CODE", "GO", "CANCEL", "BACK", "<", ">", title(), code_sub(), join_sub(), code_caption(),
 		code_line("ABCDE"), waiting_big("quick"), waiting_big("code"), waiting_line("quick"), waiting_line("code"), found_big(),
-		found_line({"name": "GLASS WIZARD", "tag": "07", "level": 7}), found_line({"name": "GLASS WIZARD", "tag": "07"}),
+		found_line(), you_label(), opp_label(), vs_word(), "?", "...", card_tag({"tag": "07"}),
+		card_place({"town": "SALT HARBOR", "level": 9}), card_place({"level": 7}), card_online({}),
+		card_online({"rank": 1204, "w": 12, "l": 9}),
 		court_note(1), court_note(3), loadout_line(2), spares_caption(true), spares_caption(false), slot_empty(2), "LOADOUT", "YOUR CARDS", "COURT",
 		header({"location": "beach"}), header({"location": "city", "reason": "forfeit"}), header({"location": "cage", "reason": "void"})]
 	for a in AREAS:
 		out.push_back(court_name(a))
 		out.push_back(court_full(a))
 		out.push_back(quick_sub(a))
+		out.push_back(found_court(a))
 	for r in ["expired", "not_found", "own_code", "offline", "peer_left", "throttled", "x"]:
 		out.push_back(failed_big(r))
 		out.push_back(failed_line(r))

@@ -1211,6 +1211,7 @@ func _open_lobby() -> void:
 			"waiting": _lobby.show_waiting(str(a), str(b) if b != null else "")
 			"found": _lobby.show_found(Dictionary(a) if a is Dictionary else {})
 			"failed": _lobby.show_failed(str(a))
+			"court": _lobby.set_found_court(str(a))
 	_lobby.quick.connect(func(area: String) -> void: App.start_online(area, "quick", "", on_state))
 	_lobby.create.connect(func(area: String) -> void: App.start_online(area, "create", "", on_state))
 	_lobby.join.connect(func(area: String, code: String) -> void: App.start_online(area, "join", code, on_state))
