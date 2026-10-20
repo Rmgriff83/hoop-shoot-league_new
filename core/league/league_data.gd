@@ -8,6 +8,10 @@ extends RefCounted
 const SHOOTERS_PATH := "res://data/shooters.json"
 const LEAGUES_PATH := "res://data/leagues.json"
 const PLAYER_ID := "player"
+## Where live cage heats sit the hoop (App.ARCADE_HOOP_DIST; a test pins the
+## two equal). The labs measure the cage here, not at SimGeometry.arcade()'s
+## 2.6 m default, so the cage the player feels is the one the ladder reports.
+const CAGE_HEAT_DIST := 2.9
 
 static var _shooters: Array = []
 static var _leagues: Array = []

@@ -104,9 +104,12 @@ the title at the cap; the suite runs it.
 
 ## Difficulty
 
-The AI side of a league's difficulty is the roster's ratings and `err_mult`, measured in
-points by `tools/league_lab.gd` — see docs/LEAGUE.md → Difficulty ladder (fewer pushovers
-per league, not stronger stars). The player's side is the area's hoop geometry.
+Since 2026-10-19 the AI side is **flat**: every league's roster measures the same points
+as the arcade cage's (`tools/league_lab.gd`, docs/LEAGUE.md → One strength, four courts),
+scaled only by the player's AI DIFFICULTY setting (EASY / NORMAL / HARD in Settings,
+`core/ai/ai_difficulty.gd`). The progression is the courts: the farther hoop, livelier
+iron and chain net of the beach, park and city are the player's ramp, and the AI — whose
+calibration makes a rating worth the same share on every hoop — does not feel them.
 
 ## Adding a league
 

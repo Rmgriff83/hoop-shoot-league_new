@@ -505,6 +505,25 @@ func _widgets(t) -> void:
 	panel._ready()
 	t.ok(panel.has_dark_mode(), "settings has the dark-mode row")
 	t.ok(panel.find_child("ShotHelp", true, false) != null, "settings has shot help")
+	# AI DIFFICULTY (2026-10-19): right under shot help, cycling NORMAL → HARD → EASY.
+	var was_diff: String = _app().ai_difficulty
+	_app().set_ai_difficulty("normal")
+	var diff: ShadowCard = panel.find_child("Difficulty", true, false)
+	t.ok(panel.has_difficulty() and diff != null, "settings has the AI DIFFICULTY row")
+	if diff != null:
+		t.eq(diff.text, "AI DIFFICULTY: NORMAL", "the row reads the saved setting")
+		t.eq(diff.get_index(), (panel.find_child("ShotHelp", true, false) as Control).get_index() + 1, "…right under SHOT HELP")
+		t.ok(diff.color != RetroTheme.LIGHT["gold"], "NORMAL is the cream face")
+		diff.pressed.emit()
+		t.eq(_app().ai_difficulty, "hard", "a tap steps to HARD")
+		t.eq(diff.text, "AI DIFFICULTY: HARD", "…and the row says so")
+		t.ok(diff.color == RetroTheme.LIGHT["gold"], "…in gold, off NORMAL")
+		diff.pressed.emit()
+		t.eq(diff.text, "AI DIFFICULTY: EASY", "then EASY")
+		diff.pressed.emit()
+		t.eq(diff.text, "AI DIFFICULTY: NORMAL", "then back to NORMAL")
+		t.eq(str(SaveService.get_settings().get("aiDifficulty", "")), "normal", "…and the settings part remembers")
+	_app().set_ai_difficulty(was_diff)
 	t.eq(panel.has_tuning(), OS.is_debug_build(), "tuning toggle only in a debug build")
 	t.eq(panel.has_gates(), OS.is_debug_build(), "the LEVEL GATES toggle only in a debug build")
 	if OS.is_debug_build():

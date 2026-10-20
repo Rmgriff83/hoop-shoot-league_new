@@ -1,5 +1,5 @@
 extends SceneTree
-## League difficulty lab (docs/LEAGUE.md → Difficulty ladder): plays every
+## League difficulty lab (docs/LEAGUE.md → One strength, four courts): plays every
 ## roster shooter against one reference player bot on the league's real
 ## geometry, error multiplier, format and calibration (CardLab.run_heat, no
 ## cards) and prints what the ladder is IN POINTS — mean AI points per heat,

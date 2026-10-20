@@ -84,7 +84,7 @@
       },
       "signature": "Unshakeable — gets BETTER when trailing.",
       "ratings": {
-        "accuracy": 0.58,
+        "accuracy": 0.45,
         "swishRate": 0.7,
         "pace": 4.8,
         "composure": 0.95,
@@ -107,7 +107,7 @@
       },
       "signature": "Rushes when hot — pace drops as the streak grows.",
       "ratings": {
-        "accuracy": 0.46,
+        "accuracy": 0.36,
         "swishRate": 0.35,
         "pace": 2.6,
         "composure": 0.4,
@@ -130,7 +130,7 @@
       },
       "signature": "Highest arc in the league — rainbow shots that kiss nothing.",
       "ratings": {
-        "accuracy": 0.55,
+        "accuracy": 0.42,
         "swishRate": 0.92,
         "pace": 4.6,
         "composure": 0.75,
@@ -153,7 +153,7 @@
       },
       "signature": "Machine-like cadence — same shot, every time, forever.",
       "ratings": {
-        "accuracy": 0.59,
+        "accuracy": 0.49,
         "swishRate": 0.72,
         "pace": 3.8,
         "composure": 0.85,
@@ -222,7 +222,7 @@
       },
       "signature": "Ice in the veins — nothing rattles her, ever.",
       "ratings": {
-        "accuracy": 0.56,
+        "accuracy": 0.45,
         "swishRate": 0.65,
         "pace": 4.4,
         "composure": 0.9,
@@ -291,7 +291,7 @@
       },
       "signature": "Bank-shot specialist — plays the glass like an instrument.",
       "ratings": {
-        "accuracy": 0.51,
+        "accuracy": 0.39,
         "swishRate": 0.2,
         "pace": 3.6,
         "composure": 0.55,
@@ -314,7 +314,7 @@
       },
       "signature": "Textbook 53° arc — the shot they show in coaching videos.",
       "ratings": {
-        "accuracy": 0.58,
+        "accuracy": 0.49,
         "swishRate": 0.88,
         "pace": 4.2,
         "composure": 0.8,
@@ -337,7 +337,7 @@
       },
       "signature": "The total package — the shooter everyone else measures against.",
       "ratings": {
-        "accuracy": 0.59,
+        "accuracy": 0.45,
         "swishRate": 0.8,
         "pace": 3.5,
         "composure": 0.9,
@@ -360,7 +360,7 @@
       },
       "signature": "A defender who happens to shoot — every make is a dare.",
       "ratings": {
-        "accuracy": 0.54,
+        "accuracy": 0.39,
         "swishRate": 0.7,
         "pace": 4.0,
         "composure": 0.8,
@@ -383,7 +383,7 @@
       },
       "signature": "Pays every shot in full — no rushed releases, ever.",
       "ratings": {
-        "accuracy": 0.54,
+        "accuracy": 0.42,
         "swishRate": 0.5,
         "pace": 3.2,
         "composure": 0.7,
@@ -406,7 +406,7 @@
       },
       "signature": "Swishes in bunches; when the tracks clear she does not miss.",
       "ratings": {
-        "accuracy": 0.59,
+        "accuracy": 0.45,
         "swishRate": 0.82,
         "pace": 4.6,
         "composure": 0.85,
@@ -429,7 +429,7 @@
       },
       "signature": "Volume and speed — the score climbs before you look up.",
       "ratings": {
-        "accuracy": 0.61,
+        "accuracy": 0.49,
         "swishRate": 0.6,
         "pace": 5.2,
         "composure": 0.6,
@@ -452,7 +452,7 @@
       },
       "signature": "Never rattled — the cold streak is somebody else's problem.",
       "ratings": {
-        "accuracy": 0.53,
+        "accuracy": 0.36,
         "swishRate": 0.78,
         "pace": 3.7,
         "composure": 0.9,
@@ -475,7 +475,7 @@
       },
       "signature": "Runs hot — five in a row, then the whole block hears about it.",
       "ratings": {
-        "accuracy": 0.6,
+        "accuracy": 0.49,
         "swishRate": 0.66,
         "pace": 4.1,
         "composure": 0.75,
@@ -498,7 +498,7 @@
       },
       "signature": "Soft high arcs that drop in without a sound.",
       "ratings": {
-        "accuracy": 0.57,
+        "accuracy": 0.45,
         "swishRate": 0.62,
         "pace": 3.9,
         "composure": 0.65,
@@ -521,7 +521,7 @@
       },
       "signature": "Line drives off the board; the square is his friend.",
       "ratings": {
-        "accuracy": 0.52,
+        "accuracy": 0.39,
         "swishRate": 0.42,
         "pace": 3.4,
         "composure": 0.7,
@@ -544,7 +544,7 @@
       },
       "signature": "Quick catch-and-shoot, always on the move between spots.",
       "ratings": {
-        "accuracy": 0.55,
+        "accuracy": 0.42,
         "swishRate": 0.55,
         "pace": 4.8,
         "composure": 0.55,
@@ -567,7 +567,7 @@
       },
       "signature": "Set shots from the elbows, one every four seconds, like a clock.",
       "ratings": {
-        "accuracy": 0.58,
+        "accuracy": 0.45,
         "swishRate": 0.5,
         "pace": 3.2,
         "composure": 0.85,
@@ -590,7 +590,7 @@
       },
       "signature": "Floaters from odd angles; streaky as the weather.",
       "ratings": {
-        "accuracy": 0.49,
+        "accuracy": 0.36,
         "swishRate": 0.48,
         "pace": 4.4,
         "composure": 0.45,
@@ -613,7 +613,7 @@
       },
       "signature": "Bank shots from the baselines, square and clean.",
       "ratings": {
-        "accuracy": 0.6,
+        "accuracy": 0.49,
         "swishRate": 0.58,
         "pace": 3.7,
         "composure": 0.72,
@@ -636,7 +636,7 @@
       },
       "signature": "Pure swishes from the key; the net barely moves.",
       "ratings": {
-        "accuracy": 0.61,
+        "accuracy": 0.49,
         "swishRate": 0.72,
         "pace": 3.9,
         "composure": 0.8,

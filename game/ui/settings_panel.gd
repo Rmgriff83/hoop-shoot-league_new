@@ -19,6 +19,7 @@ const ROW_H := 68.0
 const FIELD_BG := Color(34.0 / 255.0, 28.0 / 255.0, 24.0 / 255.0, 0.55)
 
 var _shot_help: ShadowCard
+var _difficulty: ShadowCard
 var _dark: ShadowCard
 var _tuning: ShadowCard
 var _gates: ShadowCard
@@ -53,6 +54,16 @@ func _build() -> void:
 		_tone(_shot_help, App.shot_help > 0)
 	)
 	_list.add_child(_shot_help)
+
+	# AI DIFFICULTY (Ross, 2026-10-19): every AI the player faces, on every
+	# court (core/ai/ai_difficulty.gd). Gold when it is off NORMAL.
+	_difficulty = _row("Difficulty", _difficulty_label(), App.ai_difficulty != AiDifficulty.DEFAULT)
+	_difficulty.pressed.connect(func() -> void:
+		App.cycle_ai_difficulty()
+		_difficulty.text = _difficulty_label()
+		_tone(_difficulty, App.ai_difficulty != AiDifficulty.DEFAULT)
+	)
+	_list.add_child(_difficulty)
 
 	_dark = _row("DarkMode", _dark_label(), App.dark_mode)
 	_dark.pressed.connect(func() -> void:
@@ -344,6 +355,14 @@ static func _spacer(h: float) -> Control:
 
 func _shot_help_label() -> String:
 	return "SHOT HELP: %s" % App.SHOT_HELP_LABELS[App.shot_help]
+
+
+func _difficulty_label() -> String:
+	return "AI DIFFICULTY: %s" % AiDifficulty.label(App.ai_difficulty)
+
+
+func has_difficulty() -> bool:
+	return _difficulty != null
 
 
 func _dark_label() -> String:

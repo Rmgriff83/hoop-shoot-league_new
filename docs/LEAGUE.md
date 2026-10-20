@@ -101,56 +101,59 @@ today marked), CARDS (spares + shop), STATS (career, best matches, the location'
 time-trial board). The home's LEAGUE card and its floating layer (`LeagueSummary`) show
 each league's season numbers, its next game and its unlock rule.
 
-## Difficulty ladder (2026-10-03)
+## One strength, four courts (2026-10-19)
 
-Ross's rule: a league gets harder by fielding **fewer pushovers, not stronger stars**, and
-the step up from the cage is small. Before this the three rosters were non-overlapping
-rating bands (cage 0.38–0.58, beach 0.60–0.78, city 0.66–0.80) with a second, hidden ramp
-in `err_mult` (1.2 / 1.0 / 0.9: the cage AI played worse than its rating, the city AI
-better) — and because makes compound through `StreakRules` tiers, measured in points the
-beach AIs scored 2.0× the cage's and the city AIs 2.85× (starfall 79 a heat against a
-25-point reference, 100 % wins). Note the hoop itself is **neutral for the AI**:
+Ross's new-user playtest: the league AIs felt fair in the arcade cage and too hard on
+every other court. Two ramps were stacked. The hoop is **neutral for the AI**:
 `assets/ai/calibration_<key>.json` inverts each geometry so a rating makes the same share
-everywhere; the farther hoop, livelier iron and chain net are the *player's* ramp, which
-Ross tunes per area (after any geometry change re-run `tools/calibrate_ai.gd -- <key>`,
-then the lab below to confirm the AI ladder held).
+on every hoop, so the farther hoop, livelier iron and chain net of the beach, park and
+city are the *player's* ramp alone. On top of that the rosters climbed (cage 0.38–0.56
+with three pushovers, beach 0.46–0.59 with one, park 0.49–0.61 with one, city 0.53–0.61
+with none; lab means 19.4 → 24.9 → 25.2 → 28.5). Ross's rule now: **the AI is the same
+strength on every court — the courts carry the progression.** Every league's roster
+measures the same points as the cage's; beach, park and city keep their seven named
+shooters, card hands, pace and style, and only their accuracy was re-levelled
+(rank-preserving onto the cage's spread, then nudged by the lab's points).
 
-The park league (2026-10-15, seven NORTH shooters, band 4 → 5) sits between the beach and
-the city on the same ladder: accuracies 0.49–0.61, one pushover (snowline), birchwood its
-star; `assets/ai/calibration_park.json` is its hoop's table.
+**AI DIFFICULTY** (Settings, `core/ai/ai_difficulty.gd`, the synced `aiDifficulty`
+setting): EASY / NORMAL / HARD shift the opponent's accuracy rating by `AiDifficulty.SHIFT`
+(−0.08 / 0 / +0.07; measured 2026-10-19 at n 10: cage 14.5 / 17.7 / 23.3 points, city 13.6 / 18.5 / 22.7 — about four to five points a step) for every AI the player faces — league heats (`App.league_heat_config`)
+and quick heats (`App.quick_heat_config`). NORMAL is the roster as authored. AI-vs-AI season
+games (`QuickSim`) ignore it, so the standings are the same on every setting; online 1v1
+has no AI. Accuracy is the one rating the calibration maps straight to make share, so the
+step is the same on every court.
 
 **The lab** — `godot --headless --path . -s tools/league_lab.gd [-- cage|beach|park|city]
 [-- --n=20]`: every roster shooter plays `n` seeded bot-vs-bot heats (`CardLab.run_heat`,
 no cards) against one reference bot (accuracy 0.55, swish 0.5, pace 4, composure 0.6 —
 a decent human) on the league's real geometry, `err_mult`, format and calibration, and
 prints mean AI points, the reference's points and the AI's win share per shooter; per
-league the mean / min / max, the pushover count (the reference wins more than 75 % of
-heats) and the beach/cage and city/cage ratios. It writes `assets/ai/league_ladder.json`,
-which `tests/test_league_ladder.gd` pins (overlapping bands, no star above 0.70, floors
-rising, `err_mult` 1.1 / 1.0 / 1.0, pushovers 3 / 1 / 0, the mean ratios, the city star
-under 1.35× the cage's, every beach and city shooter beatable). Points are very
-sensitive to pace and streakiness — a 0.50 shooter who shoots every 2.6 s outscores a
-0.61 who shoots every 3.6 s — so tune by the lab's points, not the accuracy number.
-Rosters and `err_mult` also feed `tools/card_lab.gd` (`assets/cards/card_power.json`,
-`tests/test_card_budget.gd`): re-run it after any ladder change.
+league the mean / min / max and the pushover count (the reference wins more than 75 % of
+heats). It writes `assets/ai/league_ladder.json`, which `tests/test_league_ladder.gd` pins
+(no roster star above 0.58, a floor at or under 0.46, `err_mult` 1.0 everywhere, every
+league's mean within ±6 % of the cage's, every star under 1.15× the cage's, 2–5 pushovers
+a league, every shooter beatable). Points are very sensitive to pace and streakiness —
+a 0.50 shooter who shoots every 2.6 s outscores a 0.61 who shoots every 3.6 s — so tune by
+the lab's points, not the accuracy number. Since 2026-10-19 the lab measures the cage at
+the **live** hoop distance (`LeagueData.CAGE_HEAT_DIST` 2.9 = `App.ARCADE_HOOP_DIST`,
+through `CardLab.geo_for_key`) rather than `SimGeometry.arcade()`'s 2.6 m default that
+`calibration_arcade.json` was fitted at: the cage AI shoots about 1.5 points under its
+2.6 m figure there (mean 17.9 vs 19.4), and that softer cage is the one Ross likes, so it
+is the anchor and the table was not refit. Rosters also feed `tools/card_lab.gd`
+(`assets/cards/card_power.json`, `tests/test_card_budget.gd`); it was deliberately **not**
+re-run for this change (Ross is rethinking card drops separately), so that file still
+describes the 2026-10-03 rosters.
 
-**Measured 2026-10-03** (`n` 40 heats a shooter, seed 7171; † = pushover):
+**Measured 2026-10-19** (`n` 40 heats a shooter, seed 7171; † = pushover):
 
 | league | AI mean | reference | top | pushovers | shooters (accuracy → points, AI win share) |
 |---|---|---|---|---|---|
-| cage | 19.4 | 21.0 | 28.7 (pinewick) | 3 | brickport 0.38 → 13 pts, 8 % wins†, maple-falls 0.50 → 16 pts, 18 % wins†, sunnyvale-flex 0.46 → 17 pts, 25 % wins†, dustplain 0.42 → 17 pts, 28 % wins, goldgulch 0.56 → 20 pts, 45 % wins, cactus-flats 0.50 → 23 pts, 70 % wins, pinewick 0.56 → 29 pts, 78 % wins |
-| beach | 24.9 | 24.1 | 30.1 (ironvale) | 1 | thunder-mesa 0.51 → 20 pts, 23 % wins†, harborlight 0.58 → 24 pts, 48 % wins, frostpeak 0.56 → 24 pts, 55 % wins, bellmeadow 0.55 → 24 pts, 50 % wins, coalditch 0.46 → 24 pts, 53 % wins, red-rock 0.58 → 28 pts, 60 % wins, ironvale 0.59 → 30 pts, 73 % wins |
-| city | 28.5 | 24.5 | 34.4 (starfall) | 0 | eastgate 0.61 → 25 pts, 50 % wins, kingsbridge 0.54 → 26 pts, 60 % wins, ferry-row 0.54 → 27 pts, 68 % wins, north-tunnel 0.53 → 28 pts, 78 % wins, rooftop-hill 0.60 → 29 pts, 68 % wins, union-yards 0.59 → 30 pts, 73 % wins, starfall 0.59 → 34 pts, 90 % wins |
+| cage | 17.9 | 19.8 | 26.1 (pinewick) | 2 | brickport 0.38 → 12 pts, 8 % wins†, maple-falls 0.50 → 15 pts, 15 % wins†, sunnyvale-flex 0.46 → 16 pts, 28 % wins, dustplain 0.42 → 16 pts, 28 % wins, goldgulch 0.56 → 19 pts, 40 % wins, cactus-flats 0.50 → 22 pts, 68 % wins, pinewick 0.56 → 26 pts, 73 % wins |
+| beach | 18.5 | 24.0 | 23.2 (ironvale) | 5 | thunder-mesa 0.39 → 15 pts, 3 % wins†, bellmeadow 0.42 → 16 pts, 8 % wins†, harborlight 0.45 → 17 pts, 10 % wins†, coalditch 0.36 → 18 pts, 20 % wins†, frostpeak 0.45 → 18 pts, 20 % wins†, red-rock 0.49 → 22 pts, 35 % wins, ironvale 0.49 → 23 pts, 45 % wins |
+| park | 18.1 | 22.8 | 22.8 (birchwood) | 4 | snowline 0.36 → 12 pts, 3 % wins†, oak-hollow 0.39 → 15 pts, 13 % wins†, millpond 0.42 → 16 pts, 10 % wins†, frostfield 0.45 → 19 pts, 18 % wins†, cedar-row 0.45 → 21 pts, 33 % wins, lamplight 0.49 → 21 pts, 35 % wins, birchwood 0.49 → 23 pts, 55 % wins |
+| city | 18.2 | 23.0 | 22.4 (starfall) | 4 | north-tunnel 0.36 → 15 pts, 3 % wins†, eastgate 0.49 → 16 pts, 10 % wins†, kingsbridge 0.39 → 16 pts, 15 % wins†, union-yards 0.45 → 18 pts, 10 % wins†, ferry-row 0.42 → 18 pts, 33 % wins, rooftop-hill 0.49 → 21 pts, 33 % wins, starfall 0.45 → 22 pts, 50 % wins |
 
-Ratios: beach/cage mean ×1.28, top ×1.05; city/cage mean ×1.47, top ×1.20 (before: ×2.00 /
-×2.06 and ×2.85 / ×3.07). The city's mean ratio is mostly the cage's three pushovers
-dragging its mean down; the city's regulars score ×1.28 the cage's regulars. Old → new
-accuracies: cage brickport .38, dustplain .45→.42, sunnyvale .50→.46, maple-falls
-.52→.50, cactus-flats .53→.50, goldgulch .57→.56, pinewick .58→.56; beach coalditch
-.60→.46, thunder-mesa .61→.51, bellmeadow .62→.55, frostpeak .63→.56, harborlight
-.66→.58, red-rock .72→.58, ironvale .78→.59; city ferry-row .66→.54, kingsbridge
-.68→.54, north-tunnel .69→.53, eastgate .70→.61, union-yards .74→.59, rooftop-hill
-.76→.60, starfall .80→.59. `err_mult` 1.2 / 1.0 / 0.9 → 1.0 everywhere.
+Old → new accuracies: beach coalditch .46→.36, thunder-mesa .51→.39, bellmeadow .55→.42, frostpeak .56→.45, harborlight .58→.45, red-rock .58→.49, ironvale .59→.49; park snowline .49→.36, oak-hollow .52→.39, millpond .55→.42, frostfield .57→.45, cedar-row .58→.45, lamplight .60→.49, birchwood .61→.49; city north-tunnel .53→.36, kingsbridge .54→.39, ferry-row .54→.42, starfall .59→.45, union-yards .59→.45, rooftop-hill .60→.49, eastgate .61→.49. The cage roster is unchanged. The three rosters sit lower on the accuracy scale than the cage's (0.36–0.49 against 0.38–0.56) because the cage AI under-shoots its rating at the live 2.9 m hoop; in points — the thing the player meets — all four leagues now agree (means 17.9 / 18.5 / 18.1 / 18.2, tops 26.1 / 23.2 / 22.8 / 22.4). The pushover count runs higher on the three courts (4–5 against the cage's 2) only because the reference bot scores more there (23–24 against 19.8): the AI's points, not its win share against a bot that does not feel the hoop, are what the ladder pins.
 
 ## AI pacing (2026-09-18)
 

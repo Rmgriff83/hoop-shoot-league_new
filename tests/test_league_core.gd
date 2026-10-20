@@ -36,7 +36,7 @@ func _data(t) -> void:
 	t.eq(int(LeagueData.league("city")["unlock"]["level"]), 5, "the city opens at level 5")
 	var park := LeagueData.league("park")
 	t.ok(park["arena"] == "park" and park["hoop"] == "park" and park["mode"] == "heat_park" and park["calib_key"] == "park", "the park league plays the park on its own hoop")
-	t.close(LeagueData.ratings_of("starfall").accuracy, 0.59, 1e-9, "ratings parse (the city star, re-tiered 2026-10-03)")
+	t.close(LeagueData.ratings_of("starfall").accuracy, 0.45, 1e-9, "ratings parse (the city star, flattened to the cage 2026-10-19)")
 	for l in LeagueData.leagues():
 		t.close(float(l["ball_return_s"]), 1.0, 1e-9, "%s league ball-return wait is 1 s" % l["id"])
 

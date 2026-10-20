@@ -1,25 +1,30 @@
 extends RefCounted
-## The league difficulty ladder (docs/LEAGUE.md → Difficulty ladder,
-## tools/league_lab.gd → assets/ai/league_ladder.json): leagues get harder by
-## having fewer pushovers, not stronger stars. The lab measures every roster
-## shooter against one reference bot in points; this pins what it found and
-## the shape of the data behind it.
+## The league difficulty ladder (docs/LEAGUE.md → One strength, four courts,
+## tools/league_lab.gd → assets/ai/league_ladder.json): since 2026-10-19 every
+## league's roster measures the same as the arcade cage's — the courts carry
+## the progression, the AI does not. The lab plays every roster shooter
+## against one reference bot in points; this pins what it found and the shape
+## of the data behind it.
+
+## A league's mean may sit this far off the cage's.
+const MEAN_TOL := 0.06
+## Pushovers (the reference wins ≥ 75 %) per league: a soft bottom, never the
+## whole roster. The count runs higher off the cage because the reference bot
+## scores more on those hoops; the AI's points are what the ladder pins.
+const PUSHOVERS_MIN := 2
+const PUSHOVERS_MAX := 5
 
 
 func run(t) -> void:
-	# The data: bands overlap (the floor rises, the ceiling barely), and no
-	# hidden boost past the cage.
-	var bands := {}
+	# The data: no roster fields a star past the cage's band, no hidden boost.
 	for league in LeagueData.leagues():
 		var lid := str(league["id"])
 		var accs: Array[float] = []
 		for id in league["roster"]:
 			accs.push_back(LeagueData.ratings_of(str(id)).accuracy)
-		bands[lid] = {"min": accs.min(), "max": accs.max(), "err": float(league.get("err_mult", 1.0))}
-	t.ok(bands["beach"]["min"] < bands["cage"]["max"] and bands["city"]["min"] < bands["beach"]["max"], "rating bands overlap league to league")
-	t.ok(bands["city"]["max"] <= 0.70 and bands["beach"]["max"] <= 0.66, "no league fields a star above 0.70 (city %.2f, beach %.2f)" % [bands["city"]["max"], bands["beach"]["max"]])
-	t.ok(bands["cage"]["min"] < 0.45 and bands["beach"]["min"] <= 0.52 and bands["city"]["min"] >= 0.53, "floors rise: cage %.2f, beach %.2f, city %.2f" % [bands["cage"]["min"], bands["beach"]["min"], bands["city"]["min"]])
-	t.ok(bands["cage"]["err"] == 1.0 and bands["beach"]["err"] == 1.0 and bands["city"]["err"] == 1.0, "no hidden err_mult ramp: 1.0 everywhere")
+		t.ok(accs.max() <= 0.58, "%s fields no star above 0.58 (%.2f)" % [lid, accs.max()])
+		t.ok(accs.min() <= 0.46, "%s has a soft floor (%.2f)" % [lid, accs.min()])
+		t.ok(float(league.get("err_mult", 1.0)) == 1.0, "no hidden err_mult ramp: %s 1.0" % lid)
 	# The measurement.
 	var path := "res://assets/ai/league_ladder.json"
 	t.ok(FileAccess.file_exists(path), "the lab's ladder file ships")
@@ -30,35 +35,15 @@ func run(t) -> void:
 	var L: Dictionary = doc["leagues"]
 	for lid in ["cage", "beach", "park", "city"]:
 		t.ok(L.has(lid) and L[lid]["shooters"].size() == 7, "%s measured, seven shooters" % lid)
-	var park_mean := float(L["park"]["mean"])
-	t.ok(park_mean >= float(L["beach"]["mean"]) * 0.95 and park_mean <= float(L["city"]["mean"]) * 1.05, "the park's AIs sit between the beach's and the city's (%.1f)" % park_mean)
-	t.ok(int(L["park"]["pushovers"]) >= 1, "the park has a pushover")
-	t.eq(int(L["cage"]["pushovers"]), 3, "the cage has three pushovers")
-	t.eq(int(L["beach"]["pushovers"]), 1, "the beach one")
-	t.eq(int(L["city"]["pushovers"]), 0, "the city none")
 	var cage_mean := float(L["cage"]["mean"])
-	var beach_r := float(L["beach"]["mean"]) / cage_mean
-	var city_r := float(L["city"]["mean"]) / cage_mean
-	t.ok(beach_r > 1.0 and beach_r < 1.3, "beach AIs score a little more than the cage's (x%.2f)" % beach_r)
-	# The mean ratio is mostly the pushover count (three in the cage drag its
-	# mean down); the fair comparison is the shooters who are not pushovers.
-	t.ok(city_r > beach_r and city_r < 1.6, "the city a little more again (x%.2f)" % city_r)
-	var cage_np := _non_pushover_mean(L["cage"], float(doc.get("pushover_win", 0.25)))
-	var city_np := _non_pushover_mean(L["city"], float(doc.get("pushover_win", 0.25)))
-	t.ok(city_np / cage_np < 1.4, "the city's regulars score under 1.4x the cage's regulars (x%.2f)" % (city_np / cage_np))
-	var top_r := float(L["city"]["max"]) / float(L["cage"]["max"])
-	t.ok(top_r < 1.35, "the city's star is not a wall (x%.2f of the cage's)" % top_r)
-	for lid in ["beach", "city"]:
+	var cage_top := float(L["cage"]["max"])
+	for lid in ["beach", "park", "city"]:
+		var r := float(L[lid]["mean"]) / cage_mean
+		t.ok(r >= 1.0 - MEAN_TOL and r <= 1.0 + MEAN_TOL, "%s AIs score what the cage's do (x%.2f)" % [lid, r])
+		var top_r := float(L[lid]["max"]) / cage_top
+		t.ok(top_r < 1.15, "%s's star is no wall (x%.2f of the cage's)" % [lid, top_r])
+	for lid in ["cage", "beach", "park", "city"]:
+		var p := int(L[lid]["pushovers"])
+		t.ok(p >= PUSHOVERS_MIN and p <= PUSHOVERS_MAX, "%s has %d–%d pushovers (%d)" % [lid, PUSHOVERS_MIN, PUSHOVERS_MAX, p])
 		for id in L[lid]["shooters"]:
-			t.ok(float(L[lid]["shooters"][id]["win"]) < 0.95, "%s/%s is beatable (wins %.0f%%)" % [lid, id, 100.0 * float(L[lid]["shooters"][id]["win"])])
-
-
-static func _non_pushover_mean(league: Dictionary, win_floor: float) -> float:
-	var sum := 0.0
-	var n := 0
-	for id in league["shooters"]:
-		var sh: Dictionary = league["shooters"][id]
-		if float(sh["win"]) > win_floor:
-			sum += float(sh["ai"])
-			n += 1
-	return sum / maxi(1, n)
+			t.ok(float(L[lid]["shooters"][id]["win"]) < 0.9, "%s/%s is beatable (wins %.0f%%)" % [lid, id, 100.0 * float(L[lid]["shooters"][id]["win"])])

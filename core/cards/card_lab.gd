@@ -18,7 +18,7 @@ const MAX_HEAT_S := 400.0   # tick guard: regulation + a stack of overtimes
 static func geo_for_key(key: String) -> SimGeometry:
 	match key:
 		"arcade":
-			return SimGeometry.arcade()
+			return SimGeometry.arcade(LeagueData.CAGE_HEAT_DIST)
 		"beach":
 			return SimGeometry.beach()
 		"city":

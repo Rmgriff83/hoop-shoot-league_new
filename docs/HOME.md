@@ -185,7 +185,10 @@ chevron (the footer says START INSIDE).
 - **Settings** (`game/ui/settings_panel.gd`, a `HomePage` since 2026-10-15,
   design "Settings"): the menu button slides it in like the locker. Every
   row is a dotted face — cream, gold when a toggle is on, orange for SAVE /
-  CLAIM: SHOT HELP, DARK MODE, the PLAYER section (your handle + SAVE, your
+  CLAIM: SHOT HELP, AI DIFFICULTY (`AI DIFFICULTY: EASY / NORMAL / HARD`, taps cycle;
+  gold off NORMAL; one strength for every AI the player faces on every court,
+  `core/ai/ai_difficulty.gd`, docs/LEAGUE.md → One strength, four courts;
+  the `aiDifficulty` setting, synced), DARK MODE, the PLAYER section (your handle + SAVE, your
   HOMETOWN + SAVE (a setting, saved on the spot), the
   handle and cloud-save lines, MOVE TO NEW PHONE, ENTER CODE, the platform
   link row — hidden until a Game Center / Play Games backend exists — and

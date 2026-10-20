@@ -178,6 +178,7 @@ func _ready() -> void:
 	shot_help = shot_help_from_saved(SaveService.get_settings().get("shotHelp", SHOT_HELP_OFF))
 	dark_mode = bool(SaveService.get_settings().get("darkMode", false))
 	music_on = bool(SaveService.get_settings().get("musicOn", false))
+	ai_difficulty = AiDifficulty.normalize(SaveService.get_settings().get("aiDifficulty", AiDifficulty.DEFAULT))
 	tuning.apply_dict(saved.get("fields", {}))
 	_resolve_cosmetics()
 	# The device account (docs/BACKEND.md): minted locally now, registered
@@ -193,6 +194,7 @@ func _on_save_pulled(parts: Array) -> void:
 		shot_help = shot_help_from_saved(SaveService.get_settings().get("shotHelp", SHOT_HELP_OFF))
 		dark_mode = bool(SaveService.get_settings().get("darkMode", false))
 		music_on = bool(SaveService.get_settings().get("musicOn", false))
+		ai_difficulty = AiDifficulty.normalize(SaveService.get_settings().get("aiDifficulty", AiDifficulty.DEFAULT))
 	if parts.has(SaveService.COSMETICS_PART):
 		_resolve_cosmetics()
 	var scene := get_tree().current_scene
@@ -248,6 +250,24 @@ func set_music_on(on: bool) -> void:
 	var s := SaveService.get_settings()
 	s["musicOn"] = on
 	SaveService.put_settings(s)
+
+
+## AI DIFFICULTY (Ross, 2026-10-19; core/ai/ai_difficulty.gd): one strength on
+## every court, scaled by this for every AI the player faces. Remembered
+## across launches and synced as the `aiDifficulty` setting.
+var ai_difficulty := AiDifficulty.DEFAULT
+
+
+func set_ai_difficulty(level: String) -> void:
+	ai_difficulty = AiDifficulty.normalize(level)
+	var s := SaveService.get_settings()
+	s["aiDifficulty"] = ai_difficulty
+	SaveService.put_settings(s)
+
+
+## The settings row's tap: easy → normal → hard → easy.
+func cycle_ai_difficulty() -> void:
+	set_ai_difficulty(AiDifficulty.next(ai_difficulty))
 
 
 func set_dark_mode(on: bool) -> void:
@@ -1004,7 +1024,7 @@ func quick_heat_config(mode_id: String) -> Dictionary:
 	var cfg := mode_config(mode_id)
 	return {
 		"mode": mode_id, "seconds": Heat.DEFAULT_SECONDS, "ot_seconds": Heat.DEFAULT_OT_SECONDS,
-		"ball_return_s": Heat.DEFAULT_BALL_RETURN_S, "ai": QUICK_OPPONENT["ratings"], "err_mult": 1.0,
+		"ball_return_s": Heat.DEFAULT_BALL_RETURN_S, "ai": AiDifficulty.apply(QUICK_OPPONENT["ratings"], ai_difficulty), "err_mult": 1.0,
 		"seed": int(Time.get_ticks_usec() % 2147483647), "opponent": QUICK_OPPONENT,
 		"calib_key": cfg.get("calib_key", "regulation"), "league": null,
 		"player_cards": [], "player_slots": [null, null, null], "ai_cards": [],
@@ -1236,7 +1256,7 @@ func league_heat_config(doc: Dictionary, cfg: Dictionary) -> Dictionary:
 		"seconds": float(cfg.get("heat_seconds", Heat.DEFAULT_SECONDS)),
 		"ot_seconds": float(cfg.get("ot_seconds", Heat.DEFAULT_OT_SECONDS)),
 		"ball_return_s": float(cfg.get("ball_return_s", Heat.DEFAULT_BALL_RETURN_S)),
-		"ai": shooter.get("ratings", {}), "err_mult": float(cfg.get("err_mult", 1.0)),
+		"ai": AiDifficulty.apply(shooter.get("ratings", {}), ai_difficulty), "err_mult": float(cfg.get("err_mult", 1.0)),
 		"seed": QuickSim.seed_from([season["seed"], season["year"], tag, int(doc["career"]["totals"]["games"])]),
 		"opponent": shooter, "calib_key": cfg.get("calib_key", "regulation"),
 		"league": {"id": cfg["id"], "game": tag, "playoff": season["phase"] == Season.PHASE_PLAYOFFS},
