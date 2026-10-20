@@ -8,30 +8,10 @@ extends RefCounted
 
 func run(t) -> void:
 	_trial(t)
-	_online(t)
 	_heats(t)
 	_envelope(t)
 	_drift(t)
 
-
-## The online payout (docs/BACKEND.md → Cards online): a win scaled by the
-## upset, a loss flat, the clamps; the server's cards.ts asserts the same.
-func _online(t) -> void:
-	t.eq(Economy.online_coins(true, 1, 9), {"coins": 110, "mult": 2.2}, "level 1 beats level 9: 50 × 2.2")
-	t.eq(Economy.online_coins(true, 9, 1), {"coins": 25, "mult": 0.5}, "level 9 beats level 1: the floor")
-	t.eq(Economy.online_coins(true, 4, 4), {"coins": 50, "mult": 1.0}, "even: the base")
-	t.eq(Economy.online_coins(true, 1, 40), {"coins": 125, "mult": 2.5}, "the cap")
-	t.eq(Economy.online_coins(false, 1, 9), {"coins": 20, "mult": 1.0}, "a loss pays flat")
-	t.eq(HeatCopy.online_coins({"online": true, "won": true, "coins": 110, "mult": 2.2}), {"big": "+110", "sub": "ONLINE COINS · WIN", "sub2": "UPSET · X2.2"}, "the upset card")
-	t.eq(HeatCopy.online_coins({"online": true, "won": true, "coins": 25, "mult": 0.5})["sub2"], "FAVOURITE · X0.5", "the favourite's card")
-	t.eq(HeatCopy.online_coins({"online": true, "won": true, "coins": 50, "mult": 1.0})["sub2"], "EVEN MATCH", "an even match")
-	t.eq(HeatCopy.online_coins({"online": true, "won": false, "coins": 20})["sub"], "ONLINE COINS · LOSS", "a loss")
-	t.eq(HeatCopy.online_coins({"online": true})["sub"], "ONLINE COINS · SETTLING", "before the room's word")
-	t.eq(HeatCopy.online_coins({"online": true, "reason": "void"})["big"], "+0", "a void pays nothing")
-	t.eq(HeatCopy.coins({"online": true, "won": true, "coins": 50, "mult": 1.0})["big"], "+50", "HeatCopy.coins hands online heats over")
-	t.eq(HeatCopy.mult_text(2.2), "2.2", "2.2")
-	t.eq(HeatCopy.mult_text(1.0), "1", "1")
-	t.eq(HeatCopy.mult_text(2.25), "2.25", "2.25")
 
 
 func _trial(t) -> void:
@@ -54,24 +34,24 @@ func _heats(t) -> void:
 	var win := Economy.heat_rewards(cage, true, false)
 	var loss := Economy.heat_rewards(cage, false, false)
 	var title := Economy.heat_rewards(cage, true, true)
-	t.eq(int(win["coins"]), int(r["win_coins"]), "win coins from the league row")
+	t.eq(win.keys(), ["tickets"], "a heat pays tickets and nothing else (coins are gone, 2026-10-19)")
 	t.eq(int(win["tickets"]), int(r["win_tickets"]), "win tickets from the league row")
-	t.eq(int(loss["coins"]), int(r["loss_coins"]), "loss coins")
 	t.eq(int(loss["tickets"]), int(r["loss_tickets"]), "loss tickets")
-	t.eq(int(title["coins"]), int(r["win_coins"]) + int(r["title_coins"]), "the title adds its coins")
 	t.eq(int(title["tickets"]), int(r["win_tickets"]) + int(r["title_tickets"]), "the title adds its tickets")
-	t.ok(int(win["coins"]) > int(loss["coins"]) and int(win["tickets"]) > int(loss["tickets"]), "winning pays more")
+	t.ok(int(win["tickets"]) > int(loss["tickets"]), "winning pays more")
+	t.eq(r.keys(), ["win_tickets", "loss_tickets", "title_tickets"], "the league row carries the three ticket keys only")
 	var beach := LeagueData.league("beach")
-	t.ok(Economy.expected_coins_per_heat(beach) > Economy.expected_coins_per_heat(cage), "the harder league pays more coins a heat")
-	t.ok(Economy.expected_tickets_per_heat(beach) > Economy.expected_tickets_per_heat(cage), "and more tickets")
+	t.ok(Economy.expected_tickets_per_heat(beach) > Economy.expected_tickets_per_heat(cage), "the harder league pays more tickets a heat")
 	var city := LeagueData.league("city")
-	t.ok(Economy.expected_coins_per_heat(city) > Economy.expected_coins_per_heat(beach), "the city pays more coins a heat than the beach")
+	t.ok(Economy.expected_tickets_per_heat(city) > Economy.expected_tickets_per_heat(beach), "the city pays more a heat than the beach")
 	t.ok(Economy.trial_tickets({"score": 24, "location": "city"}, false) > Economy.trial_tickets({"score": 24, "location": "beach"}, false), "and its trials pay more for the same score")
 	var park_pay := Economy.trial_tickets({"score": 24, "location": "park"}, false)
 	t.ok(park_pay > Economy.trial_tickets({"score": 24, "location": "beach"}, false) and park_pay < Economy.trial_tickets({"score": 24, "location": "city"}, false), "the park's trials pay between the beach's and the city's")
 	var park := LeagueData.league("park")
-	t.ok(Economy.expected_coins_per_heat(park) > Economy.expected_coins_per_heat(beach) and Economy.expected_coins_per_heat(park) < Economy.expected_coins_per_heat(city), "the park league's coins sit between")
-	t.close(Economy.expected_coins_per_heat(cage), 0.5 * int(r["win_coins"]) + 0.5 * int(r["loss_coins"]), 1e-9, "expected coins at a coin flip")
+	t.ok(Economy.expected_tickets_per_heat(park) > Economy.expected_tickets_per_heat(beach) and Economy.expected_tickets_per_heat(park) < Economy.expected_tickets_per_heat(city), "the park league's tickets sit between")
+	t.close(Economy.expected_tickets_per_heat(cage), 0.5 * int(r["win_tickets"]) + 0.5 * int(r["loss_tickets"]), 1e-9, "expected tickets at a coin flip")
+	t.close(Economy.expected_tickets_per_heat(cage), 26.0, 1e-9, "the cage heat: 36 / 16 → 26 a heat (2026-10-19)")
+	t.eq(Economy.trial_tickets({"score": 24, "location": "cage"}, false), 15, "a 24-point cage trial pays 15 (base 5 + 0.4 a point)")
 
 
 func _envelope(t) -> void:
@@ -80,7 +60,7 @@ func _envelope(t) -> void:
 	t.ok(rates.size() >= 4, "two trial rates and two heat rates (%d)" % rates.size())
 	for r in rates:
 		t.ok(float(r["rate"]) >= float(band[0]) and float(r["rate"]) <= float(band[1]), "%s pays inside the band (%.1f/min)" % [r["mode"], r["rate"]])
-	t.ok(EconomyBudget.trial_rate("cage") > EconomyBudget.heat_rate(LeagueData.league("cage")), "a trial out-earns a heat in tickets (heats also pay coins)")
+	t.ok(EconomyBudget.heat_rate(LeagueData.league("cage")) > EconomyBudget.trial_rate("cage"), "a cage heat out-earns a cage trial a minute (one currency: heats carry the wallet, trials a bit less)")
 	var catalog := EconomyBudget.catalog()
 	t.ok(catalog.size() >= 2, "the priced hoops are in the catalog (%d)" % catalog.size())
 	for item in catalog:
@@ -132,4 +112,4 @@ func _drift(t) -> void:
 	t.eq(EconomyBudget.tier_of(250), "entry", "250 is entry")
 	t.eq(EconomyBudget.tier_of(1500), "grail", "1500 is grail")
 	# An overpriced card takes too many heats.
-	t.ok(EconomyBudget.heats_to_afford(LeagueData.league("cage"), 900) > 14.0, "a 900-coin card is out of reach")
+	t.ok(EconomyBudget.heats_to_afford(LeagueData.league("cage"), 900) > 14.0, "a 900-ticket card is out of reach")

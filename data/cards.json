@@ -4,7 +4,7 @@
       "id": "ice",
       "name": "Deep Freeze",
       "rarity": "common",
-      "price": 100,
+      "price": 80,
       "target": "opponent",
       "effect": {
         "kind": "ice"
@@ -34,7 +34,7 @@
       "id": "fire7",
       "name": "Heat Check",
       "rarity": "rare",
-      "price": 170,
+      "price": 140,
       "target": "self",
       "effect": {
         "kind": "fire",
@@ -65,7 +65,7 @@
       "id": "vortex6",
       "name": "Vortex",
       "rarity": "epic",
-      "price": 390,
+      "price": 290,
       "target": "self",
       "effect": {
         "kind": "vortex",
@@ -118,7 +118,7 @@
     ]
   },
   "price_curve": {
-    "k": 200.0,
+    "k": 150.0,
     "exp": 1.3,
     "tolerance": 0.2
   }

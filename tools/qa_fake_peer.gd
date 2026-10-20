@@ -69,8 +69,7 @@ func _maybe_settle() -> void:
 		return
 	_settled = true
 	var won := _our_score > _heat.ai.score
-	var pay := Economy.online_coins(won, 1, 4)
-	message.emit.call_deferred({"t": MatchProtocol.SETTLED, "coins": int(pay["coins"]), "mult": float(pay["mult"]), "won": won, "reason": "played", "wallet": 120 + int(pay["coins"])})
+	message.emit.call_deferred({"t": MatchProtocol.SETTLED, "won": won, "reason": "played"})
 
 
 ## Their side asks first (the QA driver stages the wanted state).

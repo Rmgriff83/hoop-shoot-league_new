@@ -29,11 +29,10 @@ func run(t) -> void:
 	t.eq(full["leagues"], {}, "no buckets until a league is touched")
 	var cage := CardDefs.league_doc(full, "cage")
 	t.eq(full["leagues"].keys(), ["cage"], "touching a league creates its bucket")
-	t.eq(int(cage["coins"]), 0, "a bucket starts with no coins")
+	t.eq(cage.keys(), ["inventory", "loadout"], "a bucket is cards only: no wallet (tickets are global, 2026-10-19)")
 	CardDefs.add(cage, "ice", 2)
 	t.eq(CardDefs.count(CardDefs.league_doc(full, "cage"), "ice"), 2, "the bucket is a live reference into the doc")
 	t.eq(CardDefs.count(CardDefs.league_doc(full, "beach"), "ice"), 0, "cage cards never show in the beach bucket")
-	t.eq(CardDefs.coins(full, "beach"), 0, "coins are per league too")
 	# Inventory + loadout on a bucket: slots hold real copies, played cards empty their slot.
 	var d := CardDefs.empty_bucket()
 	t.eq(CardDefs.loadout_ids(d), [], "empty hand")
@@ -71,12 +70,18 @@ func run(t) -> void:
 	# economy is per league now.
 	var old := {"updatedAt": 0, "v": 2, "inventory": {"ice": 3}, "loadout": ["ice", null, "ice"]}
 	t.ok(CardDefs.migrate(old), "a v2 doc migrates")
-	t.eq(old["v"], CardDefs.DOC_VERSION, "stamped v3")
+	t.eq(old["v"], CardDefs.DOC_VERSION, "stamped the current version")
 	t.eq(old.get("leagues", null), {}, "…as an empty per-league doc")
 	t.ok(not old.has("inventory"), "the global inventory is gone")
 	t.ok(not CardDefs.migrate(old), "migrate is idempotent")
 	var v1 := {"updatedAt": 0, "inventory": {"ice": 1}, "loadout": ["ice", "ice", "ice"]}
 	t.ok(CardDefs.migrate(v1) and v1["leagues"] == {}, "a v1 doc is wiped the same way")
+	# v3 → v4 (2026-10-19): the per-league coin wallet goes, the cards stay.
+	var v3 := {"updatedAt": 0, "v": 3, "leagues": {"cage": {"coins": 120, "inventory": {"ice": 2}, "loadout": ["fire7", null, null]}}}
+	t.ok(CardDefs.migrate(v3), "a v3 doc migrates")
+	t.eq(v3["v"], 4, "stamped v4")
+	t.eq(v3["leagues"]["cage"], {"inventory": {"ice": 2}, "loadout": ["fire7", null, null]}, "the coins are dropped, inventory and loadout kept")
+	t.ok(not CardDefs.migrate(v3), "and it is idempotent")
 	# Heat: the player ices the AI; the effect refuses a second time.
 	var geo := SimGeometry.arcade()
 	var h := Heat.new({"geo": geo, "seconds": 30.0, "ai": AiRatings.make(0.9, 0.9, 2.0), "seed": 5,

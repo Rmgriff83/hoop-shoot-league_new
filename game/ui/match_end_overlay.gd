@@ -87,7 +87,7 @@ func build(v: Dictionary) -> Control:
 		sub.name = "Sub"
 		_centre(sub, sub_y)
 		_anim(sub, "rise", 2.1, 0.4)
-	_rewards(str(v.get("coins", "+0")), str(v.get("drop", "")))
+	_rewards(str(v.get("tickets", "+0")), str(v.get("drop", "")))
 	_continue = _label("TAP TO CONTINUE", 16, CREAM, true)
 	_continue.name = "Continue"
 	_centre(_continue, 1150.0)
@@ -456,7 +456,7 @@ func _trophy_block(titles: int) -> void:
 	_anim(row, "rise", 1.8, 0.4)
 
 
-func _rewards(coins: String, drop: String) -> void:
+func _rewards(tickets: String, drop: String) -> void:
 	var row := Control.new()
 	row.name = "Rewards"
 	row.position = Vector2(0, 920)
@@ -470,7 +470,7 @@ func _rewards(coins: String, drop: String) -> void:
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(h)
 	var pill := PanelContainer.new()
-	pill.name = "Coins"
+	pill.name = "Tickets"
 	pill.custom_minimum_size = Vector2(0, 64)
 	pill.add_theme_stylebox_override("panel", _box(GOLD, Color(GOLD, 0.25), true, Color(GOLD, 0.5)))
 	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -479,11 +479,11 @@ func _rewards(coins: String, drop: String) -> void:
 	ph.add_theme_constant_override("separation", 14)
 	ph.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	pill.add_child(ph)
-	var coin := PixelIcon.new("icon_coin", Vector2(28, 28))
-	coin.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	ph.add_child(coin)
-	var amount := _label(coins, 24, CREAM, true)
-	amount.name = "CoinsText"
+	var ticket := PixelIcon.new("icon_ticket", Vector2(28, 18))
+	ticket.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	ph.add_child(ticket)
+	var amount := _label(tickets, 24, CREAM, true)
+	amount.name = "TicketsText"
 	ph.add_child(amount)
 	h.add_child(pill)
 	if drop != "":

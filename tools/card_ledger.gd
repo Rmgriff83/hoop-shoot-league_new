@@ -43,17 +43,17 @@ func _initialize() -> void:
 	var curve := CardDefs.price_curve()
 	print("  scale: %s; price = round10(%.0f · power^%.2f) ±%.0f%%" % [", ".join(band_txt), float(curve["k"]), float(curve["exp"]), 100.0 * float(curve["tolerance"])])
 	print("")
-	print("AREA ENVELOPE  (per season; player income at p_win %.2f, %.0f playoff games, title p %.2f)" % [CardBudget.P_WIN, CardBudget.PLAYOFF_GAMES, CardBudget.P_TITLE])
-	print("  %-7s %6s %8s %8s %8s | %6s %8s %8s %8s | %6s %6s %s" % ["league", "allow", "authored", "dealt", "AI pwr", "drops", "coins", "bought", "PLR pwr", "ratio", "target", ""])
+	print("AREA ENVELOPE  (per season; player income at p_win %.2f, %.0f playoff games, title p %.2f; tickets × share %.2f bought at the mean price — reported, not gated)" % [
+		CardBudget.P_WIN, CardBudget.PLAYOFF_GAMES, CardBudget.P_TITLE, float(Economy.cards_cfg().get("ticket_share", 0.5))])
+	print("  %-7s %6s %8s %8s %8s | %6s %8s %8s %8s | %6s %6s %s" % ["league", "allow", "authored", "dealt", "AI pwr", "drops", "tickets", "bought", "PLR pwr", "ratio", "target", ""])
 	for l in CardBudget.unlock_chain(leagues):
 		var a := CardBudget.ai_budget(l)
 		var p := CardBudget.player_income(l)
 		var ratio := CardBudget.parity(l)
 		var target := float(l.get("card_parity", 0.0))
-		var ok := absf(ratio - target) <= CardBudget.PARITY_TOL * target
 		print("  %-7s %6d %8s %8s %8.2f | %6.2f %8.0f %8.2f %8.2f | %6.2f %6.2f %s" % [l["id"], int(a["per_season"]),
 			"%d (%.1f)" % [int(a["authored_n"]), float(a["authored_power"])], "%d (%.1f)" % [int(a["dealt_n"]), float(a["dealt_power"])],
-			float(a["power"]), float(p["drops"]), float(p["coins"]), float(p["bought"]), float(p["power"]), ratio, target, "ok" if ok else "OUT"])
+			float(a["power"]), float(p["drops"]), float(p["tickets"]), float(p["bought"]), float(p["power"]), ratio, target, CardBudget.parity_remark(l)])
 	print("")
 	print("SIGNATURE HANDS")
 	for l in leagues:

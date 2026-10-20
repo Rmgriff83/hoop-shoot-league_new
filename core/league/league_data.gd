@@ -108,7 +108,7 @@ static func validate() -> PackedStringArray:
 		var levels: Variant = l.get("levels", null)
 		if not (levels is Dictionary) or not levels.has("min") or not levels.has("cap"):
 			problems.push_back("league %s needs a levels band {min, cap}" % l.get("id", "?"))
-		for key in ["win_coins", "loss_coins", "title_coins", "win_tickets", "loss_tickets", "title_tickets"]:
+		for key in ["win_tickets", "loss_tickets", "title_tickets"]:
 			if not Dictionary(l.get("rewards", {})).has(key):
 				problems.push_back("league %s rewards missing %s" % [l.get("id", "?"), key])
 		_validate_cards(l, problems)

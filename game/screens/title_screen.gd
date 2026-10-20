@@ -327,10 +327,14 @@ func rebuild_chrome() -> void:
 	menu.position = Vector2(720 - MARGIN - HamburgerButton.SIZE, 32)
 	menu.pressed.connect(_open_settings)
 	_chrome.add_child(menu)
-	var coins := CoinsPill.new()
-	coins.set_coins(App.tickets())
-	coins.position = Vector2(720 - MARGIN - HamburgerButton.SIZE - 16 - 170, 32)
-	_chrome.add_child(coins)
+	var wallet := CoinsPill.new()   # the pill keeps its old class name; it shows tickets
+	wallet.set_coins(App.tickets())
+	var wallet_icon: PixelIcon = wallet.find_child("Coin", true, false)
+	if wallet_icon != null:
+		wallet_icon.icon_name = "icon_ticket"
+		wallet_icon.custom_minimum_size = Vector2(22, 14)
+	wallet.position = Vector2(720 - MARGIN - HamburgerButton.SIZE - 16 - 170, 32)
+	_chrome.add_child(wallet)
 
 	# The area zone: the stars on top, the name big under them with the
 	# ranks and multiplayer icons to its right, chevrons at the screen edges.
@@ -1228,7 +1232,7 @@ func _open_lobby() -> void:
 	add_child(_lobby)
 	_slide_home(true)
 	_lobby.slide_in()
-	Net.refresh_cards()   # the ledger's word on coins and cards
+	Net.refresh_cards()   # the ledger's word on the online cards
 
 
 func lobby() -> MatchLobbyPage:

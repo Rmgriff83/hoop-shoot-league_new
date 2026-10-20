@@ -2,7 +2,7 @@ class_name MatchEndCopy
 extends RefCounted
 ## The league match-end page's copy (design "League Match End", docs/HOME.md
 ## → Results), pure and headless: from App.last_heat (Heat.result() +
-## opponent, league {id, game, playoff}, coins, card_drop and the campaign
+## opponent, league {id, game, playoff}, tickets, card_drop and the campaign
 ## snapshot `league_end` App._apply_league_heat captured) pick the moment —
 ## win, loss, series (a playoff game that did not decide the series),
 ## advance, eliminated, runner_up, champion — and everything the overlay
@@ -83,7 +83,7 @@ static func state(heat: Dictionary) -> Dictionary:
 		"kind": k, "won": won,
 		"score_you": int(heat.get("player_score", 0)), "score_opp": int(heat.get("ai_score", 0)),
 		"opp_first": opp_first,
-		"coins": "+%d" % int(heat.get("coins", 0)),
+		"tickets": "+%d" % int(heat.get("tickets", 0)),
 		"drop": str(heat.get("card_drop", "")),
 		"year": year,
 	}
@@ -168,7 +168,7 @@ static func state(heat: Dictionary) -> Dictionary:
 
 ## Every string on the page, for the glyph check.
 static func strings(v: Dictionary) -> Array:
-	var out := [str(v.get("tag", "")), str(v.get("head", "")), str(v.get("sub", "")), str(v.get("coins", "")),
+	var out := [str(v.get("tag", "")), str(v.get("head", "")), str(v.get("sub", "")), str(v.get("tickets", "")),
 		str(v.get("opp_first", "")), "YOU", "TAP TO CONTINUE", "NEW CARD", "TITLES"]
 	for key in ["record", "bracket"]:
 		if v.has(key):

@@ -157,7 +157,6 @@ func run(t) -> void:
 	t.eq(svc3.get_cards().get("leagues", null), {}, "no league buckets by default")
 	var cd: Dictionary = svc3.get_cards()
 	var bucket := CardDefs.league_doc(cd, "cage")
-	bucket["coins"] = 120
 	CardDefs.add(bucket, "ice", 1)
 	CardDefs.equip(bucket, 1, "ice")
 	svc3.put_cards(cd)
@@ -165,8 +164,7 @@ func run(t) -> void:
 	var svc5 := _fresh()
 	t.eq(CardDefs.owned(CardDefs.league_doc(svc5.get_cards(), "cage"), "ice"), 1, "card ownership survives reload")
 	t.eq(CardDefs.league_doc(svc5.get_cards(), "cage")["loadout"][1], "ice", "loadout survives reload")
-	t.eq(CardDefs.coins(svc5.get_cards(), "cage"), 120, "league coins survive reload")
-	t.eq(CardDefs.coins(svc5.get_cards(), "beach"), 0, "and stay in their league")
+	t.ok(not CardDefs.league_doc(svc5.get_cards(), "cage").has("coins"), "no wallet in a bucket (v4)")
 	t.eq(svc5.get_cards().get("v", 0), CardDefs.DOC_VERSION, "cards doc carries the version")
 	svc5.free()
 	svc3.free()

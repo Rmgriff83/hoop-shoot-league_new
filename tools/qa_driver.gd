@@ -535,7 +535,7 @@ func _run_heat_result() -> void:
 	App.enter_league("cage")
 	var opp := LeagueData.shooter("brickport")
 	var base := {"won": true, "player_score": 44, "ai_score": 42, "ot": 1, "opponent": opp, "mode": "heat", "location": "cage",
-		"league": {"id": "cage", "game": "d1", "playoff": false}, "coins": 50, "tickets": 28, "card_drop": "fire7",
+		"league": {"id": "cage", "game": "d1", "playoff": false}, "tickets": 36, "card_drop": "fire7",
 		"xp": {"gained": 30, "level_before": 1, "level_after": 2},
 		"sides": {"player": {"makes": 19, "attempts": 30, "swishes": 7, "bestStreak": 6, "bonus": 7, "iced": 0},
 			"ai": {"makes": 18, "attempts": 31, "swishes": 6, "bestStreak": 6, "bonus": 7, "iced": 0}}}
@@ -548,8 +548,7 @@ func _run_heat_result() -> void:
 	loss["player_score"] = 33
 	loss["ai_score"] = 36
 	loss["ot"] = 0
-	loss["coins"] = 15
-	loss["tickets"] = 11
+	loss["tickets"] = 16
 	loss["card_drop"] = ""
 	loss["xp"] = {"gained": 4, "level_before": 2, "level_after": 2}
 	loss["sides"]["player"] = {"makes": 14, "attempts": 25, "swishes": 5, "bestStreak": 4, "bonus": 3, "iced": 1}
@@ -1140,7 +1139,6 @@ func _run_multi() -> void:
 	# The cards on the page (design 37a): a seeded cache (a spare, one set).
 	var cd: Dictionary = SaveService.get_cards()
 	var ob := CardDefs.league_doc(cd, "online")
-	ob["coins"] = 260
 	ob["inventory"] = {"ice": 1}
 	ob["loadout"] = ["fire7", null, null]
 	SaveService.put_cards(cd)
@@ -1259,7 +1257,7 @@ func _run_match_end() -> void:
 		e.merge(c[4], true)
 		var heat := {"won": c[1], "player_score": c[2], "ai_score": c[3], "ot": 0, "opponent": opp, "mode": "heat", "location": "cage",
 			"league": {"id": "cage", "game": "po-sf-1" if bool(e["playoff"]) else "d4", "playoff": e["playoff"]},
-			"coins": 50 if c[1] else 15, "tickets": 28, "card_drop": c[5], "league_end": e}
+			"tickets": 36 if c[1] else 16, "card_drop": c[5], "league_end": e}
 		var o := MatchEndOverlay.new()
 		o.name = "MatchEnd"
 		o.build(MatchEndCopy.state(heat))

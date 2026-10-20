@@ -808,7 +808,7 @@ func _fill_loadout(vb: VBoxContainer) -> void:
 
 
 func _fill_shop(vb: VBoxContainer) -> void:
-	vb.add_child(_caps("%d COINS · CARDS BOUGHT HERE PLAY IN THE %s ONLY" % [App.league_coins(league_id), str(cfg.get("name", "LEAGUE")).to_upper()]))
+	vb.add_child(_caps("%d TICKETS · CARDS BOUGHT HERE PLAY IN THE %s ONLY" % [App.tickets(), str(cfg.get("name", "LEAGUE")).to_upper()]))
 	var cd := App.cards_bucket(league_id)
 	for card in CardDefs.all():
 		var panel := ShadowPanel.new(CREAM, 20.0, 0.12)
@@ -866,7 +866,7 @@ func _fill_shop(vb: VBoxContainer) -> void:
 		var buy := ShadowCard.new(RetroTheme.c("gold"))
 		buy.name = "Buy_" + str(card["id"])
 		buy.custom_minimum_size = Vector2(136 + ShadowStyle.OFFSET, 50 + ShadowStyle.OFFSET)
-		buy.disabled = App.league_coins(league_id) < int(card.get("price", 0)) or not usable   # bought at level, too
+		buy.disabled = App.tickets() < int(card.get("price", 0)) or not usable   # bought at level, too
 		var bm := MarginContainer.new()
 		bm.set_anchors_preset(Control.PRESET_FULL_RECT)
 		bm.add_theme_constant_override("margin_right", int(ShadowStyle.OFFSET))
@@ -876,9 +876,9 @@ func _fill_shop(vb: VBoxContainer) -> void:
 		var br := _hrow(10)
 		br.alignment = BoxContainer.ALIGNMENT_CENTER
 		bm.add_child(br)
-		var coin := PixelIcon.new("icon_coin", Vector2(16, 16))
-		coin.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		br.add_child(coin)
+		var ticket := PixelIcon.new("icon_ticket", Vector2(16, 16))
+		ticket.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		br.add_child(ticket)
 		var price := _display("%d" % int(card.get("price", 0)), 16)
 		price.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		br.add_child(price)

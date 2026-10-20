@@ -134,7 +134,6 @@ export function deleteAccountStatements(db: D1Database, playerId: string): D1Pre
     "DELETE FROM tt_best WHERE player_id = ?1",
     "DELETE FROM tt_week_best WHERE player_id = ?1",
     "DELETE FROM seen_runs WHERE player_id = ?1",
-    "DELETE FROM online_wallet WHERE player_id = ?1",
     "DELETE FROM online_cards WHERE player_id = ?1",
     "DELETE FROM online_ledger WHERE player_id = ?1",
     "DELETE FROM players WHERE id = ?1",

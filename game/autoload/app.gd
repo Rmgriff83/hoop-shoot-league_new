@@ -319,9 +319,9 @@ func unlocked_areas() -> Array:
 	return out
 
 
-# ---- tickets (global, the locker money) + cosmetics ----------------------------
-# docs/ECONOMY.md: tickets are earned by time trials and league heats and
-# spent on balls / hoops in the locker; coins (below) are per league.
+# ---- tickets (the one currency, global) + cosmetics ----------------------------
+# docs/ECONOMY.md: tickets are earned by time trials, league heats and titles
+# and spent on PEGGY plays and each league's cards (below).
 
 
 func tickets() -> int:
@@ -892,8 +892,8 @@ func _tip_off(client: MatchClient, start: Dictionary) -> void:
 	start_heat(str(cfg["mode"]), cfg)
 
 
-## The room's payout for the match just played ({coins, mult, won, reason,
-## wallet}); {} until it lands. The post-match page reads it and listens.
+## The room's decision for the match just played ({won, reason}; no payout
+## yet — the ranked task). {} until it lands. The post-match page listens.
 signal online_settled(settle: Dictionary)
 var online_settle: Dictionary = {}
 
@@ -902,16 +902,8 @@ func settled_online(msg: Dictionary) -> void:
 	if not online_settle.is_empty():
 		return   # once (the screen and this autoload both hear the room)
 	online_settle = msg.duplicate(true)
-	if bool(last_heat.get("online", false)):
-		last_heat["coins"] = int(msg.get("coins", 0))
-		last_heat["mult"] = float(msg.get("mult", 1.0))
 	Net.refresh_cards()
 	online_settled.emit(online_settle)
-
-
-## Buy a card for online play: the server's ledger decides; the cache follows.
-func buy_online_card(id: String) -> Dictionary:
-	return await Net.buy_card(id)
 
 
 ## Leave the lobby / the room (a cancel, a back, a finished match).
@@ -1052,9 +1044,6 @@ func settle_heat(result: Dictionary) -> Dictionary:
 	last_heat["online"] = bool(next_heat.get("remote", false))
 	if last_heat["online"]:
 		last_heat["their_level"] = int(next_heat.get("their_level", 1))
-		if not online_settle.is_empty():
-			last_heat["coins"] = int(online_settle.get("coins", 0))
-			last_heat["mult"] = float(online_settle.get("mult", 1.0))
 	if last_heat["league"] != null:
 		_apply_league_heat(last_heat)
 		Net.push_save()
@@ -1070,10 +1059,10 @@ func finish_heat(result: Dictionary) -> void:
 	to_heat_result()
 
 
-# ---- power-up cards + coins: one bucket per league --------------------------------
+# ---- power-up cards: one bucket per league --------------------------------------
 # docs/ECONOMY.md. Every call takes the league (default: the one being played,
-# App.current_league). Coins earned in a league are spent there; the cards
-# bought or dropped there stay there.
+# App.current_league). Cards are bought with the global tickets, and the cards
+# bought or dropped in a league stay there.
 
 
 func _league_for(league := "") -> String:
@@ -1087,22 +1076,9 @@ func cards_doc() -> Dictionary:
 	return SaveService.get_cards()
 
 
-## A copy of one league's bucket {coins, inventory, loadout}.
+## A copy of one league's bucket {inventory, loadout}.
 func cards_bucket(league := "") -> Dictionary:
 	return CardDefs.league_doc(cards_doc(), _league_for(league)).duplicate(true)
-
-
-func league_coins(league := "") -> int:
-	return CardDefs.coins(cards_doc(), _league_for(league))
-
-
-func grant_league_coins(n: int, league := "") -> void:
-	if n <= 0:
-		return
-	var d := cards_doc()
-	var b := CardDefs.league_doc(d, _league_for(league))
-	b["coins"] = int(b.get("coins", 0)) + n
-	SaveService.put_cards(d)
 
 
 func card_count(id: String, league := "") -> int:
@@ -1158,18 +1134,18 @@ func consume_slot(slot: int, id: String, league := "") -> bool:
 	return true
 
 
-## Buy a card with the league's coins. False if unknown or unaffordable. The
-## online bucket is the server's: buy_online_card instead.
+## Buy a card for a league with tickets; it goes into that league's bucket.
+## False if unknown, level-locked or unaffordable. Online cards are never
+## bought (docs/ECONOMY.md → The rule): the online bucket refuses.
 func try_buy_card(id: String, league := "") -> bool:
 	var card := CardDefs.get_card(id)
 	if card.is_empty() or _league_for(league) == Net.ONLINE_BUCKET or not can_equip(id):
 		return false
+	var price := int(card.get("price", 0))
+	if not spend_tickets(price):
+		return false
 	var d := cards_doc()
 	var b := CardDefs.league_doc(d, _league_for(league))
-	var price := int(card.get("price", 0))
-	if int(b.get("coins", 0)) < price:
-		return false
-	b["coins"] = int(b.get("coins", 0)) - price
 	CardDefs.add(b, id)
 	SaveService.put_cards(d)
 	return true
@@ -1294,12 +1270,10 @@ func _apply_league_heat(result: Dictionary) -> void:
 		"won": bool(result.get("won", false)), "ot": int(result.get("ot", 0)),
 		"swishes": int(you.get("swishes", 0)), "bestStreak": int(you.get("bestStreak", 0)),
 	})
-	# Payout (docs/ECONOMY.md): this league's coins, global tickets.
+	# Payout (docs/ECONOMY.md): tickets, the one wallet.
 	var title: bool = doc["season"].get("championId", "") == Campaign.PLAYER and doc["season"]["phase"] == Season.PHASE_DONE
 	var pay := Economy.heat_rewards(cfg, bool(result.get("won", false)), title)
-	grant_league_coins(int(pay["coins"]), cfg["id"])
 	grant_tickets(int(pay["tickets"]))
-	last_heat["coins"] = int(pay["coins"])
 	last_heat["tickets"] = int(pay["tickets"])
 	# The level (docs/PROGRESSION.md): the match's XP into the league's band;
 	# the title straight to its cap.

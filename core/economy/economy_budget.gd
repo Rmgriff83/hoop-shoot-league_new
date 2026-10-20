@@ -143,8 +143,9 @@ static func peggy_per_prize() -> float:
 	return peggy_tickets() / float(maxi(peggy_to_win(), 1))
 
 
+## League heats a card costs at the reference win rate (rule 4, in tickets).
 static func heats_to_afford(league: Dictionary, price: int) -> float:
-	return float(price) / maxf(Economy.expected_coins_per_heat(league), 0.01)
+	return float(price) / maxf(Economy.expected_tickets_per_heat(league), 0.01)
 
 
 ## Every rule, as problems (empty = the economy is inside its envelope).
@@ -186,7 +187,7 @@ static func problems() -> PackedStringArray:
 	for kind in NetSet.KINDS:
 		if CosmeticLibrary.stock_net(kind) == null:
 			out.push_back("net kind %s has no stock net" % kind)
-	var bands: Dictionary = Economy.coins_cfg().get("heats_to_afford", {})
+	var bands: Dictionary = Economy.cards_cfg().get("heats_to_afford", {})
 	for l in LeagueData.leagues():
 		for c in CardDefs.all():
 			var rarity := str(c.get("rarity", ""))

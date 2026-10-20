@@ -21,7 +21,7 @@ func _heat(won: bool, end: Dictionary, playoff := false, drop := "fire7") -> Dic
 	return {"won": won, "player_score": 41 if won else 33, "ai_score": 37 if won else 36, "ot": 0,
 		"opponent": LeagueData.shooter("brickport"), "mode": "heat", "location": "cage",
 		"league": {"id": "cage", "game": "po-sf-1" if playoff else "d4", "playoff": playoff},
-		"coins": 50 if won else 15, "tickets": 28, "card_drop": drop, "league_end": e}
+		"tickets": 36 if won else 16, "card_drop": drop, "league_end": e}
 
 
 func run(t) -> void:
@@ -51,7 +51,7 @@ func _copy(t) -> void:
 	t.eq(win["record"]["new"], "3-1", "the new record")
 	t.eq(win["record"]["place"], "2ND PLACE · UP 1", "the place chip")
 	t.eq(win["record"]["label"], "SEASON 2 RECORD", "the record label")
-	t.eq(win["coins"], "+50", "the coins")
+	t.eq(win["tickets"], "+36", "the tickets")
 	t.eq(win["opp_first"], "MO", "the opponent's first name")
 	t.eq(win["head_size"], 64, "a short headline at 64")
 	var loss := MatchEndCopy.state(_heat(false, {}))
@@ -108,7 +108,7 @@ func _overlay(t) -> void:
 	var win := MatchEndCopy.state(_heat(true, {}))
 	var o := MatchEndOverlay.new()
 	var page := o.build(win)
-	for n in ["Scrim", "Tag", "Head", "ScoreYou", "ScoreOpp", "Record", "RecordOld", "RecordNew", "Place", "Coins", "Drop", "DropArt", "Continue", "Rays", "Confetti", "Flash"]:
+	for n in ["Scrim", "Tag", "Head", "ScoreYou", "ScoreOpp", "Record", "RecordOld", "RecordNew", "Place", "Tickets", "Drop", "DropArt", "Continue", "Rays", "Confetti", "Flash"]:
 		t.ok(page.find_child(n, true, false) != null, "the win page has %s" % n)
 	t.eq((page.find_child("Head", true, false) as Label).text, "YOU WIN", "the headline text")
 	t.eq((page.find_child("ScoreYou", true, false) as Label).text, "41", "your score")
@@ -180,7 +180,7 @@ func _settle(t) -> void:
 	t.eq(e["record_after"], [1, 0], "one win after")
 	t.ok(int(e["place_after"]) >= 1, "a place after the first game (%d)" % int(e["place_after"]))
 	t.eq(e["playoff"], false, "a regular-season game")
-	t.ok(heat.has("coins") and heat.has("xp"), "payout and XP settled")
+	t.ok(heat.has("tickets") and not heat.has("coins") and heat.has("xp"), "payout (tickets only) and XP settled")
 	t.eq(MatchEndCopy.state(heat)["kind"], "win", "and the page reads it as a win")
 	SaveService.put_league_doc("cage", doc_before)
 	SaveService.put_cosmetics(cos_before)

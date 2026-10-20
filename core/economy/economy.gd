@@ -1,10 +1,12 @@
 class_name Economy
 extends RefCounted
-## The two currencies (docs/ECONOMY.md). TICKETS are global and buy locker
-## items; earned by time trials (never practice) and league heats. COINS are
-## one wallet per league and buy that league's power-up cards; earned by
-## that league's heats. The numbers live in data/economy.json (trials) and
-## data/leagues.json `rewards` (heats); this is the arithmetic, headless.
+## The one currency (docs/ECONOMY.md, 2026-10-19): TICKETS, one global
+## wallet, earned by time trials (never practice), league heats and titles,
+## spent on PEGGY plays and on each league's power-up cards (the cards stay
+## in the league they were bought in; only the wallet is global). Online
+## cards are never bought. The numbers live in data/economy.json (trials,
+## the card bands) and data/leagues.json `rewards` (heats); this is the
+## arithmetic, headless.
 
 const PATH := "res://data/economy.json"
 
@@ -32,8 +34,10 @@ static func tickets_cfg() -> Dictionary:
 	return doc().get("tickets", {})
 
 
-static func coins_cfg() -> Dictionary:
-	return doc().get("coins", {})
+## The card rules: heats-to-afford bands per rarity, the informational
+## ticket share the card ledger assumes goes to cards.
+static func cards_cfg() -> Dictionary:
+	return doc().get("cards", {})
 
 
 ## Tickets for a finished time trial: (base + per_point × score) × the
@@ -48,35 +52,14 @@ static func trial_tickets(run: Dictionary, is_best: bool) -> int:
 	return maxi(n, 0)
 
 
-## Coins and tickets for a league heat from the league's `rewards` row.
+## Tickets for a league heat from the league's `rewards` row (win or loss,
+## plus the title bonus). Online heats pay nothing yet (the ranked task).
 static func heat_rewards(league: Dictionary, won: bool, title: bool) -> Dictionary:
 	var r: Dictionary = league.get("rewards", {})
-	var coins := int(r.get("win_coins", 50)) if won else int(r.get("loss_coins", 20))
 	var tickets := int(r.get("win_tickets", 0)) if won else int(r.get("loss_tickets", 0))
 	if title:
-		coins += int(r.get("title_coins", 300))
 		tickets += int(r.get("title_tickets", 0))
-	return {"coins": coins, "tickets": tickets}
-
-
-## The online match payout (docs/BACKEND.md → Cards online; the server's
-## cards.ts runs the same rule): online coins only — the winner's base scaled
-## by the upset (a lower level beating a higher one earns more), the loser's
-## flat. {coins, mult}.
-static func online_coins(won: bool, my_level: int, their_level: int) -> Dictionary:
-	var o: Dictionary = doc().get("online", {})
-	if not won:
-		return {"coins": int(o.get("loss_coins", 20)), "mult": 1.0}
-	var raw := 1.0 + float(o.get("upset_per_level", 0.15)) * float(their_level - my_level)
-	var mult := clampf(raw, float(o.get("mult_min", 0.5)), float(o.get("mult_max", 2.5)))
-	return {"coins": int(roundf(float(o.get("win_coins", 50)) * mult)), "mult": roundf(mult * 100.0) / 100.0}
-
-
-## Expected coins per heat at the reference win rate.
-static func expected_coins_per_heat(league: Dictionary, p_win := -1.0) -> float:
-	var r: Dictionary = league.get("rewards", {})
-	var p := p_win if p_win >= 0.0 else float(Dictionary(tickets_cfg().get("reference", {})).get("p_win", 0.5))
-	return p * float(r.get("win_coins", 50)) + (1.0 - p) * float(r.get("loss_coins", 20))
+	return {"tickets": tickets}
 
 
 ## Expected tickets per heat at the reference win rate.

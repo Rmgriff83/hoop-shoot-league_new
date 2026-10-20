@@ -98,7 +98,7 @@ the title at the cap; the suite runs it.
   `LVL 3` chip and will not play; the loadout float greys its name with the
   level; the shop shows a `LVL n` chip per card (gold once you have it).
   Buying and drops are never gated.
-- **Post-match** — `+28 TICKETS · +18 XP` on the coins card and a level
+- **Post-match** — `+36 · TICKETS · WIN · +18 XP` on the rewards card and a level
   line under the opponent: `LEVEL 1 · 64/100 XP`, `LEVEL UP · LEVEL 2`
   (gold) or `LEVEL 3 · CAP`.
 

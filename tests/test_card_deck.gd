@@ -18,17 +18,21 @@ func run(t) -> void:
 	if svc == null:
 		t.ok(false, "SaveService autoload present")
 		return
-	# Seed the cache: 150 online coins, one spare ice, nothing equipped.
+	# Seed the cache: one spare ice, nothing equipped; 150 tickets in the wallet.
 	var d: Dictionary = svc.get_cards()
-	CardDefs.migrate(d)   # the autoload's doc may predate v3 in a scratch user://
+	CardDefs.migrate(d)   # the autoload's doc may predate v4 in a scratch user://
 	var b := CardDefs.league_doc(d, "online")
-	b["coins"] = 150
 	b["inventory"] = {"ice": 1}
 	b["loadout"] = [null, null, null]
 	svc.put_cards(d)
+	var cos_before: Dictionary = svc.get_cosmetics()
+	var cos: Dictionary = svc.get_cosmetics()
+	cos["tickets"] = 150
+	svc.put_cosmetics(cos)
 	var sheet := CardDeckSheet.new()
 	sheet.build("online", "ONLINE CARDS")
-	t.eq((sheet.find_child("Coins", true, false) as Label).text, "150 COINS", "the coins in the head")
+	t.ok(sheet.find_child("Tickets", true, false) == null, "the online sheet shows no wallet: online cards are never bought")
+	t.ok(sheet.find_child("Sub_SHOP", true, false) == null and sheet.find_child("Sub_LOADOUT", true, false) != null, "…and has no SHOP tab, LOADOUT only")
 	t.eq(sheet.sub(), "LOADOUT", "opens on the loadout")
 	t.ok(sheet.find_child("Spare_ice", true, false) != null, "the spare ice shows")
 	t.ok((sheet.find_child("Slot0", true, false) as Button).disabled, "an empty slot is not a button")
@@ -59,36 +63,54 @@ func run(t) -> void:
 		# …and cannot be bought below its level in a league either.
 		var cd_doc: Dictionary = svc.get_cards()
 		var cage_before: Dictionary = CardDefs.league_doc(cd_doc, "cage").duplicate(true)
-		CardDefs.league_doc(cd_doc, "cage")["coins"] = 1000
 		svc.put_cards(cd_doc)
-		t.ok(not App.try_buy_card("vortex6", "cage"), "the league shop refuses Vortex under level 5 with the coins in hand")
-		t.eq(App.league_coins("cage"), 1000, "…and takes nothing")
+		var rich: Dictionary = svc.get_cosmetics()
+		rich["tickets"] = 1000
+		svc.put_cosmetics(rich)
+		t.ok(not App.try_buy_card("vortex6", "cage"), "the league shop refuses Vortex under level 5 with the tickets in hand")
+		t.eq(App.tickets(), 1000, "…and takes nothing")
 		cd_doc = svc.get_cards()
 		cd_doc["leagues"]["cage"] = cage_before
 		svc.put_cards(cd_doc)
+		rich["tickets"] = 150
+		svc.put_cosmetics(rich)
 		d = svc.get_cards()
 		CardDefs.league_doc(d, "online")["inventory"] = {"ice": 1}
 		svc.put_cards(d)
-	# The shop.
+	# The shop: a league's sheet, priced in tickets (the online bucket has none).
 	sheet.build("online", "ONLINE CARDS", "SHOP")
+	t.eq(sheet.sub(), "LOADOUT", "asking the online sheet for the SHOP lands on the loadout")
+	var cage_doc: Dictionary = svc.get_cards()
+	var cage_was: Dictionary = CardDefs.league_doc(cage_doc, "cage").duplicate(true)
+	CardDefs.league_doc(cage_doc, "cage")["inventory"] = {"ice": 1}
+	svc.put_cards(cage_doc)
+	sheet.build("cage", "CAGE CARDS", "SHOP")
 	t.eq(sheet.sub(), "SHOP", "the shop")
+	t.eq((sheet.find_child("Tickets", true, false) as Label).text, "150 TICKETS", "the wallet in the head")
 	for id in ["ice", "fire7", "vortex6"]:
 		t.ok(sheet.find_child("Shop_" + id, true, false) != null, "%s is on the shelf" % id)
 	t.eq((sheet.find_child("Owned_ice", true, false) as Label).text, "OWNED 1", "owned count")
-	t.ok(not (sheet.find_child("Buy_ice", true, false) as Button).disabled, "ice (100) is affordable at 150")
-	t.ok((sheet.find_child("Buy_fire7", true, false) as Button).disabled, "Heat Check (170) is not")
+	t.ok(not (sheet.find_child("Buy_ice", true, false) as Button).disabled, "ice (80) is affordable at 150")
+	t.ok(not (sheet.find_child("Buy_fire7", true, false) as Button).disabled or not App.can_equip("fire7"), "Heat Check (140) is affordable at 150 once its level is reached")
 	t.ok((sheet.find_child("Buy_vortex6", true, false) as Button).disabled, "Vortex is above the level anyway")
-	t.ok(not App.try_buy_card("ice", "online"), "the save never sells online cards (the server does)")
-	t.eq(App.league_coins("online"), 150, "…so the coins stay")
+	t.ok(App.try_buy_card("ice", "cage"), "the cage shop sells an ice for tickets")
+	t.eq(App.tickets(), 70, "…80 tickets gone")
+	t.eq(App.card_count("ice", "cage"), 2, "…and the ice is in the cage bucket")
+	cage_doc = svc.get_cards()
+	cage_doc["leagues"]["cage"] = cage_was
+	svc.put_cards(cage_doc)
+	t.ok(not App.try_buy_card("ice", "online"), "the save never sells online cards")
+	t.eq(App.tickets(), 70, "…so the tickets stay")
+	svc.put_cosmetics(cos_before)
 	# Net's cache rule: copies owned minus the ones equipped, a dead slot emptied.
 	var fake_net: Node = load("res://game/net/net_client.gd").new()
 	App.equip_card(0, "ice", "online")
-	fake_net._apply_cards({"coins": 300, "inventory": {"ice": 2, "fire7": 1}, "level": 3})
-	t.eq(App.league_coins("online"), 300, "the ledger's coins")
+	fake_net._apply_cards({"inventory": {"ice": 2, "fire7": 1}, "level": 3})
+	t.ok(not CardDefs.league_doc(svc.get_cards(), "online").has("coins"), "the ledger sends no wallet")
 	t.eq(App.loadout_slots("online"), ["ice", null, null], "the equipped ice stays equipped")
 	t.eq(App.card_count("ice", "online"), 1, "one ice spare (two owned, one equipped)")
 	t.eq(App.card_count("fire7", "online"), 1, "the Heat Check spare")
-	fake_net._apply_cards({"coins": 0, "inventory": {}, "level": 3})
+	fake_net._apply_cards({"inventory": {}, "level": 3})
 	t.eq(App.loadout_slots("online"), [null, null, null], "a slot the ledger no longer covers empties")
 	fake_net.free()
 	sheet.free()

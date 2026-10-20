@@ -138,22 +138,27 @@ authored hand over the cap, and authored totals over the allowance.
   win rate, plus ~4 playoff games with the playoff bonus) × the rarity-weighted
   mean power of the cards the player can PLAY in that league (level below
   the league's cap — `CardBudget.usable_ids`; a card that opens at the cap
-  is the next league's), plus what the coin income (win/loss/title rewards)
-  buys at the shop at the mean price.
+  is the next league's), plus what an assumed share of the ticket income
+  (win/loss/title rewards × `economy.json` → `cards.ticket_share`, 0.5 —
+  informational) buys at the shop at the mean price.
 - **Parity** = AI budget ÷ player income.
 
 Rules the suite enforces (`CardBudget.problems()`):
 
 1. every card has a measured power in every league;
 2. every card's rarity is its band and its price is on the curve (§2);
-3. every league's parity is within **±20 %** of its `card_parity`;
-4. `card_parity` never falls along the unlock chain (a harder league never
+3. `card_parity` never falls along the unlock chain (a harder league never
    hands its AI *less* card power than the league before it);
-5. no signature hand carries more than one epic-band card.
+4. no signature hand carries more than one epic-band card.
 
-The wallet *is* per league (docs/ECONOMY.md): coins earned in a league are
-spent in that league's shop, and its cards play only there. So the envelope
-is the real thing, not a simplification.
+**Parity is reported, not gated** (2026-10-19, one currency —
+docs/ECONOMY.md). Since the wallet is global, how much of it a player puts
+into cards rather than PEGGY is theirs to choose, and Ross's call is that
+league card buying exists to relieve friction, not to balance the AI. The
+ledger prints each league's ratio beside its target with a remark
+(`near 0.50`, `above 0.85 (not gated)`); the ±20 % check that used to be
+rule 3 is gone from `problems()` and the suite. Card inventories are still
+per league, so the AI side of the envelope is the real thing.
 
 Shipped envelope (2026-09-22): cage allowance 6 (3 signature) → AI 4.2 power
 vs player income 9.9 → parity **0.42** against a target of 0.5 (the open
@@ -210,10 +215,12 @@ spinning rim catches.
 ## Online matches (2026-10-07)
 
 Cards play in online 1v1 too, from a separate **online** bucket that lives on
-the server (docs/BACKEND.md → Cards online): only cards bought in the online
-shop with online coins (earned by online matches, weighted to the upset) can
-be brought into a room, the server deals both validated hands, and a play is a
-relayed, receipted message. The level rule is the leagues' (`Progression.can_use`),
+the server (docs/BACKEND.md → Cards online): only cards the server ledger
+holds can be brought into a room, the server deals both validated hands, and
+a play is a relayed, receipted message. Online cards are **never bought**
+(docs/ECONOMY.md → The rule: no path from real money to online cards; the
+online shop and wallet were removed 2026-10-19); they will come only from
+verified server drops and spoils (the next task). The level rule is the leagues' (`Progression.can_use`),
 checked on the phone and again on the server. There is no card-drop path and
 no parity envelope online yet; `card_parity` and `CardBudget` remain per
 league. AI cards never meet online hands.
@@ -254,21 +261,26 @@ league. AI cards never meet online hands.
 ## Reading the ledger
 
 ```
-CARD POWER  (assets/cards/card_power.json: n 500, seed 4242, 2026-09-22)
-  card     rarity  price  power cage/beach                 mean  band  price curve
-  ice      rare      150  +0.61±0.06 / +0.85±0.13         +0.73  ok    ok (130)  NEAR EDGE 0.70 (±0.07): …
-  fire7    common    100  +0.78±0.07 / +0.55±0.13         +0.67  ok    ok (120)  NEAR EDGE 0.70 (±0.07): …
-  scale: common 0.0–0.7, rare 0.7–1.4, epic 1.4–99.0; price = round10(200 · power^1.30) ±20%
+CARD POWER  (assets/cards/card_power.json: n 500, seed 4242, 2026-10-03)
+  card     rarity  price  power cage/beach/park/city       mean  band  price curve
+  ice      common     80  +0.78±0.07 / +0.50±0.06 / +0.59±0.00 / +0.48±0.09  +0.59  ok    ok (70)
+  fire7    rare      140  +0.97±0.07 / +0.97±0.08 / +0.95±0.00 / +0.91±0.09  +0.95  ok    ok (140)
+  vortex6  epic      290  +1.05±0.09 / +1.89±0.13 / +1.66±0.00 / +2.04±0.15  +1.66  ok    ok (290)
+  scale: common 0.0–0.7, rare 0.7–1.4, epic 1.4–99.0; price = round10(150 · power^1.30) ±20%
 
-AREA ENVELOPE  (per season; player income at p_win 0.50, 4 playoff games, title p 0.20)
-  league   allow authored    dealt   AI pwr |  drops    coins   bought  PLR pwr |  ratio target
-  cage         6  3 (2.0)  3 (2.2)     4.16 |   8.25      690     5.52     9.92 |   0.42   0.50 ok
-  beach       10  8 (6.8)  2 (1.3)     8.11 |   8.25      845     6.76     9.83 |   0.82   1.00 ok
+AREA ENVELOPE  (per season; … tickets × share 0.50 bought at the mean price — reported, not gated)
+  league   allow authored    dealt   AI pwr |  drops  tickets   bought  PLR pwr |  ratio target
+  cage         5  3 (2.5)  2 (1.7)     4.22 |   8.25      498     1.46     7.58 |   0.56   0.50 near 0.50
+  beach       10  8 (4.0)  2 (1.3)     5.33 |   8.25      558     1.64     6.57 |   0.81   0.70 near 0.70
+  park        11  6 (4.2)  5 (3.6)     7.82 |   8.25      607     1.79     7.16 |   1.09   0.85 above 0.85 (not gated)
+  city        12  8 (7.4)  4 (3.1)    10.45 |   8.25      656     1.93     7.79 |   1.34   1.00 above 1.00 (not gated)
 
 OK — every card on the scale, every league inside its envelope.
 ```
 
-`band` and `price curve` say `ok` or what they should be; the envelope row
-ends `ok` or `OUT`; the tool exits non-zero with `DATA` / `RULE` lines when
+(2026-10-19: the park's powers are the mean fallback — `card_power.json`
+has no park entry yet, the three parked `measured in park` reds.) `band` and
+`price curve` say `ok` or what they should be; the envelope row ends with
+the parity remark; the tool exits non-zero with `DATA` / `RULE` lines when
 anything is off. Run it whenever `cards.json`, `leagues.json` or the lab
 output changes.

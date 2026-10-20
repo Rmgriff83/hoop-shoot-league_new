@@ -34,18 +34,17 @@ func _initialize() -> void:
 		EconomyBudget.peggy_tickets(), EconomyBudget.peggy_per_prize(), EconomyBudget.peggy_hours()])
 	print("  whole catalog (hoops + PEGGY): %.1f hours (band %s-%s)" % [EconomyBudget.catalog_hours(), hours[0], hours[1]])
 	print("")
-	print("COINS  (per league; heats to afford each card at the expected coins per heat)")
-	var bands: Dictionary = Economy.coins_cfg().get("heats_to_afford", {})
+	print("CARDS  (per league; heats to afford each card at the expected tickets per heat)")
+	var bands: Dictionary = Economy.cards_cfg().get("heats_to_afford", {})
 	for l in LeagueData.leagues():
 		var r: Dictionary = l.get("rewards", {})
-		print("  %-7s win %d / loss %d / title %d coins, win %d / loss %d / title %d tickets → %.1f coins + %.1f tickets a heat" % [
-			l["id"], int(r.get("win_coins", 0)), int(r.get("loss_coins", 0)), int(r.get("title_coins", 0)),
-			int(r.get("win_tickets", 0)), int(r.get("loss_tickets", 0)), int(r.get("title_tickets", 0)),
-			Economy.expected_coins_per_heat(l), Economy.expected_tickets_per_heat(l)])
+		print("  %-7s win %d / loss %d / title %d tickets → %.1f tickets a heat (%.1f a minute)" % [
+			l["id"], int(r.get("win_tickets", 0)), int(r.get("loss_tickets", 0)), int(r.get("title_tickets", 0)),
+			Economy.expected_tickets_per_heat(l), EconomyBudget.heat_rate(l)])
 		for c in CardDefs.all():
 			var n := EconomyBudget.heats_to_afford(l, int(c.get("price", 0)))
 			var b: Array = bands.get(str(c.get("rarity", "")), [0, 1e9])
-			print("    %-8s %-7s %4d coins  %4.1f heats  (band %s-%s) %s" % [c["id"], c.get("rarity", "?"), int(c.get("price", 0)), n, b[0], b[1],
+			print("    %-8s %-7s %4d tickets  %4.1f heats  (band %s-%s) %s" % [c["id"], c.get("rarity", "?"), int(c.get("price", 0)), n, b[0], b[1],
 				"ok" if n >= float(b[0]) and n <= float(b[1]) else "OUT"])
 	print("")
 	var problems := EconomyBudget.problems()

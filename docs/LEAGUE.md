@@ -87,7 +87,7 @@ themselves follow the **difficulty ladder** below.
 dashboard is the home page's league context, `docs/HOME.md`); `start_league(id)` also goes there;
 `start_league_heat()` builds the heat config (opponent card + ratings, league format, a seed
 from season seed + game) and `finish_heat` applies the result (season, career, live games,
-the league's coins and tickets from its `rewards`, docs/ECONOMY.md) before the post-match page
+the league's tickets from its `rewards`, docs/ECONOMY.md) before the post-match page
 (`heat_result_screen.gd`, design "League Post-Match", docs/HOME.md → Results), whose CONTINUE
 SEASON returns to the dashboard. `App.league_gating` is on in release builds (off in debug builds, so the editor and the phone dev APK reach every area): a league (and its whole area) opens at its
 `unlock` level, reached by playing the league before it (docs/PROGRESSION.md).
@@ -240,7 +240,7 @@ opponent's clock not running or rim already iced); played cards leave the tray.
 - **UI**: the in-heat **card tray** (left edge, inside the flick input's UI zone; tap = deploy,
   greyed when it can't apply), the **card toast** (art + "Deep Freeze → OPPONENT", or "Ollie
   Knots plays Deep Freeze on YOU!"), the opponent's board scrolls ICED BY CARD, the dashboard's
-  **LOADOUT** (this league's three slots + inventory) and **SHOP** (this league's cards for this league's coins) tabs, and
+  **LOADOUT** (this league's three slots + inventory) and **SHOP** (this league's cards for tickets) tabs, and
   the result screen's card drop.
 
 ## League banners (environment dressing, league heats only)

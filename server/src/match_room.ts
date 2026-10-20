@@ -11,7 +11,6 @@
  */
 import { DurableObject } from "cloudflare:workers";
 import type { Env } from "./env";
-import { onlineCoins, payStatements } from "./cards";
 
 export const MAX_PER_S = 5;
 export const MAX_BYTES = 2048;
@@ -262,37 +261,25 @@ export class MatchRoom extends DurableObject<Env> {
   }
 
   /**
-   * The match is decided: write it, pay both sides in online coins (the
-   * winner's base scaled by the upset, the loser's flat, nothing on a void)
-   * and tell each phone what it earned.
+   * The match is decided: write it and tell each phone how it went. No
+   * payout yet; the ranked task refills this.
    */
   private async record(m: Meta, a: number, b: number, period: number, desync: number, winner: Side | null): Promise<void> {
     if (m.recorded || !m.a || !m.b) return;
     m.recorded = true;
     const now = Date.now();
     const room = this.ctx.id.toString();
-    const pay: Record<Side, { coins: number; mult: number }> = { a: { coins: 0, mult: 1 }, b: { coins: 0, mult: 1 } };
-    if (winner) {
-      const loser = other(winner);
-      const w = m[winner]!;
-      const l = m[loser]!;
-      pay[winner] = onlineCoins(true, w.level, l.level);
-      if (m.reason === "played") pay[loser] = onlineCoins(false, l.level, w.level);
-    }
     try {
       await this.env.DB.batch([
         this.env.DB.prepare(
           "INSERT OR IGNORE INTO matches (room, area, a_id, b_id, a_score, b_score, ot, reason, desync, ended_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)",
         ).bind(room, m.area, m.a.id, m.b.id, a, b, period, m.reason, desync, now),
-        ...payStatements(this.env.DB, m.a.id, pay.a.coins, room, now),
-        ...payStatements(this.env.DB, m.b.id, pay.b.coins, room, now),
       ]);
     } catch (e) {
       console.error("record", e);
     }
     for (const side of ["a", "b"] as Side[]) {
-      const wallet = await this.env.DB.prepare("SELECT coins FROM online_wallet WHERE player_id = ?1").bind(m[side]!.id).first<{ coins: number }>().catch(() => null);
-      this.sendSide(side, { t: "settled", coins: pay[side].coins, mult: pay[side].mult, won: winner === side, reason: m.reason, wallet: wallet?.coins ?? 0 });
+      this.sendSide(side, { t: "settled", won: winner === side, reason: m.reason });
     }
   }
 

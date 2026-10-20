@@ -6,7 +6,7 @@ current area**. `game/screens/title_screen.gd` (a `Node3D`), widgets in `game/ui
 
 ```
 Court       full-screen CourtGeometry + Camera3D (TitlePan), under a mild scrim (0.25)
-TopBar      [LVL01 + meter] [ball = locker]                   [coin 1,240] [menu]
+TopBar      [LVL01 + meter] [ball = locker]                 [ticket 1,240] [menu]
 AreaZone    ★ (one star per difficulty step, ArenaSet.title_stars)
             ARCADE CAGE (52 px, wraps at 430, dithered drop shadow) [⚔ ONLINE]
             big < > chevrons at the screen edges (y 520), dithered shadows too
@@ -30,9 +30,9 @@ wins balls and nets — tickets buy nothing else; the hoop counter is closed
 for now (`App.HOOPS_IN_LOCKER`). The locker icon carries a gold dot while a
 won prize has not been looked at.
 **The board** sits mid-court (`BoardPreview`, (140, 440), 440 wide — design 3a, 2026-10-17): the area's top five this week and YOUR row after a gap; a tap opens the global boards (below). It slides off left as the league opens. **ONLINE** is the one cream card beside the area name (the 1v1 icon + the word): the lobby.
-**Shop is not on the home page**: it will live inside each league, selling
-cards usable only in that league (so the easy league can't farm cards for the
-hard one); the pill shows TICKETS, the locker money.
+**Shop is not on the home page**: it lives inside each league, selling
+cards usable only in that league for tickets (docs/ECONOMY.md: one currency
+since 2026-10-19); the pill shows TICKETS, the one wallet.
 
 - **Theme** (`game/ui/retro_theme.gd`, `RetroTheme`): two palettes over one
   layout — `LIGHT` (the concept's cream, ink `#221C18`, orange / gold / teal /
@@ -46,7 +46,7 @@ hard one); the pill shows TICKETS, the locker money.
   3 px checkerboard (a tiled texture, drawn only as the L strip past the
   face), a thin edge in that colour and a faint tint; labels in cream + ink
   outline. Cards use their colour; the level, locker, ranks and menu use
-  cream; the coins pill gold. `on_scene()` gives
+  cream; the tickets pill (`CoinsPill`, its old class name) gold. `on_scene()` gives
   any text drawn straight on the court that cream face with an ink outline.
   `card_button()` dresses a `Button`; `caps()` / `display()` make labels in
   the body / display face. Flipping the setting rebuilds the chrome in place
@@ -95,7 +95,7 @@ hard one); the pill shows TICKETS, the locker money.
   standings (your row orange, the dashed PLAYOFF LINE) or the bracket (the
   semis, a connector, the final); SCHED — every game (today's gold, unplayed
   dim); CARDS — LOADOUT (the **spares**; the equipped slots float above) and
-  SHOP (this league's coins, the buy pill with the coin icon); STATS — the
+  SHOP (your tickets, the buy pill with the ticket icon); STATS — the
   career grid, seasons, BEST MATCHES, the area's time trials. Every panel is
   a see-through cream `ShadowPanel` at 14 % with cream text. `changed` fires
   when the doc moves, `tab_changed` on a tab; `go_loadout()` lands on CARDS ·
@@ -128,7 +128,7 @@ chevron (the footer says START INSIDE).
   pieces. LEAGUE → opens the league in context; TIME TRIAL / PRACTICE →
   `App.start_area(mode, area)`. **Quick heat is not on the home screen**.
 - **Ticker** (`game/ui/home_ticker.gd`, `HomeTicker`): `items_from(bests,
-  states, coins, next_up)` → `ARCADE CAGE BEST 29 · ARCADE LEAGUE · SEASON 2
+  states, tickets, next_up)` → `ARCADE CAGE BEST 29 · ARCADE LEAGUE · SEASON 2
   · DAY 4 · 3RD PLACE · NEXT UP: PRUDENCE CHIME · 1,240 TICKETS`, laid twice
   around a `★` seam and scrolled at 80 px/s.
 - **New player** (design "New Game Flow" 35a, 2026-10-17; `game/ui/new_player_page.gd`
@@ -244,8 +244,8 @@ chevron (the footer says START INSIDE).
   ANY it sends the owned courts and the Lobby pairs on a court both own (the
   joiner is told the court; an any-court host's room takes the joiner's) — and
   tips off into a heat with the other phone in the opponent slot; the
-  post-match page reads `ONLINE MATCH · BEACH` with the online coins card
-  (`+110 · ONLINE COINS · WIN · UPSET · X2.2`) and the REMATCH? card (orange to
+  post-match page reads `ONLINE MATCH · BEACH` with no rewards card (online
+  pays nothing yet, docs/BACKEND.md) and the REMATCH? card (orange to
   ask, gold when they asked, teal once both have, THEY LEFT when the other
   phone went home). QA: `--qa-multi` (`multi_menu`, `multi_code`,
   `multi_found`, `multi_failed`, `multi_finding`, `multi_cards`).
@@ -396,7 +396,7 @@ dims and is struck through, they move on, `SEASON 2 OVER · 3RD PLACE`),
 **runner-up** (SO CLOSE) and **champions** (the trophy pops and bobs,
 TITLES with a cup per title and `X2`, `SEASON 2 TITLE`, the most confetti).
 A tag pill (`DAY 4 · FINAL` / `PLAYOFFS · SEMIFINAL` / `ARCADE LEAGUE ·
-FINAL`), the score with YOU and their first name, the coins pill and the
+FINAL`), the score with YOU and their first name, the tickets pill and the
 NEW CARD tile (tilted animated face) are on every state; after 3 s TAP TO
 CONTINUE blinks and a tap goes to the post-match page
 (`App.to_heat_result`). Sounds: `peggy_win` on a win, `peggy_jackpot` on
@@ -409,7 +409,7 @@ the same recipe after a league heat — `ARCADE LEAGUE · SEASON 2 · DAY 4` (or
 `SEMI 2 · GAME 3`), YOU WIN in gold / THEY TOOK IT, the score with an OT chip,
 `VS NAME · "NICKNAME"`; the box score (MAKES · SHOOTING · SWISHES · BEST
 STREAK · STREAK BONUS · ICED OVER) with a YOU chip and the opponent's chip in
-their colour, the better number in gold; the coins card (+ tickets) beside the
+their colour, the better number in gold; the rewards card (tickets + XP) beside the
 card drop; **CONTINUE SEASON** (`NOW 3-1 · 2ND PLACE · DAY 5 NEXT`,
 `App.to_league_hub`) and **HOME**. A heat outside a league reads QUICK HEAT
 and gets only HOME.

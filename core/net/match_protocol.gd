@@ -16,7 +16,7 @@ const JOINED := "joined"       # {t, side, room, area, peer|null}
 const PEER := "peer"           # {t, peer}                 the other phone arrived
 const START := "start"         # {t, seed, area, seconds, ot_seconds, ball_return_s, hands: {a, b}, levels: {a, b}}
 const CARD_OK := "card_ok"     # {t, id}                   the room took our card
-const SETTLED := "settled"     # {t, coins, mult, won, reason, wallet}  the payout
+const SETTLED := "settled"     # {t, won, reason}          the decision (no payout yet: the ranked task)
 const REMATCH_GO := "rematch_go"  # {t, room, area}        both asked: the fresh room
 const PEER_LEFT := "peer_left"
 const EXPIRED := "expired"     # nobody came
@@ -93,7 +93,7 @@ static func parse(text: String) -> Dictionary:
 			if not (m.get("id") is String) or CardDefs.get_card(str(m["id"])).is_empty():
 				return {}
 		SETTLED:
-			if not _num(m.get("coins")):
+			if not (m.get("won") is bool) or not (m.get("reason") is String):
 				return {}
 		REMATCH_GO:
 			if not (m.get("room") is String) or not _is_uuid(str(m["room"])) or not (m.get("area") is String):

@@ -1,7 +1,7 @@
 import { SELF, env } from "cloudflare:test";
 import { beforeEach, describe, expect, it } from "vitest";
 import { resetMemoryLimits } from "../src/limits";
-import { CARDS, onlineCoins, validHand } from "../src/cards";
+import { CARDS, validHand } from "../src/cards";
 
 const uuid = () => crypto.randomUUID();
 const secret = () => [...crypto.getRandomValues(new Uint8Array(40))].map((b) => "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[b % 62]).join("");
@@ -20,13 +20,10 @@ async function register(level = 1): Promise<Player> {
   return p;
 }
 const auth = (p: Player) => ({ authorization: `Bearer ${p.playerId}.${p.secret}`, "cf-connecting-ip": p.ip, "content-type": "application/json" });
-const giveCoins = (p: Player, n: number) => env.DB.prepare("INSERT INTO online_wallet (player_id, coins) VALUES (?1, ?2) ON CONFLICT(player_id) DO UPDATE SET coins = ?2").bind(p.playerId, n).run();
+/** Straight into the ledger: nothing on the server hands out cards yet (drops come later). */
+const give = (p: Player, cardId: string, n: number) => env.DB.prepare("INSERT INTO online_cards (player_id, card_id, n) VALUES (?1, ?2, ?3) ON CONFLICT(player_id, card_id) DO UPDATE SET n = ?3").bind(p.playerId, cardId, n).run();
 async function cards(p: Player) {
   const res = await SELF.fetch("https://api/v1/cards", { headers: auth(p) });
-  return { status: res.status, json: (await res.json()) as any };
-}
-async function buy(p: Player, id: string) {
-  const res = await SELF.fetch("https://api/v1/cards/buy", { method: "POST", headers: auth(p), body: JSON.stringify({ id }) });
   return { status: res.status, json: (await res.json()) as any };
 }
 async function join(p: Player, room: string, slots = "") {
@@ -50,18 +47,11 @@ async function join(p: Player, room: string, slots = "") {
 
 beforeEach(() => resetMemoryLimits());
 
-describe("the online payout rule", () => {
-  it("weights a win by the upset and pays a loss flat", () => {
-    expect(onlineCoins(true, 1, 9)).toEqual({ coins: 110, mult: 2.2 });
-    expect(onlineCoins(true, 9, 1)).toEqual({ coins: 25, mult: 0.5 });
-    expect(onlineCoins(true, 4, 4)).toEqual({ coins: 50, mult: 1 });
-    expect(onlineCoins(true, 1, 40)).toEqual({ coins: 125, mult: 2.5 }); // the cap
-    expect(onlineCoins(false, 1, 9)).toEqual({ coins: 20, mult: 1 });
-  });
+describe("the card list", () => {
   it("reads the cards and keeps a hand honest", () => {
     expect(Object.keys(CARDS).sort()).toEqual(["fire7", "ice", "vortex6"]);
     expect(CARDS.vortex6.level).toBe(5);
-    const inv = { coins: 0, inventory: { ice: 1, fire7: 2 }, level: 3 };
+    const inv = { inventory: { ice: 1, fire7: 2 }, level: 3 };
     expect(validHand(["ice", "ice", "fire7"], inv)).toEqual(["ice", "", "fire7"]); // one ice owned
     expect(validHand(["vortex6", "fire7", "fire7"], inv)).toEqual(["", "fire7", "fire7"]); // level 5 card at level 3
     expect(validHand(["nope", "", "ice"], inv)).toEqual(["", "", "ice"]);
@@ -69,25 +59,13 @@ describe("the online payout rule", () => {
   });
 });
 
-describe("the shop", () => {
-  it("lists an empty ledger, sells under the level cap, refuses short coins and unknown cards", async () => {
+describe("the cards route", () => {
+  it("reads an empty ledger and then what the ledger holds", async () => {
     const p = await register(3);
-    const empty = await cards(p);
-    expect(empty.json).toEqual({ coins: 0, inventory: {}, level: 3 });
-    expect((await buy(p, "ice")).status).toBe(402);
-    await giveCoins(p, 300);
-    const bought = await buy(p, "ice");
-    expect(bought.status).toBe(200);
-    expect(bought.json).toEqual({ coins: 200, inventory: { ice: 1 }, level: 3 });
-    const again = await buy(p, "fire7");
-    expect(again.json).toEqual({ coins: 30, inventory: { ice: 1, fire7: 1 }, level: 3 });
-    expect((await buy(p, "ice")).status).toBe(402);
-    const locked = await buy(p, "vortex6");
-    expect(locked.status).toBe(400);
-    expect(locked.json).toMatchObject({ error: "level", level: 5 });
-    expect((await buy(p, "moon")).status).toBe(400);
-    const ledger = await env.DB.prepare("SELECT kind, card_id, coins FROM online_ledger WHERE player_id = ?1 ORDER BY id").bind(p.playerId).all<any>();
-    expect(ledger.results).toEqual([{ kind: "buy", card_id: "ice", coins: -100 }, { kind: "buy", card_id: "fire7", coins: -170 }]);
+    expect((await cards(p)).json).toEqual({ inventory: {}, level: 3 });
+    await give(p, "ice", 2);
+    await give(p, "fire7", 1);
+    expect((await cards(p)).json).toEqual({ inventory: { ice: 2, fire7: 1 }, level: 3 });
   });
   it("lets the level be reported", async () => {
     const p = await register();
@@ -99,14 +77,11 @@ describe("the shop", () => {
 });
 
 describe("cards in a room", () => {
-  it("deals the ledger's hands, relays a play once, decrements, and pays the upset", async () => {
+  it("deals the ledger's hands, relays a play once, decrements, and settles", async () => {
     const a = await register(1);
     const b = await register(9);
-    await giveCoins(a, 500);
-    await buy(a, "ice");
-    await buy(a, "ice");
-    await giveCoins(b, 500);
-    await buy(b, "fire7");
+    await give(a, "ice", 2);
+    await give(b, "fire7", 1);
     const room = uuid();
     const A = await join(a, room, "ice,ice,fire7"); // owns two ice, no fire7
     const B = await join(b, room, ",vortex6,fire7"); // vortex6 is level 5 (b is 9: fine) but unowned
@@ -128,39 +103,40 @@ describe("cards in a room", () => {
     await A.settle();
     const left = await env.DB.prepare("SELECT n FROM online_cards WHERE player_id = ?1 AND card_id = 'ice'").bind(a.playerId).first<{ n: number }>();
     expect(left?.n).toBe(0);
-    // The level-1 player beats the level-9 player: 50 × 2.2.
+    // The level-1 player beats the level-9 player; nothing is paid.
     A.send({ t: "period_end", period: 0, score: 12, totals: {} });
     B.send({ t: "period_end", period: 0, score: 9, totals: {} });
-    const setA = await A.until((m) => m.t === "settled");
-    const setB = await B.until((m) => m.t === "settled");
-    expect(setA).toMatchObject({ coins: 110, mult: 2.2, won: true, reason: "played", wallet: 300 + 110 });
-    expect(setB).toMatchObject({ coins: 20, mult: 1, won: false, wallet: 330 + 20 });
-    const ledgerA = await env.DB.prepare("SELECT kind, coins FROM online_ledger WHERE player_id = ?1 AND kind = 'reward'").bind(a.playerId).all<any>();
-    expect(ledgerA.results).toEqual([{ kind: "reward", coins: 110 }]);
+    expect(await A.until((m) => m.t === "settled")).toEqual({ t: "settled", won: true, reason: "played" });
+    expect(await B.until((m) => m.t === "settled")).toEqual({ t: "settled", won: false, reason: "played" });
+    const ledgerA = await env.DB.prepare("SELECT kind, card_id, coins FROM online_ledger WHERE player_id = ?1 ORDER BY id").bind(a.playerId).all<any>();
+    expect(ledgerA.results).toEqual([{ kind: "play", card_id: "ice", coins: 0 }, { kind: "play", card_id: "ice", coins: 0 }]);
   });
-  it("pays the favourite less, pays nothing on a void, pays the stayer on a forfeit", async () => {
-    const hi = await register(9);
-    const lo = await register(1);
-    const room = uuid();
-    const H = await join(hi, room);
-    const L = await join(lo, room);
-    await H.until((m) => m.t === "start");
-    H.send({ t: "period_end", period: 0, score: 20, totals: {} });
-    L.send({ t: "period_end", period: 0, score: 3, totals: {} });
-    expect(await H.until((m) => m.t === "settled")).toMatchObject({ coins: 25, mult: 0.5, won: true });
-    expect(await L.until((m) => m.t === "settled")).toMatchObject({ coins: 20, won: false });
+  it("settles a void without an error and the stayer wins a forfeit", async () => {
     // A void: the leaver goes in the first seconds.
     const c = await register(2);
     const d = await register(2);
-    const room2 = uuid();
-    const C = await join(c, room2);
-    const D = await join(d, room2);
+    const room = uuid();
+    const C = await join(c, room);
+    const D = await join(d, room);
     await C.until((m) => m.t === "start");
     D.ws.close(1000, "bye");
-    expect(await C.until((m) => m.t === "settled")).toMatchObject({ coins: 0, won: false, reason: "void" });
-    expect(await env.DB.prepare("SELECT coins FROM online_wallet WHERE player_id = ?1").bind(c.playerId).first()).toBeNull();
+    expect(await C.until((m) => m.t === "settled")).toMatchObject({ won: false, reason: "void" });
+    expect(C.inbox.some((m) => m.t === "error")).toBe(false);
+    // A forfeit: the reporter leaves a tie, the stayer takes it.
+    const e = await register(2);
+    const f = await register(2);
+    const room2 = uuid();
+    const E = await join(e, room2);
+    const F = await join(f, room2);
+    await E.until((m) => m.t === "start");
+    E.send({ t: "period_end", period: 0, score: 5, totals: {} });
+    await F.until((m) => m.t === "period_end");
+    E.ws.close(1000, "bye");
+    await new Promise((r) => setTimeout(r, 80));
+    F.send({ t: "period_end", period: 0, score: 5, totals: {} });
+    expect(await F.until((m) => m.t === "settled")).toMatchObject({ won: true, reason: "forfeit" });
   });
-  it("throttles the shop", async () => {
+  it("throttles the cards route", async () => {
     const p = await register();
     for (let i = 0; i < 20; i++) expect((await cards(p)).status).toBe(200);
     expect((await cards(p)).status).toBe(429);

@@ -2,12 +2,12 @@ class_name CardDeckSheet
 extends CanvasLayer
 ## A bucket's cards as a modal sheet (docs/BACKEND.md → Cards online): the
 ## three loadout slots (tap one to unequip), LOADOUT — the spares, tap one to
-## equip — and SHOP — every card with its rarity, the level it plays from
-## (gold once you have it), the blurb, OWNED n, and BUY at its price. Built
-## for the `online` bucket (the lobby), where buying asks the server
-## (App.buy_online_card) and the inventory is the ledger's cache; a league
-## bucket works the same with the save as the ledger. The league hub keeps its
-## own CARDS tab (game/ui/league_context.gd); this is the lobby's door.
+## equip — and, for a league bucket, SHOP — every card with its rarity, the
+## level it plays from (gold once you have it), the blurb, OWNED n, and BUY
+## at its ticket price. Built for the `online` bucket (the lobby), which is
+## LOADOUT only: online cards are never bought (docs/ECONOMY.md → The rule),
+## the inventory is the server ledger's cache. The league hub keeps its own
+## CARDS tab (game/ui/league_context.gd); this is the lobby's door.
 
 signal closed
 signal changed
@@ -65,10 +65,13 @@ func build(p_bucket: String, p_title: String, sub := "LOADOUT") -> void:
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	head.add_child(title)
-	var coins := RetroTheme.display("%d COINS" % App.league_coins(bucket), 16, RetroTheme.c("gold"))
-	coins.name = "Coins"
-	coins.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	head.add_child(coins)
+	# The wallet, for a league's shop. Online cards are never bought (the
+	# online bucket is LOADOUT only), so the lobby's sheet shows no balance.
+	if bucket != Net.ONLINE_BUCKET:
+		var wallet := RetroTheme.display("%d TICKETS" % App.tickets(), 16, RetroTheme.c("gold"))
+		wallet.name = "Tickets"
+		wallet.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		head.add_child(wallet)
 	# The slots: tap one to send its card back to the spares.
 	var slots := HBoxContainer.new()
 	slots.name = "Slots"
@@ -98,12 +101,15 @@ func build(p_bucket: String, p_title: String, sub := "LOADOUT") -> void:
 	hint.name = "SlotHint"
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(hint)
-	# LOADOUT / SHOP.
+	# LOADOUT / SHOP (no SHOP for the online bucket: online cards come only
+	# from the server — docs/ECONOMY.md → The rule).
+	if bucket == Net.ONLINE_BUCKET:
+		_sub = "LOADOUT"
 	var subs := HBoxContainer.new()
 	subs.name = "Subs"
 	subs.add_theme_constant_override("separation", 12)
 	vbox.add_child(subs)
-	for name_v in ["LOADOUT", "SHOP"]:
+	for name_v in (["LOADOUT"] if bucket == Net.ONLINE_BUCKET else ["LOADOUT", "SHOP"]):
 		var name_: String = name_v
 		var tb := ShadowCard.new(RetroTheme.c("ink"))
 		tb.name = "Sub_" + name_
@@ -156,7 +162,7 @@ func _fill_loadout() -> void:
 		if cd["loadout"][slot] == null:
 			free_slots += 1
 	if inv.is_empty():
-		_body.add_child(_caps("NO SPARE CARDS · VISIT THE SHOP" if bucket == Net.ONLINE_BUCKET else "NO SPARE CARDS · WIN MATCHES OR VISIT THE SHOP"))
+		_body.add_child(_caps("NO SPARE CARDS · WIN ONLINE TO EARN THEM" if bucket == Net.ONLINE_BUCKET else "NO SPARE CARDS · WIN MATCHES OR VISIT THE SHOP"))
 	else:
 		_body.add_child(_caps("SPARES · TAP ONE TO EQUIP IT · A CARD ABOVE YOUR LEVEL WAITS" if free_slots > 0 else "SPARES · THE LOADOUT IS FULL"))
 	var spares := HBoxContainer.new()
@@ -207,8 +213,7 @@ func _fill_loadout() -> void:
 
 ## Every card: rarity, the level it plays from, the blurb, OWNED, BUY.
 func _fill_shop() -> void:
-	var where := "ONLINE ONLY" if bucket == Net.ONLINE_BUCKET else "IN THIS LEAGUE ONLY"
-	_body.add_child(_caps("%d COINS · CARDS BOUGHT HERE PLAY %s" % [App.league_coins(bucket), where]))
+	_body.add_child(_caps("%d TICKETS · CARDS BOUGHT HERE PLAY IN THIS LEAGUE ONLY" % App.tickets()))
 	var cd := App.cards_bucket(bucket)
 	var level := App.level()
 	for card in CardDefs.all():
@@ -251,7 +256,7 @@ func _fill_shop() -> void:
 		var buy := ShadowCard.new(RetroTheme.c("gold"))
 		buy.name = "Buy_" + cid
 		buy.custom_minimum_size = Vector2(130 + ShadowStyle.OFFSET, 46 + ShadowStyle.OFFSET)
-		buy.disabled = App.league_coins(bucket) < int(card.get("price", 0)) or not usable   # own at level, too
+		buy.disabled = App.tickets() < int(card.get("price", 0)) or not usable   # own at level, too
 		var price := RetroTheme.display("%d" % int(card.get("price", 0)), 16, RetroTheme.c("text"))
 		price.position = Vector2.ZERO
 		price.size = Vector2(130, 46)
@@ -264,17 +269,8 @@ func _fill_shop() -> void:
 
 
 func _buy(cid: String) -> void:
-	if bucket == Net.ONLINE_BUCKET:
-		var r: Dictionary = await App.buy_online_card(cid)
-		if not is_inside_tree():
-			return
-		if not bool(r.get("ok", false)):
-			match str(r.get("why", "")):
-				"coins": _status = "NOT ENOUGH ONLINE COINS"
-				"level": _status = "YOUR LEVEL IS TOO LOW FOR THAT CARD"
-				_: _status = "NO SIGNAL · TRY AGAIN LATER"
-	elif not App.try_buy_card(cid, bucket):
-		_status = "NOT ENOUGH COINS"
+	if not App.try_buy_card(cid, bucket):
+		_status = "NOT ENOUGH TICKETS"
 	changed.emit()
 	build(bucket, title_text, _sub)
 

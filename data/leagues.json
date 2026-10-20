@@ -44,14 +44,9 @@
           "ice"
         ]
       },
-      "rewards": {
-        "win_coins": 50,
-        "loss_coins": 20,
-        "title_coins": 300,
-        "win_tickets": 28,
-        "loss_tickets": 11,
-        "title_tickets": 80
-      },
+      "rewards": {"win_tickets": 36,
+        "loss_tickets": 16,
+        "title_tickets": 150},
       "levels": {
         "min": 1,
         "cap": 3
@@ -115,14 +110,9 @@
           "ice"
         ]
       },
-      "rewards": {
-        "win_coins": 60,
-        "loss_coins": 25,
-        "title_coins": 400,
-        "win_tickets": 35,
-        "loss_tickets": 14,
-        "title_tickets": 100
-      },
+      "rewards": {"win_tickets": 40,
+        "loss_tickets": 18,
+        "title_tickets": 180},
       "levels": {
         "min": 3,
         "cap": 4
@@ -182,14 +172,9 @@
           "ice"
         ]
       },
-      "rewards": {
-        "win_coins": 63,
-        "loss_coins": 26,
-        "title_coins": 420,
-        "win_tickets": 40,
-        "loss_tickets": 16,
-        "title_tickets": 115
-      },
+      "rewards": {"win_tickets": 43,
+        "loss_tickets": 20,
+        "title_tickets": 200},
       "levels": {
         "min": 4,
         "cap": 5
@@ -254,14 +239,9 @@
           "ice"
         ]
       },
-      "rewards": {
-        "win_coins": 66,
-        "loss_coins": 27,
-        "title_coins": 440,
-        "win_tickets": 45,
-        "loss_tickets": 18,
-        "title_tickets": 130
-      },
+      "rewards": {"win_tickets": 47,
+        "loss_tickets": 21,
+        "title_tickets": 220},
       "levels": {
         "min": 5,
         "cap": 7

@@ -14,7 +14,7 @@ signal board_failed(area: String, period: String)
 ## The mirror brought newer copies of these parts; App re-reads what it caches.
 signal save_pulled(parts: Array)
 signal save_pushed(parts: Array)
-## The online card cache changed (a refresh, a buy, a settle).
+## The online card cache changed (a refresh, a settle).
 signal cards_changed
 
 const FLUSH_GAP_S := 30.0
@@ -318,14 +318,14 @@ func delete_account() -> bool:
 const ONLINE_BUCKET := "online"
 
 
-## The server's wallet + inventory into the `online` bucket of cards.json (a
-## read-only cache: spares = copies owned minus the ones in the loadout; a
-## loadout slot the ledger no longer covers is emptied).
+## The server's inventory into the `online` bucket of cards.json (a read-only
+## cache: spares = copies owned minus the ones in the loadout; a loadout slot
+## the ledger no longer covers is emptied). Online cards are never bought;
+## they come only from the server (drops and spoils, a later task).
 func _apply_cards(json: Dictionary) -> void:
 	var d := SaveService.get_cards()
 	CardDefs.migrate(d)   # a stale doc would be wiped on save anyway; wipe it first
 	var b := CardDefs.league_doc(d, ONLINE_BUCKET)
-	b["coins"] = int(json.get("coins", 0))
 	var owned: Dictionary = json.get("inventory", {}) if json.get("inventory") is Dictionary else {}
 	var left := {}
 	for id in owned:
@@ -361,21 +361,6 @@ func refresh_cards() -> bool:
 	if r["code"] != -1:
 		_back_off(r)
 	return false
-
-
-## Buy one card with online coins; the cache follows the server's answer.
-## {ok, why}: why = "" | level | coins | offline.
-func buy_card(id: String) -> Dictionary:
-	if not _can_call() or not registered():
-		return {"ok": false, "why": "offline"}
-	var r := await _request("cards", HTTPClient.METHOD_POST, "/v1/cards/buy", {"id": id})
-	if r["ok"]:
-		_apply_cards(r["json"])
-		return {"ok": true, "why": ""}
-	var why := str(r["json"].get("error", "offline")) if r["code"] > 0 else "offline"
-	if r["code"] != 400 and r["code"] != 402 and r["code"] != -1:
-		_back_off(r)
-	return {"ok": false, "why": why}
 
 
 ## The game's level, for the online card cap (sent once per change).

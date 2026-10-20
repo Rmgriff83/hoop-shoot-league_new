@@ -6,7 +6,7 @@ extends Node3D
 ## shadow (YOU WIN in gold), the score with an OT chip when it went there,
 ## `VS NAME · "NICKNAME"`; the box score on a see-through panel with a YOU
 ## chip and the opponent's chip in their colour, the better number in gold;
-## the coins card (with the tickets) beside the card drop; CONTINUE SEASON
+## the rewards card (the tickets) beside the card drop; CONTINUE SEASON
 ## back to the home with the league open, and HOME. A heat outside a league
 ## (test-only) gets the header QUICK HEAT and only HOME. Copy from HeatCopy
 ## (pure); the heat from App.last_heat, the doc from App.league_doc.
@@ -176,50 +176,39 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	for r in HeatCopy.box(heat):
 		bcol.add_child(_box_row(r))
 
-	# Coins beside the card drop, CONTINUE SEASON, HOME. An online match has
-	# the coins card alone (docs/BACKEND.md → Cards online) and HOME.
-	if in_league or online:
+	# The tickets beside the card drop, CONTINUE SEASON, HOME. An online match
+	# pays nothing yet (docs/BACKEND.md → Cards online): no rewards row, HOME.
+	if in_league:
 		var cards := _hbox(26 - int(ShadowStyle.OFFSET))
 		cards.name = "Cards"
 		cards.position = Vector2(MARGIN, CARDS_Y + shift)
 		cards.size = Vector2(RIGHT - MARGIN + ShadowStyle.OFFSET, CARD_H + ShadowStyle.OFFSET)
 		chrome.add_child(cards)
-		var ck := HeatCopy.coins(heat)
-		var coins := ShadowPanel.new(GOLD, 0.0, 0.22, 22.0)
-		coins.name = "Coins"
-		coins.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		coins.custom_minimum_size = Vector2(0, CARD_H + ShadowStyle.OFFSET)
+		var ck := HeatCopy.rewards(heat)
+		var rewards := ShadowPanel.new(GOLD, 0.0, 0.22, 22.0)
+		rewards.name = "Rewards"
+		rewards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		rewards.custom_minimum_size = Vector2(0, CARD_H + ShadowStyle.OFFSET)
 		var cr := _hbox(18)
 		cr.alignment = BoxContainer.ALIGNMENT_BEGIN
-		var coin := PixelIcon.new("icon_coin", Vector2(48, 48), 3.0)
-		coin.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		cr.add_child(coin)
+		var ticket := PixelIcon.new("icon_ticket", Vector2(48, 32), 3.0)
+		ticket.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		cr.add_child(ticket)
 		var cc := _vbox(12)
 		cc.alignment = BoxContainer.ALIGNMENT_CENTER
 		var big := _text(str(ck.get("big", "+0")), 32, CREAM, true)
-		big.name = "CoinsBig"
+		big.name = "RewardsBig"
 		cc.add_child(big)
 		var sub_l := _text(str(ck.get("sub", "")))
-		sub_l.name = "CoinsSub"
+		sub_l.name = "RewardsSub"
 		cc.add_child(sub_l)
 		var t2 := _text(str(ck.get("sub2", "")))
-		t2.name = "TicketsLine"
+		t2.name = "XpLine"
 		t2.visible = str(ck.get("sub2", "")) != ""
 		cc.add_child(t2)
-		if online:
-			# The room's word may land after this page is up.
-			App.online_settled.connect(func(_s: Dictionary) -> void:
-				if not is_instance_valid(big):
-					return
-				var now := HeatCopy.coins(App.last_heat)
-				big.text = str(now.get("big", ""))
-				sub_l.text = str(now.get("sub", ""))
-				t2.text = str(now.get("sub2", ""))
-				t2.visible = t2.text != ""
-			, CONNECT_ONE_SHOT)
 		cr.add_child(cc)
-		coins.add_child(cr)
-		cards.add_child(coins)
+		rewards.add_child(cr)
+		cards.add_child(rewards)
 		var card := HeatCopy.drop(heat)
 		if not card.is_empty():
 			var dp := ShadowPanel.new(RetroTheme.c("teal"), 0.0, 0.22, 20.0)

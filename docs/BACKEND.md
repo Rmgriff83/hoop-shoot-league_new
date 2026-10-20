@@ -252,24 +252,30 @@ The same power-up cards as leagues, from an **online-only inventory that
 lives on the server** — the save can be edited, the ledger cannot, and the
 other phone must trust what hits its rim.
 
+- **The rule** (2026-10-19, docs/ECONOMY.md → The rule): **no path from
+  real money to online cards, ever.** Ticket packs buy tickets; tickets never
+  buy online cards; online cards are never tradeable, giftable or sold;
+  drops are never sold. So there is no online shop and no online wallet:
+  online cards come only from verified server drops and spoils (next task).
+  That keeps "winner takes the played cards" clear of Apple 5.3 / Google
+  Play's gambling policy.
 - **Ledger** (`migrations/0004_online_cards.sql`, `server/src/cards.ts`):
-  `online_wallet(player_id, coins)`, `online_cards(player_id, card_id, n)`,
-  `online_ledger` (buy / reward / play rows, pruned after 90 days), and
+  `online_cards(player_id, card_id, n)`, `online_ledger` (play rows, pruned
+  after 90 days; its `coins` column is history, always 0 now), and
   `players.level` — the game's level, reported at register and whenever a
   league match raises it (`Net.report_level` → `PATCH /v1/me {level}`), so
-  the card cap holds server-side too. The card list and prices come from
-  `data/cards.json`, the payout rule from `data/economy.json` → `online`
-  (one data file, two readers).
-- **Shop**: `GET /v1/cards` → `{coins, inventory, level}`; `POST
-  /v1/cards/buy {id}` → the price from `cards.json`, 400 `level` under the
-  card's level (`Progression.can_use` on both sides), 402 `coins` when short.
-  `RL_CARDS` 20/min + 200/day, `FEATURE_CARDS` kill switch.
+  the card cap holds server-side too. The card list comes from
+  `data/cards.json`. `online_wallet` is dropped by
+  `migrations/0006_drop_online_wallet.sql` — before applying it in
+  production run `SELECT count(*) FROM online_wallet WHERE coins > 0` and
+  stop if real players hold a balance (none expected: dev accounts only).
+- **Inventory**: `GET /v1/cards` → `{inventory, level}` (`RL_CARDS` 20/min
+  + 200/day, `FEATURE_CARDS` kill switch). There is no buy route.
 - **The phone's cache**: the `online` bucket in `cards.json` is a read-only
   mirror of the ledger (`Net.refresh_cards` / `_apply_cards`: spares =
   copies owned − the ones in the loadout; a slot the ledger no longer covers
   empties), so every card API and view renders it unchanged. The loadout is
-  the phone's; `App.try_buy_card` refuses the online bucket and
-  `App.buy_online_card` asks the server instead.
+  the phone's; `App.try_buy_card` refuses the online bucket.
 - **Into the room**: the WebSocket upgrade carries `?slots=ice,,fire7`; the
   Worker keeps only what the ledger holds under the level (`validHand`) and
   the room deals both validated hands in `start.hands` (+ `levels`), so each
@@ -282,21 +288,17 @@ other phone must trust what hits its rim.
   The other phone's `card` lands through `Heat.remote_card` — their ice
   freezes *our* rim in our sim (we own our side and report it), their fire
   or vortex lights our replay of theirs.
-- **Payout** (coins only; no card drops, tickets or XP online — Ross will
-  design an online drop system later): at the decision the room pays the
-  winner `round(win_coins × clamp(1 + upset_per_level × (loser_level −
-  winner_level), mult_min, mult_max))` and the loser `loss_coins` flat (50 /
-  20, 0.15 per level, 0.5–2.5: level 1 beating 9 → 110, 9 beating 1 → 25,
-  even → 50), writes wallets + ledger rows and sends `settled {coins, mult,
-  won, reason, wallet}`. A forfeit pays the stayer by the same rule and the
-  leaver nothing; a void pays nothing. `Economy.online_coins` is the game's
-  copy of the rule (the post-match page's `+110 · ONLINE COINS · WIN ·
-  UPSET · X2.2`).
-- **Game**: the lobby's card strip (`120 COINS`, the three slots, `CARDS >`)
-  opens `CardDeckSheet` on the online bucket — slots (tap to unequip),
-  LOADOUT (tap a spare to equip), SHOP (rarity, the level chip gold once
-  reached, OWNED, BUY). `--qa-multi` seeds the cache, snaps the deck, and the
-  fake peer brings an ice it plays on us.
+- **The decision** (no payout yet: no tickets, XP, coins or card drops
+  online — the ranked task refills this): at the decision the room writes
+  the `matches` row and sends `settled {won, reason}` to each side (reason
+  `played` / `forfeit` / `void`). The post-match page shows no rewards card
+  for an online match. (Until 2026-10-19 this paid online coins by an upset
+  multiplier; removed with the online wallet.)
+- **Game**: the lobby's card strip (the three slots, `CARDS >`) opens
+  `CardDeckSheet` on the online bucket — slots (tap to unequip) and LOADOUT
+  (tap a spare to equip) only; no SHOP and no balance for the online bucket.
+  `--qa-multi` seeds the cache, snaps the deck, and the fake peer brings an
+  ice it plays on us.
 
 ## Platform identity (prep, 2026-10-17)
 
@@ -350,7 +352,7 @@ the server". Ross's calls: per-device secrets, deletion wipes the phone too,
 - `DELETE /v1/me` (auth, 3/hour per IP + 2/hour per player, **no kill
   switch**): one batch deletes the player's rows from players,
   player_secrets, player_identities, transfer_codes, save_parts, tt_best,
-  tt_week_best, seen_runs, online_wallet, online_cards, online_ledger →
+  tt_week_best, seen_runs, online_cards, online_ledger →
   `{deleted: true}`; the bearer is dead after. Match history (`matches`) keeps
   the room rows: they are the other player's record of the game and carry no
   handle. Apple's guideline 5.1.1(v) applies to us: the app creates an

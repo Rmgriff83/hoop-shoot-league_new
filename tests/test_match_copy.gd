@@ -141,7 +141,7 @@ func run(t) -> void:
 	t.eq([MatchCopy.rematch_title("gone"), MatchCopy.rematch_sub("gone")], ["THEY LEFT", "BACK HOME FOR ANOTHER"], "they left")
 	t.ok(MatchCopy.rematch_active("") and MatchCopy.rematch_active("wanted"), "ask and accept are taps")
 	t.ok(not MatchCopy.rematch_active("offered") and not MatchCopy.rematch_active("both") and not MatchCopy.rematch_active("gone"), "the rest are not")
-	var heat := {"online": true, "won": false, "location": "beach", "player_score": 3, "ai_score": 7, "ot": 0, "coins": 20, "mult": 1.0,
+	var heat := {"online": true, "won": false, "location": "beach", "player_score": 3, "ai_score": 7, "ot": 0,
 		"opponent": MatchProtocol.opponent({"name": "GLASS WIZARD", "tag": "07"}), "sides": {"player": {}, "ai": {}}}
 	var screen_script: GDScript = load("res://game/screens/heat_result_screen.gd")
 	var screen: Node = screen_script.new()

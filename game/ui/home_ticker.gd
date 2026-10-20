@@ -60,7 +60,7 @@ func _process(dt: float) -> void:
 
 ## The copy, from data: bests = [{name, best}], states = App.league_states()
 ## rows, tickets, and the next opponent's name (or "").
-static func items_from(bests: Array, states: Array, coins: int, next_up := "", xp := -1) -> PackedStringArray:
+static func items_from(bests: Array, states: Array, tickets: int, next_up := "", xp := -1) -> PackedStringArray:
 	var out := PackedStringArray()
 	if xp >= 0:
 		var inl := Progression.xp_in_level(xp)
@@ -76,7 +76,7 @@ static func items_from(bests: Array, states: Array, coins: int, next_up := "", x
 		out.push_back("%s · %s" % [str(st["league"]["name"]).to_upper(), line])
 	if next_up != "":
 		out.push_back("NEXT UP: %s" % next_up.to_upper())
-	out.push_back("%s TICKETS" % RetroTheme.thousands(coins))
+	out.push_back("%s TICKETS" % RetroTheme.thousands(tickets))
 	if out.size() < 3:
 		out.push_back("SWISH FOR 2")
 		out.push_back("KEEP THE STREAK ALIVE")

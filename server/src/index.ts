@@ -20,7 +20,7 @@ import { AREAS as MATCH_AREAS } from "./rules";
 import { cleanTown } from "./towns";
 export { MatchRoom } from "./match_room";
 export { Lobby } from "./lobby";
-import { CARDS, SLOTS, inventoryOf, validHand } from "./cards";
+import { SLOTS, inventoryOf, validHand } from "./cards";
 
 type Vars = { Bindings: Env; Variables: { player: PlayerRow; cardsGated: boolean } };
 export const app = new Hono<Vars>();
@@ -167,27 +167,9 @@ const cardsGate = async (c: any, next: any) => {
 app.use("/v1/cards", authenticate, cardsGate);
 app.use("/v1/cards/*", authenticate, cardsGate);
 
-/** Your online wallet and inventory (the phone's read-only cache). */
+/** Your online inventory and level. */
 app.get("/v1/cards", async (c) => {
   const p = c.get("player");
-  return c.json(await inventoryOf(c.env.DB, p.id));
-});
-
-/** Buy one card with online coins: the price from cards.json, the level cap as in leagues. */
-app.post("/v1/cards/buy", async (c) => {
-  const p = c.get("player");
-  const b = await body(c, ["id"]);
-  if (!b || typeof b.id !== "string") return c.json({ error: "bad_request" }, 400);
-  const card = CARDS[b.id];
-  if (!card) return c.json({ error: "card" }, 400);
-  if (card.level > (p.level ?? 1)) return c.json({ error: "level", level: card.level }, 400);
-  const now = Date.now();
-  const paid = await c.env.DB.prepare("UPDATE online_wallet SET coins = coins - ?1 WHERE player_id = ?2 AND coins >= ?1").bind(card.price, p.id).run();
-  if ((paid.meta.changes ?? 0) === 0) return c.json({ error: "coins", price: card.price }, 402);
-  await c.env.DB.batch([
-    c.env.DB.prepare("INSERT INTO online_cards (player_id, card_id, n) VALUES (?1, ?2, 1) ON CONFLICT(player_id, card_id) DO UPDATE SET n = online_cards.n + 1").bind(p.id, card.id),
-    c.env.DB.prepare("INSERT INTO online_ledger (player_id, kind, card_id, coins, room, at) VALUES (?1, 'buy', ?2, ?3, NULL, ?4)").bind(p.id, card.id, -card.price, now),
-  ]);
   return c.json(await inventoryOf(c.env.DB, p.id));
 });
 

@@ -2,7 +2,7 @@ extends RefCounted
 ## The league post-match page (docs/HOME.md → Results): HeatCopy through
 ## a win, a loss, overtime and a heat outside a league — the header, the
 ## result and score, the opponent line and chip, the box score's gold side
-## (fewer ICED is better, ties plain), the coins and tickets, the drop, the
+## (fewer ICED is better, ties plain), the tickets, the drop, the
 ## CONTINUE SEASON sub-line after a folded result — and the chrome off-tree.
 
 
@@ -13,7 +13,7 @@ func _app():
 func _heat(won: bool, ot: int, drop: String) -> Dictionary:
 	return {"won": won, "player_score": 41 if won else 33, "ai_score": 37 if won else 36, "ot": ot,
 		"opponent": LeagueData.shooter("brickport"), "mode": "heat", "location": "cage",
-		"league": {"id": "cage", "game": "d4", "playoff": false}, "coins": 50 if won else 15, "tickets": 28 if won else 11, "card_drop": drop,
+		"league": {"id": "cage", "game": "d4", "playoff": false}, "tickets": 36 if won else 16, "card_drop": drop,
 		"sides": {"player": {"makes": 17, "attempts": 26, "swishes": 6, "bestStreak": 7, "bonus": 8, "iced": 0},
 			"ai": {"makes": 15, "attempts": 27, "swishes": 4, "bestStreak": 5, "bonus": 6, "iced": 1}}}
 
@@ -53,18 +53,19 @@ func _copy(t) -> void:
 	for r in HeatCopy.box(tie):
 		t.eq(r["hi"], "", "%s: a tie marks nobody" % r["l"])
 	t.eq(HeatCopy.pct_text({"attempts": 0}), "-", "no attempts, no percent")
-	t.eq(HeatCopy.coins(win), {"big": "+50", "sub": "COINS · WIN", "sub2": "+28 TICKETS"}, "the coins card with the tickets")
+	t.eq(HeatCopy.rewards(win), {"big": "+36", "sub": "TICKETS · WIN", "sub2": ""}, "the rewards card: the tickets")
 	var xp_win := win.duplicate(true)
 	xp_win["xp"] = {"gained": 18, "level_before": 1, "level_after": 1}
-	t.eq(HeatCopy.coins(xp_win)["sub2"], "+28 TICKETS · +18 XP", "the XP joins the tickets line")
+	t.eq(HeatCopy.rewards(xp_win)["sub2"], "+18 XP", "the XP under the tickets")
 	t.eq(HeatCopy.level_line(xp_win, 64), {"text": "LEVEL 1 · 64/100 XP", "gold": false}, "the level line")
 	xp_win["xp"] = {"gained": 30, "level_before": 1, "level_after": 2}
 	t.eq(HeatCopy.level_line(xp_win, 110), {"text": "LEVEL UP · LEVEL 2", "gold": true}, "a level up is gold")
 	xp_win["xp"] = {"gained": 0, "level_before": 3, "level_after": 3}
 	t.eq(HeatCopy.level_line(xp_win, 200), {"text": "LEVEL 3 · CAP", "gold": false}, "at the league's cap")
 	t.eq(HeatCopy.level_line({"league": null, "xp": {"gained": 5}}, 5), {}, "no line outside a league")
-	t.eq(HeatCopy.coins(_heat(false, 0, ""))["sub"], "COINS · LOSS", "a loss says so")
-	t.eq(HeatCopy.coins({"league": null, "coins": 9}), {}, "no card outside a league")
+	t.eq(HeatCopy.rewards(_heat(false, 0, ""))["sub"], "TICKETS · LOSS", "a loss says so")
+	t.eq(HeatCopy.rewards({"league": null, "tickets": 9}), {}, "no card outside a league")
+	t.eq(HeatCopy.rewards({"online": true, "won": true, "league": null}), {}, "no card for an online match: no payout yet")
 	t.eq(HeatCopy.drop(win)["id"], "fire7", "the dropped card")
 	t.eq(HeatCopy.drop(_heat(true, 0, "")), {}, "no drop, no card")
 	var display := UiFont.display()
@@ -111,7 +112,8 @@ func _chrome(t) -> void:
 	t.ok(c.find_child("OT", true, false) != null, "the OT chip in overtime")
 	t.ok(c.find_child("Row_ICED_OVER", true, false) != null, "six box rows end with ICED OVER")
 	t.ok(c.find_child("YouChip", true, false) is ShadowPanel and c.find_child("ThemChip", true, false) is ShadowPanel, "the two chips")
-	t.ok(c.find_child("Coins", true, false) != null and c.find_child("TicketsLine", true, false) != null, "coins with the tickets line")
+	t.ok(c.find_child("Rewards", true, false) != null and c.find_child("XpLine", true, false) != null, "the tickets with the XP line")
+	t.ok(c.find_child("Coins", true, false) == null, "no coins anywhere (2026-10-19)")
 	t.ok(c.find_child("Drop", true, false) != null, "the card drop")
 	t.ok(c.find_child("ContinueSeason", true, false) is ShadowCard, "CONTINUE SEASON")
 	t.ok((c.find_child("ContinueSub", true, false) as Label).text.begins_with("NOW 0-0"), "with the season line")
@@ -124,7 +126,7 @@ func _chrome(t) -> void:
 	quick["league"] = null
 	c = screen.build_chrome(quick, {}, {})
 	t.eq((c.find_child("Header", true, false) as Label).text, "QUICK HEAT", "a quick heat's header")
-	t.ok(c.find_child("Coins", true, false) == null and c.find_child("ContinueSeason", true, false) == null, "no coins, no continue")
+	t.ok(c.find_child("Rewards", true, false) == null and c.find_child("ContinueSeason", true, false) == null, "no rewards card, no continue")
 	t.ok(c.find_child("Home", true, false) != null, "HOME stays")
 	c.free()
 	screen.free()

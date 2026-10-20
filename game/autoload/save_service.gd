@@ -121,7 +121,8 @@ func put_progress(doc: Dictionary) -> void:
 	mark_dirty(PROGRESS_PART)
 
 
-## Power-up cards, v3: {leagues: {id: {coins, inventory: {id: n}, loadout: [id|null ×3]}}}.
+## Power-up cards, v4: {leagues: {id: {inventory: {id: n}, loadout: [id|null ×3]}}}
+## (v3's per-league coins dropped by CardDefs.migrate on load).
 func get_cards() -> Dictionary:
 	return _cards.duplicate(true)
 

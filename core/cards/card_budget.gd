@@ -2,17 +2,20 @@ class_name CardBudget
 extends RefCounted
 ## The area envelope (docs/CARDS.md): how much card power a league hands its
 ## AI per season against how much the player can expect to earn there, as a
-## ratio checked against the league's declared `card_parity`. Pure arithmetic
+## ratio reported beside the league's declared `card_parity` (reported, not
+## gated, since 2026-10-19: with one wallet the share of tickets a player
+## puts into cards is theirs to choose, and league card buying exists to
+## relieve friction, not to balance the AI). Pure arithmetic
 ## over data/cards.json, data/leagues.json and the measured powers in
 ## assets/cards/card_power.json — the same numbers tools/card_ledger.gd prints
 ## and tests/test_card_budget.gd enforces, so a green ledger is a green suite.
 
-## A league's parity may sit this far (relative) from its target.
+## A league's parity "near" its target, for the ledger's remark only.
 const PARITY_TOL := 0.2
 ## Expected playoff heats the player plays in a season (semis Bo3 + final Bo5,
 ## weighted by making them at all).
 const PLAYOFF_GAMES := 4.0
-## Chance of the title (its coin bonus) in an average season.
+## Chance of the title (its ticket bonus) in an average season.
 const P_TITLE := 0.2
 ## Both rows of the standings taken as a coin flip.
 const P_WIN := 0.5
@@ -97,7 +100,9 @@ static func ai_budget(league: Dictionary) -> Dictionary:
 
 ## Expected card power the player earns in one season of this league: drops
 ## (regular + playoff games at the drop odds, at the dealt mean power) plus
-## what the coin income buys at the shop (mean price → mean power).
+## what the assumed share of the ticket income (economy.json
+## cards.ticket_share, informational) buys at the shop (mean price → mean
+## power).
 static func player_income(league: Dictionary, p_win := P_WIN) -> Dictionary:
 	var lid := str(league.get("id", ""))
 	var odds := CardDefs.drop_odds()
@@ -107,12 +112,24 @@ static func player_income(league: Dictionary, p_win := P_WIN) -> Dictionary:
 	var usable := usable_ids(league)
 	var drop_power := drops * mean_dealt_power(usable, lid)
 	var rewards: Dictionary = league.get("rewards", {})
-	var coins_per_game := p_win * float(rewards.get("win_coins", 50)) + (1.0 - p_win) * float(rewards.get("loss_coins", 20))
-	var coins := (games + PLAYOFF_GAMES) * coins_per_game + P_TITLE * float(rewards.get("title_coins", 300))
-	var bought := coins / mean_price()
+	var per_game := p_win * float(rewards.get("win_tickets", 0)) + (1.0 - p_win) * float(rewards.get("loss_tickets", 0))
+	var tickets := (games + PLAYOFF_GAMES) * per_game + P_TITLE * float(rewards.get("title_tickets", 0))
+	var share := float(Economy.cards_cfg().get("ticket_share", 0.5))
+	var bought := share * tickets / mean_price()
 	var bought_power := bought * mean_dealt_power(usable, lid)
-	return {"drops": drops, "drop_power": drop_power, "coins": coins, "bought": bought,
+	return {"drops": drops, "drop_power": drop_power, "tickets": tickets, "share": share, "bought": bought,
 		"bought_power": bought_power, "power": drop_power + bought_power}
+
+
+## The ledger's word on a league's parity against its declared target.
+static func parity_remark(league: Dictionary) -> String:
+	if not league.has("card_parity"):
+		return "no target"
+	var target := float(league["card_parity"])
+	var got := parity(league)
+	if absf(got - target) <= PARITY_TOL * target:
+		return "near %.2f" % target
+	return "%s %.2f (not gated)" % ["above" if got > target else "below", target]
 
 
 static func parity(league: Dictionary) -> float:
@@ -166,10 +183,8 @@ static func problems() -> PackedStringArray:
 		var lid := str(l.get("id", "?"))
 		if not l.has("card_parity"):
 			continue
-		var target := float(l["card_parity"])
-		var got := parity(l)
-		if absf(got - target) > PARITY_TOL * target:
-			out.push_back("league %s parity %.2f is outside %.2f ±%.0f%%" % [lid, got, target, 100.0 * PARITY_TOL])
+		# Parity against `card_parity` is reported by the ledger (parity_remark),
+		# not gated here (2026-10-19).
 		for sid in l.get("ai_cards", {}):
 			var epics := 0
 			for id in Array(l["ai_cards"][sid]):
