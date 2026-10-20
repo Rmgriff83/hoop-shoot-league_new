@@ -1,84 +1,105 @@
 {
   "cards": {
     "fire7": {
-      "beach": 0.97,
-      "cage": 0.97,
-      "city": 0.91
+      "beach": 0.62,
+      "cage": 0.9,
+      "city": 0.58,
+      "park": 0.75
     },
     "ice": {
-      "beach": 0.5,
-      "cage": 0.78,
-      "city": 0.48
+      "beach": 0.42,
+      "cage": 0.65,
+      "city": 0.36,
+      "park": 0.36
     },
     "vortex6": {
-      "beach": 1.89,
-      "cage": 1.05,
-      "city": 2.04
+      "beach": 1.42,
+      "cage": 0.98,
+      "city": 1.51,
+      "park": 1.47
     }
   },
   "detail": {
     "fire7": {
       "beach": {
         "played": 1.0,
-        "se": 0.083,
-        "with": 1.04,
-        "without": 0.07
+        "se": 0.061,
+        "with": 0.61,
+        "without": -0.01
       },
       "cage": {
         "played": 1.0,
-        "se": 0.073,
-        "with": 0.88,
-        "without": -0.09
+        "se": 0.07,
+        "with": 0.62,
+        "without": -0.29
       },
       "city": {
         "played": 1.0,
-        "se": 0.094,
-        "with": 1.3,
-        "without": 0.38
+        "se": 0.059,
+        "with": 0.87,
+        "without": 0.29
+      },
+      "park": {
+        "played": 1.0,
+        "se": 0.065,
+        "with": 0.24,
+        "without": -0.51
       }
     },
     "ice": {
       "beach": {
-        "played": 0.982,
-        "se": 0.063,
-        "with": 0.57,
-        "without": 0.07
+        "played": 0.87,
+        "se": 0.043,
+        "with": 0.41,
+        "without": -0.01
       },
       "cage": {
-        "played": 0.896,
+        "played": 0.866,
         "se": 0.066,
-        "with": 0.69,
-        "without": -0.09
+        "with": 0.37,
+        "without": -0.29
       },
       "city": {
-        "played": 0.988,
-        "se": 0.092,
-        "with": 0.86,
-        "without": 0.38
+        "played": 0.854,
+        "se": 0.054,
+        "with": 0.65,
+        "without": 0.29
+      },
+      "park": {
+        "played": 0.84,
+        "se": 0.057,
+        "with": -0.15,
+        "without": -0.51
       }
     },
     "vortex6": {
       "beach": {
         "played": 1.0,
-        "se": 0.129,
-        "with": 1.96,
-        "without": 0.07
+        "se": 0.09,
+        "with": 1.41,
+        "without": -0.01
       },
       "cage": {
         "played": 1.0,
-        "se": 0.086,
-        "with": 0.96,
-        "without": -0.09
+        "se": 0.072,
+        "with": 0.7,
+        "without": -0.29
       },
       "city": {
         "played": 1.0,
-        "se": 0.147,
-        "with": 2.42,
-        "without": 0.38
+        "se": 0.09,
+        "with": 1.8,
+        "without": 0.29
+      },
+      "park": {
+        "played": 1.0,
+        "se": 0.09,
+        "with": 0.96,
+        "without": -0.51
       }
     }
   },
-  "generated": "2026-10-03",
+  "generated": "2026-10-20",
   "n": 500.0,
   "seed": 4242.0
 }

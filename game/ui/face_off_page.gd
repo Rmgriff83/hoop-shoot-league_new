@@ -91,11 +91,13 @@ func _corner(row: HBoxContainer, text: String, colour: Color) -> Label:
 	return l
 
 
+## `place_text` / `online_text` on the record override the copy (a league
+## opponent has a league and a record, not a town and a ladder badge).
 static func _fill_lines(lines: Control, rec: Dictionary) -> void:
 	_set_name(lines.find_child("Name", true, false) as Label, str(rec.get("name", "THEM")))
 	(lines.find_child("Tag", true, false) as Label).text = MatchCopy.card_tag(rec)
-	(lines.find_child("Place", true, false) as Label).text = MatchCopy.card_place(rec)
-	(lines.find_child("Online", true, false) as Label).text = MatchCopy.card_online(rec)
+	(lines.find_child("Place", true, false) as Label).text = str(rec.get("place_text", MatchCopy.card_place(rec)))
+	(lines.find_child("Online", true, false) as Label).text = str(rec.get("online_text", MatchCopy.card_online(rec)))
 
 
 ## The handle at its own width (the tag follows it), cut with an ellipsis

@@ -226,8 +226,10 @@ opponent's clock not running or rim already iced); played cards leave the tray.
 - **Core** (`core/cards/`): `CardDefs` (definitions, inventory/loadout doc helpers: add,
   equip, unequip, consume/`consume_slot`, `loadout_ids`/`loadout_slots`, `owned`, `migrate`), `CardEffects` (the effect registry — `ice` calls
   `TimeTrial.freeze_rim("card")` on the target side, so the same cold-streak rules apply),
-  `CardRewards.roll(won, playoff, seed)` (seeded drops, win 60 % / loss 25 % / +15 % in the
-  playoffs, rarity-weighted). `core/ai/card_policy.gd`: the AI plays Ice when the player is on
+  `CardRewards.roll(ctx, seed)` → `{id, reason}` (docs/CARDS.md § Drops, 2026-10-19: seeded,
+  level-capped at your level + 1, a win at 60 % (+15 % in the playoffs, +20 % trailing at the
+  half), a loss only when close — by ≤ 2 or in OT — at 35 %, the 4th straight loss a
+  guaranteed Ice; the AI DIFFICULTY multiplier on the rolls). `core/ai/card_policy.gd`: the AI plays Ice when the player is on
   ≥ 3 straight or leads by ≥ 4 with < 45 s left, never in the first 10 s, once per card.
 - **Heat**: `hands` per side (`player_cards` / `ai_cards` in the config), `play_card(side, id)`
   (consumed only when the effect applied; emits `card_played {side, card, target, ok}`),
@@ -236,12 +238,15 @@ opponent's clock not running or rim already iced); played cards leave the tray.
 - **Save**: part `cards` = `{inventory: {id: n}, loadout: [id|null ×3]}`; `App.cards_doc /
   add_card / equip_card / unequip_card / consume_card / try_buy_card / loadout_hand`. A deployed
   card leaves the inventory immediately (abandoning a heat is no refund). Every heat (league or
-  quick) starts with the equipped hand.
+  quick) starts with the equipped hand — picked on the pre-match page before every league
+  heat since 2026-10-19 (`App.start_league_heat` → `PreMatchPage` → `play_league_heat`).
 - **UI**: the in-heat **card tray** (left edge, inside the flick input's UI zone; tap = deploy,
   greyed when it can't apply), the **card toast** (art + "Deep Freeze → OPPONENT", or "Ollie
   Knots plays Deep Freeze on YOU!"), the opponent's board scrolls ICED BY CARD, the dashboard's
-  **LOADOUT** (this league's three slots + inventory) and **SHOP** (this league's cards for tickets) tabs, and
-  the result screen's card drop.
+  **YOUR CARDS** (this league's spares, to look at — the loadout is picked before each heat)
+  and **SHOP** (this league's cards for tickets) tabs, and the result screen's card drop with
+  why it dropped (`CARD DROP` / `COMEBACK CARD` / `CLOSE ONE` / `TOUGH STRETCH · HERE'S AN
+  ICE`) and, in a loss, the bright spots (`BrightSpots`).
 
 ## League banners (environment dressing, league heats only)
 

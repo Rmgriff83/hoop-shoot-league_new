@@ -148,29 +148,97 @@ func run(t) -> void:
 		if ev["kind"] == "card_played" and ev["side"] == Heat.AI:
 			ai_fire = ev["target"] == Heat.AI and ev["ok"]
 	t.ok(ai_fire, "AI's fire card lit its own rim")
-	# Rewards: deterministic, within odds.
-	t.eq(CardRewards.roll(true, false, 77), CardRewards.roll(true, false, 77), "roll replays from the seed")
+	# Rewards (docs/CARDS.md § Drops, 2026-10-19): CardRewards.roll(ctx, seed)
+	# → {id, reason}, deterministic, level-capped, nothing on a plain loss.
+	var win_ctx := {"won": true, "playoff": false, "level": 9, "difficulty": "normal", "margin": 5, "ot": 0, "trailing_at_half": false, "loss_streak": 0}
+	t.eq(CardRewards.roll(win_ctx, 77), CardRewards.roll(win_ctx, 77), "roll replays from the seed")
+	t.eq(CardRewards.roll({}, 1), CardRewards.roll({"won": false, "level": 1}, 1), "no fields = a plain loss")
 	var wins := 0
-	var losses := 0
+	var plain_losses := 0
+	var close_losses := 0
+	var ot_losses := 0
 	for i in 2000:
-		if CardRewards.roll(true, false, i) != "":
+		if str(CardRewards.roll(win_ctx, i)["id"]) != "":
 			wins += 1
-		if CardRewards.roll(false, false, 100000 + i) != "":
-			losses += 1
+		if str(CardRewards.roll({"won": false, "level": 9, "margin": -8}, 100000 + i)["id"]) != "":
+			plain_losses += 1
+		var cl := CardRewards.roll({"won": false, "level": 9, "margin": -2}, 200000 + i)
+		if str(cl["id"]) != "":
+			close_losses += 1
+			if close_losses == 1:
+				t.eq(cl["reason"], "close_loss", "a close loss says so")
+		if str(CardRewards.roll({"won": false, "level": 9, "margin": -5, "ot": 1}, 300000 + i)["id"]) != "":
+			ot_losses += 1
 	t.ok(absf(wins / 2000.0 - 0.6) < 0.05, "win drop rate ≈ 60 %% (%.3f)" % (wins / 2000.0))
-	t.ok(absf(losses / 2000.0 - 0.25) < 0.05, "loss drop rate ≈ 25 %% (%.3f)" % (losses / 2000.0))
+	t.eq(plain_losses, 0, "a plain loss never drops")
+	t.ok(absf(close_losses / 2000.0 - 0.35) < 0.05, "a close loss (by ≤ 2) rolls at 35 %% (%.3f)" % (close_losses / 2000.0))
+	t.ok(absf(ot_losses / 2000.0 - 0.35) < 0.05, "an overtime loss rolls the same (%.3f)" % (ot_losses / 2000.0))
+	# The playoff and comeback bonuses stack on the win odds.
+	var po := 0
+	var cb := 0
+	for i in 2000:
+		if str(CardRewards.roll({"won": true, "level": 9, "playoff": true}, 400000 + i)["id"]) != "":
+			po += 1
+		var r := CardRewards.roll({"won": true, "level": 9, "trailing_at_half": true}, 500000 + i)
+		if str(r["id"]) != "":
+			cb += 1
+			if i == 0:
+				t.eq(r["reason"], "comeback_win", "a comeback win says so")
+	t.ok(absf(po / 2000.0 - 0.75) < 0.05, "a playoff win rolls at 75 %% (%.3f)" % (po / 2000.0))
+	t.ok(absf(cb / 2000.0 - 0.8) < 0.05, "a comeback win rolls at 80 %% (%.3f)" % (cb / 2000.0))
+	t.eq(CardRewards.roll(win_ctx, 77)["reason"], "win" if str(CardRewards.roll(win_ctx, 77)["id"]) != "" else "", "a plain win's reason")
+	# The level cap: never a card above level + 1, at every level and seed.
+	var over := 0
+	for lvl in range(1, 8):
+		for i in 300:
+			var r := CardRewards.roll({"won": true, "level": lvl, "playoff": true}, 600000 + lvl * 1000 + i)
+			if str(r["id"]) != "" and Progression.card_level(CardDefs.get_card(str(r["id"]))) > lvl + 1:
+				over += 1
+	t.eq(over, 0, "no drop ever sits above the player's level + 1")
+	t.eq(CardRewards.eligible_ids(1), ["ice"], "at level 1 only the ice is eligible (fire7 is level 3)")
+	t.ok(CardRewards.eligible_ids(2).has("fire7") and not CardRewards.eligible_ids(2).has("vortex6"), "at level 2 the Heat Check (level 3) joins, the Vortex (5) waits")
 	var ids := {}
 	for i in 2000:
-		var id := CardRewards.roll(true, false, 5000 + i)
+		var id := str(CardRewards.roll({"won": true, "level": 9}, 5000 + i)["id"])
 		if id != "":
 			ids[id] = int(ids.get(id, 0)) + 1
 	t.ok(ids.has("ice") and ids.has("fire7"), "both cards drop (%s)" % str(ids))
+	# The 4th straight loss: a guaranteed ice, then the counter rolls on.
+	t.eq(CardRewards.next_loss_streak(0, false), 1, "a loss counts")
+	t.eq(CardRewards.next_loss_streak(3, true), 0, "a win resets")
+	t.eq(CardRewards.roll({"won": false, "level": 1, "margin": -20, "loss_streak": 4}, 9), {"id": "ice", "reason": "loss_streak"}, "the 4th straight loss hands an ice, however bad")
+	t.eq(CardRewards.roll({"won": false, "level": 1, "margin": -20, "loss_streak": 3}, 9)["id"], "", "the 3rd does not")
+	t.eq(CardRewards.roll({"won": false, "level": 1, "margin": -20, "loss_streak": 8}, 9)["reason"], "loss_streak", "…nor the 5th, but the 8th does")
+	# The difficulty multiplier scales the roll, never the streak ice.
+	var odds: Dictionary = CardDefs.drop_odds()
+	t.eq(Dictionary(odds["difficulty_mult"]).keys(), ["easy", "normal", "hard"], "a multiplier per AI DIFFICULTY level")
+	for k in odds["difficulty_mult"]:
+		t.ok(float(odds["difficulty_mult"][k]) >= 0.0, "%s multiplier is a factor" % k)
+	t.eq(CardRewards.roll({"won": false, "level": 1, "loss_streak": 4, "difficulty": "easy"}, 3)["id"], "ice", "the streak ice ignores the multiplier")
 	# Whichever of the two is the common card (ice since the 2026-10-03 re-measure) drops more.
 	var common := "ice" if str(CardDefs.get_card("ice")["rarity"]) == "common" else "fire7"
 	var rare := "fire7" if common == "ice" else "ice"
 	t.ok(int(ids.get(common, 0)) > int(ids.get(rare, 0)), "the common %s drops more often than the rare %s" % [common, rare])
 	for id in ids:
 		t.ok(not CardDefs.get_card(str(id)).is_empty(), "drops are real card ids")
+	# Bright spots (BrightSpots.note): the running bests on the league doc.
+	var bdoc := {"career": {}}
+	var r1 := {"sides": {"player": {"makes": 10, "attempts": 20, "swishes": 2, "bestStreak": 2}}}
+	t.eq(BrightSpots.note(bdoc, r1), [], "nothing to say on a first modest heat")
+	var r2 := {"sides": {"player": {"makes": 15, "attempts": 25, "swishes": 5, "bestStreak": 6}}}
+	t.eq(BrightSpots.note(bdoc, r2), ["NEW BEST STREAK · 6", "5 SWISHES · YOUR MOST"], "a new best streak and most swishes")
+	t.eq(BrightSpots.note(bdoc, r2), [], "the same numbers again are no news")
+	for i in 3:
+		BrightSpots.note(bdoc, {"sides": {"player": {"makes": 10, "attempts": 20, "swishes": 1, "bestStreak": 1}}})
+	var r3 := {"sides": {"player": {"makes": 14, "attempts": 20, "swishes": 1, "bestStreak": 1}}}
+	var lines := BrightSpots.note(bdoc, r3)
+	t.ok(lines.size() == 1 and str(lines[0]).begins_with("SHOOTING 70% · UP FROM"), "shooting up on the last heats (%s)" % str(lines))
+	t.eq(HeatCopy.drop_caption({"drop_reason": "comeback_win"}), "COMEBACK CARD", "the comeback caption")
+	t.eq(HeatCopy.drop_caption({"drop_reason": "close_loss"}), "CLOSE ONE", "the close-loss caption")
+	t.eq(HeatCopy.drop_caption({"drop_reason": "loss_streak"}), "TOUGH STRETCH · HERE'S AN ICE", "the streak caption")
+	t.eq(HeatCopy.drop_caption({"drop_reason": "win"}), "CARD DROP", "a plain win")
+	t.eq(HeatCopy.bright_lines({"won": false, "bright": ["NEW BEST STREAK · 6"]}), ["NEW BEST STREAK · 6"], "bright spots in a loss")
+	t.eq(HeatCopy.bright_lines({"won": true, "bright": ["NEW BEST STREAK · 6"]}), [], "…not in a win")
 	# The policy is side-agnostic: a player bot plays its ice on the streaking AI.
 	# (A sharpshooter AI, so the streak it is handed survives its own shots.)
 	var h4 := Heat.new({"geo": geo, "seconds": 60.0, "ai": AiRatings.make(0.95, 0.9, 3.0), "player_bot": AiRatings.make(0.5, 0.5, 3.0),

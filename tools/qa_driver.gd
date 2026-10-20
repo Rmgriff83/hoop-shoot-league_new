@@ -553,10 +553,31 @@ func _run_heat_result() -> void:
 	loss["xp"] = {"gained": 4, "level_before": 2, "level_after": 2}
 	loss["sides"]["player"] = {"makes": 14, "attempts": 25, "swishes": 5, "bestStreak": 4, "bonus": 3, "iced": 1}
 	loss["sides"]["ai"] = {"makes": 16, "attempts": 26, "swishes": 5, "bestStreak": 8, "bonus": 9, "iced": 0}
+	loss["bright"] = ["NEW BEST STREAK · 4", "SHOOTING 56% · UP FROM 48% · LAST 5"]
 	App.last_heat = loss
 	get_tree().change_scene_to_file(App.HEAT_RESULT_SCENE)
 	await _sleep(1.2)
 	await _snap("heat_loss")
+	# A close loss (by 2) rolls a card: CLOSE ONE over the drop.
+	var close := loss.duplicate(true)
+	close["player_score"] = 34
+	close["card_drop"] = "ice"
+	close["drop_reason"] = "close_loss"
+	close["bright"] = ["5 SWISHES · YOUR MOST"]
+	App.last_heat = close
+	get_tree().change_scene_to_file(App.HEAT_RESULT_SCENE)
+	await _sleep(1.2)
+	await _snap("heat_close")
+	# The 4th straight loss: the guaranteed Ice and its caption.
+	var streak := loss.duplicate(true)
+	streak["player_score"] = 24
+	streak["card_drop"] = "ice"
+	streak["drop_reason"] = "loss_streak"
+	streak["bright"] = []
+	App.last_heat = streak
+	get_tree().change_scene_to_file(App.HEAT_RESULT_SCENE)
+	await _sleep(1.2)
+	await _snap("heat_streak")
 	var quick := base.duplicate(true)
 	quick["league"] = null
 	quick["card_drop"] = ""
@@ -1420,6 +1441,15 @@ func _run_title() -> void:
 	await _click_button_named("LEAGUE")
 	await _sleep(0.8)
 	await _snap("title_league_heat")
+	# The pre-match pick before a league heat (docs/CARDS.md § Drops): the
+	# next opponent, the cap at your level, this league's cards, the clock.
+	var title_scene: Node = get_tree().current_scene
+	if title_scene != null and title_scene.has_method("open_league_pre_match"):
+		title_scene.call("open_league_pre_match", App.league_pre_match_info(App.league_doc(), App.league_cfg()))
+		await _sleep(0.5)
+		await _snap("title_prematch")
+		title_scene.call("_close_pre_match")
+		await _sleep(0.3)
 	for tab in ["TABLE", "SCHED", "CARDS", "STATS"]:
 		await _click_button_named(tab)
 		await _sleep(0.6)

@@ -33,3 +33,4 @@ func run(t) -> void:
 	t.eq(MatchCopy.rank_delta_line({"ranked": true, "won": false, "reason": "void"}), "RATED · NO CHANGE", "a void")
 	t.eq(MatchCopy.rank_delta_line({"ranked": false, "won": true}), "", "nothing for a casual match")
 	t.eq(MatchCopy.cap_line(3), "CARD CAP · LVL 3 · THE LOWER LEVEL PLAYS", "the cap line")
+	t.eq(MatchCopy.cap_line(3, true), "CARD CAP · LVL 3 · YOUR LEVEL", "…and a league heat's")

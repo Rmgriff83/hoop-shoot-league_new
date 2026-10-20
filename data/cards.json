@@ -100,8 +100,15 @@
   },
   "drop_odds": {
     "win": 0.6,
-    "loss": 0.25,
-    "playoff_bonus": 0.15
+    "playoff_bonus": 0.15,
+    "comeback_win_bonus": 0.2,
+    "close_loss": 0.35,
+    "close_margin": 2,
+    "loss_streak_n": 4,
+    "loss_streak_card": "ice",
+    "level_ahead": 1,
+    "difficulty_mult": {"easy": 1.0, "normal": 1.0, "hard": 1.0},
+    "reference": {"close_loss_share": 0.3, "comeback_win_share": 0.25}
   },
   "rarity_bands": {
     "common": [
@@ -116,6 +123,9 @@
       1.4,
       99.0
     ]
+  },
+  "prematch": {
+    "league_seconds": 12
   },
   "price_curve": {
     "k": 150.0,

@@ -104,8 +104,9 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
   home with it open. While open the chevrons hide and the swipe is off.
 - **The floating layer** (`title_screen.gd` `_rebuild_float`, over the court
   above the area, per open tab): MATCH → the compact loadout strip (three
-  42×56 thumbnails, `LOADOUT · n OF 3 SET`; tap → CARDS · LOADOUT); CARDS →
-  the full loadout (96×128 cards, tap one to unequip, `SLOT 3 EMPTY`); TABLE
+  42×56 thumbnails, `LOADOUT · n OF 3 SET`; tap → CARDS · YOUR CARDS); CARDS →
+  the last loadout, read-only (96×128 cards, `LAST LOADOUT · n OF 3`, `SLOT 3
+  EMPTY`; the pick itself is the pre-match page before each heat, 2026-10-20); TABLE
   → `YOUR SPOT` / the big ordinal / `2-1 · 1.0 GB` / `IN A PLAYOFF SPOT`;
   SCHED → `COMING UP`, the next three games as cards (today's gold); STATS →
   `THIS SEASON` RECORD · HIGH PTS · STREAK. Rebuilt on `tab_changed` /
@@ -271,6 +272,13 @@ chevron (the footer says START INSIDE).
   the two levels); the LOADOUT strip (a spare above the cap dimmed with its
   `LVL n` tag, its tap refused); `TIP-OFF IN 12` over a gold timer bar
   (20 s from data) and READY (orange → gold `WAITING FOR THEM`), BACK OUT.
+  The same page opens before every **league heat** (2026-10-20, `App.start_league_heat`
+  → `open_league_pre_match`): the league in context and the home chrome step aside so
+  the court alone shows under it, the next shooter is the gold card (`ARCADE LEAGUE ·
+  SUNSHINE`, `0-0 THIS SEASON`), YOUR card carries your season record, the cap line
+  reads `CARD CAP · LVL 1 · YOUR LEVEL`, the clock is 12 s, READY plays the heat and
+  BACK OUT brings the league back. The clock loses at most 0.25 s a frame, so a
+  hitch never readies the page by itself. QA: `--qa-title` → `title_prematch`.
   The page sends its pick as it changes (`picked`, provisional — a timeout
   starts with it) and `readied(slots)` on READY; at zero it readies itself.
   Built to be reused before solo league heats later (`build` takes a plain

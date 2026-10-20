@@ -131,7 +131,9 @@ static func prematch_title() -> String:
 
 ## `CARD CAP · LVL 3 · THE LOWER LEVEL PLAYS` — both loadouts stop at the
 ## lower of the two levels (a level-7 card never meets a level-2 player).
-static func cap_line(cap: int) -> String:
+static func cap_line(cap: int, league := false) -> String:
+	if league:
+		return "CARD CAP · LVL %d · YOUR LEVEL" % maxi(1, cap)
 	return "CARD CAP · LVL %d · THE LOWER LEVEL PLAYS" % maxi(1, cap)
 
 
@@ -266,7 +268,7 @@ static func strings() -> Array:
 		card_place({"town": "SALT HARBOR", "level": 9}), card_place({"level": 7}), card_online({}),
 		card_online({"rank": {"tier": "pro", "division": 2, "wins": 12, "losses": 9, "games": 21}}),
 		card_online({"rank": {"tier": "legend", "division": 1, "position": 12, "wins": 40, "losses": 11, "games": 51}}),
-		waiting_big("ranked"), waiting_line("ranked"), ranked_sub(), "RANKED", prematch_title(), cap_line(3), ready_word(true), ready_word(false),
+		waiting_big("ranked"), waiting_line("ranked"), ranked_sub(), "RANKED", prematch_title(), cap_line(3), cap_line(3, true), ready_word(true), ready_word(false),
 		timer_line(12.4), ranked_chip(), rank_delta_line({"ranked": true, "rating": {"delta": 18}, "rank": {"tier": "pro", "division": 2}, "events": ["promoted"]}),
 		rank_delta_line({"ranked": true, "rating": {"delta": -7}, "rank": {"tier": "rookie", "division": 3}, "events": ["shielded", "floored", "demoted"]}),
 		rank_delta_line({"ranked": true}),

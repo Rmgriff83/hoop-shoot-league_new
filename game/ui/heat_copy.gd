@@ -164,6 +164,25 @@ static func drop(heat: Dictionary) -> Dictionary:
 	return CardDefs.get_card(id) if id != "" else {}
 
 
+## Why it dropped (docs/CARDS.md § Drops): the caption over the card's name.
+static func drop_caption(heat: Dictionary) -> String:
+	match str(heat.get("drop_reason", "")):
+		"comeback_win": return "COMEBACK CARD"
+		"close_loss": return "CLOSE ONE"
+		"loss_streak": return "TOUGH STRETCH · HERE'S AN ICE"
+	return "CARD DROP"
+
+
+## The bright spots (BrightSpots.note, kept on `heat.bright`), shown in a loss.
+static func bright_lines(heat: Dictionary) -> Array:
+	if bool(heat.get("won", false)) or not (heat.get("bright") is Array):
+		return []
+	var out := []
+	for l in heat["bright"]:
+		out.push_back(str(l))
+	return out
+
+
 ## CONTINUE SEASON's sub-line from the campaign doc the result was folded into.
 static func continue_sub(doc: Dictionary, cfg: Dictionary) -> String:
 	if doc.is_empty():

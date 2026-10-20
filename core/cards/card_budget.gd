@@ -106,19 +106,58 @@ static func ai_budget(league: Dictionary) -> Dictionary:
 static func player_income(league: Dictionary, p_win := P_WIN) -> Dictionary:
 	var lid := str(league.get("id", ""))
 	var odds := CardDefs.drop_odds()
-	var p_drop := p_win * float(odds.get("win", 0.6)) + (1.0 - p_win) * float(odds.get("loss", 0.25))
+	var ref: Dictionary = odds.get("reference", {}) if odds.get("reference") is Dictionary else {}
+	var mult := float(Dictionary(odds.get("difficulty_mult", {})).get("normal", 1.0))
+	# A win rolls at `win` (a comeback share of wins adds the bonus); a loss
+	# rolls only when close (a share of losses), at `close_loss`.
+	var p_win_drop := minf((float(odds.get("win", 0.6)) + float(ref.get("comeback_win_share", 0.25)) * float(odds.get("comeback_win_bonus", 0.2))) * mult, 1.0)
+	var p_loss_drop := float(ref.get("close_loss_share", 0.3)) * minf(float(odds.get("close_loss", 0.35)) * mult, 1.0)
+	var p_drop := p_win * p_win_drop + (1.0 - p_win) * p_loss_drop
 	var games := regular_games(league)
-	var drops := games * p_drop + PLAYOFF_GAMES * minf(p_drop + float(odds.get("playoff_bonus", 0.15)), 1.0)
+	var p_po := p_win * minf(p_win_drop + float(odds.get("playoff_bonus", 0.15)) * mult, 1.0) + (1.0 - p_win) * p_loss_drop
+	var drops := games * p_drop + PLAYOFF_GAMES * p_po
+	# The streak Ice: the expected number of 4th-straight-loss moments in a
+	# season (a Markov chain over the streak counter, reset by a win).
+	var streak_cards := expected_streak_cards(int(round(games + PLAYOFF_GAMES)), 1.0 - p_win, int(odds.get("loss_streak_n", 4)))
 	var usable := usable_ids(league)
-	var drop_power := drops * mean_dealt_power(usable, lid)
+	var ice_power := CardDefs.power_mean(str(odds.get("loss_streak_card", "ice"))) if CardDefs.has_power(str(odds.get("loss_streak_card", "ice"))) else mean_dealt_power(usable, lid)
+	var drop_power := drops * mean_dealt_power(usable, lid) + streak_cards * ice_power
 	var rewards: Dictionary = league.get("rewards", {})
 	var per_game := p_win * float(rewards.get("win_tickets", 0)) + (1.0 - p_win) * float(rewards.get("loss_tickets", 0))
 	var tickets := (games + PLAYOFF_GAMES) * per_game + P_TITLE * float(rewards.get("title_tickets", 0))
 	var share := float(Economy.cards_cfg().get("ticket_share", 0.5))
 	var bought := share * tickets / mean_price()
 	var bought_power := bought * mean_dealt_power(usable, lid)
-	return {"drops": drops, "drop_power": drop_power, "tickets": tickets, "share": share, "bought": bought,
+	return {"drops": drops, "streak_cards": streak_cards, "drop_power": drop_power, "tickets": tickets, "share": share, "bought": bought,
 		"bought_power": bought_power, "power": drop_power + bought_power}
+
+
+## Expected guaranteed streak cards over `games` with a loss chance `p_loss`:
+## the counter climbs on a loss, resets on a win, and pays at every n-th.
+static func expected_streak_cards(games: int, p_loss: float, n: int) -> float:
+	if n <= 0:
+		return 0.0
+	var dist := []   # probability of each counter value 0..n-1
+	dist.resize(n)
+	dist.fill(0.0)
+	dist[0] = 1.0
+	var paid := 0.0
+	for _g in games:
+		var next := []
+		next.resize(n)
+		next.fill(0.0)
+		for k in n:
+			var pk := float(dist[k])
+			if pk == 0.0:
+				continue
+			next[0] += pk * (1.0 - p_loss)
+			if k + 1 == n:
+				paid += pk * p_loss   # the n-th straight loss: a card, counter on
+				next[0] += pk * p_loss
+			else:
+				next[k + 1] += pk * p_loss
+		dist = next
+	return paid
 
 
 ## The ledger's word on a league's parity against its declared target.

@@ -88,6 +88,8 @@ var _settings: SettingsPanel
 var _ranks: RanksPage
 var _lobby: MatchLobbyPage
 var _pre_match: PreMatchPage
+var _pre_match_league := false   # the pick is over the league in context (not the lobby)
+var _league_slide: Tween
 var _switching := false
 
 
@@ -596,7 +598,7 @@ func _apply_area(f: float) -> void:
 		_board.visible = f < 1.0
 
 
-func _make_league(tab := "HEAT", sub := "LOADOUT") -> LeagueContext:
+func _make_league(tab := "HEAT", sub := "YOUR CARDS") -> LeagueContext:
 	var lc := LeagueContext.new()
 	lc.name = "League"
 	lc.setup(str(CARDS[_index]["area"]), tab, sub)
@@ -884,7 +886,8 @@ func _float_strip() -> void:
 	col.add_child(set_l)
 
 
-## CARDS: the equipped cards full size with their names; tap one to unequip it.
+## CARDS: the last loadout full size with its names — the pick itself
+## happens on the pre-match page before each heat (docs/CARDS.md § Drops).
 func _float_loadout() -> void:
 	var slots: Array = App.loadout_slots(_league.league_id)
 	var box := _float_box(LOADOUT_Y, 14)
@@ -893,7 +896,7 @@ func _float_loadout() -> void:
 	for id in slots:
 		if id != null:
 			set_n += 1
-	box.add_child(_float_text("LEAGUE LOADOUT · %d OF %d" % [set_n, slots.size()]))
+	box.add_child(_float_text("LAST LOADOUT · %d OF %d" % [set_n, slots.size()]))
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_BEGIN
 	row.add_theme_constant_override("separation", 18)
@@ -910,14 +913,8 @@ func _float_loadout() -> void:
 			row.add_child(ModeCards.empty_slot(Vector2(96, 128), 24, 3.0))
 			names.add_child(_float_text("SLOT %d EMPTY" % (i + 1), 16, RetroTheme.SCENE_MUTED))
 		else:
-			var art := ModeCards.art(card, Vector2(96, 128), 6.0, true)
+			var art := ModeCards.art(card, Vector2(96, 128), 6.0)
 			art.name = "Slot_%d" % i
-			var slot: int = i
-			var lid := _league.league_id
-			(art.get_meta("button") as TextureButton).pressed.connect(func() -> void:
-				App.unequip_card(slot, lid)
-				_league.refresh()
-			)
 			row.add_child(art)
 			var usable := Progression.can_use(App.level(), card)
 			var nm := str(card.get("name", id)).to_upper() + ("" if usable else " · LVL %d" % Progression.card_level(card))
@@ -1289,12 +1286,53 @@ func _close_pre_match() -> void:
 		var p := _pre_match
 		_pre_match = null
 		p.queue_free()
-		if _lobby != null:
+		if _pre_match_league:
+			_pre_match_league = false
+			_slide_league_aside(false)
+		elif _lobby != null:
 			_lobby.slide_in(true)
 
 
 func pre_match() -> PreMatchPage:
 	return _pre_match
+
+
+## PLAY HEAT in a league (App.start_league_heat): the pre-match pick over
+## the league in context — this league's cards under your level, the short
+## clock, READY → the heat (docs/CARDS.md § Drops, 2026-10-19).
+func open_league_pre_match(info: Dictionary) -> void:
+	_close_pre_match()
+	_pre_match = PreMatchPage.new()
+	_pre_match.name = "PreMatch"
+	_pre_match.build(info, str(info.get("bucket", "cage")))
+	_pre_match.readied.connect(func(_slots: Array) -> void:
+		App.play_league_heat())
+	_pre_match.cancelled.connect(func() -> void:
+		_close_pre_match())
+	_pre_match.closed.connect(func() -> void:
+		_pre_match = null)
+	add_child(_pre_match)
+	_pre_match_league = true
+	_slide_league_aside(true)
+	_pre_match.slide_in()
+
+
+## The league in context (and the home chrome) steps aside for the pick
+## and comes back when it closes — the court alone shows under the page.
+func _slide_league_aside(aside: bool) -> void:
+	_slide_home(aside)
+	if _float != null:
+		_float.visible = _open and not aside
+	if _league == null:
+		return
+	if _league_slide != null and _league_slide.is_valid():
+		_league_slide.kill()
+	var x := 1.1 * AREA_W if aside else 0.0
+	if not is_inside_tree():
+		_league.position.x = x
+		return
+	_league_slide = create_tween()
+	_league_slide.tween_property(_league, "position:x", x, OPEN_S).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
 ## Land on an area's home from the archive: the page's ink hands over to

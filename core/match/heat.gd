@@ -40,6 +40,9 @@ var ai: TimeTrial
 var ai_ratings: AiRatings
 var ai_mood: AiMood
 var ot := 0
+## The scores at the regulation midpoint ({player, ai}; {} until then): the
+## league drop's comeback rule reads it (docs/CARDS.md § Drops, 2026-10-19).
+var half: Dictionary = {}
 var done := false
 var rng: DetRng
 
@@ -235,6 +238,8 @@ func tick(dt: float) -> void:
 		return
 	player.tick(dt)
 	ai.tick(dt)
+	if half.is_empty() and ot == 0 and player.time_left <= seconds * 0.5:
+		half = {PLAYER: player.score, AI: score(AI)}
 	for ev in player.drain_events():
 		ev["side"] = PLAYER
 		# The period this event belongs to, stamped now: when the other side's
@@ -528,6 +533,7 @@ func _build_result() -> Dictionary:
 		"ot": ot,
 		"seed": seed_value,
 		"sides": {PLAYER: p, AI: a},
+		"half": half.duplicate(),
 	}
 	if remote:
 		out["online"] = true

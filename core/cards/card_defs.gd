@@ -40,6 +40,12 @@ static func rarity_weights() -> Dictionary:
 	return _doc.get("rarity_weights", {"common": 60, "rare": 30, "epic": 10})
 
 
+## The pre-match pick's clock for a league heat (data/cards.json → prematch).
+static func prematch_seconds(kind := "league") -> float:
+	_load()
+	return float(Dictionary(_doc.get("prematch", {})).get(kind + "_seconds", 12))
+
+
 static func drop_odds() -> Dictionary:
 	_load()
 	return _doc.get("drop_odds", {"win": 0.6, "loss": 0.25, "playoff_bonus": 0.15})

@@ -37,7 +37,7 @@ var cfg: Dictionary = {}
 var doc: Dictionary = {}
 
 var _tab := "HEAT"
-var _card_sub := "LOADOUT"
+var _card_sub := "YOUR CARDS"
 var _tab_row: HBoxContainer
 var _clip: Control
 var _fade: TextureRect
@@ -45,7 +45,7 @@ var _panes: Dictionary = {}
 var _switching := false
 
 
-func setup(id: String, p_tab := "HEAT", p_sub := "LOADOUT") -> void:
+func setup(id: String, p_tab := "HEAT", p_sub := "YOUR CARDS") -> void:
 	league_id = id
 	_tab = p_tab
 	_card_sub = p_sub
@@ -192,10 +192,11 @@ func card_sub() -> String:
 	return _card_sub
 
 
-## The home's loadout float tapped: land on CARDS · LOADOUT.
+## The home's loadout float tapped: land on CARDS · YOUR CARDS (the loadout
+## itself is picked before each heat, on the pre-match page — 2026-10-19).
 func go_loadout() -> void:
-	if _card_sub != "LOADOUT":
-		_card_sub = "LOADOUT"
+	if _card_sub != "YOUR CARDS":
+		_card_sub = "YOUR CARDS"
 		refresh()
 	_show_tab("CARDS")
 
@@ -726,35 +727,32 @@ func _fill_cards() -> void:
 	var subs := _hrow(12)
 	subs.name = "CardSubs"
 	vb.add_child(subs)
-	for sub in ["LOADOUT", "SHOP"]:
+	for sub in ["YOUR CARDS", "SHOP"]:
 		var b := _tab_button(sub, sub == _card_sub, 16, 46.0)
-		b.name = "Sub_" + sub
-		b.custom_minimum_size.x = 170
+		b.name = "Sub_" + sub.replace(" ", "_")
+		b.custom_minimum_size.x = 200
 		var sname: String = sub
 		b.pressed.connect(func() -> void:
 			_card_sub = sname
 			refresh()
 		)
 		subs.add_child(b)
-	if _card_sub == "LOADOUT":
+	if _card_sub == "YOUR CARDS":
 		_fill_loadout(vb)
 	else:
 		_fill_shop(vb)
 
 
-## The spares (the equipped slots float above the panel on the home page):
-## tap one to put it in the first empty slot.
+## The league's cards (the equipped slots float above the panel on the home
+## page): the spares, to look at. The loadout is picked before each heat on
+## the pre-match page (docs/CARDS.md § Drops, 2026-10-19), not here.
 func _fill_loadout(vb: VBoxContainer) -> void:
 	var cd := App.cards_bucket(league_id)
 	var inv: Dictionary = cd.get("inventory", {})
-	var free_slots := 0
-	for slot in CardDefs.SLOTS:
-		if cd["loadout"][slot] == null:
-			free_slots += 1
 	if inv.is_empty():
 		vb.add_child(_caps("NO SPARE CARDS · WIN MATCHES OR VISIT THE SHOP"))
 	else:
-		vb.add_child(_caps("SPARES · TAP ONE TO EQUIP IT" if free_slots > 0 else "SPARES · THE LOADOUT IS FULL"))
+		vb.add_child(_caps("SPARES · PICK YOUR LOADOUT BEFORE EACH HEAT"))
 	var spares := _hrow(24)
 	spares.name = "Spares"
 	vb.add_child(spares)
@@ -783,15 +781,6 @@ func _fill_loadout(vb: VBoxContainer) -> void:
 			lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			lock.add_child(UiFont.label("LVL %d" % Progression.card_level(card), 14, CREAM, UiFont.body_bold()))
 			holder.add_child(lock)
-		(holder.get_meta("button") as TextureButton).pressed.connect(func() -> void:
-			if not can:
-				return
-			for slot in CardDefs.SLOTS:
-				if App.cards_bucket(league_id)["loadout"][slot] == null:
-					App.equip_card(slot, cid, league_id)
-					break
-			refresh()
-		)
 		var badge := PanelContainer.new()
 		var sb := StyleBoxFlat.new()
 		sb.bg_color = INK

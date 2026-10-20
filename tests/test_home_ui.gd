@@ -494,7 +494,7 @@ func _widgets(t) -> void:
 	t.eq(tabs, ["STATS"], "and say so")
 	lc.go_loadout()
 	t.eq(lc.current_tab(), "CARDS", "go_loadout lands on CARDS")
-	t.eq(lc.card_sub(), "LOADOUT", "on the loadout")
+	t.eq(lc.card_sub(), "YOUR CARDS", "on YOUR CARDS (the loadout is picked before each heat)")
 	var closed := []
 	lc.closed.connect(func() -> void: closed.push_back(true))
 	(lc.find_child("Back", true, false) as Button).pressed.emit()

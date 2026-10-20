@@ -148,6 +148,23 @@ func run(t) -> void:
 	pre.press_ready()
 	t.ok(pre.is_ready() and readied == [["ice", null, null]], "READY sends the slots")
 	t.eq((root.find_child("Ready", true, false) as ShadowCard).text, "WAITING FOR THEM", "…and waits for them")
+	# A league heat's pick (docs/CARDS.md § Drops): the next opponent as the
+	# peer, the league as the place, the record as the line, the cap at your level.
+	if App.enter_league("cage"):
+		var info: Dictionary = App.league_pre_match_info(App.league_doc("cage"), App.league_cfg("cage"))
+		t.eq(info["bucket"], "cage", "the league's bucket")
+		t.eq(int(info["cap"]), App.level(), "the cap at your level")
+		t.close(float(info["seconds"]), CardDefs.prematch_seconds("league"), 1e-9, "the short league clock from data")
+		t.ok(str(info["peer"]["place_text"]).begins_with("ARCADE LEAGUE"), "the league as their place (%s)" % info["peer"]["place_text"])
+		t.ok(str(info["peer"]["online_text"]).ends_with("THIS SEASON"), "their record as the line (%s)" % info["peer"]["online_text"])
+		var lp := PreMatchPage.new()
+		lp.build(info, str(info["bucket"]))
+		t.ok(lp.is_league(), "a league pick")
+		t.eq(lp.opp_online_text(), str(info["peer"]["online_text"]), "the record on the card")
+		t.eq(lp.cap_text(), "CARD CAP · LVL %d · YOUR LEVEL" % App.level(), "a league cap is your own level")
+		t.ok(lp.you_online_text().ends_with("THIS SEASON"), "your season record, not the ladder (%s)" % lp.you_online_text())
+		lp.free()
+	t.close(CardDefs.prematch_seconds("league"), 12.0, 1e-9, "12 s before a league heat")
 	var pre2 := PreMatchPage.new()
 	pre2.build({"peer": {"name": "X", "tag": "01"}, "cap": 3, "seconds": 2.0}, "online")
 	var auto := [0]

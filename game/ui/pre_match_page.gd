@@ -15,6 +15,7 @@ signal readied(slots: Array)
 signal cancelled
 
 const BAR_H := 14.0
+const HITCH_S := 0.25   # the most one frame may take off the clock
 
 var bucket := Net.ONLINE_BUCKET
 var cap := 1
@@ -68,13 +69,16 @@ func _build() -> void:
 	# The face-off: YOU, VS, the opponent (gold).
 	_you_card = _face_card("YouCard", CREAM, MatchCopy.you_label())
 	body.add_child(_you_card)
-	_fill_lines(_you_card, you_record())
+	var you := you_record()
+	if _info.get("you") is Dictionary:   # a league heat: your season record, not the ladder
+		you.merge(_info["you"], true)
+	_fill_lines(_you_card, you)
 	body.add_child(_vs_row())
 	_opp_card = _face_card("OppCard", GOLD, MatchCopy.opp_label())
 	body.add_child(_opp_card)
 	_fill_lines(_opp_card, opponent_record())
 	# The cap.
-	var cap_l := words(MatchCopy.cap_line(cap), 16, true)
+	var cap_l := words(MatchCopy.cap_line(cap, is_league()), 16, true)
 	cap_l.name = "CapLine"
 	cap_l.add_theme_color_override("font_color", GOLD)
 	body.add_child(cap_l)
@@ -147,6 +151,12 @@ func opponent_record() -> Dictionary:
 	return rec
 
 
+## A league heat's pick (no room): the page is what it is, the title plays
+## the heat on READY.
+func is_league() -> bool:
+	return bool(_info.get("league", false))
+
+
 ## Rebuild the strip from the bucket's cache (a tap, Net.cards_changed).
 func refresh_cards() -> void:
 	if _strip == null:
@@ -194,7 +204,7 @@ func advance(dt: float) -> void:
 
 
 func _process(dt: float) -> void:
-	advance(dt)
+	advance(minf(dt, HITCH_S))   # a stalled frame never eats the clock
 
 
 func cap_text() -> String:
@@ -207,3 +217,7 @@ func opp_name() -> String:
 
 func opp_online_text() -> String:
 	return (_opp_card.find_child("Online", true, false) as Label).text
+
+
+func you_online_text() -> String:
+	return (_you_card.find_child("Online", true, false) as Label).text

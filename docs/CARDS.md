@@ -128,17 +128,49 @@ theirs dealt on first use from the season seed (`Season.ensure_card_hands`).
 `LeagueData.validate()` rejects unknown ids in `ai_cards` / `ai_pool`, an
 authored hand over the cap, and authored totals over the allowance.
 
+## 3b. Drops (league heats, 2026-10-19)
+
+`CardRewards.roll(ctx, seed) → {id, reason}` (`core/cards/card_rewards.gd`, headless,
+seeded by the campaign so a replayed season rolls the same; every number in
+`data/cards.json` → `drop_odds`):
+
+- **The pool** is every card with `level ≤ the player's level + level_ahead (1)`; the
+  rarity weights apply inside it, falling back to any eligible card; none eligible → no
+  drop. Equip gating is unchanged: a card from one level up waits dimmed with its LVL chip.
+- **A win** rolls at `win` (0.6), `+ playoff_bonus` (0.15) in the playoffs, `+
+  comeback_win_bonus` (0.2) when trailing at the regulation midpoint (`Heat.half`, the
+  scores when the clock passes half — reason `comeback_win`).
+- **A loss** drops nothing, except: lost by `≤ close_margin` (2) or in overtime → a roll at
+  `close_loss` (0.35, reason `close_loss`); the `loss_streak_n`-th (4th) straight league-heat
+  loss → the `loss_streak_card` (Ice, level 1, always eligible), guaranteed (reason
+  `loss_streak`). The counter lives on the league doc (`lossStreak`) and resets on any
+  league win; it rolls on (the 8th straight pays again). Quick heats pay nothing.
+- **Difficulty**: `difficulty_mult {easy, normal, hard}` (all 1.0 for now) scales the
+  rolls — never the streak Ice — from the AI DIFFICULTY setting.
+- **The loadout** is picked before every league heat on the pre-match page built for
+  online (the league's bucket, only cards at or under your level, a 12 s clock
+  (`prematch.league_seconds`) falling back to the last loadout); the league hub's CARDS
+  tab shows YOUR CARDS and the SHOP only.
+- **The result screen** says why (`COMEBACK CARD`, `CLOSE ONE`, `TOUGH STRETCH · HERE'S AN
+  ICE`) and, in a loss, the bright spots (`core/match/bright_spots.gd`: `NEW BEST STREAK ·
+  9`, `8 SWISHES · YOUR MOST`, `SHOOTING 62% · UP FROM 51% · LAST 10`, against the
+  running bests on `career.bright`).
+
 ## 4. The area envelope
 
 `CardBudget` (headless) computes, per league and per season:
 
 - **AI budget** = Σ signature-card power (that league's measured power) +
   (allowance − signature count) × the pool's rarity-weighted mean power.
-- **Player income** = expected drops (regular games × drop odds at a coin-flip
-  win rate, plus ~4 playoff games with the playoff bonus) × the rarity-weighted
-  mean power of the cards the player can PLAY in that league (level below
-  the league's cap — `CardBudget.usable_ids`; a card that opens at the cap
-  is the next league's), plus what an assumed share of the ticket income
+- **Player income** = expected drops under § 3b's rules (regular games at a
+  coin-flip win rate: a win at `win + comeback_win_share × comeback_win_bonus`,
+  a loss at `close_loss_share × close_loss` — the shares from `drop_odds.reference`
+  — plus ~4 playoff games with the playoff bonus, at the normal difficulty
+  multiplier) × the rarity-weighted mean power of the cards the player can
+  PLAY in that league (level below the league's cap — `CardBudget.usable_ids`;
+  a card that opens at the cap is the next league's), plus the expected
+  streak Ices (`expected_streak_cards`, a Markov chain over the loss counter)
+  at the Ice's power, plus what an assumed share of the ticket income
   (win/loss/title rewards × `economy.json` → `cards.ticket_share`, 0.5 —
   informational) buys at the shop at the mean price.
 - **Parity** = AI budget ÷ player income.

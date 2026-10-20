@@ -57,12 +57,19 @@ func _envelope(t) -> void:
 	t.eq(chain[3]["id"], "city", "then the city")
 	for i in range(1, chain.size()):
 		t.ok(float(chain[i]["card_parity"]) >= float(chain[i - 1]["card_parity"]), "parity does not fall from %s to %s" % [chain[i - 1]["id"], chain[i]["id"]])
-	# The cage's arithmetic, by hand: 7 opponents × 2 rounds = 14 games; drops at
-	# 0.5·0.6 + 0.5·0.25 = 0.425 a game plus 4 playoff games at +0.15.
+	# The cage's arithmetic, by hand (docs/CARDS.md § Drops): 7 opponents × 2
+	# rounds = 14 games; a win rolls at 0.6 + 0.25·0.2 (the comeback share), a
+	# loss only when close (0.3 of losses) at 0.35, plus 4 playoff games at +0.15.
 	var cage := LeagueData.league("cage")
 	t.eq(CardBudget.regular_games(cage), 14, "14 regular-season games")
 	var inc := CardBudget.player_income(cage)
-	t.close(float(inc["drops"]), 14 * 0.425 + 4 * 0.575, 1e-9, "expected drops per season")
+	var p_w := 0.6 + 0.25 * 0.2
+	var p_l := 0.3 * 0.35
+	t.close(float(inc["drops"]), 14 * (0.5 * p_w + 0.5 * p_l) + 4 * (0.5 * (p_w + 0.15) + 0.5 * p_l), 1e-9, "expected drops per season")
+	t.ok(float(inc["streak_cards"]) > 0.3 and float(inc["streak_cards"]) < 1.2, "a streak ice or so a season (%.2f)" % float(inc["streak_cards"]))
+	t.close(CardBudget.expected_streak_cards(4, 1.0, 4), 1.0, 1e-9, "four straight losses pay exactly once")
+	t.close(CardBudget.expected_streak_cards(8, 1.0, 4), 2.0, 1e-9, "…and eight twice (the counter rolls on)")
+	t.close(CardBudget.expected_streak_cards(10, 0.0, 4), 0.0, 1e-9, "never on wins")
 	t.close(float(inc["tickets"]), 18 * 26.0 + 0.2 * 150.0, 1e-9, "expected tickets per season")
 	t.close(float(inc["bought"]), 0.5 * (18 * 26.0 + 0.2 * 150.0) / CardBudget.mean_price(), 1e-9, "half of them at the mean price (informational share)")
 	var a := CardBudget.ai_budget(cage)

@@ -19,6 +19,9 @@ const BOX_Y := 392.0
 const BOX_W := 642.0
 const CARDS_Y := 814.0
 const CARD_H := 150.0
+const ROW_H := 50.0          # a box score row
+const ROW_H_BRIGHT := 44.0   # …when bright spots follow the rows
+const BRIGHT_H := 28.0       # a bright-spot line
 const CONT_Y := 1002.0
 const CONT_H := 128.0
 const HOME_Y := 1158.0
@@ -186,8 +189,19 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 		cell.add_child(chip)
 		bh.add_child(cell)
 	bcol.add_child(bh)
+	# The bright spots of a loss (docs/CARDS.md § Drops) sit in gold under
+	# the rows; the rows slim a little to keep the box above the rewards.
+	var bright := HeatCopy.bright_lines(heat)
 	for r in HeatCopy.box(heat):
-		bcol.add_child(_box_row(r))
+		bcol.add_child(_box_row(r, ROW_H_BRIGHT if not bright.is_empty() else ROW_H))
+	for line in bright:
+		var bl := _text(str(line), 14, GOLD, true)
+		bl.name = "Bright"
+		bl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		bl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		bl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		bl.custom_minimum_size = Vector2(0, BRIGHT_H)
+		bcol.add_child(bl)
 
 	# The tickets beside the card drop, CONTINUE SEASON, HOME. An online match
 	# pays nothing yet (docs/BACKEND.md → Cards online): no rewards row, HOME.
@@ -235,7 +249,10 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 			var dc := _vbox(12)
 			dc.alignment = BoxContainer.ALIGNMENT_CENTER
 			dc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			dc.add_child(_text("CARD DROP"))
+			var cap_l := _text(HeatCopy.drop_caption(heat), 14, CREAM, true)
+			cap_l.name = "DropCaption"
+			cap_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			dc.add_child(cap_l)
 			var nm := _text(str(card.get("name", "")).to_upper().replace(" ", "\n"), 16, CREAM, true)
 			nm.name = "DropName"
 			nm.add_theme_constant_override("line_spacing", 6)
@@ -331,10 +348,10 @@ func _rematch_card(shift: float) -> Control:
 
 
 ## A box row: the label, then you / them in 150-px columns, the better in gold.
-func _box_row(r: Dictionary) -> Control:
+func _box_row(r: Dictionary, h := ROW_H) -> Control:
 	var row := _hbox(0)
 	row.name = "Row_" + str(r["l"]).replace(" ", "_")
-	row.custom_minimum_size = Vector2(0, 50)
+	row.custom_minimum_size = Vector2(0, h)
 	var l := _text(str(r["l"]))
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER

@@ -1322,8 +1322,45 @@ func league_heat_config(doc: Dictionary, cfg: Dictionary) -> Dictionary:
 	}
 
 
-## PLAY HEAT from the dashboard.
+## PLAY HEAT from the dashboard: the pre-match pick first (docs/CARDS.md §
+## Drops, 2026-10-19 — the same page as online: this league's cards, only
+## those at or under your level, a short clock falling back to the last
+## loadout), then play_league_heat. A scene without the page plays at once.
 func start_league_heat() -> void:
+	var cfg := league_cfg()
+	var doc := league_doc()
+	if league_heat_config(doc, cfg).is_empty():
+		return
+	var scene := get_tree().current_scene
+	if scene != null and scene.has_method("open_league_pre_match"):
+		scene.call("open_league_pre_match", league_pre_match_info(doc, cfg))
+	else:
+		play_league_heat()
+
+
+## What the pre-match page shows before a league heat: the next opponent as
+## the "peer" (its name, the league as its place, its record as its line),
+## the cap at your level, the league's bucket, the short clock.
+func league_pre_match_info(doc: Dictionary, cfg: Dictionary) -> Dictionary:
+	var opp_id := Campaign.next_opponent(doc)
+	var shooter := LeagueData.shooter(opp_id)
+	var season: Dictionary = doc.get("season", {})
+	var rows := Standings.compute(LeagueData.team_ids(cfg), season.get("schedule", []) if season.get("schedule") is Array else [])
+	var row: Dictionary = rows.get(opp_id, {"w": 0, "l": 0})
+	var rec := [int(row.get("w", 0)), int(row.get("l", 0))]
+	var mine: Dictionary = rows.get(LeagueData.PLAYER_ID, {"w": 0, "l": 0})
+	return {
+		"peer": {"id": opp_id, "name": str(shooter.get("name", "THEM")), "tag": "%02d" % int(shooter.get("number", 0)),
+			"place_text": "%s · %s" % [str(cfg.get("name", "LEAGUE")).to_upper(), str(shooter.get("nickname", "")).to_upper()],
+			"online_text": "%d-%d THIS SEASON" % [int(rec[0]), int(rec[1])]},
+		"you": {"online_text": "%d-%d THIS SEASON" % [int(mine.get("w", 0)), int(mine.get("l", 0))]},
+		"cap": level(), "seconds": float(CardDefs.prematch_seconds("league")), "bucket": str(cfg["id"]),
+		"side": "a", "league": true,
+	}
+
+
+## The heat itself, with the loadout as picked.
+func play_league_heat() -> void:
 	var cfg := league_cfg()
 	var doc := league_doc()
 	var heat_cfg := league_heat_config(doc, cfg)
@@ -1372,14 +1409,28 @@ func _apply_league_heat(result: Dictionary) -> void:
 	var opened := AreaUnlockCopy.crossed(int(xp_info["level_before"]), int(xp_info["level_after"]))
 	if opened != "" and not unlock_seen(opened):
 		pending_unlock = opened
-	# Card drop, seeded by the campaign so a replayed season rolls the same;
-	# it lands in this league's inventory.
+	# Card drop (docs/CARDS.md § Drops): seeded by the campaign so a replayed
+	# season rolls the same; it lands in this league's inventory. The loss
+	# streak lives on the league doc for the same reason.
 	var league: Dictionary = result.get("league", {})
-	var drop := CardRewards.roll(bool(result.get("won", false)), bool(league.get("playoff", false)),
-		QuickSim.seed_from([doc["season"]["seed"], "drop", int(doc["career"]["totals"]["games"])]))
-	if drop != "":
-		add_card(drop, 1, cfg["id"])
-	last_heat["card_drop"] = drop
+	var won := bool(result.get("won", false))
+	var streak := CardRewards.next_loss_streak(int(doc.get("lossStreak", 0)), won)
+	doc["lossStreak"] = streak
+	save_league_doc(doc)
+	var half: Dictionary = result.get("half", {}) if result.get("half") is Dictionary else {}
+	var ctx := {
+		"won": won, "playoff": bool(league.get("playoff", false)), "level": int(xp_info["level_before"]),
+		"difficulty": ai_difficulty, "margin": int(result.get("player_score", 0)) - int(result.get("ai_score", 0)),
+		"ot": int(result.get("ot", 0)), "trailing_at_half": not half.is_empty() and int(half.get("player", 0)) < int(half.get("ai", 0)),
+		"loss_streak": streak,
+	}
+	var drop := CardRewards.roll(ctx, QuickSim.seed_from([doc["season"]["seed"], "drop", int(doc["career"]["totals"]["games"])]))
+	if str(drop["id"]) != "":
+		add_card(str(drop["id"]), 1, cfg["id"])
+	last_heat["card_drop"] = str(drop["id"])
+	last_heat["drop_reason"] = str(drop["reason"])
+	last_heat["bright"] = BrightSpots.note(doc, result)
+	save_league_doc(doc)
 
 
 ## What the match-end page (game/ui/match_end_overlay.gd) needs from the
