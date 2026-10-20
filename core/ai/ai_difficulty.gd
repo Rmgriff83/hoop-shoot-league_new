@@ -5,15 +5,17 @@ extends RefCounted
 ## (docs/LEAGUE.md → One strength, four courts) — scaled by this setting for
 ## every AI the player faces. EASY / NORMAL / HARD shift the opponent's
 ## accuracy rating, the one rating the per-hoop calibration maps straight to
-## its make share, so the step is the same on every court. NORMAL is the
-## roster as authored. Applied to the player's league heats and quick heats
+## its make share, so the step is the same on every court. NORMAL carries a
+## small lift over the roster as authored (Ross, 2026-10-19 evening: "bring
+## up the bar of easy, and all the levels accordingly, a little").
+## Applied to the player's league heats and quick heats
 ## only: AI-vs-AI season games (QuickSim) ignore it, so the standings are the
 ## same on every setting. Headless: dictionaries in, dictionaries out.
 
 const LEVELS := ["easy", "normal", "hard"]
 const DEFAULT := "normal"
 ## The accuracy shift per level (rating points; sized by tools/league_lab.gd).
-const SHIFT := {"easy": -0.08, "normal": 0.0, "hard": 0.07}
+const SHIFT := {"easy": -0.05, "normal": 0.02, "hard": 0.09}
 const LABELS := {"easy": "EASY", "normal": "NORMAL", "hard": "HARD"}
 
 
@@ -34,7 +36,7 @@ static func shift(level: String) -> float:
 
 
 ## A copy of a shooter's ratings dict with the level's shift on "accuracy"
-## (clamped to AiMood's 0.05..0.97). NORMAL returns an unchanged copy.
+## (clamped to AiMood's 0.05..0.97).
 static func apply(ratings: Dictionary, level: String) -> Dictionary:
 	var out := ratings.duplicate(true)
 	var d := shift(level)

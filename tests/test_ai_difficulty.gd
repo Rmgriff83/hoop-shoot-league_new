@@ -20,10 +20,12 @@ func run(t) -> void:
 	t.eq(AiDifficulty.label("easy"), "EASY", "EASY label")
 	t.eq(AiDifficulty.label("normal"), "NORMAL", "NORMAL label")
 	t.eq(AiDifficulty.label("hard"), "HARD", "HARD label")
-	t.ok(AiDifficulty.shift("easy") < 0.0 and AiDifficulty.shift("hard") > 0.0 and AiDifficulty.shift("normal") == 0.0, "easy lowers, hard raises, normal leaves")
+	t.ok(AiDifficulty.shift("easy") < AiDifficulty.shift("normal") and AiDifficulty.shift("normal") < AiDifficulty.shift("hard"), "easy < normal < hard")
+	t.ok(AiDifficulty.shift("normal") > 0.0 and AiDifficulty.shift("normal") <= 0.03, "NORMAL carries a small lift over the authored roster (%.2f)" % AiDifficulty.shift("normal"))
 	var r := {"accuracy": 0.5, "swishRate": 0.6, "pace": 3.4}
 	var n := AiDifficulty.apply(r, "normal")
-	t.eq(n, r, "NORMAL is the roster as authored")
+	t.close(float(n["accuracy"]), 0.5 + AiDifficulty.shift("normal"), 1e-9, "NORMAL shifts accuracy by the normal step")
+	t.close(float(n["swishRate"]), 0.6, 1e-9, "…and nothing else")
 	n["accuracy"] = 0.9
 	t.close(float(r["accuracy"]), 0.5, 1e-9, "…and a copy, not the shooter's own dict")
 	var e := AiDifficulty.apply(r, "easy")
