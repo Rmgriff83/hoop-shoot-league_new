@@ -128,6 +128,10 @@ is not a band edge fails `Progression.validate()`.
 ## Not modelled (yet)
 
 - Anything above level 7: the next league adds the next band.
-- Multiplayer's use of the level (matchmaking, card eligibility) — the
-  level is global and saved, that is all the hook it needs.
+- Online, the level is **trusted only so far** (docs/BACKEND.md → Ranked,
+  2026-10-19): the server accepts a reported level only upward, and no faster
+  than `data/ranked.json` → `level_trust` allows (1 + a grace level + 2 a
+  hour since the account was made — the fastest title run here is ~2 levels
+  an hour). The online rank (tier / division) is a separate thing: a rating
+  the server keeps, never the level.
 - Prestige / resets; time-trial XP (by decision: leagues only).

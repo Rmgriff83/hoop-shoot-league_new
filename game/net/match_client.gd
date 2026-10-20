@@ -35,18 +35,16 @@ var _close_deadline := 0.0
 const CLOSE_DRAIN_S := 2.0
 
 
-## Open the room with the three loadout slots we want to bring (null = blank;
-## the server keeps only what the ledger covers). False when the net is off.
-func open(p_room: String, p_area: String, slots: Array = []) -> bool:
+## Open the room. The loadout follows later, in the pre-match step
+## (`loadout` once the room says `matched`; docs/BACKEND.md → Ranked).
+## False when the net is off.
+func open(p_room: String, p_area: String) -> bool:
 	room = p_room
 	area = p_area
 	var base := NetConfig.base_url()
 	if base == "" or not Net.enabled or not Net.registered():
 		return false
-	var ids := PackedStringArray()
-	for i in CardDefs.SLOTS:
-		ids.append("" if i >= slots.size() or slots[i] == null else str(slots[i]).uri_encode())
-	var url := base.replace("https://", "wss://").replace("http://", "ws://") + "/v1/match/room/%s?area=%s&slots=%s" % [room, area, ",".join(ids)]
+	var url := base.replace("https://", "wss://").replace("http://", "ws://") + "/v1/match/room/%s?area=%s" % [room, area]
 	# The hometown for the other phone's face-off card (design 37a); the room cleans it.
 	var town := App.hometown()
 	if town != "":

@@ -60,6 +60,7 @@ describe("link", () => {
   });
   it("answers 409 with the other account's handle and level, and never merges", async () => {
     const owner = await register(freshIp(), { name: "BRICK BARON" });
+    await env.DB.prepare("UPDATE players SET created_at = ?1 WHERE id = ?2").bind(Date.now() - 3 * 3_600_000, owner.playerId).run(); // old enough to be level 7
     await SELF.fetch("https://api/v1/me", { method: "PATCH", headers: auth(owner), body: JSON.stringify({ level: 7 }) });
     const subject = "shared-" + uuid();
     expect((await link(owner, { provider: "test", proof: { subject } })).status).toBe(200);
@@ -203,10 +204,12 @@ describe("delete account", () => {
       method: "POST", headers: auth(p),
       body: JSON.stringify({ runId: uuid(), area: "cage", score: 20, makes: 12, attempts: 20, swishes: 6, bestStreak: 7, bonus: 2, iced: 0, playedAt: Date.now(), version: "test" }),
     });
+    await SELF.fetch("https://api/v1/match/ranked", { method: "POST", headers: auth(p), body: "{}" }); // makes the ratings row
+    await SELF.fetch("https://api/v1/match/leave", { method: "POST", headers: auth(p), body: JSON.stringify({ ranked: true }) });
     const res = await SELF.fetch("https://api/v1/me", { method: "DELETE", headers: auth(p) });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ deleted: true });
-    for (const [table, col] of [["players", "id"], ["player_identities", "player_id"], ["player_secrets", "player_id"], ["transfer_codes", "player_id"], ["tt_best", "player_id"], ["tt_week_best", "player_id"], ["seen_runs", "player_id"], ["save_parts", "player_id"], ["online_cards", "player_id"], ["online_ledger", "player_id"]]) {
+    for (const [table, col] of [["players", "id"], ["player_identities", "player_id"], ["player_secrets", "player_id"], ["transfer_codes", "player_id"], ["tt_best", "player_id"], ["tt_week_best", "player_id"], ["seen_runs", "player_id"], ["save_parts", "player_id"], ["online_cards", "player_id"], ["online_ledger", "player_id"], ["ratings", "player_id"]]) {
       const n = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${col} = ?1`).bind(p.playerId).first<any>();
       expect(n.n, table).toBe(0);
     }

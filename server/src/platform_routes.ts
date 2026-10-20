@@ -136,6 +136,7 @@ export function deleteAccountStatements(db: D1Database, playerId: string): D1Pre
     "DELETE FROM seen_runs WHERE player_id = ?1",
     "DELETE FROM online_cards WHERE player_id = ?1",
     "DELETE FROM online_ledger WHERE player_id = ?1",
+    "DELETE FROM ratings WHERE player_id = ?1",
     "DELETE FROM players WHERE id = ?1",
   ].map((sql) => db.prepare(sql).bind(playerId));
 }

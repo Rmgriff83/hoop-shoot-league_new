@@ -730,9 +730,15 @@ func peggy_drop(aim_x: float) -> Dictionary:
 ## and `send`/`close`/`is_open`). Null between matches. (`match` is a
 ## GDScript keyword, hence `room`.)
 var room: Node = null
-## How the current lobby attempt was started: quick | create | join.
+## How the current lobby attempt was started: ranked | quick | create | join.
 var match_how := ""
 var match_area := ""
+## The pre-match step (docs/BACKEND.md → Ranked, 2026-10-19): the room's
+## `matched` ({peer, levels, tiers, cap, seconds}) while both phones pick a
+## loadout under the card cap; {} otherwise. The PreMatchPage reads it.
+var pre_match: Dictionary = {}
+## The ranked queue poll (a SceneTree timer loop) while a rated search runs.
+var _ranked_search := 0
 ## The lobby's face-off reveal (design 37a, 2026-10-18): the room sends the
 ## tip-off the moment the second phone is in, so both phones hold it this
 ## long after it lands — the same on both, so they stay in step. Rematches
@@ -750,6 +756,9 @@ func start_online(area: String, how: String, code: String, on_state: Callable) -
 	match_area = area
 	if not Net.enabled or not Net.registered():
 		on_state.call("failed", "offline")
+		return
+	if how == "ranked":
+		_search_ranked(on_state)
 		return
 	var path := "/v1/match/" + ("quick" if how == "quick" else ("code" if how == "create" else "join"))
 	var body := {"area": area}
@@ -778,6 +787,45 @@ func start_online(area: String, how: String, code: String, on_state: Callable) -
 		on_state.call("failed", "offline")
 
 
+## RANKED (docs/BACKEND.md → Ranked): one global rated queue. The Lobby pairs
+## on a court both own, by rating, widening every few seconds; the phone polls
+## `/v1/match/ranked` every `queue.poll_s` until it is paired (or cancels),
+## then opens the room like any other.
+func _search_ranked(on_state: Callable) -> void:
+	_ranked_search += 1
+	var my_search := _ranked_search
+	match_area = "any"
+	on_state.call("waiting", "ranked", "")
+	var poll_s := float(RankedRules.queue_cfg().get("poll_s", 4))
+	while match_how == "ranked" and my_search == _ranked_search:
+		var r: Dictionary = await Net.request_json("match", HTTPClient.METHOD_POST, "/v1/match/ranked", {})
+		if match_how != "ranked" or my_search != _ranked_search:
+			return
+		if not r["ok"]:
+			if r["code"] != -1 and r["code"] != 0:
+				on_state.call("failed", "throttled" if r["code"] == 429 else "offline")
+				match_how = ""
+				return
+		elif bool(r["json"].get("paired", false)):
+			# Paired: open the room; its joined / peer messages carry the other
+			# phone's handle for the found card (the queue's record has none).
+			var court := str(r["json"].get("area", "cage"))
+			match_area = court
+			if not _open_room(str(r["json"].get("room", "")), court, on_state):
+				on_state.call("failed", "offline")
+			return
+		await (Engine.get_main_loop() as SceneTree).create_timer(poll_s).timeout
+
+
+## The pre-match pick: the three slots as the room wants them, ready once
+## READY is pressed (the page sends a provisional one on build, so a timeout
+## starts with it).
+func send_loadout(slots: Array, ready: bool) -> void:
+	if room == null or not room.has_method("send"):
+		return
+	room.send(MatchProtocol.loadout(slots, ready))
+
+
 ## Open a room and route its messages for the life of the client: the lobby
 ## states before the tip-off, the payout and the rematch after. False when
 ## the socket could not open.
@@ -787,7 +835,8 @@ func _open_room(room_id: String, area: String, on_state: Callable) -> bool:
 	add_child(client)
 	room = client
 	rematch_state = ""
-	if not client.open(room_id, area, loadout_slots(Net.ONLINE_BUCKET)):
+	pre_match = {}
+	if not client.open(room_id, area):
 		cancel_online()
 		return false
 	client.message.connect(func(msg: Dictionary) -> void:
@@ -799,8 +848,13 @@ func _open_room(room_id: String, area: String, on_state: Callable) -> bool:
 			MatchProtocol.JOINED:
 				if msg.get("peer", null) is Dictionary:
 					on_state.call("found", _with_area(Dictionary(msg["peer"]), msg))
+			MatchProtocol.MATCHED:
+				pre_match = msg.duplicate(true)
+				pre_match["side"] = client.side
+				on_state.call("matched", pre_match)
 			MatchProtocol.START:
-				if match_how in ["quick", "create", "join"] and not bool(msg.get("resumed", false)):
+				pre_match = {}
+				if match_how in ["ranked", "quick", "create", "join"] and not bool(msg.get("resumed", false)):
 					on_state.call("court", str(msg.get("area", match_area)))
 					_hold_tip_off(client, msg)
 				else:
@@ -886,14 +940,17 @@ func _rematch_go(room_id: String, area: String, on_state: Callable) -> void:
 func _tip_off(client: MatchClient, start: Dictionary) -> void:
 	if match_how == "quick":
 		Net.request_json("match", HTTPClient.METHOD_POST, "/v1/match/leave", {"area": match_area})
+	pre_match = {}
 	online_settle = {}
 	rematch_state = ""
 	var cfg := MatchProtocol.heat_cfg(start, client.peer, client.side)
 	start_heat(str(cfg["mode"]), cfg)
 
 
-## The room's decision for the match just played ({won, reason}; no payout
-## yet — the ranked task). {} until it lands. The post-match page listens.
+## The room's decision for the match just played ({won, reason, ranked} and,
+## rated, {rating, rank, events, peak} — docs/BACKEND.md → Ranked). {} until
+## it lands. The post-match page listens; the rank the server sends becomes
+## Net.me_rank.
 signal online_settled(settle: Dictionary)
 var online_settle: Dictionary = {}
 
@@ -902,6 +959,24 @@ func settled_online(msg: Dictionary) -> void:
 	if not online_settle.is_empty():
 		return   # once (the screen and this autoload both hear the room)
 	online_settle = msg.duplicate(true)
+	if bool(msg.get("ranked", false)):
+		last_heat["ranked"] = true
+		for k in ["rating", "rank", "events", "peak"]:
+			if msg.has(k):
+				last_heat[k] = msg[k]
+		if msg.get("rank") is Dictionary:
+			# The decision's rank carries the tier; the record follows from
+			# what we knew plus this result, until the next /v1/me.
+			var was: Dictionary = Net.me_rank
+			var r: Dictionary = Dictionary(msg["rank"]).duplicate(true)
+			var won := bool(msg.get("won", false))
+			r["games"] = int(was.get("games", 0)) + 1
+			r["wins"] = int(was.get("wins", 0)) + (1 if won else 0)
+			r["losses"] = int(was.get("losses", 0)) + (0 if won else 1)
+			if msg.get("rating") is Dictionary and Dictionary(msg["rating"]).get("after") is Dictionary:
+				r["cons"] = float(Dictionary(msg["rating"]["after"]).get("cons", 0.0))
+			Net.set_me_rank(r)
+			Net.fetch_me()
 	Net.refresh_cards()
 	online_settled.emit(online_settle)
 
@@ -915,8 +990,12 @@ func cancel_online() -> void:
 			room.queue_free()
 		room = null
 	rematch_state = ""
+	pre_match = {}
 	if match_how == "quick" and match_area != "" and Net.enabled and Net.registered():
 		Net.request_json("match", HTTPClient.METHOD_POST, "/v1/match/leave", {"area": match_area})
+	elif match_how == "ranked" and Net.enabled and Net.registered():
+		_ranked_search += 1   # stops the poll loop
+		Net.request_json("match", HTTPClient.METHOD_POST, "/v1/match/leave", {"area": "any", "ranked": true})
 	match_how = ""
 
 

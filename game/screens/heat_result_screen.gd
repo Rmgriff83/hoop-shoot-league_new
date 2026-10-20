@@ -133,6 +133,19 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	var vs := _text(HeatCopy.vs_line(heat), 20)
 	vs.name = "Vs"
 	vs.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if online:
+		# The rank line (docs/BACKEND.md → Ranked): the rating change and the
+		# badge once the room's decision lands; nothing for a casual match.
+		var rank_l := _text(MatchCopy.rank_delta_line(App.online_settle), 18, GOLD, true)
+		rank_l.name = "RankLine"
+		rank_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		rank_l.visible = rank_l.text != ""
+		App.online_settled.connect(func(s: Dictionary) -> void:
+			if is_instance_valid(rank_l):
+				rank_l.text = MatchCopy.rank_delta_line(s)
+				rank_l.visible = rank_l.text != ""
+		, CONNECT_ONE_SHOT)
+		head.add_child(rank_l)
 	head.add_child(vs)
 	# The level line (docs/PROGRESSION.md) adds a row: everything below drops with it.
 	var lv := HeatCopy.level_line(heat, App.xp())

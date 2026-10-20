@@ -182,10 +182,14 @@ build at any server.
   so a friend across the table or across the world takes the same path.
 - **Protocol** (`core/net/match_protocol.gd`, pure, tested): phone → room
   `shot {n, launch}` on release, `outcome {n, score}` when it lands,
-  `period_end {period, score, totals}` at the buzzer, `ping`; room → phone
-  `joined {side, area, peer}`, `peer`, `start {seed, area, seconds, ot_seconds,
-  ball_return_s}` once both are in (no clocks to agree on: each phone starts
-  on receipt, latency apart), relayed messages tagged `from`, `peer_left`,
+  `period_end {period, score, totals}` at the buzzer, `loadout {slots,
+  ready}` in the pre-match pick (→ Ranked), `card {id}`, `rematch`, `ping`;
+  room → phone `joined {side, area, peer, status, ranked}`, `peer`, `matched
+  {peer, levels, tiers, cap, seconds}` once both are seated, `loadout_ok`,
+  `start {seed, area, seconds, ot_seconds, ball_return_s, hands, levels,
+  ranked, cap, tiers}` once both are ready or the pick timer runs out (no
+  clocks to agree on: each phone starts on receipt, latency apart), relayed
+  messages tagged `from`, `card_ok`, `settled`, `rematch_go`, `peer_left`,
   `expired`, `pong`. A shot is ~250 bytes; a match is ~60 messages a side.
 - **Sync model — each side owns its own shots.** `Heat` with `remote: true`
   (`core/match/heat.gd`) has no bot: their launches replay through the AI
@@ -228,8 +232,9 @@ build at any server.
   `start` tips off. Leaving the page (HOME) closes the socket and the other
   phone's card reads `THEY LEFT`. `App.offer_rematch`, `App.rematch_state`,
   `MatchCopy.rematch_*`.
-- **Later**: a ranked ladder from `matches`, rejoin after a drop (the room
-  already re-sends `start` to a reconnect), an online card-drop system.
+- **Later**: rejoin after a drop (the room already re-sends `start` to a
+  reconnect), an online card-drop system (the ranked ladder landed
+  2026-10-19 → Ranked).
 
 - **ANY court (2026-10-17, design 37a):** `POST /v1/match/quick {area: "any",
   areas: [owned courts]}` (and `leave`). The Lobby pairs an any-court player
@@ -299,6 +304,114 @@ other phone must trust what hits its rim.
   (tap a spare to equip) only; no SHOP and no balance for the online bucket.
   `--qa-multi` seeds the cache, snaps the deck, and the fake peer brings an
   ice it plays on us.
+
+## Ranked (Stage A, built 2026-10-19)
+
+Ross's brief: a global rated 1v1 with (next, Stage B) verified card drops,
+spoils and comeback rewards. Principles: online cards only for what the
+server witnessed, never purchasable (docs/ECONOMY.md → The rule); never the
+words bet / wager / stake — the mechanic is SPOILS; every number in data
+(`data/ranked.json`, `data/online_drops.json`), computed by headless code
+(server TS authoritative, `core/online/ranked_rules.gd` the display mirror),
+enforced by Vitest + GDScript tests (`tests/fixtures/ranked_ladder.json` pins
+both sides to the same tier bands).
+
+- **Rating** (`server/src/glicko.ts`, `rank.ts`, migration `0007_ranked.sql`):
+  Glicko-2 (Glickman's paper, tau 0.5, 1500 / 350 / 0.06), ONE global rating
+  per player across every court, permanent, no seasons or resets. `ratings
+  (player_id, mu, rd, vol, cons, games, wins, losses, win_streak,
+  loss_streak, tier, division, peak_tier, peak_division, shield_left,
+  updated_at)`, index `ratings_board (cons DESC)`. Updated by the room at the
+  decision, ranked rooms only, each match its own rating period with the
+  opponent's rd widened for idle days (`inflate`, on Glicko-2's internal
+  scale). Forfeit = a loss for the leaver and a win for the stayer; a void or
+  a desync changes nothing.
+- **The visible rank** (`data/ranked.json` → `tiers`): the conservative
+  rating `cons = mu − 2·rd` through the bands ROOKIE (700) / STARTER (1000) /
+  PRO (1150) / ALL-STAR (1300) / MVP (1450) / LEGEND (1600), each in three
+  equal divisions III → I (below the first band is ROOKIE III; LEGEND is one
+  division and shows the global position, `LEGEND #12`). A new player sits at
+  cons 800 → ROOKIE II. Rules: **inactivity never drops the tier** (Glicko
+  widens rd while away; the tier only moves on a result); **promotion
+  shield** — after moving up, the next 3 ranked matches cannot drop you
+  (`shield_left`, event `shielded`); **tier floors** — once a tier is reached
+  (`peak_tier`) the rank can lose divisions inside it but never falls below it
+  (event `floored`: the rank becomes that tier's III while the rating
+  underneath keeps moving, so matchmaking stays honest); a **peak badge**
+  (`peak_tier` / `peak_division`); `promoted` / `demoted` otherwise.
+- **The queue** (`POST /v1/match/ranked`, `FEATURE_RANKED`, the match
+  middleware's `RL_MATCH` now 30/min; `lobby.ts` `/ranked`): one global
+  queue in the Lobby DO beside the casual quick/code paths (which stay
+  unranked: no rating, drops or spoils). The Worker loads the caller's
+  `ratings` row (made on first use), the courts the verified level opens
+  (`rules.ts` `areasForLevel`: cage ≥ 1, beach ≥ 3, park ≥ 4, city ≥ 5) and a
+  hidden, mild `lean` (3+ straight ranked losses, or 7+ days since the last
+  ranked game: the search treats the player as 100 below their rating).
+  The phone polls every 4 s (`queue.poll_s`); each poll re-scans the other
+  waiters (`rq:<playerId>` entries, stale after 60 s) with a window of
+  `100 + 50 × floor(max wait / 4 s)` rating points over a non-empty common
+  court; past 30 s (`cap_s`) it takes the closest anyone with a common
+  court. **Ranked ignores the lobby's court picker** (Ross's call): the
+  server picks a court at random from the ones both own. A pair writes
+  `ranked_rooms (room, area, a_id, b_id)` (pruned after a day); the taker is
+  told `{room, host:false, paired:true, area, opponent}` and the host learns
+  on its next poll; `POST /v1/match/leave {ranked:true}` drops the entry.
+  The room upgrade looks the id up in `ranked_rooms`: found → the row's court
+  is forced, `x-ranked: 1`, and only its two players may connect.
+- **Level trust** (`server/src/level_trust.ts`, `ranked.json` →
+  `level_trust`): the server accepts a reported level only if it goes **up**,
+  and no faster than `1 + grace (1) + 2 × hours since the account was made`
+  (docs/PROGRESSION.md's fastest title run is ~2 levels an hour), clamped to
+  99; `PATCH /v1/me` and register return the accepted level (a capped report
+  is not an error). Online card eligibility also needs a minimum ladder tier
+  per card (`data/online_drops.json` → `card_min_tier`, all rookie until the
+  drop task).
+- **The pre-match pick and the card cap** (every online match, casual too —
+  Ross's call; `match_room.ts`, `cards.ts` `validHand(slots, inv, cap,
+  tier)`): the `?slots=` query is gone. Once both phones are seated the room
+  sets `cap = min(levels)`, reads both inventories, sends `matched {peer:
+  {id, name, tag, level, town, tier, division}, levels, tiers, cap, seconds:
+  20}` and arms a 23 s alarm. Each phone sends `loadout {slots, ready}` as its
+  pick changes (provisional) and on READY; the room keeps the latest,
+  validated against the ledger, the player's level, the cap and the tier
+  floor (a blanked slot comes back in `loadout_ok {hand, ready}`), and starts
+  when both are ready or the alarm fires (a side that never picked starts
+  empty). So a level-7 card never meets a level-2 player. A disconnect during
+  the pick ends the room like a pre-start leave: no row, no rating.
+- **The decision** (`record()`): the `matches` row gains `ranked, winner
+  (a | b | NULL), a_level, b_level, cap, a_mu_before/after, b_mu_before/after`;
+  for a ranked room both `ratings` rows are updated in the same batch and
+  `settled` carries `ranked: true, rating: {before: {mu, rd, cons}, after:
+  {…}, delta}, rank: {tier, division, position?}, events: [...], peak`
+  (a void: `ranked: true` and nothing else; a desync: `desync: true`, no
+  change). Casual: `settled {won, reason, ranked: false}`. No payout yet —
+  Stage B adds spoils, the drop meter, tickets.
+- **The board** (`GET /v1/ranked/board`, `FEATURE_RANKED`, `RL_BOARD`): the
+  top 50 by `cons` (position, handle, tier, division, record) memoised 30 s
+  in the isolate, plus your own live `me` (position = 1 + the count above
+  you, tier, division, mu, rd, cons, record, peak). `GET /v1/me` gains
+  `rank {tier, division, games, wins, losses, cons, position?}` so the lobby
+  cards show the badge without a board call.
+- **Game**: the lobby's RANKED button (`App.start_online(…, "ranked")` polls
+  the queue until paired, then the room as any other); `PreMatchPage`
+  (`game/ui/pre_match_page.gd`) between PLAYER FOUND and the tip-off — the
+  face-off cards with the badges, `CARD CAP · LVL n`, the loadout strip with
+  over-cap spares dimmed, the timer bar, READY; the RANKED tab on the Ranks
+  page (`Net.load_ranked_board`, cached 60 s); `Net.me_rank` from `/v1/me`
+  and every rated decision; the post-match `RATING +18 · PRO II · PROMOTED`
+  line (`MatchCopy.rank_delta_line`). docs/HOME.md has the pages; QA
+  `--qa-multi` (`multi_prematch`, `online_result`).
+- **Deploy** (Ross): `wrangler d1 migrations apply hoop_shoot --env production
+  --remote` (0007), `wrangler.toml` already carries `FEATURE_RANKED = "on"`
+  and `RL_MATCH` 30/60 s, `wrangler deploy --env production`. Until it ships
+  the phone's RANKED button fails with `offline` (404 on the route), and the
+  pre-match step needs the new room too — deploy the Worker together with
+  this build.
+- **Stage B (next, after Ross's check)**: spoils (the loser's played cards to
+  the winner; forfeit, void, insurance, a same-opponent cap), the server-side
+  drop meter sized from `WEEKLY_CARD_TARGET`, the loss-streak Ice, cumulative
+  login days, idempotent milestones mirrored to the Platform facade, ranked
+  tickets inside the rate band, the full post-match copy.
 
 ## Platform identity (prep, 2026-10-17)
 

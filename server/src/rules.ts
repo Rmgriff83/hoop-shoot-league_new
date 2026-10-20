@@ -6,6 +6,12 @@
 export const AREAS = ["cage", "beach", "park", "city"] as const;
 export type Area = (typeof AREAS)[number];
 
+/** The courts a level has unlocked (docs/PROGRESSION.md bands): cage 1, beach 3, park 4, city 5. */
+export const AREA_LEVELS: Record<Area, number> = { cage: 1, beach: 3, park: 4, city: 5 };
+export function areasForLevel(level: number): Area[] {
+  return AREAS.filter((a) => level >= AREA_LEVELS[a]);
+}
+
 /** A time trial is 60 s with a ball return; nobody gets more shots off than this. */
 export const MAX_ATTEMPTS = 80;
 /** The hottest make pays 4 + 1 for the swish (core/match/streak_rules.gd). */

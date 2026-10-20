@@ -1,0 +1,67 @@
+{
+ "rows": [
+  {
+   "position": 1,
+   "playerId": "p1",
+   "name": "GLASS WIZARD",
+   "tag": "07",
+   "tier": "legend",
+   "division": 1,
+   "games": 51,
+   "wins": 40,
+   "losses": 11,
+   "me": false
+  },
+  {
+   "position": 2,
+   "playerId": "p2",
+   "name": "SWISH KID",
+   "tag": "42",
+   "tier": "mvp",
+   "division": 1,
+   "games": 30,
+   "wins": 20,
+   "losses": 10,
+   "me": false
+  },
+  {
+   "position": 3,
+   "playerId": "me",
+   "name": "BRICK BARON",
+   "tag": "42",
+   "tier": "pro",
+   "division": 2,
+   "games": 21,
+   "wins": 12,
+   "losses": 9,
+   "me": true
+  },
+  {
+   "position": 4,
+   "playerId": "p4",
+   "name": "CORNER FOX",
+   "tag": "11",
+   "tier": "rookie",
+   "division": 3,
+   "games": 2,
+   "wins": 0,
+   "losses": 2,
+   "me": false
+  }
+ ],
+ "me": {
+  "position": 3,
+  "tier": "pro",
+  "division": 2,
+  "mu": 1480.5,
+  "rd": 90.0,
+  "cons": 1300.5,
+  "games": 21,
+  "wins": 12,
+  "losses": 9,
+  "peak": {
+   "tier": "pro",
+   "division": 2
+  }
+ }
+}

@@ -74,3 +74,16 @@ func run(t) -> void:
 	t.ok(App.MODES.has(cfg["mode"]), "the mode exists")
 	var chip := HeatCopy.opponent_chip({"opponent": opp})
 	t.eq(chip["text"], "GLASS", "their first word on the chip")
+	# The pre-match step (docs/BACKEND.md → Ranked, 2026-10-19).
+	var matched := MatchProtocol.parse('{"t":"matched","peer":{"name":"GLASS WIZARD","tag":"07","level":4},"levels":{"a":1,"b":4},"tiers":{"a":{"tier":"rookie","division":3},"b":{"tier":"pro","division":2}},"cap":1,"seconds":20}')
+	t.eq(matched["cap"], 1, "matched carries the cap")
+	t.eq(MatchProtocol.parse('{"t":"matched","peer":{}}'), {}, "a matched without a cap → {}")
+	t.eq(MatchProtocol.parse('{"t":"matched","cap":2}'), {}, "…or without a peer")
+	t.eq(MatchProtocol.loadout(["ice", null, "fire7"], false), {"t": "loadout", "slots": ["ice", "", "fire7"], "ready": false}, "a loadout message, blanks as empty strings")
+	t.eq(MatchProtocol.loadout([], true)["slots"], ["", "", ""], "three slots always")
+	var rated := MatchProtocol.parse('{"t":"settled","won":true,"reason":"played","ranked":true,"rating":{"before":1500,"after":1518,"delta":18},"rank":{"tier":"pro","division":2},"events":["promoted"]}')
+	t.eq(rated["rank"]["tier"], "pro", "a rated settle carries the rank")
+	var rcfg := MatchProtocol.heat_cfg({"seed": 3, "area": "beach", "ranked": true, "cap": 2, "levels": {"a": 2, "b": 5},
+		"tiers": {"a": {"tier": "rookie", "division": 1}, "b": {"tier": "pro", "division": 3}}}, peer, "a")
+	t.ok(bool(rcfg["ranked"]) and int(rcfg["cap"]) == 2 and rcfg["their_tier"]["tier"] == "pro", "heat_cfg carries ranked, the cap and their tier")
+	t.ok(not bool(MatchProtocol.heat_cfg({"seed": 1, "area": "cage"}, peer)["ranked"]), "…casual by default")

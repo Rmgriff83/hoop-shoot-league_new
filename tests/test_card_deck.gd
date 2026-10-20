@@ -114,13 +114,48 @@ func run(t) -> void:
 	t.eq(App.loadout_slots("online"), [null, null, null], "a slot the ledger no longer covers empties")
 	fake_net.free()
 	sheet.free()
-	# The lobby's cards (design 37a): the loadout and the spares on the page.
-	var lobby := MatchLobbyPage.new()
-	var root := lobby.build("cage")
+	# The pre-match pick (docs/BACKEND.md → Ranked): the loadout and the spares
+	# on the page, under the card cap.
+	d = svc.get_cards()
+	CardDefs.league_doc(d, "online")["inventory"] = {"ice": 1, "vortex6": 1}
+	CardDefs.league_doc(d, "online")["loadout"] = [null, null, null]
+	svc.put_cards(d)
+	var pre := PreMatchPage.new()
+	var root := pre.build({"peer": {"name": "GLASS WIZARD", "tag": "07", "level": 4, "town": "SALT HARBOR"}, "levels": {"a": 1, "b": 4},
+		"tiers": {"a": {"tier": "rookie", "division": 3, "games": 0}, "b": {"tier": "pro", "division": 2, "games": 21, "wins": 12, "losses": 9}},
+		"cap": 1, "seconds": 20.0, "side": "a"}, "online")
 	t.ok(root.find_child("Slot0", true, false) != null and root.find_child("Slot2", true, false) != null, "three loadout slots")
 	t.ok(root.find_child("Spares", true, false) != null, "the spares row")
 	t.ok((root.find_child("LoadoutLine", true, false) as Label).text.ends_with("OF 3 · TAP TO REMOVE"), "n OF 3 · TAP TO REMOVE")
-	lobby.free()
+	t.eq(pre.cap_text(), "CARD CAP · LVL 1 · THE LOWER LEVEL PLAYS", "the cap line")
+	t.eq(pre.opp_name(), "GLASS WIZARD", "their name")
+	t.eq(pre.opp_online_text(), "PRO II · 12-9", "their badge and record")
+	t.ok(root.find_child("Lock_vortex6", true, false) != null, "a Vortex above the cap wears its level")
+	t.ok(root.find_child("Lock_ice", true, false) == null, "an ice under the cap does not")
+	var picks := []
+	pre.picked.connect(func(s: Array) -> void: picks.push_back(s))
+	(root.find_child("Spare_vortex6", true, false).get_meta("button") as TextureButton).pressed.emit()
+	t.eq(App.loadout_slots("online"), [null, null, null], "tapping the capped Vortex does nothing")
+	(root.find_child("Spare_ice", true, false).get_meta("button") as TextureButton).pressed.emit()
+	t.eq(App.loadout_slots("online"), ["ice", null, null], "tapping the ice equips it")
+	t.eq(picks.size(), 1, "…and the provisional pick goes out")
+	var readied := []
+	pre.readied.connect(func(s: Array) -> void: readied.push_back(s))
+	t.ok(not pre.is_ready(), "not ready yet")
+	pre.advance(5.0)
+	t.ok(pre.seconds_left() < 15.1 and pre.seconds_left() > 14.9, "the clock runs")
+	t.ok((root.find_child("TimerLine", true, false) as Label).text.begins_with("TIP-OFF IN 15"), "the timer line")
+	pre.press_ready()
+	t.ok(pre.is_ready() and readied == [["ice", null, null]], "READY sends the slots")
+	t.eq((root.find_child("Ready", true, false) as ShadowCard).text, "WAITING FOR THEM", "…and waits for them")
+	var pre2 := PreMatchPage.new()
+	pre2.build({"peer": {"name": "X", "tag": "01"}, "cap": 3, "seconds": 2.0}, "online")
+	var auto := [0]
+	pre2.readied.connect(func(_s: Array) -> void: auto[0] += 1)
+	pre2.advance(2.5)
+	t.eq(auto[0], 1, "at zero the page readies itself")
+	pre2.free()
+	pre.free()
 	# Clean the cache we seeded.
 	d = svc.get_cards()
 	d["leagues"].erase("online")

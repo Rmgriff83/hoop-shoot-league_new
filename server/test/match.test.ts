@@ -29,7 +29,11 @@ async function lobby(p: Player, action: string, body: Record<string, unknown> = 
   return { status: res.status, json: (await res.json()) as any };
 }
 
-/** Open the room socket and collect its messages as they come. */
+/**
+ * Open the room socket and collect its messages as they come. The pre-match
+ * step is answered at once with an empty, ready loadout (prematch.test.ts
+ * exercises the step itself).
+ */
 async function join(p: Player, room: string, area = "cage", town?: string) {
   const q = town === undefined ? "" : `&town=${encodeURIComponent(town)}`;
   const res = await SELF.fetch(`https://api/v1/match/room/${room}?area=${area}${q}`, { headers: { ...auth(p), upgrade: "websocket" } });
@@ -38,7 +42,11 @@ async function join(p: Player, room: string, area = "cage", town?: string) {
   const inbox: any[] = [];
   const closes: { code: number; reason: string }[] = [];
   ws.accept();
-  ws.addEventListener("message", (e) => inbox.push(JSON.parse(String(e.data))));
+  ws.addEventListener("message", (e) => {
+    const m = JSON.parse(String(e.data));
+    inbox.push(m);
+    if (m.t === "matched") ws.send(JSON.stringify({ t: "loadout", slots: ["", "", ""], ready: true }));
+  });
   ws.addEventListener("close", (e) => closes.push({ code: e.code, reason: e.reason }));
   const until = async (pred: (m: any) => boolean, ms = 2000) => {
     const t0 = Date.now();
@@ -54,6 +62,9 @@ async function join(p: Player, room: string, area = "cage", town?: string) {
 }
 
 beforeEach(() => resetMemoryLimits());
+
+/** The room allows MAX_PER_S messages a second and the loadout is one of them: step into the next second. */
+const nextSecond = () => new Promise((r) => setTimeout(r, 1005 - (Date.now() % 1000)));
 
 describe("lobby", () => {
   it("pairs the next two quick-match players in an area into one room", async () => {
@@ -173,6 +184,7 @@ describe("match room", () => {
     const sb = await B.until((m) => m.t === "start");
     expect(sa.seed).toBe(sb.seed);
     expect(sa).toMatchObject({ area: "beach", seconds: 90, ot_seconds: 20, ball_return_s: 1 });
+    await nextSecond();
     // A shot from a reaches b, tagged with its side, and not a itself.
     A.send({ t: "shot", n: 1, launch: { angle_deg: 50.5, speed: 7.2 } });
     const shot = await B.until((m) => m.t === "shot");
@@ -357,7 +369,7 @@ describe("match room", () => {
   });
   it("throttles lobby calls", async () => {
     const a = await register();
-    for (let i = 0; i < 20; i++) expect((await lobby(a, "leave")).status).toBe(200);
+    for (let i = 0; i < 30; i++) expect((await lobby(a, "leave")).status).toBe(200);
     expect((await lobby(a, "leave")).status).toBe(429);
   });
 });

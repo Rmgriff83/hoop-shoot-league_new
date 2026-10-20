@@ -1,19 +1,22 @@
 class_name RanksPage
 extends CanvasLayer
 ## The Ranks page (docs/HOME.md → Ranks): the global time-trial boards per
-## area. A sheet in the RetroTheme with `<` RANKS and your handle, the three
-## area tabs (a locked area's tab is greyed with the level that opens it),
-## THIS WEEK / ALL TIME, a status line, the top 50 as rows (the first three
-## ranks in gold, your own row on orange), and your line pinned under the
-## list. The page owns no network: it emits `request(area, period)` and is
-## fed by set_board / set_offline (the title wires it to Net; tests and QA
-## feed it a fixture).
+## area and, on the RANKED tab (2026-10-19), the 1v1 ladder. A sheet in the
+## RetroTheme with `<` RANKS and your handle, the area tabs (a locked area's
+## tab is greyed with the level that opens it) and RANKED, THIS WEEK / ALL
+## TIME (hidden on the ladder: one board), a status line, the top 50 as rows
+## (the first three ranks in gold, your own row on orange), and your line
+## pinned under the list. The page owns no network: it emits
+## `request(area, period)` (`ranked`, `all` for the ladder) and is fed by
+## set_board / set_offline (the title wires it to Net; tests and QA feed it
+## a fixture).
 
 signal closed
 signal request(area: String, period: String)
 
 const PAD := Vector2(28, 44)
-const TAB_SIZE := Vector2(156, 56)   # four tabs and three 12 px gaps fill the 664 px row
+const TAB_SIZE := Vector2(156, 56)   # four tabs and three 12 px gaps filled the 664 px row; five share it (TAB_W)
+const TAB_GAP := 12.0
 const CHIP_SIZE := Vector2(176, 44)
 const ROW_H := 60.0
 const ME_H := 64.0
@@ -24,6 +27,7 @@ var _tabs: Dictionary = {}
 var _locked: Dictionary = {}
 var _chips: Dictionary = {}
 var _status: Label
+var _chip_row: HBoxContainer
 var _list: VBoxContainer
 var _me: Label
 var _area := "cage"
@@ -83,13 +87,14 @@ func build(tabs: Array, handle: String) -> Control:
 	tab_row.name = "Tabs"
 	tab_row.position = Vector2(PAD.x, PAD.y + 56 + 24)
 	tab_row.size = Vector2(720 - PAD.x * 2, TAB_SIZE.y + ShadowStyle.OFFSET)
-	tab_row.add_theme_constant_override("separation", 12)
+	tab_row.add_theme_constant_override("separation", int(TAB_GAP))
 	_root.add_child(tab_row)
+	var tab_w := (tab_row.size.x - TAB_GAP * (tabs.size() - 1)) / maxi(tabs.size(), 1) - ShadowStyle.OFFSET
 	for tb in tabs:
 		var area := str(tb["area"])
 		var locked := bool(tb.get("locked", false))
 		var text := str(tb["text"]) if not locked else "%s · %s" % [str(tb["text"]), str(tb["lock_text"])]
-		var b := _card("Tab_" + area, TAB_SIZE, text, 16 if not locked else 12)
+		var b := _card("Tab_" + area, Vector2(tab_w, TAB_SIZE.y), text, 14 if not locked else 11)
 		b.disabled = locked
 		b.pressed.connect(func() -> void: select(area, _period))
 		tab_row.add_child(b)
@@ -102,6 +107,7 @@ func build(tabs: Array, handle: String) -> Control:
 	chip_row.size = Vector2(720 - PAD.x * 2, CHIP_SIZE.y + ShadowStyle.OFFSET)
 	chip_row.add_theme_constant_override("separation", 12)
 	_root.add_child(chip_row)
+	_chip_row = chip_row
 	for p in RanksCopy.PERIODS:
 		var period := str(p)
 		var c := _card("Period" + period.capitalize(), CHIP_SIZE, RanksCopy.period_name(period), 12)
@@ -152,6 +158,10 @@ func select(area: String, period: String) -> void:
 		return
 	_area = area
 	_period = period if RanksCopy.PERIODS.has(period) else "week"
+	if _area == RanksCopy.RANKED:
+		_period = "all"   # one ladder, no periods
+	if _chip_row != null:
+		_chip_row.visible = _area != RanksCopy.RANKED
 	_restyle()
 	_clear()
 	_status.text = RanksCopy.loading_status()
@@ -164,19 +174,24 @@ func set_board(area: String, period: String, data: Dictionary) -> void:
 	if area != _area or period != _period:
 		return
 	_clear()
-	var rows := RanksCopy.rows(data)
+	var ladder := area == RanksCopy.RANKED
+	var rows := RanksCopy.ranked_rows(data) if ladder else RanksCopy.rows(data)
 	for r in rows:
 		_list.add_child(_row(r))
 	_rows = rows.size()
-	_status.text = RanksCopy.status(_period, _rows)
-	_me.text = RanksCopy.me_line(data)
+	_status.text = RanksCopy.ranked_status(_rows) if ladder else RanksCopy.status(_period, _rows)
+	_me.text = RanksCopy.ranked_me_line(data) if ladder else RanksCopy.me_line(data)
 
 
-## No server: the device's own board for the area instead.
+## No server: the device's own board for the area instead (the ladder has none).
 func set_offline(area: String, period: String, local_top: Array) -> void:
 	if area != _area or period != _period:
 		return
 	_clear()
+	if area == RanksCopy.RANKED:
+		_status.text = RanksCopy.ranked_offline_status()
+		_me.text = RanksCopy.ranked_me_line({})
+		return
 	var rows := RanksCopy.local_rows(local_top)
 	for r in rows:
 		_list.add_child(_row(r))

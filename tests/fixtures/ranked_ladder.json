@@ -1,0 +1,23 @@
+{
+  "note": "conservative rating → visible tier/division (data/ranked.json). Shared by tests/test_ranked_rules.gd and server/test/rank.test.ts; below the first tier is ROOKIE III, LEGEND is always division 1 (it shows the global position).",
+  "cases": [
+    {"cons": 500, "tier": "rookie", "division": 3},
+    {"cons": 799, "tier": "rookie", "division": 3},
+    {"cons": 800, "tier": "rookie", "division": 2},
+    {"cons": 950, "tier": "rookie", "division": 1},
+    {"cons": 1000, "tier": "starter", "division": 3},
+    {"cons": 1099, "tier": "starter", "division": 2},
+    {"cons": 1149, "tier": "starter", "division": 1},
+    {"cons": 1150, "tier": "pro", "division": 3},
+    {"cons": 1340, "tier": "allstar", "division": 3},
+    {"cons": 1420, "tier": "allstar", "division": 1},
+    {"cons": 1599, "tier": "mvp", "division": 1},
+    {"cons": 1600, "tier": "legend", "division": 1},
+    {"cons": 2100, "tier": "legend", "division": 1}
+  ],
+  "conservative": [
+    {"mu": 1500, "rd": 350, "cons": 800},
+    {"mu": 1500, "rd": 100, "cons": 1300},
+    {"mu": 1700, "rd": 50, "cons": 1600}
+  ]
+}

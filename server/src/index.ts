@@ -1,8 +1,9 @@
 /**
  * Hoop Shoot API (docs/BACKEND.md): the one trusted layer between the game
  * and its data. Anonymous device accounts, per-area time-trial boards, the
- * move-to-new-phone code. Every route is throttled (limits.ts) and every
- * feature has a kill switch (503 → the game shows its device board).
+ * move-to-new-phone code, the 1v1 rooms and the ranked ladder. Every route
+ * is throttled (limits.ts) and every feature has a kill switch (503 → the
+ * game shows its device board).
  */
 import { Hono } from "hono";
 import type { Env, PlayerRow } from "./env";
@@ -20,7 +21,11 @@ import { AREAS as MATCH_AREAS } from "./rules";
 import { cleanTown } from "./towns";
 export { MatchRoom } from "./match_room";
 export { Lobby } from "./lobby";
-import { SLOTS, inventoryOf, validHand } from "./cards";
+import { inventoryOf } from "./cards";
+import { acceptLevel } from "./level_trust";
+import { areasForLevel } from "./rules";
+import { defaultRow, type RatingRow } from "./rank";
+import { BOARD, LEVEL_TRUST, QUEUE, TIERS } from "./ranked_data";
 
 type Vars = { Bindings: Env; Variables: { player: PlayerRow; cardsGated: boolean } };
 export const app = new Hono<Vars>();
@@ -46,7 +51,7 @@ async function body(c: any, allowed: readonly string[]): Promise<Record<string, 
   if (text.length > MAX_BODY) return null;
   let parsed: unknown;
   try {
-    parsed = JSON.parse(text);
+    parsed = text === "" ? {} : JSON.parse(text);
   } catch {
     return null;
   }
@@ -89,8 +94,9 @@ app.post("/v1/register", async (c) => {
     if (validName(name, BLOCKED)) handle.name = name;
   }
   if (typeof b.tag === "string" && TAG_RE.test(b.tag)) handle.tag = b.tag;
-  const level = validLevel(b.level) ? (b.level as number) : 1;
   const now = Date.now();
+  // The level the phone claims, trusted only as far as a brand-new account could have earned (level_trust.ts).
+  const level = validLevel(b.level) ? acceptLevel(1, b.level, now, now) : 1;
   await c.env.DB.batch([
     c.env.DB.prepare(
       "INSERT INTO players (id, secret_hash, name, tag, client_id, created_at, last_seen, level) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?6, ?7)",
@@ -104,8 +110,17 @@ app.get("/v1/me", authenticate, async (c) => {
   const p = c.get("player");
   const lim = await minuteLimit(c.env.RL_ME, `me:${p.id}`, 5);
   if (!lim.allowed) return throttled(c, lim);
-  return c.json({ playerId: p.id, name: p.name, tag: p.tag, level: p.level ?? 1, providers: await providersOf(c.env.DB, p.id) });
+  const [providers, rating] = await Promise.all([providersOf(c.env.DB, p.id), db.ratingOf(c.env.DB, p.id)]);
+  return c.json({ playerId: p.id, name: p.name, tag: p.tag, level: p.level ?? 1, providers, rank: rating ? await rankOf(c.env.DB, rating) : null });
 });
+
+/** The rank line the game shows (me.rank): legend carries its world position instead of a division. */
+async function rankOf(d: D1Database, r: RatingRow) {
+  const out: Record<string, unknown> = { tier: r.tier, division: r.division, games: r.games, wins: r.wins, losses: r.losses, cons: r.cons };
+  if (r.tier === LEGEND) out.position = await db.rankedPosition(d, r.cons, r.updated_at);
+  return out;
+}
+const LEGEND = TIERS[TIERS.length - 1].id;
 
 /**
  * Account deletion (Apple 5.1.1(v): an app that creates accounts — ours does,
@@ -124,8 +139,8 @@ app.delete("/v1/me", authenticate, async (c) => {
   return c.json({ deleted: true });
 });
 
-/** The game's level (docs/PROGRESSION.md), reported so the online card cap can hold. */
-const validLevel = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 99;
+/** The game's level (docs/PROGRESSION.md), reported so the online card cap can hold; believed as far as level_trust.ts allows. */
+const validLevel = (v: unknown): v is number => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= LEVEL_TRUST.max_level;
 
 app.patch("/v1/me", authenticate, async (c) => {
   const p = c.get("player");
@@ -142,7 +157,7 @@ app.patch("/v1/me", authenticate, async (c) => {
   let level = p.level ?? 1;
   if (b.level !== undefined) {
     if (!validLevel(b.level)) return c.json({ error: "level" }, 400);
-    level = b.level;
+    level = acceptLevel(level, b.level, p.created_at, Date.now()); // lowered or capped is not an error: the answer says what held
   }
   await c.env.DB.prepare("UPDATE players SET name = ?1, level = ?2 WHERE id = ?3").bind(name, level, p.id).run();
   return c.json({ playerId: p.id, name, tag: p.tag, level });
@@ -282,7 +297,7 @@ app.route("/v1/link", link);
 
 // ---- 1v1 rooms (match_room.ts, lobby.ts) ---------------------------------------------------
 
-const MATCH_PER_MINUTE = 20;
+const MATCH_PER_MINUTE = 30; // a 4 s ranked poll for the 30 s cap, with room to spare
 const MATCH_PER_DAY = 200;
 const ROOM_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
@@ -300,10 +315,11 @@ app.use("/v1/match/*", authenticate, async (c, next) => {
  * Quick match / make a code / join a code / leave the queue: the Lobby decides.
  * `area` may be "any" for quick / leave (design "Online Lobby" 37a): then
  * `areas` lists the courts this phone owns and the Lobby picks one on pairing.
+ * `leave` with `ranked: true` leaves the ranked queue instead.
  */
 app.post("/v1/match/:action{quick|code|join|leave}", async (c) => {
   const p = c.get("player");
-  const b = await body(c, ["area", "code", "areas"]);
+  const b = await body(c, ["area", "code", "areas", "ranked"]);
   if (!b) return c.json({ error: "bad_request" }, 400);
   const action = c.req.param("action");
   const area = typeof b.area === "string" ? b.area : "cage";
@@ -319,37 +335,111 @@ app.post("/v1/match/:action{quick|code|join|leave}", async (c) => {
   const stub = c.env.LOBBY.get(c.env.LOBBY.idFromName("lobby"));
   const res = await stub.fetch(`https://lobby/${action}`, {
     method: "POST",
-    body: JSON.stringify({ playerId: p.id, area, code: b.code ?? "", areas }),
+    body: JSON.stringify({ playerId: p.id, area, code: b.code ?? "", areas, ranked: action === "leave" && b.ranked === true }),
   });
   return new Response(res.body, { status: res.status, headers: { "content-type": "application/json" } });
 });
 
-/** The room's WebSocket: authenticated here, the player handed on in headers. */
+/**
+ * The ranked queue (docs/BACKEND.md → Ranked): polled every QUEUE.poll_s
+ * seconds until `paired`. Everything the Lobby matches on comes from here —
+ * the verified level (→ the courts owned), the ratings row (made on the
+ * first call), and `lean` (a losing streak or a long time away widens the
+ * search downward). The Lobby remembers the pair in `ranked_rooms`, which is
+ * what makes the room ranked when the phones connect.
+ */
+app.post("/v1/match/ranked", async (c) => {
+  if (!on(c.env.FEATURE_RANKED)) return off(c);
+  const p = c.get("player");
+  const b = await body(c, []);
+  if (!b) return c.json({ error: "bad_request" }, 400);
+  const now = Date.now();
+  let r = await db.ratingOf(c.env.DB, p.id);
+  if (!r) {
+    r = defaultRow(p.id, now);
+    await db.upsertRatingStatement(c.env.DB, r).run();
+  }
+  const level = p.level ?? 1;
+  const away = r.games > 0 && now - r.updated_at >= QUEUE.lean.away_days * 86_400_000;
+  const lean = r.loss_streak >= QUEUE.lean.losses || away;
+  const stub = c.env.LOBBY.get(c.env.LOBBY.idFromName("lobby"));
+  const res = await stub.fetch("https://lobby/ranked", {
+    method: "POST",
+    body: JSON.stringify({ playerId: p.id, level, mu: r.mu, rd: r.rd, cons: r.cons, tier: r.tier, division: r.division, areas: areasForLevel(level), lean }),
+  });
+  return new Response(res.body, { status: res.status, headers: { "content-type": "application/json" } });
+});
+
+/**
+ * The room's WebSocket: authenticated here, the player handed on in headers
+ * (every x-* the room reads is set here, so no client header gets through).
+ * A room the Lobby paired as ranked is in `ranked_rooms`: then `x-ranked` is
+ * 1, the court is the row's and only its two players may enter; any other
+ * room is casual with the client's court. Hands come later, through the
+ * room's pre-match `loadout`.
+ */
 app.get("/v1/match/room/:id", async (c) => {
   if (c.req.header("upgrade")?.toLowerCase() !== "websocket") return c.json({ error: "websocket" }, 426);
   const id = c.req.param("id");
   if (!ROOM_RE.test(id)) return c.json({ error: "room" }, 400);
   const p = c.get("player");
-  const area = c.req.query("area") ?? "cage";
+  let area = c.req.query("area") ?? "cage";
   // "any": the host of an any-court queue; the room takes the joiner's court.
   if (area !== "any" && !(MATCH_AREAS as readonly string[]).includes(area)) return c.json({ error: "area" }, 400);
-  // The hand this phone brings (docs/BACKEND.md → Cards online): only what
-  // the ledger holds, under the level cap; anything else comes in blank.
-  const wanted = (c.req.query("slots") ?? "").split(",").slice(0, SLOTS);
-  const inv = await inventoryOf(c.env.DB, p.id);
-  const hand = validHand(wanted, inv);
+  const [ranked, inv, rating] = await Promise.all([
+    c.env.DB.prepare("SELECT area, a_id, b_id FROM ranked_rooms WHERE room = ?1").bind(id).first<{ area: string; a_id: string; b_id: string }>(),
+    inventoryOf(c.env.DB, p.id),
+    db.ratingOf(c.env.DB, p.id),
+  ]);
+  if (ranked) {
+    if (ranked.a_id !== p.id && ranked.b_id !== p.id) return c.json({ error: "forbidden" }, 403);
+    area = ranked.area;
+  }
+  const band = rating ?? defaultRow(p.id, Date.now());
   const headers = new Headers(c.req.raw.headers);
   headers.set("x-player-id", p.id);
   headers.set("x-player-name", p.name);
   headers.set("x-player-tag", p.tag);
   headers.set("x-player-level", String(inv.level));
-  headers.set("x-player-town", cleanTown(c.req.query("town")));   // always set: no client header gets through
-  headers.set("x-hand", JSON.stringify(hand));
+  headers.set("x-player-town", cleanTown(c.req.query("town")));
+  headers.set("x-player-tier", band.tier);
+  headers.set("x-player-division", String(band.division));
+  headers.set("x-ranked", ranked ? "1" : "0");
   headers.set("x-area", area);
   headers.set("x-room", id);
   headers.delete("authorization");
   const stub = c.env.ROOM.get(c.env.ROOM.idFromName(id));
   return stub.fetch(new Request(c.req.raw.url, { headers, method: "GET" }));
+});
+
+// ---- the ranked board (rank.ts, db.ts) ---------------------------------------------------------
+
+/** The top rows, held for BOARD.cache_s so a lobby full of phones costs one query. */
+let boardCache: { at: number; rows: db.BoardRow[] } | null = null;
+/** Test hook: forget the memoised rows. */
+export function resetBoardCache(): void {
+  boardCache = null;
+}
+
+app.get("/v1/ranked/board", authenticate, async (c) => {
+  if (!on(c.env.FEATURE_RANKED)) return off(c);
+  const p = c.get("player");
+  const lim = await minuteLimit(c.env.RL_BOARD, `rboard:${p.id}`, 20);
+  if (!lim.allowed) return throttled(c, lim);
+  const now = Date.now();
+  if (!boardCache || now - boardCache.at >= BOARD.cache_s * 1000) boardCache = { at: now, rows: await db.rankedBoard(c.env.DB, BOARD.top) };
+  const mine = await db.ratingOf(c.env.DB, p.id);
+  const me = mine
+    ? {
+        position: await db.rankedPosition(c.env.DB, mine.cons, mine.updated_at),
+        tier: mine.tier, division: mine.division, mu: mine.mu, rd: mine.rd, cons: mine.cons,
+        games: mine.games, wins: mine.wins, losses: mine.losses, peak: { tier: mine.peak_tier, division: mine.peak_division },
+      }
+    : null;
+  return c.json({
+    rows: boardCache.rows.map((r, i) => ({ position: i + 1, playerId: r.player_id, name: r.name, tag: r.tag, tier: r.tier, division: r.division, games: r.games, wins: r.wins, losses: r.losses })),
+    me,
+  });
 });
 
 app.notFound((c) => c.json({ error: "not_found" }, 404));

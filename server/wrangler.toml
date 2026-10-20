@@ -14,6 +14,7 @@ FEATURE_SAVE = "on"
 FEATURE_MATCH = "on"
 FEATURE_CARDS = "on"
 FEATURE_PLATFORM = "on"
+FEATURE_RANKED = "on"
 
 [[durable_objects.bindings]]
 name = "ROOM"
@@ -44,6 +45,7 @@ FEATURE_SAVE = "on"
 FEATURE_MATCH = "on"
 FEATURE_CARDS = "on"
 FEATURE_PLATFORM = "on"
+FEATURE_RANKED = "on"
 
 [[env.production.durable_objects.bindings]]
 name = "ROOM"
@@ -97,7 +99,7 @@ simple = { limit = 30, period = 60 }
 name = "RL_MATCH"
 type = "ratelimit"
 namespace_id = "1006"
-simple = { limit = 20, period = 60 }
+simple = { limit = 30, period = 60 }
 
 [[env.production.unsafe.bindings]]
 name = "RL_CARDS"

@@ -1,21 +1,23 @@
 class_name MatchLobbyPage
-extends HomePage
+extends FaceOffPage
 ## The 1v1 lobby (design "Online Lobby" 37a, 2026-10-17; docs/HOME.md → 1v1,
 ## docs/BACKEND.md → Phase 3) with the locker treatment: a HomePage over the
 ## area — the home slides out left, this slides in from the right, every
 ## face see-through and dotted. `<` ONLINE · 1V1; the COURT picker (ANY and
 ## the four courts, locked ones dimmed with a lock; the row itself dimmed
-## while only the cage is open); QUICK MATCH, CREATE CODE, ENTER CODE + GO;
-## then, at the foot, the LOADOUT (three slots, tap to remove) and YOUR
-## CARDS (spares, tap to add). The waits: FINDING A PLAYER… / the big gold
+## while only the cage is open); RANKED (2026-10-19: one global rated queue,
+## any court both own — the picker does not constrain it), QUICK MATCH,
+## CREATE CODE, ENTER CODE + GO. The loadout moved to the pre-match page
+## (PreMatchPage). The waits: FINDING A PLAYER… / the big gold
 ## code and WAITING… with CANCEL; PLAYER FOUND; a failure with BACK. The
 ## quick wait and PLAYER FOUND are a face-off (2026-10-18): your card, VS,
 ## and theirs — a pulsing "?" beside a reel of names while searching, then
 ## the gold card popping in, VS slamming down and the court sliding in. The
-## page owns no network: it emits `quick(area)`, `create(area)`,
+## page owns no network: it emits `ranked`, `quick(area)`, `create(area)`,
 ## `join(area, code)` and `cancel`; App drives it through show_waiting /
 ## show_found / show_failed.
 
+signal ranked
 signal quick(area: String)
 signal create(area: String)
 signal join(area: String, code: String)
@@ -25,15 +27,7 @@ const BTN_H := 112.0
 const COURT_H := 60.0
 const FIELD_BG := Color(34.0 / 255.0, 28.0 / 255.0, 24.0 / 255.0, 0.55)
 const BAD := Color("#FF8A6A")
-const GOLD := RetroTheme.LIGHT["gold"]
-const SLOT := Vector2(84, 112)
-const SPARE := Vector2(66, 88)
 const DOTS_S := 0.45
-const FACE_H := 156.0
-const FACE_ICON := 72.0
-const FACE_SUB := Color("#E6D9B8")
-const NAME_MAX_W := 380.0
-const ORANGE := RetroTheme.LIGHT["orange"]
 const REEL_S := 0.11       # a new face on the reel
 const REEL_IN_S := 0.1     # …sliding down 36 px into place
 const REEL_H := 110.0
@@ -50,7 +44,6 @@ var _courts: Dictionary = {}
 var _court_note: Label
 var _quick_sub: Label
 var _code_edit: LineEdit
-var _loadout: VBoxContainer
 var _code_block: VBoxContainer
 var _code_label: Label
 var _big: Label
@@ -130,6 +123,7 @@ func _build() -> void:
 	_menu.add_theme_constant_override("separation", 16)
 	body.add_child(_menu)
 	_build_courts()
+	_menu.add_child(_big_button("Ranked", "RANKED", MatchCopy.ranked_sub(), GOLD, func() -> void: ranked.emit()))
 	_menu.add_child(_big_button("Quick", "QUICK MATCH", MatchCopy.quick_sub(area_choice), RetroTheme.c("orange"), func() -> void: quick.emit(area_choice)))
 	_quick_sub = _menu.get_node("Quick/Col/Sub")
 	_menu.add_child(_big_button("Create", "CREATE CODE", MatchCopy.code_sub(), RetroTheme.c("teal"), func() -> void: create.emit(area_choice)))
@@ -181,17 +175,11 @@ func _build() -> void:
 	var sub := words(MatchCopy.join_sub(), 16)
 	sub.name = "JoinSub"
 	_menu.add_child(sub)
-	# The cards, at the foot.
 	var push := Control.new()
 	push.name = "Push"
 	push.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	push.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_menu.add_child(push)
-	_loadout = VBoxContainer.new()
-	_loadout.name = "Cards"
-	_loadout.add_theme_constant_override("separation", 12)
-	_menu.add_child(_loadout)
-	refresh_cards()
 	# The waits.
 	_wait = VBoxContainer.new()
 	_wait.name = "Wait"
@@ -340,153 +328,6 @@ func _big_button(name_: String, text: String, sub: String, fill: Color, on_press
 	return b
 
 
-# ---- the cards: LOADOUT (tap to remove) and YOUR CARDS (tap to add) --------------------
-
-
-## Rebuild from the online bucket's cache (Net.cards_changed, a tap).
-func refresh_cards() -> void:
-	if _loadout == null:
-		return
-	for c in _loadout.get_children():
-		_loadout.remove_child(c)
-		c.queue_free()
-	var cd := App.cards_bucket(Net.ONLINE_BUCKET)
-	var slots: Array = App.loadout_slots(Net.ONLINE_BUCKET)
-	var inv: Dictionary = cd.get("inventory", {})
-	# The LOADOUT panel.
-	var panel := ShadowPanel.new(GOLD, 12.0, 0.18, 18.0)
-	panel.name = "Loadout"
-	_loadout.add_child(panel)
-	var col := VBoxContainer.new()
-	col.name = "Col"
-	col.add_theme_constant_override("separation", 12)
-	panel.add_child(col)
-	var head_ := HBoxContainer.new()
-	head_.add_theme_constant_override("separation", 12)
-	col.add_child(head_)
-	var t := words("LOADOUT", 16, true)
-	t.name = "LoadoutTitle"
-	t.add_theme_color_override("font_color", GOLD)
-	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	head_.add_child(t)
-	var set_count := 0
-	for s in slots:
-		if s != null:
-			set_count += 1
-	var line := words(MatchCopy.loadout_line(set_count), 16)
-	line.name = "LoadoutLine"
-	head_.add_child(line)
-	var row := HBoxContainer.new()
-	row.name = "Slots"
-	row.add_theme_constant_override("separation", 18)
-	row.alignment = BoxContainer.ALIGNMENT_BEGIN
-	col.add_child(row)
-	var names := VBoxContainer.new()
-	names.name = "SlotNames"
-	names.add_theme_constant_override("separation", 12)
-	names.size_flags_vertical = Control.SIZE_SHRINK_END
-	for i in CardDefs.SLOTS:
-		var id: Variant = slots[i] if i < slots.size() else null
-		if id != null:
-			var card := CardDefs.get_card(str(id))
-			var holder := ModeCards.art(card, SLOT, 6.0, true)
-			holder.name = "Slot%d" % i
-			var slot_i := i
-			(holder.get_meta("button") as TextureButton).pressed.connect(func() -> void:
-				App.unequip_card(slot_i, Net.ONLINE_BUCKET)
-				refresh_cards())
-			row.add_child(holder)
-			var n := words(str(card.get("name", id)).to_upper(), 16)
-			n.name = "SlotName%d" % i
-			n.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-			names.add_child(n)
-		else:
-			var empty := ModeCards.empty_slot(SLOT, 24, 3.0)
-			empty.name = "Slot%d" % i
-			row.add_child(empty)
-			var n := words(MatchCopy.slot_empty(i), 16)
-			n.name = "SlotName%d" % i
-			n.add_theme_color_override("font_color", RetroTheme.SCENE_MUTED)
-			n.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-			names.add_child(n)
-	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(8, 0)
-	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(gap)
-	row.add_child(names)
-	# YOUR CARDS: the spares.
-	var yours := VBoxContainer.new()
-	yours.name = "Yours"
-	yours.add_theme_constant_override("separation", 14)
-	_loadout.add_child(yours)
-	var yh := HBoxContainer.new()
-	yh.add_theme_constant_override("separation", 12)
-	yours.add_child(yh)
-	var yt := words("YOUR CARDS", 16, true)
-	yt.name = "YoursTitle"
-	yt.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	yt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	yh.add_child(yt)
-	var rule := ColorRect.new()   # the design's underline, drawn under the words
-	rule.name = "YoursRule"
-	rule.color = CREAM
-	rule.custom_minimum_size = Vector2(0, 3)
-	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var spares_n := 0
-	for id in inv:
-		if int(inv[id]) > 0:
-			spares_n += 1
-	var yc := words(MatchCopy.spares_caption(spares_n > 0), 16)
-	yc.name = "YoursCaption"
-	yh.add_child(yc)
-	var spares := HBoxContainer.new()
-	spares.name = "Spares"
-	spares.add_theme_constant_override("separation", 22)
-	spares.custom_minimum_size = Vector2(0, SPARE.y + 6)
-	yours.add_child(spares)
-	var free_slots := 0
-	for s in slots:
-		if s == null:
-			free_slots += 1
-	for id in inv:
-		if int(inv[id]) <= 0:
-			continue
-		var card := CardDefs.get_card(str(id))
-		if card.is_empty():
-			continue
-		var holder := ModeCards.art(card, SPARE, 6.0, true)
-		holder.name = "Spare_" + str(id)
-		var cid := str(id)
-		(holder.get_meta("button") as TextureButton).pressed.connect(func() -> void:
-			if not App.can_equip(cid):
-				return
-			for slot in CardDefs.SLOTS:
-				if App.loadout_slots(Net.ONLINE_BUCKET)[slot] == null:
-					App.equip_card(slot, cid, Net.ONLINE_BUCKET)
-					break
-			refresh_cards())
-		var badge := PanelContainer.new()
-		badge.name = "Count"
-		var sb := StyleBoxFlat.new()
-		sb.bg_color = RetroTheme.SCENE_OUTLINE
-		sb.set_content_margin_all(6)
-		sb.content_margin_left = 8
-		sb.content_margin_right = 8
-		badge.add_theme_stylebox_override("panel", sb)
-		badge.position = Vector2(SPARE.x - 10, -10)
-		badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		badge.add_child(UiFont.label("×%d" % int(inv[id]), 16, CREAM))
-		holder.add_child(badge)
-		spares.add_child(holder)
-	_loadout.add_child(_spacer_v(18))   # breathing room over the frame's foot
-
-
-## The old name, kept for the title and QA.
-func refresh_strip() -> void:
-	refresh_cards()
-
-
 # ---- the face-off (design 37a, 2026-10-18) -----------------------------------------------
 
 
@@ -502,20 +343,9 @@ func _build_face_off() -> void:
 	_you_card = _face_card("YouCard", CREAM, MatchCopy.you_label())
 	_vs.add_child(_you_card)
 	# VS between two rules.
-	var row := HBoxContainer.new()
-	row.name = "VsRow"
-	row.add_theme_constant_override("separation", 20)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var row := _vs_row()
 	_vs.add_child(row)
-	row.add_child(Rule.new())
-	_vs_word = RetroTheme.display(MatchCopy.vs_word(), 36, ORANGE)
-	_vs_word.name = "VsWord"
-	_vs_word.add_theme_color_override("font_outline_color", RetroTheme.SCENE_OUTLINE)
-	_vs_word.add_theme_constant_override("outline_size", RetroTheme.OUTLINE)
-	_vs_word.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	RetroTheme.dithered(_vs_word, Vector2(5, 5))
-	row.add_child(_vs_word)
-	row.add_child(Rule.new())
+	_vs_word = row.get_node("VsWord")
 	# Searching: the "?" and the reel.
 	_opp_search = ShadowPanel.new(CREAM, 0.0, ShadowStyle.TINT, 24.0)
 	_opp_search.name = "OppSearch"
@@ -565,100 +395,9 @@ func _build_face_off() -> void:
 	_court_row.add_child(_court_label)
 
 
-## A face-off card: the jersey, the three lines, the corner word.
-func _face_card(name_: String, edge: Color, corner: String) -> ShadowPanel:
-	var card := ShadowPanel.new(edge, 0.0, ShadowStyle.TINT, 24.0)
-	card.name = name_
-	card.custom_minimum_size = Vector2(0, FACE_H + ShadowStyle.OFFSET)
-	var row := _face_row()
-	card.add_child(row)
-	var icon := PixelIcon.new("icon_jersey", Vector2.ONE * FACE_ICON, 4.0)
-	icon.name = "Jersey"
-	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(icon)
-	var lines := _face_lines(GOLD if edge == GOLD else CREAM, CREAM if edge == GOLD else FACE_SUB, GOLD)
-	lines.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	lines.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(lines)
-	_corner(row, corner, GOLD if edge == GOLD else CREAM)
-	return card
-
-
-func _face_row() -> HBoxContainer:
-	var row := HBoxContainer.new()
-	row.name = "Row"
-	row.add_theme_constant_override("separation", 22)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return row
-
-
-## Name (+ #tag), the town and level, the online line.
-func _face_lines(name_colour: Color, tag_colour: Color, online_colour: Color) -> VBoxContainer:
-	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 14)
-	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var top := HBoxContainer.new()
-	top.name = "Top"
-	top.add_theme_constant_override("separation", 12)
-	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(top)
-	var who := words("", 22, true)
-	who.name = "Name"
-	who.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	who.add_theme_color_override("font_color", name_colour)
-	who.clip_text = true
-	who.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	top.add_child(who)
-	var tag := words("", 18)
-	tag.name = "Tag"
-	tag.add_theme_color_override("font_color", tag_colour)
-	tag.size_flags_vertical = Control.SIZE_SHRINK_END
-	top.add_child(tag)
-	var place := words("", 18)
-	place.name = "Place"
-	place.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	col.add_child(place)
-	var online := words("", 18)
-	online.name = "Online"
-	online.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	online.add_theme_color_override("font_color", online_colour)
-	col.add_child(online)
-	return col
-
-
-## The corner word (YOU / OPP / the searching "..."), 20 px down from the top.
-func _corner(row: HBoxContainer, text: String, colour: Color) -> Label:
-	var col := VBoxContainer.new()
-	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.size_flags_vertical = Control.SIZE_FILL
-	col.add_child(_spacer_v(20))
-	var l := words(text, 14, true)
-	l.name = "Corner"
-	l.add_theme_color_override("font_color", colour)
-	col.add_child(l)
-	row.add_child(col)
-	return l
-
-
-static func _fill_lines(lines: Control, rec: Dictionary) -> void:
-	_set_name(lines.find_child("Name", true, false) as Label, str(rec.get("name", "THEM")))
-	(lines.find_child("Tag", true, false) as Label).text = MatchCopy.card_tag(rec)
-	(lines.find_child("Place", true, false) as Label).text = MatchCopy.card_place(rec)
-	(lines.find_child("Online", true, false) as Label).text = MatchCopy.card_online(rec)
-
-
-## The handle at its own width (the tag follows it), cut with an ellipsis
-## past NAME_MAX_W — a clipped label alone would shrink to nothing in a row.
-static func _set_name(l: Label, text: String) -> void:
-	l.text = text
-	var w := UiFont.display().get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(22)).x + 2.0 * RetroTheme.OUTLINE
-	l.custom_minimum_size.x = minf(w, NAME_MAX_W)
-
-
-## YOU: the account's handle, the hometown, the level.
+## YOU: the account's handle, the hometown, the level, the rank.
 func _fill_you() -> void:
-	var a: Dictionary = Net.account()
-	_fill_lines(_you_card, {"name": str(a.get("name", "YOU")), "tag": str(a.get("tag", "")), "town": App.hometown(), "level": App.level()})
+	_fill_lines(_you_card, you_record())
 
 
 func _next_reel_face() -> void:
@@ -740,18 +479,6 @@ func court_text() -> String:
 	return _court_label.text
 
 
-## A 3 px cream rule with a 2 px ink shadow, either side of VS.
-class Rule extends Control:
-	func _init() -> void:
-		custom_minimum_size = Vector2(0, 5)
-		size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-	func _draw() -> void:
-		draw_rect(Rect2(Vector2(2, 2), Vector2(size.x, 3)), RetroTheme.SCENE_OUTLINE)
-		draw_rect(Rect2(Vector2.ZERO, Vector2(size.x, 3)), RetroTheme.SCENE_TEXT)
-
-
 # ---- the states ------------------------------------------------------------------------
 
 
@@ -781,15 +508,16 @@ func show_waiting(how: String, code := "") -> void:
 	_cancel.text = "CANCEL"
 	_code_block.visible = code != ""
 	_code_label.text = code.to_upper()
-	_base_big = MatchCopy.waiting_big("quick" if how == "quick" else "code")
-	_base_status = MatchCopy.waiting_line("quick" if how == "quick" else "code")
+	var kind := "code" if how in ["create", "join"] else how
+	_base_big = MatchCopy.waiting_big(kind)
+	_base_status = MatchCopy.waiting_line(kind)
 	_big.add_theme_font_size_override("font_size", UiFont.snap(24))
 	_big.add_theme_color_override("font_color", CREAM)
 	_dots = 0
 	_apply_dots()
 	# The quick wait is the face-off with the reel; the code wait is the code.
 	_found_t = -1.0
-	_vs.visible = how == "quick"
+	_vs.visible = how in ["quick", "ranked"]
 	if _vs.visible:
 		_fill_you()
 		_opp_search.visible = true
@@ -894,9 +622,3 @@ func close() -> void:
 	cancel.emit()
 	slide_out(false, true)
 
-
-static func _spacer_v(h: float) -> Control:
-	var c := Control.new()
-	c.custom_minimum_size = Vector2(0, h)
-	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	return c

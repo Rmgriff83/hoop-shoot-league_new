@@ -53,11 +53,22 @@ static func code_line(code: String) -> String:
 
 ## The big line while waiting: FINDING A PLAYER / WAITING (dots added live).
 static func waiting_big(how: String) -> String:
-	return "FINDING A PLAYER" if how == "quick" else "WAITING"
+	match how:
+		"ranked": return "FINDING A RATED OPPONENT"
+		"quick": return "FINDING A PLAYER"
+	return "WAITING"
 
 
 static func waiting_line(how: String) -> String:
-	return "USUALLY UNDER 30 SECONDS" if how == "quick" else "THE MATCH STARTS AS SOON AS THEY JOIN"
+	match how:
+		"ranked": return "CLOSE IN RATING FIRST · WIDER AS YOU WAIT"
+		"quick": return "USUALLY UNDER 30 SECONDS"
+	return "THE MATCH STARTS AS SOON AS THEY JOIN"
+
+
+## Under RANKED on the menu (2026-10-19): one global rated queue, any court.
+static func ranked_sub() -> String:
+	return "ANY COURT · RATED · ONE GLOBAL LADDER"
 
 
 static func found_big() -> String:
@@ -98,15 +109,66 @@ static func card_place(rec: Dictionary) -> String:
 	return "%s · %s" % [town, lvl] if town != "" else lvl
 
 
-## `ONLINE #988 · 21-14` once the online ladder lands (`rank`, `w`, `l` on
-## the record); a placeholder until then (Ross, 2026-10-18: the ladder is
-## being planned separately).
+## The online line of a face-off card: the ladder badge and the record
+## (`PRO II · 12-9`, `LEGEND #12 · 40-11`) from `rank` ({tier, division,
+## position?, wins, losses, games}); `ONLINE · UNRANKED` without a rated game.
 static func card_online(rec: Dictionary) -> String:
-	if not rec.has("rank"):
+	var rank: Variant = rec.get("rank", null)
+	if not (rank is Dictionary) or int(rank.get("games", 0)) <= 0:
 		return "ONLINE · UNRANKED"
-	var line := "ONLINE #%s" % RetroTheme.thousands(int(rec["rank"]))
-	if rec.has("w") and rec.has("l"):
-		line += " · %d-%d" % [int(rec["w"]), int(rec["l"])]
+	var line := RankedRules.badge_text(rank)
+	if rank.has("wins") and rank.has("losses"):
+		line += " · %d-%d" % [int(rank["wins"]), int(rank["losses"])]
+	return line
+
+
+# ---- the pre-match pick (docs/BACKEND.md → Ranked, 2026-10-19) -------------------------
+
+
+static func prematch_title() -> String:
+	return "PICK YOUR CARDS"
+
+
+## `CARD CAP · LVL 3 · THE LOWER LEVEL PLAYS` — both loadouts stop at the
+## lower of the two levels (a level-7 card never meets a level-2 player).
+static func cap_line(cap: int) -> String:
+	return "CARD CAP · LVL %d · THE LOWER LEVEL PLAYS" % maxi(1, cap)
+
+
+static func ready_word(ready: bool) -> String:
+	return "WAITING FOR THEM" if ready else "READY"
+
+
+## `TIP-OFF IN 12` over the timer bar; the room starts at zero either way.
+static func timer_line(seconds_left: float) -> String:
+	return "TIP-OFF IN %d" % maxi(0, int(ceil(seconds_left)))
+
+
+static func ranked_chip() -> String:
+	return "RATED"
+
+
+## The post-match rank line: `RATING +18 · PRO II`, with the event after it
+## (`PROMOTED`, `SHIELDED`, `FLOOR HELD`); `RATED · NO CHANGE` on a void.
+static func rank_delta_line(settle: Dictionary) -> String:
+	if not bool(settle.get("ranked", false)):
+		return ""
+	var rating: Variant = settle.get("rating", null)
+	if not (rating is Dictionary):
+		return "RATED · NO CHANGE"
+	var delta := int(roundf(float(rating.get("delta", 0.0))))
+	var line := "RATING %s%d" % ["+" if delta >= 0 else "", delta]
+	if settle.get("rank") is Dictionary:
+		var rank: Dictionary = settle["rank"]
+		rank = rank.duplicate()
+		rank["games"] = maxi(1, int(rank.get("games", 1)))
+		line += " · " + RankedRules.badge_text(rank)
+	for ev in settle.get("events", []):
+		match str(ev):
+			"promoted": line += " · PROMOTED"
+			"shielded": line += " · SHIELDED"
+			"floored": line += " · FLOOR HELD"
+			"demoted": line += " · DOWN A DIVISION"
 	return line
 
 
@@ -202,7 +264,12 @@ static func strings() -> Array:
 		code_line("ABCDE"), waiting_big("quick"), waiting_big("code"), waiting_line("quick"), waiting_line("code"), found_big(),
 		found_line(), you_label(), opp_label(), vs_word(), "?", "...", card_tag({"tag": "07"}),
 		card_place({"town": "SALT HARBOR", "level": 9}), card_place({"level": 7}), card_online({}),
-		card_online({"rank": 1204, "w": 12, "l": 9}),
+		card_online({"rank": {"tier": "pro", "division": 2, "wins": 12, "losses": 9, "games": 21}}),
+		card_online({"rank": {"tier": "legend", "division": 1, "position": 12, "wins": 40, "losses": 11, "games": 51}}),
+		waiting_big("ranked"), waiting_line("ranked"), ranked_sub(), "RANKED", prematch_title(), cap_line(3), ready_word(true), ready_word(false),
+		timer_line(12.4), ranked_chip(), rank_delta_line({"ranked": true, "rating": {"delta": 18}, "rank": {"tier": "pro", "division": 2}, "events": ["promoted"]}),
+		rank_delta_line({"ranked": true, "rating": {"delta": -7}, "rank": {"tier": "rookie", "division": 3}, "events": ["shielded", "floored", "demoted"]}),
+		rank_delta_line({"ranked": true}),
 		court_note(1), court_note(3), loadout_line(2), spares_caption(true), spares_caption(false), slot_empty(2), "LOADOUT", "YOUR CARDS", "COURT",
 		header({"location": "beach"}), header({"location": "city", "reason": "forfeit"}), header({"location": "cage", "reason": "void"})]
 	for a in AREAS:

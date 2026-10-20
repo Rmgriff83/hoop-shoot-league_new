@@ -199,14 +199,21 @@ chevron (the footer says START INSIDE).
   CREDITS, the full-width CLOSE. Flipping DARK MODE rebuilds the home chrome
   behind it (still slid out); the page itself wears the scene colours.
 - **Ranks** (`game/ui/ranks_page.gd` `RanksPage`, copy in `ranks_copy.gd`):
-  the global time-trial boards (docs/BACKEND.md). `<` RANKS and your handle;
-  CAGE / BEACH / CITY tabs (a locked area's tab greyed with `LVL n`); THIS
-  WEEK / ALL TIME; a status line (`TOP 12 · THIS WEEK`, `NO RUNS YET · BE
-  FIRST`, or `NO SIGNAL · DEVICE BOARD` when the server is out of reach,
-  with the device's own runs as rows); the top 50 as rows, ranks 1–3 in gold,
-  your row on orange; `YOU · #7 · 29` pinned under the list. Opens on the
-  current area's tab; the page only emits `request(area, period)` and the
-  title feeds it from `Net`. QA: `--qa-ranks`.
+  the global time-trial boards (docs/BACKEND.md) and, since 2026-10-19, the
+  1v1 ladder. `<` RANKS and your handle; CAGE / BEACH / PARK / CITY tabs (a
+  locked area's tab greyed with `LVL n`) and **RANKED** (never locked, the
+  five share the row); THIS WEEK / ALL TIME (hidden on the ladder — one
+  board); a status line (`TOP 12 · THIS WEEK`, `NO RUNS YET · BE FIRST`, or
+  `NO SIGNAL · DEVICE BOARD` when the server is out of reach, with the
+  device's own runs as rows; the ladder: `TOP 50 · RATED 1V1`, `NO RATED
+  GAMES YET · BE FIRST`, `NO SIGNAL · THE LADDER NEEDS A CONNECTION`); the
+  top 50 as rows, ranks 1–3 in gold, your row on orange (a ladder row's
+  score column is the badge and record, `PRO II · 12-9`, `LEGEND #1 ·
+  40-11`); `YOU · #7 · 29` / `YOU · #12 · PRO II` / `YOU · UNRANKED · PLAY A
+  RATED GAME` pinned under the list. Opens on the current area's tab; the
+  page only emits `request(area, period)` (`ranked`, `all` for the ladder)
+  and the title feeds it from `Net` (`load_board` / `load_ranked_board`, both
+  cached 60 s). QA: `--qa-ranks`.
 - **1v1** (`game/ui/match_lobby_page.gd` `MatchLobbyPage`, a `HomePage` since
   2026-10-17 — design "Online Lobby" 37a; copy in `match_copy.gd`;
   docs/BACKEND.md → Phase 3): the ONLINE card beside the area name opens the
@@ -215,14 +222,15 @@ chevron (the footer says START INSIDE).
   and the four courts in a row (a locked court dimmed with a lock; the whole
   row dimmed and fixed on the cage with `UNLOCK MORE COURTS TO CHOOSE` while
   only the cage is open, else `n OF 4 OWNED`; the chosen one gold, the home's
-  court picked at open); QUICK MATCH (orange; `FIRST OPEN MATCH ON YOUR COURTS`
-  / `PLAY WHOEVER IS ON …`), CREATE CODE (teal, `PLAY A FRIEND`), ENTER CODE
-  + GO (gold) over `GOT A CODE FROM A FRIEND? TYPE IT IN`; at the foot the
-  **LOADOUT** panel (gold: three 84 × 112 slots, tap one to remove it, names
-  beside, `n OF 3 · TAP TO REMOVE`) and **YOUR CARDS** (the spares at 66 × 88
-  with a ×n badge, tap one to add it; `TAP TO ADD` / `NONE LEFT · WIN MORE IN
-  LEAGUES`) — the online deck sheet is no longer opened from here. The waits:
-  `FINDING A PLAYER…` over `USUALLY UNDER 30 SECONDS` with CANCEL; a code:
+  court picked at open — the picker steers the casual games only); **RANKED**
+  (gold, `ANY COURT · RATED · ONE GLOBAL LADDER`, 2026-10-19: the rated queue,
+  docs/BACKEND.md → Ranked; the server picks a court both own); QUICK MATCH
+  (orange; `FIRST OPEN MATCH ON YOUR COURTS` / `PLAY WHOEVER IS ON …`), CREATE
+  CODE (teal, `PLAY A FRIEND`), ENTER CODE + GO (gold) over `GOT A CODE FROM A
+  FRIEND? TYPE IT IN`. The loadout left this page for the **pre-match pick**
+  (below). The waits: `FINDING A RATED OPPONENT…` over `CLOSE IN RATING FIRST ·
+  WIDER AS YOU WAIT` (ranked), `FINDING A PLAYER…` over `USUALLY UNDER 30
+  SECONDS` (quick), both with CANCEL; a code:
   `TELL A FRIEND THIS CODE`, the code at 72 px gold, `WAITING…` over `THE MATCH
   STARTS AS SOON AS THEY JOIN`; `PLAYER FOUND` (gold) over `STARTING…`; a
   failure big in `#FF8A6A` (`CODE NOT FOUND` / `NOBODY CAME` / …) over what to
@@ -237,18 +245,36 @@ chevron (the footer says START INSIDE).
   (`MatchLobbyPage.advance` runs it all off one clock). The room tips off the
   moment both phones are in, so App holds a lobby tip-off `FOUND_HOLD_S`
   (2.4 s) on both phones to let the reveal play; rematches and resumes go at
-  once. The online line is a placeholder, `ONLINE · UNRANKED`, until the
-  online ladder lands (`MatchCopy.card_online` already reads `rank` / `w` /
-  `l`). Hometowns travel as typed (Ross's call), cleaned by the room. The page emits `quick(area)`, `create(area)`,
-  `join(area, code)` and `cancel`; `App.start_online` arranges the room — for
-  ANY it sends the owned courts and the Lobby pairs on a court both own (the
-  joiner is told the court; an any-court host's room takes the joiner's) — and
-  tips off into a heat with the other phone in the opponent slot; the
-  post-match page reads `ONLINE MATCH · BEACH` with no rewards card (online
-  pays nothing yet, docs/BACKEND.md) and the REMATCH? card (orange to
-  ask, gold when they asked, teal once both have, THEY LEFT when the other
-  phone went home). QA: `--qa-multi` (`multi_menu`, `multi_code`,
-  `multi_found`, `multi_failed`, `multi_finding`, `multi_cards`).
+  once. The online line is the ladder badge and record (`PRO II · 12-9`,
+  `LEGEND #12 · 40-11`; `ONLINE · UNRANKED` before a rated game) from the
+  `rank` the server sends (`Net.me_rank` for YOU, `matched.tiers` for them).
+  Hometowns travel as typed (Ross's call), cleaned by the room. The page
+  emits `ranked`, `quick(area)`, `create(area)`, `join(area, code)` and
+  `cancel`; `App.start_online` arranges the room — ranked polls
+  `/v1/match/ranked` every 4 s until paired; for ANY it sends the owned
+  courts and the Lobby pairs on a court both own (the joiner is told the
+  court; an any-court host's room takes the joiner's) — and tips off into a
+  heat with the other phone in the opponent slot; the post-match page reads
+  `ONLINE MATCH · BEACH`, a rated match's `RATING +18 · PRO II · PROMOTED`
+  line under the score (`MatchCopy.rank_delta_line`; `RATED · NO CHANGE` on a
+  void), no rewards card yet, and the REMATCH? card (orange to ask, gold when
+  they asked, teal once both have, THEY LEFT when the other phone went
+  home). QA: `--qa-multi` (`multi_menu`, `multi_code`, `multi_found`,
+  `multi_failed`, `multi_finding`, `multi_prematch`, `multi_prematch_ready`,
+  `online_result`).
+- **Pre-match pick** (`game/ui/pre_match_page.gd` `PreMatchPage`, 2026-10-19,
+  docs/BACKEND.md → Ranked; `FaceOffPage` holds the face cards and the
+  loadout strip both 1v1 pages build): between PLAYER FOUND and the tip-off,
+  over the lobby (which slides out), for every online match. PICK YOUR CARDS;
+  YOUR card, VS, THEIR gold card (handle, `TOWN · LVL 04`, the badge); `CARD
+  CAP · LVL 1 · THE LOWER LEVEL PLAYS` (both loadouts stop at the lower of
+  the two levels); the LOADOUT strip (a spare above the cap dimmed with its
+  `LVL n` tag, its tap refused); `TIP-OFF IN 12` over a gold timer bar
+  (20 s from data) and READY (orange → gold `WAITING FOR THEM`), BACK OUT.
+  The page sends its pick as it changes (`picked`, provisional — a timeout
+  starts with it) and `readied(slots)` on READY; at zero it readies itself.
+  Built to be reused before solo league heats later (`build` takes a plain
+  info dict).
 
 ## Placeholders (present, not wired)
 

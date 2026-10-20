@@ -1,4 +1,5 @@
 import type { ScorePayload } from "./rules";
+import type { RatingRow } from "./rank";
 
 export interface BestRow {
   player_id: string;
@@ -106,5 +107,49 @@ export async function prune(db: D1Database, now: number): Promise<void> {
     db.prepare("DELETE FROM rl WHERE win < ?1").bind(Math.floor(now / 1000 / 86_400) - 2),
     db.prepare("DELETE FROM tt_week_best WHERE played_at < ?1").bind(now - 8 * 7 * day),
     db.prepare("DELETE FROM online_ledger WHERE at < ?1").bind(now - 90 * day),
+    db.prepare("DELETE FROM ranked_rooms WHERE created_at < ?1").bind(now - day),
   ]);
+}
+
+// ---- ranked (rank.ts): the ratings table and the board ------------------------------------
+
+export async function ratingOf(db: D1Database, playerId: string): Promise<RatingRow | null> {
+  return db.prepare("SELECT * FROM ratings WHERE player_id = ?1").bind(playerId).first<RatingRow>();
+}
+
+/** The whole row, written as one statement (for a batch with the match row). */
+export function upsertRatingStatement(db: D1Database, r: RatingRow): D1PreparedStatement {
+  return db
+    .prepare(
+      `INSERT INTO ratings (player_id, mu, rd, vol, cons, games, wins, losses, win_streak, loss_streak, tier, division, peak_tier, peak_division, shield_left, updated_at)
+       VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16)
+       ON CONFLICT(player_id) DO UPDATE SET
+         mu = excluded.mu, rd = excluded.rd, vol = excluded.vol, cons = excluded.cons, games = excluded.games,
+         wins = excluded.wins, losses = excluded.losses, win_streak = excluded.win_streak, loss_streak = excluded.loss_streak,
+         tier = excluded.tier, division = excluded.division, peak_tier = excluded.peak_tier, peak_division = excluded.peak_division,
+         shield_left = excluded.shield_left, updated_at = excluded.updated_at`,
+    )
+    .bind(r.player_id, r.mu, r.rd, r.vol, r.cons, r.games, r.wins, r.losses, r.win_streak, r.loss_streak, r.tier, r.division, r.peak_tier, r.peak_division, r.shield_left, r.updated_at);
+}
+
+/** 1 + the rows strictly above: a higher cons, or the same cons rated earlier. */
+export async function rankedPosition(db: D1Database, cons: number, updatedAt: number): Promise<number> {
+  const row = await db
+    .prepare("SELECT COUNT(*) AS n FROM ratings WHERE cons > ?1 OR (cons = ?1 AND updated_at < ?2)")
+    .bind(cons, updatedAt)
+    .first<{ n: number }>();
+  return (row?.n ?? 0) + 1;
+}
+
+export interface BoardRow extends RatingRow { name: string; tag: string }
+
+export async function rankedBoard(db: D1Database, limit: number): Promise<BoardRow[]> {
+  const res = await db
+    .prepare(
+      `SELECT r.*, p.name, p.tag FROM ratings r JOIN players p ON p.id = r.player_id
+       ORDER BY r.cons DESC, r.updated_at ASC LIMIT ?1`,
+    )
+    .bind(limit)
+    .all<BoardRow>();
+  return res.results;
 }

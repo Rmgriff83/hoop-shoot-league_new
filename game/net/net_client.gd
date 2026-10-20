@@ -11,6 +11,11 @@ signal account_ready(name: String, tag: String)
 signal score_accepted(area: String, reply: Dictionary)
 signal board_loaded(area: String, period: String, data: Dictionary)
 signal board_failed(area: String, period: String)
+## The ranked ladder (docs/BACKEND.md → Ranked): the board, and your own rank
+## whenever the server tells it (GET /v1/me, a rated decision).
+signal ranked_board_loaded(data: Dictionary)
+signal ranked_board_failed
+signal rank_changed(rank: Dictionary)
 ## The mirror brought newer copies of these parts; App re-reads what it caches.
 signal save_pulled(parts: Array)
 signal save_pushed(parts: Array)
@@ -50,6 +55,9 @@ var _pulling := false
 var _level_reported := -1
 ## The server's view of the level, from the last cards refresh.
 var online_level := 1
+## Your ladder rank as the server last told it ({tier, division, games, wins,
+## losses, cons, position?}); {} until a rated game or the first /v1/me.
+var me_rank: Dictionary = {}
 var _last_push := -1.0
 var _last_pull := -1.0
 
@@ -221,6 +229,10 @@ func fetch_me() -> void:
 			var a := account()
 			a["linked"] = Array(r["json"]["providers"])
 			SaveService.put_account(a)
+		if r["json"].get("rank") is Dictionary:
+			set_me_rank(Dictionary(r["json"]["rank"]))
+		if r["json"].has("level"):
+			online_level = int(r["json"]["level"])
 	elif r["code"] == 401:
 		await _recover_identity()
 
@@ -348,6 +360,40 @@ func _apply_cards(json: Dictionary) -> void:
 	SaveService.put_cards(d)
 	online_level = int(json.get("level", online_level))
 	cards_changed.emit()
+
+
+## The server's word on your rank (a /v1/me, a rated decision).
+func set_me_rank(rank: Dictionary) -> void:
+	me_rank = rank.duplicate(true)
+	rank_changed.emit(me_rank)
+
+
+## The ranked ladder: top 50 + your own line, cached BOARD_TTL_S like the
+## time-trial boards (`ranked:all`). Emits ranked_board_loaded / _failed.
+func load_ranked_board(force := false) -> void:
+	var key := "ranked:all"
+	var hit: Dictionary = _board_cache.get(key, {})
+	if not force and not hit.is_empty() and Time.get_ticks_msec() / 1000.0 - float(hit["at"]) < BOARD_TTL_S:
+		ranked_board_loaded.emit.call_deferred(hit["data"])
+		return
+	if not registered():
+		if not await _register():
+			ranked_board_failed.emit.call_deferred()
+			return
+	var r := await _request("board", HTTPClient.METHOD_GET, "/v1/ranked/board")
+	if r["ok"]:
+		_board_cache[key] = {"at": Time.get_ticks_msec() / 1000.0, "data": r["json"]}
+		if r["json"].get("me") is Dictionary:
+			set_me_rank(Dictionary(r["json"]["me"]))
+		ranked_board_loaded.emit(r["json"])
+	else:
+		if r["code"] != -1:
+			_back_off(r)
+		ranked_board_failed.emit()
+
+
+func cached_ranked_board() -> Dictionary:
+	return Dictionary(_board_cache.get("ranked:all", {})).get("data", {})
 
 
 ## Pull the ledger (the lobby opens, a match settled). False when it could not.

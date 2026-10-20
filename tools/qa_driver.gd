@@ -1136,21 +1136,37 @@ func _run_multi() -> void:
 	await _snap("multi_found")
 	print("QA multi: found popped=%s vs=%.2f court=%s" % [lobby.found_popped(), lobby.vs_scale(), lobby.court_text()])
 	lobby.show_menu()
-	# The cards on the page (design 37a): a seeded cache (a spare, one set).
+	# The pre-match pick (docs/BACKEND.md → Ranked): a seeded cache (a spare
+	# ice, a Heat Check set, a Vortex above the cap), the opponent's badge,
+	# the cap line, the timer; READY goes gold.
 	var cd: Dictionary = SaveService.get_cards()
 	var ob := CardDefs.league_doc(cd, "online")
-	ob["inventory"] = {"ice": 1}
+	ob["inventory"] = {"ice": 1, "vortex6": 1}
 	ob["loadout"] = ["fire7", null, null]
 	SaveService.put_cards(cd)
-	lobby.refresh_cards()
-	await _sleep(0.2)
-	await _snap("multi_cards")
+	var staged := QaFakePeer.new()
+	var title_screen: Node = get_tree().current_scene
+	var matched: Dictionary = staged.matched_message()
+	matched["side"] = "a"
+	title_screen.call("_open_pre_match", matched)
+	staged.free()
+	await _sleep(0.5)
+	var pre: PreMatchPage = get_tree().root.find_child("PreMatch", true, false)
+	await _snap("multi_prematch")
+	if pre != null:
+		pre.press_ready()
+		await _sleep(0.2)
+		await _snap("multi_prematch_ready")
+		print("QA multi: prematch cap=%s opp=%s / %s ready=%s" % [pre.cap_text(), pre.opp_name(), pre.opp_online_text(), pre.is_ready()])
+	title_screen.call("_close_pre_match")
+	await _sleep(0.3)
 	lobby.close()
 	await _sleep(0.4)
 	# The staged match: a 20 s beach heat against the fake peer, hands dealt
 	# both ways (ours from the cache above; theirs an ice they play on us).
 	var start := {"t": "start", "seed": 4242, "area": "beach", "seconds": 20.0, "ot_seconds": 6.0, "ball_return_s": 1.0,
-		"hands": {"a": ["fire7", "", "ice"], "b": ["ice", "", ""]}, "levels": {"a": 1, "b": 4}}
+		"hands": {"a": ["fire7", "", "ice"], "b": ["ice", "", ""]}, "levels": {"a": 1, "b": 4}, "ranked": true, "cap": 1,
+		"tiers": {"a": {"tier": "rookie", "division": 3}, "b": {"tier": "pro", "division": 2}}}
 	var fake := QaFakePeer.new()
 	fake.name = "Match"
 	App.add_child(fake)
@@ -1176,6 +1192,7 @@ func _run_multi() -> void:
 	await _snap("online_heat_late")
 	await _sleep(9.0)
 	await _snap("online_result")
+	print("QA multi: settle rank line '%s'" % MatchCopy.rank_delta_line(App.online_settle))
 	# The rematch card: they ask (gold), we accept (teal).
 	if is_instance_valid(fake):
 		fake.ask_rematch()

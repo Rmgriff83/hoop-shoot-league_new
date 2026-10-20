@@ -10,10 +10,13 @@ signal opened
 signal message(msg: Dictionary)
 signal closed(reason: String)
 
-var peer := {"id": "qa-peer", "name": "GLASS WIZARD", "tag": "07"}
+var peer := {"id": "qa-peer", "name": "GLASS WIZARD", "tag": "07", "level": 4, "town": "SALT HARBOR"}
 var start: Dictionary = {}
 var sent: Array = []
 var side := "a"
+## Settle as a rated match (docs/BACKEND.md → Ranked): a fake rating change
+## and badge on `settled`, the way the real room sends them.
+var ranked := true
 
 var _heat: Heat
 var _hand: Array = []
@@ -51,6 +54,8 @@ func send(msg: Dictionary) -> void:
 	match str(msg.get("t", "")):
 		MatchProtocol.CARD:
 			message.emit.call_deferred({"t": MatchProtocol.CARD_OK, "id": str(msg["id"])})
+		MatchProtocol.LOADOUT:
+			pass   # the real room validates and starts on both READY; the driver stages `start` itself
 		MatchProtocol.REMATCH:
 			# The fake always wants another go; a real room would then send rematch_go.
 			message.emit.call_deferred({"t": MatchProtocol.REMATCH, "from": "b"})
@@ -69,7 +74,20 @@ func _maybe_settle() -> void:
 		return
 	_settled = true
 	var won := _our_score > _heat.ai.score
-	message.emit.call_deferred({"t": MatchProtocol.SETTLED, "won": won, "reason": "played"})
+	var settle := {"t": MatchProtocol.SETTLED, "won": won, "reason": "played", "ranked": ranked}
+	if ranked:
+		settle["rating"] = {"before": 1500.0, "after": 1518.0 if won else 1483.0, "delta": 18.0 if won else -17.0, "cons": 860.0}
+		settle["rank"] = {"tier": "rookie", "division": 2 if won else 3, "games": 1, "wins": 1 if won else 0, "losses": 0 if won else 1}
+		settle["events"] = ["promoted"] if won else []
+		settle["peak"] = {"tier": "rookie", "division": 2 if won else 3}
+	message.emit.call_deferred(settle)
+
+
+## The room's `matched`, for the pre-match page (the driver calls it).
+func matched_message() -> Dictionary:
+	return {"t": MatchProtocol.MATCHED, "peer": peer, "levels": {"a": 1, "b": 4},
+		"tiers": {"a": {"tier": "rookie", "division": 3, "games": 0}, "b": {"tier": "pro", "division": 2, "games": 21, "wins": 12, "losses": 9}},
+		"cap": 1, "seconds": 20.0}
 
 
 ## Their side asks first (the QA driver stages the wanted state).

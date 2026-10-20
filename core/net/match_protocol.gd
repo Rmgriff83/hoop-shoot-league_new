@@ -9,14 +9,17 @@ const SHOT := "shot"           # {t, n, launch}            one per release
 const OUTCOME := "outcome"     # {t, n, score}             the sender's running score after it landed
 const PERIOD_END := "period_end"  # {t, period, score, totals}
 const CARD := "card"           # {t, id}                   a card out of the hand the room dealt
+const LOADOUT := "loadout"     # {t, slots: [id|"" ×3], ready}  the pre-match pick (docs/BACKEND.md → Ranked)
 const REMATCH := "rematch"     # {t}                       on the post-match page: another go?
 const PING := "ping"
 ## Messages the room sends.
 const JOINED := "joined"       # {t, side, room, area, peer|null}
 const PEER := "peer"           # {t, peer}                 the other phone arrived
-const START := "start"         # {t, seed, area, seconds, ot_seconds, ball_return_s, hands: {a, b}, levels: {a, b}}
+const MATCHED := "matched"     # {t, peer, levels: {a, b}, tiers: {a, b}, cap, seconds}  both seated: pick a loadout
+const START := "start"         # {t, seed, area, seconds, ot_seconds, ball_return_s, hands: {a, b}, levels: {a, b}, ranked, cap, tiers}
 const CARD_OK := "card_ok"     # {t, id}                   the room took our card
-const SETTLED := "settled"     # {t, won, reason}          the decision (no payout yet: the ranked task)
+const LOADOUT_OK := "loadout_ok"  # {t, hand: [id|"" ×3], ready}  the validated pick (what the cap blanked)
+const SETTLED := "settled"     # {t, won, reason, ranked, rating?, rank?, events?, peak?}  the decision
 const REMATCH_GO := "rematch_go"  # {t, room, area}        both asked: the fresh room
 const PEER_LEFT := "peer_left"
 const EXPIRED := "expired"     # nobody came
@@ -58,6 +61,15 @@ static func rematch() -> Dictionary:
 	return {"t": REMATCH}
 
 
+## The pre-match pick: three slots (null → ""), ready once READY is pressed.
+static func loadout(slots: Array, ready: bool) -> Dictionary:
+	var out := []
+	for i in CardDefs.SLOTS:
+		var s: Variant = slots[i] if i < slots.size() else null
+		out.push_back(str(s) if s != null else "")
+	return {"t": LOADOUT, "slots": out, "ready": ready}
+
+
 static func encode(msg: Dictionary) -> String:
 	return JSON.stringify(msg)
 
@@ -88,6 +100,9 @@ static func parse(text: String) -> Dictionary:
 				return {}
 		START:
 			if not _num(m.get("seed")) or not (m.get("area") is String):
+				return {}
+		MATCHED:
+			if not (m.get("peer") is Dictionary) or not _num(m.get("cap")):
 				return {}
 		CARD, CARD_OK:
 			if not (m.get("id") is String) or CardDefs.get_card(str(m["id"])).is_empty():
@@ -157,6 +172,9 @@ static func heat_cfg(start: Dictionary, peer: Dictionary, side := "a") -> Dictio
 		"league": null, "remote": true, "online": true, "bucket": "online",
 		"player_cards": _ids(mine), "player_slots": mine, "ai_cards": _ids(theirs),
 		"their_level": int(levels.get("b" if side == "a" else "a", 1)),
+		"ranked": bool(start.get("ranked", false)),
+		"cap": int(start.get("cap", levels.get("a", 1))),
+		"their_tier": Dictionary(start.get("tiers", {})).get("b" if side == "a" else "a", {}) if start.get("tiers") is Dictionary else {},
 	}
 
 

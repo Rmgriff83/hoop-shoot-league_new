@@ -12,6 +12,8 @@ export interface Env {
   FEATURE_SAVE?: string;
   FEATURE_MATCH?: string;
   FEATURE_CARDS?: string;
+  /** Ranked online: the queue, the board, the rated rooms (index.ts, lobby.ts). */
+  FEATURE_RANKED?: string;
   /** Platform identity link/restore/unlink (platform_routes.ts); DELETE /v1/me has no switch. */
   FEATURE_PLATFORM?: string;
   /** Vitest only: enables the `test` proof verifier (platform.ts). Never a wrangler var. */

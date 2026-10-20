@@ -87,6 +87,7 @@ var _chip_b: Label
 var _settings: SettingsPanel
 var _ranks: RanksPage
 var _lobby: MatchLobbyPage
+var _pre_match: PreMatchPage
 var _switching := false
 
 
@@ -1180,12 +1181,26 @@ func _open_ranks() -> void:
 	var on_fail := func(area: String, period: String) -> void:
 		if _ranks != null:
 			_ranks.set_offline(area, period, SaveService.top_scores(RanksCopy.BOARD_SIZE, area))
+	var on_ladder := func(data: Dictionary) -> void:
+		if _ranks != null:
+			_ranks.set_board(RanksCopy.RANKED, "all", data)
+	var on_ladder_fail := func() -> void:
+		if _ranks != null:
+			_ranks.set_offline(RanksCopy.RANKED, "all", [])
 	Net.board_loaded.connect(on_board)
 	Net.board_failed.connect(on_fail)
-	_ranks.request.connect(func(area: String, period: String) -> void: Net.load_board(area, period))
+	Net.ranked_board_loaded.connect(on_ladder)
+	Net.ranked_board_failed.connect(on_ladder_fail)
+	_ranks.request.connect(func(area: String, period: String) -> void:
+		if area == RanksCopy.RANKED:
+			Net.load_ranked_board()
+		else:
+			Net.load_board(area, period))
 	_ranks.closed.connect(func() -> void:
 		Net.board_loaded.disconnect(on_board)
 		Net.board_failed.disconnect(on_fail)
+		Net.ranked_board_loaded.disconnect(on_ladder)
+		Net.ranked_board_failed.disconnect(on_ladder_fail)
 		_ranks = null
 	)
 	add_child(_ranks)
@@ -1214,18 +1229,20 @@ func _open_lobby() -> void:
 		match kind:
 			"waiting": _lobby.show_waiting(str(a), str(b) if b != null else "")
 			"found": _lobby.show_found(Dictionary(a) if a is Dictionary else {})
-			"failed": _lobby.show_failed(str(a))
+			"failed":
+				_close_pre_match()
+				_lobby.show_failed(str(a))
 			"court": _lobby.set_found_court(str(a))
+			"matched": _open_pre_match(Dictionary(a) if a is Dictionary else {})
+	_lobby.ranked.connect(func() -> void: App.start_online("any", "ranked", "", on_state))
 	_lobby.quick.connect(func(area: String) -> void: App.start_online(area, "quick", "", on_state))
 	_lobby.create.connect(func(area: String) -> void: App.start_online(area, "create", "", on_state))
 	_lobby.join.connect(func(area: String, code: String) -> void: App.start_online(area, "join", code, on_state))
-	_lobby.cancel.connect(App.cancel_online)
-	var on_cards := func() -> void:
-		if _lobby != null:
-			_lobby.refresh_cards()
-	Net.cards_changed.connect(on_cards)
+	_lobby.cancel.connect(func() -> void:
+		_close_pre_match()
+		App.cancel_online())
 	_lobby.closed.connect(func() -> void:
-		Net.cards_changed.disconnect(on_cards)
+		_close_pre_match()
 		_lobby = null
 		_slide_home(false)
 	)
@@ -1233,10 +1250,51 @@ func _open_lobby() -> void:
 	_slide_home(true)
 	_lobby.slide_in()
 	Net.refresh_cards()   # the ledger's word on the online cards
+	Net.fetch_me()        # …and on the rank
 
 
 func lobby() -> MatchLobbyPage:
 	return _lobby
+
+
+## The pre-match pick (docs/BACKEND.md → Ranked): over the lobby once the
+## room says `matched` — the opponent, the card cap, the loadout, READY.
+func _open_pre_match(info: Dictionary) -> void:
+	_close_pre_match()
+	_pre_match = PreMatchPage.new()
+	_pre_match.name = "PreMatch"
+	_pre_match.build(info, Net.ONLINE_BUCKET)
+	_pre_match.readied.connect(func(slots: Array) -> void: App.send_loadout(slots, true))
+	_pre_match.picked.connect(func(slots: Array) -> void: App.send_loadout(slots, false))
+	_pre_match.cancelled.connect(func() -> void:
+		_close_pre_match()
+		App.cancel_online()
+		if _lobby != null:
+			_lobby.show_menu())
+	var on_cards := func() -> void:
+		if _pre_match != null:
+			_pre_match.refresh_cards()
+	Net.cards_changed.connect(on_cards)
+	_pre_match.closed.connect(func() -> void:
+		Net.cards_changed.disconnect(on_cards)
+		_pre_match = null)
+	add_child(_pre_match)
+	if _lobby != null:
+		_lobby.slide_out(true, false)
+	_pre_match.slide_in()
+
+
+func _close_pre_match() -> void:
+	if _pre_match != null and is_instance_valid(_pre_match):
+		var p := _pre_match
+		_pre_match = null
+		p.queue_free()
+		if _lobby != null:
+			_lobby.slide_in(true)
+
+
+func pre_match() -> PreMatchPage:
+	return _pre_match
 
 
 ## Land on an area's home from the archive: the page's ink hands over to

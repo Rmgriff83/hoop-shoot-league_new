@@ -221,9 +221,14 @@ a play is a relayed, receipted message. Online cards are **never bought**
 (docs/ECONOMY.md → The rule: no path from real money to online cards; the
 online shop and wallet were removed 2026-10-19); they will come only from
 verified server drops and spoils (the next task). The level rule is the leagues' (`Progression.can_use`),
-checked on the phone and again on the server. There is no card-drop path and
-no parity envelope online yet; `card_parity` and `CardBudget` remain per
-league. AI cards never meet online hands.
+checked on the phone and again on the server — and since 2026-10-19 **the
+card cap** (docs/BACKEND.md → Ranked): in every online match both loadouts
+stop at the lower of the two verified levels, picked on the pre-match page
+and validated by the room, so a level-5 Vortex never meets a level-2 player.
+`data/online_drops.json` → `card_min_tier` adds a ladder-tier floor per card
+(all rookie until the drop task). There is no card-drop path and no parity
+envelope online yet; `card_parity` and `CardBudget` remain per league. AI
+cards never meet online hands.
 
 ## Adding a card
 
