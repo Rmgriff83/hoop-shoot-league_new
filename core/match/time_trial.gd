@@ -88,10 +88,12 @@ var fire_until := -1.0
 ## when the window closes, so the makes shot during it stay a real streak and
 ## a strong shooter is never worse off for having played the card.
 var _fire_loan := 0
-## Card vortex (docs/CARDS.md): the rim pulls any ball that touched iron or
-## board through, for a window of the trial clock. Ice ends it; a miss does not.
-var vortex_card := false
-var vortex_until := -1.0
+## Card magnet (docs/CARDS.md): a near miss is zapped in, for a window of the
+## trial clock; makes under it never build the streak (the counter is kept,
+## not grown); a real miss still breaks it. Ice ends the window; a miss does not.
+var magnet_card := false
+var magnet_until := -1.0
+var magnet_pull_m := 0.35
 
 # Each flight: { "state": BallState, "seen_events": int, "scored": bool }
 var _flights: Array[Dictionary] = []
@@ -128,7 +130,7 @@ func freeze_rim(reason := "card") -> bool:
 	_set_geo(geo)
 	_events.push_back({"kind": "ice_on", "misses": miss_streak, "reason": reason})
 	_end_card_fire("ice")
-	_end_vortex("ice")
+	_end_magnet("ice")
 	return true
 
 
@@ -167,31 +169,33 @@ func _end_card_fire(reason: String) -> void:
 	_events.push_back({"kind": "fire_off", "reason": reason})
 
 
-## Spin the rim from a power-up card for `seconds` of the trial clock: every
-## ball that touches iron or board is pulled through (ShotSim). Refused during
-## the countdown, while iced, while already spinning. Emits vortex_on.
-func spin_rim(seconds: float, reason := "card") -> bool:
-	if vortex_card or iced or phase != PHASE_RUNNING:
+## Hang the magnet over the rim from a power-up card for `seconds` of the
+## trial clock: a miss within `pull_m` of the rim centre is zapped in
+## (ShotSim decides at release). Refused during the countdown, while iced,
+## while already magnetised. Emits magnet_on.
+func magnetize_rim(seconds: float, pull_m := 0.35, reason := "card") -> bool:
+	if magnet_card or iced or phase != PHASE_RUNNING:
 		return false
-	vortex_card = true
-	vortex_until = t + seconds
+	magnet_card = true
+	magnet_until = t + seconds
+	magnet_pull_m = pull_m if pull_m > 0.0 else magnet_pull_m
 	_set_geo(geo)
-	_events.push_back({"kind": "vortex_on", "reason": reason, "seconds": seconds})
+	_events.push_back({"kind": "magnet_on", "reason": reason, "seconds": seconds})
 	return true
 
 
-## Seconds of the vortex left (0 when none).
-func vortex_left() -> float:
-	return maxf(vortex_until - t, 0.0) if vortex_card else 0.0
+## Seconds of the magnet left (0 when none).
+func magnet_left() -> float:
+	return maxf(magnet_until - t, 0.0) if magnet_card else 0.0
 
 
-func _end_vortex(reason: String) -> void:
-	if not vortex_card:
+func _end_magnet(reason: String) -> void:
+	if not magnet_card:
 		return
-	vortex_card = false
-	vortex_until = -1.0
+	magnet_card = false
+	magnet_until = -1.0
 	_set_geo(geo)
-	_events.push_back({"kind": "vortex_off", "reason": reason})
+	_events.push_back({"kind": "magnet_off", "reason": reason})
 
 
 ## Any shot still unresolved (in the air or rattling)?
@@ -267,8 +271,8 @@ func _set_geo(g: SimGeometry) -> void:
 	var out := g
 	if out.ice != iced:
 		out = out.with_ice(iced)
-	if out.vortex != vortex_card:
-		out = out.with_vortex(vortex_card)
+	if out.magnet != magnet_card or (magnet_card and out.magnet_pull_m != magnet_pull_m):
+		out = out.with_magnet(magnet_card, magnet_pull_m)
 	geo = out
 
 
@@ -293,7 +297,7 @@ func release(launch: Dictionary) -> bool:
 	attempts += 1
 	if ball_return_s > 0.0:
 		ball_ready_at = t + ball_return_s
-	_flights.push_back({"state": ShotSim.create_shot(launch, geo), "seen_events": 0, "scored": false})
+	_flights.push_back({"state": ShotSim.create_shot(launch, geo), "seen_events": 0, "scored": false, "magnet": magnet_card})
 	_events.push_back({"kind": "release", "launch": launch})
 	return true
 
@@ -360,8 +364,8 @@ func _step_fixed() -> void:
 	# The card's window closes once the last shot of it has landed.
 	if fire_card and t >= fire_until and not _shot_pending():
 		_end_card_fire("time")
-	if vortex_card and t >= vortex_until and not _shot_pending():
-		_end_vortex("time")
+	if magnet_card and t >= magnet_until and not _shot_pending():
+		_end_magnet("time")
 	if was_waiting and ball_ready() and phase == PHASE_RUNNING:
 		_events.push_back({"kind": "ball_ready"})
 	if phase == PHASE_COUNTDOWN:
@@ -431,7 +435,12 @@ func _step_fixed() -> void:
 				if f.get("broke_ice", false):
 					outcome["ice_broken"] = "swish"  # the swish that shattered the ice
 				miss_streak = 0
-				streak += 1
+				if f.get("magnet", false):
+					# Shot under the magnet: it pays at the streak you had but
+					# never builds it (Ross, 2026-10-23).
+					outcome["streak_frozen"] = true
+				else:
+					streak += 1
 				makes += 1
 				var swish: bool = outcome["type"] == ShotClassify.SWISH
 				if swish:
@@ -451,7 +460,7 @@ func _step_fixed() -> void:
 					times_iced += 1
 					_set_geo(geo)
 					_events.push_back({"kind": "ice_on", "misses": miss_streak})
-					_end_vortex("ice")
+					_end_magnet("ice")
 			outcome["streak"] = streak
 			outcome["miss_streak"] = miss_streak
 			outcome["iced"] = iced

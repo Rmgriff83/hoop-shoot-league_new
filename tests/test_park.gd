@@ -44,7 +44,7 @@ func _geometry(t) -> void:
 	t.ok(g.prop_e < 0.5, "snow is a dull bounce (%.2f)" % g.prop_e)
 	var moved := g.with_pose(3.9, 0.2)
 	t.ok(moved.rim_e == g.rim_e and moved.wall_e == g.wall_e and moved.props.size() == 1 and moved.pole_r == g.pole_r, "with_pose keeps the iron, the banks, the drift and the pole")
-	t.ok(not g.vortex and not g.ice, "no vortex, no ice by default")
+	t.ok(not g.magnet and not g.ice, "no magnet, no ice by default")
 
 
 func _shots(t) -> void:

@@ -12,7 +12,7 @@
       "city": 0.36,
       "park": 0.36
     },
-    "vortex6": {
+    "magnet6": {
       "beach": 1.42,
       "cage": 0.98,
       "city": 1.51,
@@ -72,7 +72,7 @@
         "without": -0.51
       }
     },
-    "vortex6": {
+    "magnet6": {
       "beach": {
         "played": 1.0,
         "se": 0.09,
@@ -101,5 +101,8 @@
   },
   "generated": "2026-10-20",
   "n": 500.0,
+  "placeholder": {
+    "magnet6": "carried over from vortex6 (2026-10-23); re-run tools/card_lab.gd -- magnet6"
+  },
   "seed": 4242.0
 }

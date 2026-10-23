@@ -54,11 +54,11 @@ beforeEach(() => resetMemoryLimits());
 
 describe("validHand with a cap and a tier", () => {
   it("holds a card under the cap and the player's own level, and under its tier", () => {
-    const inv = { inventory: { ice: 1, fire7: 1, vortex6: 1 }, level: 9 };
-    expect(validHand(["ice", "fire7", "vortex6"], inv)).toEqual(["ice", "fire7", "vortex6"]); // the old two-arg call: no cap, top tier
-    expect(validHand(["ice", "fire7", "vortex6"], inv, 3, "rookie")).toEqual(["ice", "fire7", ""]); // vortex6 is level 5
-    expect(validHand(["ice", "fire7", "vortex6"], inv, 1, "rookie")).toEqual(["ice", "", ""]);
-    expect(validHand(["ice", "fire7", "vortex6"], { ...inv, level: 4 }, 9, "rookie")).toEqual(["ice", "fire7", ""]); // own level, not just the cap
+    const inv = { inventory: { ice: 1, fire7: 1, magnet6: 1 }, level: 9 };
+    expect(validHand(["ice", "fire7", "magnet6"], inv)).toEqual(["ice", "fire7", "magnet6"]); // the old two-arg call: no cap, top tier
+    expect(validHand(["ice", "fire7", "magnet6"], inv, 3, "rookie")).toEqual(["ice", "fire7", ""]); // magnet6 is level 5
+    expect(validHand(["ice", "fire7", "magnet6"], inv, 1, "rookie")).toEqual(["ice", "", ""]);
+    expect(validHand(["ice", "fire7", "magnet6"], { ...inv, level: 4 }, 9, "rookie")).toEqual(["ice", "fire7", ""]); // own level, not just the cap
     const was = CARD_MIN_TIER.fire7;
     CARD_MIN_TIER.fire7 = "pro";
     try {
@@ -98,19 +98,19 @@ describe("the pre-match step", () => {
     const b = await register(3);
     await give(a, "ice", 1);
     await give(a, "fire7", 2);
-    await give(a, "vortex6", 1);
+    await give(a, "magnet6", 1);
     await give(b, "fire7", 1);
     await give(b, "ice", 1);
     const room = uuid();
     const A = await join(a, room);
     const B = await join(b, room);
     await A.until((m) => m.t === "matched");
-    A.loadout(["ice", "ice", "vortex6"], false); // one ice owned; vortex6 (level 5) is over the cap of 3
+    A.loadout(["ice", "ice", "magnet6"], false); // one ice owned; magnet6 (level 5) is over the cap of 3
     expect(await A.until((m) => m.t === "loadout_ok")).toEqual({ t: "loadout_ok", hand: ["ice", "", ""], ready: false });
     A.loadout(["fire7", "nope", "fire7"], true); // the last word counts
     await A.until((m) => m.t === "loadout_ok" && m.ready);
     await B.until((m) => m.t === "matched");
-    B.loadout(["vortex6", "fire7", "ice"], true); // vortex6 is over b's own level; fire7 (level 3) fits the cap exactly
+    B.loadout(["magnet6", "fire7", "ice"], true); // magnet6 is over b's own level; fire7 (level 3) fits the cap exactly
     const sa = await A.until((m) => m.t === "start");
     const sb = await B.until((m) => m.t === "start");
     expect(sa.hands).toEqual({ a: ["fire7", "", "fire7"], b: ["", "fire7", "ice"] });

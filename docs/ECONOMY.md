@@ -115,7 +115,7 @@ sessions, the legends behind level 5. Nets were priced 400–1000 on a counter
 until 2026-10-15; now they are prizes.
 
 **Cards** (`data/cards.json`, `price = round10(150 · power^1.3)` ±20 %): ice
-**80**, fire7 **140**, vortex6 **290** tickets. Heats to afford in the cage
+**80**, fire7 **140**, magnet6 **290** tickets. Heats to afford in the cage
 3.1 / 5.4 / 11.2 (bands common 1.5–4.5, rare 3–8, epic 6–14), in the city
 2.4 / 4.1 / 8.5 — about what the coin prices (100 / 170 / 390 at 35 coins a
 cage heat) took. A season (18 heats + a fifth of a title) is ~500 tickets in

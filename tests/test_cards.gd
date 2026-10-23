@@ -19,9 +19,10 @@ func run(t) -> void:
 	t.eq(CardDefs.target_of("nope"), "opponent", "unknown → opponent")
 	t.eq(Progression.card_level(CardDefs.get_card("ice")), 1, "Deep Freeze is a level-1 card")
 	t.eq(Progression.card_level(CardDefs.get_card("fire7")), 3, "Heat Check is level 3")
-	t.eq(Progression.card_level(CardDefs.get_card("vortex6")), 5, "Vortex is level 5 (opens with the city)")
-	t.eq(CardDefs.target_of("vortex6"), "self", "vortex is a self card")
-	_run_vortex(t)
+	t.eq(Progression.card_level(CardDefs.get_card("magnet6")), 5, "Magnet is level 5 (opens with the city)")
+	t.eq(CardDefs.target_of("magnet6"), "self", "the magnet is a self card")
+	t.close(float(CardDefs.get_card("magnet6")["effect"]["pull_m"]), 0.35, 1e-9, "the pull threshold is data")
+	_run_magnet(t)
 	_run_art(t)
 	# The save doc: one bucket per league (docs/ECONOMY.md).
 	var full := CardDefs.empty_doc()
@@ -76,12 +77,18 @@ func run(t) -> void:
 	t.ok(not CardDefs.migrate(old), "migrate is idempotent")
 	var v1 := {"updatedAt": 0, "inventory": {"ice": 1}, "loadout": ["ice", "ice", "ice"]}
 	t.ok(CardDefs.migrate(v1) and v1["leagues"] == {}, "a v1 doc is wiped the same way")
-	# v3 → v4 (2026-10-19): the per-league coin wallet goes, the cards stay.
+	# v3 → v5 (2026-10-19): the per-league coin wallet goes, the cards stay.
 	var v3 := {"updatedAt": 0, "v": 3, "leagues": {"cage": {"coins": 120, "inventory": {"ice": 2}, "loadout": ["fire7", null, null]}}}
 	t.ok(CardDefs.migrate(v3), "a v3 doc migrates")
-	t.eq(v3["v"], 4, "stamped v4")
+	t.eq(v3["v"], CardDefs.DOC_VERSION, "stamped the current version")
 	t.eq(v3["leagues"]["cage"], {"inventory": {"ice": 2}, "loadout": ["fire7", null, null]}, "the coins are dropped, inventory and loadout kept")
 	t.ok(not CardDefs.migrate(v3), "and it is idempotent")
+	# v4 → v5 (2026-10-23): the Vortex became the Magnet — every copy renames.
+	var v4 := {"updatedAt": 0, "v": 4, "leagues": {"city": {"inventory": {"vortex6": 2, "magnet6": 1, "ice": 1}, "loadout": ["vortex6", null, "ice"]}}}
+	t.ok(CardDefs.migrate(v4), "a v4 doc migrates")
+	t.eq(v4["v"], 5, "stamped v5")
+	t.eq(v4["leagues"]["city"], {"inventory": {"magnet6": 3, "ice": 1}, "loadout": ["magnet6", null, "ice"]}, "vortex6 → magnet6 in the inventory and the loadout")
+	t.ok(not CardDefs.migrate(v4), "idempotent")
 	# Heat: the player ices the AI; the effect refuses a second time.
 	var geo := SimGeometry.arcade()
 	var h := Heat.new({"geo": geo, "seconds": 30.0, "ai": AiRatings.make(0.9, 0.9, 2.0), "seed": 5,
@@ -196,7 +203,7 @@ func run(t) -> void:
 				over += 1
 	t.eq(over, 0, "no drop ever sits above the player's level + 1")
 	t.eq(CardRewards.eligible_ids(1), ["ice"], "at level 1 only the ice is eligible (fire7 is level 3)")
-	t.ok(CardRewards.eligible_ids(2).has("fire7") and not CardRewards.eligible_ids(2).has("vortex6"), "at level 2 the Heat Check (level 3) joins, the Vortex (5) waits")
+	t.ok(CardRewards.eligible_ids(2).has("fire7") and not CardRewards.eligible_ids(2).has("magnet6"), "at level 2 the Heat Check (level 3) joins, the Magnet (5) waits")
 	var ids := {}
 	for i in 2000:
 		var id := str(CardRewards.roll({"won": true, "level": 9}, 5000 + i)["id"])
@@ -310,24 +317,25 @@ func _run_art(t) -> void:
 	deal.free()
 
 
-## The Vortex card in a heat: the player spins their own rim; the AI plays
-## its signature copy on itself.
-func _run_vortex(t) -> void:
+## The Magnet card in a heat: the player hangs it over their own rim; the AI
+## plays its signature copy on itself.
+func _run_magnet(t) -> void:
 	var geo := SimGeometry.city()
 	var h := Heat.new({"geo": geo, "seconds": 40.0, "ai": AiRatings.make(0.9, 0.9, 2.0), "seed": 9,
-		"calib_key": "city", "player_cards": ["vortex6"], "ai_cards": ["vortex6"]})
-	t.ok(not h.can_play(Heat.PLAYER, "vortex6"), "no vortex during the countdown")
+		"calib_key": "city", "player_cards": ["magnet6"], "ai_cards": ["magnet6"]})
+	t.ok(not h.can_play(Heat.PLAYER, "magnet6"), "no magnet during the countdown")
 	_tick(h, TimeTrial.COUNTDOWN_SECONDS + 0.1)
-	t.ok(h.can_play(Heat.PLAYER, "vortex6"), "vortex playable once running")
-	t.ok(h.play_card(Heat.PLAYER, "vortex6"), "vortex applied to the player")
-	t.ok(h.player.vortex_card and h.player.geo.vortex, "the player's rim pulls")
-	t.ok(not h.ai.vortex_card, "the AI's does not")
+	t.ok(h.can_play(Heat.PLAYER, "magnet6"), "magnet playable once running")
+	t.ok(h.play_card(Heat.PLAYER, "magnet6"), "magnet applied to the player")
+	t.ok(h.player.magnet_card and h.player.geo.magnet, "the player's rim is magnetised")
+	t.close(h.player.geo.magnet_pull_m, 0.35, 1e-9, "…with the card's threshold")
+	t.ok(not h.ai.magnet_card, "the AI's is not")
 	t.eq(h.hands[Heat.PLAYER].size(), 0, "the card is spent")
-	t.ok(not h.can_play(Heat.PLAYER, "vortex6"), "cannot play it twice")
+	t.ok(not h.can_play(Heat.PLAYER, "magnet6"), "cannot play it twice")
 	_tick(h, 30.0)
 	var ai_played := false
 	for ev in h.drain_events():
 		if ev["kind"] == "card_played" and ev.get("ok", false) and str(ev.get("side", "")) == Heat.AI:
 			ai_played = true
-			t.eq(ev["target"], Heat.AI, "the AI spins its own rim")
-	t.ok(ai_played, "the AI plays its vortex within 30 s")
+			t.eq(ev["target"], Heat.AI, "the AI magnetises its own rim")
+	t.ok(ai_played, "the AI plays its magnet within 30 s")

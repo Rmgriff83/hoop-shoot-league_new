@@ -230,19 +230,52 @@ close hard-reset the streak to 0, which the card lab caught as a NEGATIVE
 power in the city (−0.84 ± 0.26): a strong shooter lost the streak the card
 had helped build, then shot the next five makes at base points.
 
-## The Vortex (`vortex6`, level 5, the city)
+## The Magnet (`magnet6`, level 5, the city) — was the Vortex until 2026-10-23
 
-A self card with a 6 s window (`TimeTrial.spin_rim` / `vortex_left`, the
-fire window's shape): while `SimGeometry.vortex` is on, `ShotSim` pulls any
-ball that has touched iron or board and is at the hoop — inside the ring
-above make depth, or within `R_RIM + R_BALL + 5 cm` of the axis between
-6 cm below and 45 cm above the plane — into a 0.35 s glide to the axis and
-a straight drop through the ring (`vortex_pull` event, then the normal
-`enter` and make). A clean entry is never taken, so a swish still pays 2; an
-airball never scores (no iron or board event); a board-only miss becomes a
-BANK. The window ends on the clock (after the last pending ball lands) or
-when the rim ices; a miss does not end it. Ice has precedence: an iced,
-spinning rim catches.
+A self card with a 6 s window (`TimeTrial.magnetize_rim` / `magnet_left`,
+the fire window's shape; design "Magnet Card FX" 38b). Ross swapped the
+Vortex for it because its animation was the one that worked; the rule
+changed with it:
+
+- **The pull is decided at release.** With `SimGeometry.magnet` on,
+  `ShotSim.create_shot` replays the launch once without the magnet
+  (`_magnet_predict`, deterministic, ~one extra sim per shot) and asks
+  `first_reach`: when the unpulled ball first reaches the rim — iron, board
+  or the downward crossing of the rim plane, whichever is first — and how far
+  its centre is from the rim axis then. A **make is left alone** (a swish
+  stays a swish, a rattle-in is the same shot). A **miss within
+  `effect.pull_m`** (0.35 m, data) is pulled: at 2/3 of that time the bolt
+  strikes (`magnet_pull` event, before any iron), the ball is dragged in 4
+  stepped jerks over 0.36 s to a hover 20 cm above the rim (3 cm toward the
+  shooter, 2 cm aside), held 0.12 s, then released straight down so the
+  normal stepper fires `enter` and the make. `ShotClassify` downgrades a
+  pulled entry to MAKE: **never a swish, 1 point** (+ the streak tier). A
+  wide miss or an airball (never reaches rim height) is untouched. The
+  prediction uses the geometry of the moment; the drag reads the live geo,
+  so the moving board keeps the ball.
+- **The streak freezes.** A shot released under the magnet (`flight.magnet`)
+  that scores pays `StreakRules.points_for` at the streak you already had
+  (`outcome.streak_frozen`) and does not grow it; the counter you had is
+  yours again when the window closes. A real miss under it still breaks the
+  streak (and puts the fire out) — the magnet protects nothing. Fire and
+  magnet can be on together: the fire's lent streak just stops climbing.
+- The window ends on the clock (after the last pending ball lands) or when
+  the rim ices (`magnet_off {reason: time|ice}`); a miss does not end it.
+  Ice has precedence: no prediction, no pull on an iced rim.
+
+The show (`game/view/rim_magnet.gd` `RimMagnet`, under the rim pivot via
+`CourtGeometry.set_magnet` / `magnet_follow`): a red low-poly horseshoe pops
+up 0.52 m over the rim with a 7-step spring, bobs, and throws stepped gold
+zaps from its silver tips to the front of the ring (12 fps, hidden every
+third step); on `magnet_pull` a forked bolt locks onto the ball with six
+spark rays until the release; SPENT pops it down in 4 steps, ICED tints it
+pale blue and drops it. Tray tag `MAGNET · 6S` in the card's red; marquees
+MAGNET / MAGNET SPENT / MAGNET ICED; a ZAP rim pop on the strike. Built
+from primitives with runtime 16×16 pixel textures: ≤ 6 draws, no lights.
+
+Its power in `card_power.json` is **the Vortex's measurement carried over**
+(the `placeholder` note in the file) until `tools/card_lab.gd -- magnet6`
+is run for it (~27 min, other cards kept) — Ross's call.
 
 ## Online matches (2026-10-07)
 
@@ -256,7 +289,7 @@ verified server drops and spoils (the next task). The level rule is the leagues'
 checked on the phone and again on the server — and since 2026-10-19 **the
 card cap** (docs/BACKEND.md → Ranked): in every online match both loadouts
 stop at the lower of the two verified levels, picked on the pre-match page
-and validated by the room, so a level-5 Vortex never meets a level-2 player.
+and validated by the room, so a level-5 Magnet never meets a level-2 player.
 `data/online_drops.json` → `card_min_tier` adds a ladder-tier floor per card
 (all rookie until the drop task). There is no card-drop path and no parity
 envelope online yet; `card_parity` and `CardBudget` remain per league. AI
@@ -283,9 +316,14 @@ cards never meet online hands.
    `h`. `game/ui/card_face.gd` (`CardFace`) draws it everywhere — the tray,
    the deal, loadout, spares, shop, the drop and the chips. Only
    `card_back.png` is still generated (`gen_card_textures.lua`).
-   Vortex (`vortex6`, 2026-09-27): `card_vortex6.png` + `fx_vortex.png` (16
-   frames at 14.5 fps, rect `[16, 29, 64, 56]`, chip 30×36 on `#1E4A41`),
-   `glyph_vortex.png` from `gen_card_textures.lua`.
+   Magnet (`magnet6`, 2026-10-23, design "Card Icons" 10a): `card_magnet6.png`
+   + `fx_magnet.png` (16 frames at 12 fps, rect `[16, 29, 64, 56]`, chip
+   36×32 on `#4A1410`) and `glyph_magnet.png`, all from the design export
+   (the Vortex's files and its Lua glyph are gone). **Stand-in (2026-10-23):**
+   the face and the loop checked in are the old Vortex art under the new
+   names — the design PNGs did not survive the DesignSync transcription
+   (docs memory: export the project instead); the glyph is the real one.
+   Replace both from the export and run `--import`.
 
 ## Adding a league
 

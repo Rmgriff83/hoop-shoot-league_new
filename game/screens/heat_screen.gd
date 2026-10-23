@@ -224,7 +224,7 @@ const TRAY_PITCH := TRAY_CARD.y + 8
 const TRAY_CENTRE_Y := TRAY_POS.y + TRAY_CARD.y * 0.5 - TRAY_PITCH
 ## The slot whose fire card is burning (its tag counts the window down).
 var _fire_slot := -1
-var _vortex_slot := -1
+var _magnet_slot := -1
 ## The slot a card was just dealt from, and where it sat (the deal starts there).
 var _dealt_slot := -1
 var _dealt_from := Rect2(TRAY_POS, TRAY_CARD)
@@ -296,17 +296,17 @@ class TrayCard extends Control:
 		tag.position = Vector2(-6 + (4 if down else 0), 42 + (4 if down else 0))
 		queue_redraw()
 
-	## "wait" (WAIT, dimmed), "fire" / "vortex" (the seconds left, with the
+	## "wait" (WAIT, dimmed), "fire" / "magnet" (the seconds left, with the
 	## card's glyph) or "" (ready).
 	func set_state(kind: String, text: String) -> void:
 		tag.visible = kind != ""
 		tag_label.text = text
-		tag_glyph.visible = kind == "fire" or kind == "vortex"
-		if kind == "vortex":
-			tag_glyph.icon_name = "cards/glyph_vortex"
+		tag_glyph.visible = kind == "fire" or kind == "magnet"
+		if kind == "magnet":
+			tag_glyph.icon_name = "cards/glyph_magnet"
 			tag_glyph.queue_redraw()
-			_sb.bg_color = Color(Color("#1E4A41"), 0.9)
-			_sb.border_color = Color("#2E9684")
+			_sb.bg_color = Color(Color("#4A1410"), 0.9)
+			_sb.border_color = Color("#D0443A")
 			face.modulate = Color.WHITE
 		elif kind == "fire":
 			tag_glyph.icon_name = "cards/glyph_fire"
@@ -436,8 +436,8 @@ func tray_states() -> Array:
 		elif _tray_ids[i] == "used":
 			if i == _fire_slot and heat.player.fire_card:
 				out.push_back("fire")
-			elif i == _vortex_slot and heat.player.vortex_card:
-				out.push_back("vortex")
+			elif i == _magnet_slot and heat.player.magnet_card:
+				out.push_back("magnet")
 			else:
 				out.push_back("used")
 		elif not Progression.can_use(App.level(), CardDefs.get_card(_tray_ids[i])):
@@ -482,8 +482,8 @@ func _deploy(i: int, id: String) -> void:
 		var kind := str(CardDefs.get_card(id).get("effect", {}).get("kind", ""))
 		if kind == "fire":
 			_fire_slot = i   # stays in the tray while it burns
-		elif kind == "vortex":
-			_vortex_slot = i   # stays in the tray while it pulls
+		elif kind == "magnet":
+			_magnet_slot = i   # stays in the tray while it hangs over the rim
 		else:
 			_remove_from_tray(i)
 	else:
@@ -513,8 +513,8 @@ func _refresh_tray() -> void:
 		match st:
 			"fire":
 				_tray[i].set_state("fire", "%dS" % ceili(heat.player.fire_left()))
-			"vortex":
-				_tray[i].set_state("vortex", "%dS" % ceili(heat.player.vortex_left()))
+			"magnet":
+				_tray[i].set_state("magnet", "%dS" % ceili(heat.player.magnet_left()))
 			"used":
 				_remove_from_tray(i)   # a fire card whose window just closed
 			"wait":
@@ -1020,11 +1020,13 @@ func _handle_ai_event(ev: Dictionary) -> void:
 			if _ai_court.fire_lit():
 				_ai_court.set_fire(false)
 				_ai_court.info.marquee("BURNED OUT" if str(ev.get("reason", "")) == "time" else "COOLED OFF", 24.0, _ai_court.info.accent_color)
-		"vortex_on":
-			_ai_court.info.marquee("VORTEX", 24.0, _ai_court.info.accent_color)
-		"vortex_off":
+		"magnet_on":
+			_ai_court.set_magnet(true)
+			_ai_court.info.marquee("MAGNET", 24.0, _ai_court.info.accent_color)
+		"magnet_off":
+			_ai_court.set_magnet(false, str(ev.get("reason", "")) == "ice")
 			_ai_court.show_score(heat.score(Heat.AI))
-			_ai_court.info.marquee("VORTEX SPENT" if str(ev.get("reason", "")) == "time" else "VORTEX ICED", 24.0, _ai_court.info.accent_color)
+			_ai_court.info.marquee("MAGNET SPENT" if str(ev.get("reason", "")) == "time" else "MAGNET ICED", 24.0, _ai_court.info.accent_color)
 		"card_played":
 			if ev.get("ok", false):
 				Sfx.gain_db = prev_gain
@@ -1080,6 +1082,7 @@ func _process(dt: float) -> void:
 		_ai_applied_geo = heat.ai.geo
 		_ai_court.apply_geometry(heat.ai.geo)
 	_ai_pool.update_balls(heat.balls(Heat.AI), heat.ai.holding, dt)
+	_ai_court.magnet_follow(CourtGeometry.magnet_target(heat.balls(Heat.AI)))
 	_ai_court.step_rim(dt)
 	_ai_court.step_net(dt, heat.balls(Heat.AI))
 	if heat.ai.phase == TimeTrial.PHASE_RUNNING:

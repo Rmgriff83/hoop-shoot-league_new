@@ -214,16 +214,16 @@
       "ai_pool": [
         "ice",
         "fire7",
-        "vortex6"
+        "magnet6"
       ],
       "card_parity": 1.0,
       "ai_cards": {
         "starfall": [
           "ice",
-          "vortex6"
+          "magnet6"
         ],
         "union-yards": [
-          "vortex6"
+          "magnet6"
         ],
         "north-tunnel": [
           "ice",

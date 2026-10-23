@@ -27,20 +27,31 @@ const ICE_TOP := 0.02
 const ICE_SEAT_H := 0.07
 const ICE_POP_VX := -1.6
 const ICE_POP_VY := 3.0
-## Card VORTEX: once a ball has touched iron or board, the rim pulls it in.
-## Capture radius: a centre within R_RIM + R_BALL + 5 cm of the axis is still
-## "at the hoop" (on the tube, on the board face, rattling beside the ring);
-## anything farther is a brick flying away and is left alone. The pull is a
-## glide (like the ice hold), provably terminal: it ends on the axis with the
-## ball released straight down through the ring.
-const VORTEX_CAPTURE_R := SimConstants.R_RIM + SimConstants.R_BALL + 0.05
-const VORTEX_CAPTURE_ABOVE := 0.45
-const VORTEX_CAPTURE_BELOW := SimConstants.R_BALL * 0.5
-const VORTEX_PULL_S := 0.35
-const VORTEX_HOVER := SimConstants.R_BALL + SimConstants.R_TUBE + 0.03
-const VORTEX_DROP_VY := -2.5
+## Card MAGNET (design "Magnet Card FX" 38b, 2026-10-23): decided at release.
+## The shot is replayed once without the magnet; if it misses and would reach
+## the rim (iron, board or the rim plane) within `geo.magnet_pull_m` of the
+## rim centre, the bolt strikes at MAGNET_GRAB_FRAC of that time and drags
+## the ball in MAGNET_JERKS stepped jerks to a hover just above the rim
+## (slightly off-centre: never a swish), holds it a beat, then releases it
+## straight down so the normal stepper fires "enter" and made. A ball that
+## was going in is left alone — a swish stays a swish. Provably terminal.
+const MAGNET_GRAB_FRAC := 2.0 / 3.0
+const MAGNET_PULL_S := 0.36
+const MAGNET_JERKS := 4
+const MAGNET_HOLD_S := 0.12
+const MAGNET_HOVER := 0.20
+const MAGNET_ABOVE_DX := -0.03
+const MAGNET_ABOVE_DZ := 0.02
+const MAGNET_DROP_VY := -2.5
 
 static func create_shot(launch: Dictionary, geo: SimGeometry = null) -> BallState:
+	var s := _create_shot_raw(launch, geo)
+	if s.geo.magnet and not s.geo.ice:
+		_magnet_predict(s, launch)
+	return s
+
+
+static func _create_shot_raw(launch: Dictionary, geo: SimGeometry = null) -> BallState:
 	var th: float = deg_to_rad(launch["angle_deg"])
 	var s := BallState.new()
 	s.geo = geo if geo != null else SimGeometry.regulation()
@@ -80,6 +91,38 @@ static func create_shot(launch: Dictionary, geo: SimGeometry = null) -> BallStat
 	s.spin = launch.get("backspin", SimConstants.BACKSPIN_DEFAULT)
 	s.roll = launch.get("roll", 0.0)
 	return s
+
+
+## The magnet's call, made at release: replay the launch without the magnet
+## (the geometry of this moment; the pull itself reads the live geo) and find
+## where the unpulled ball first reaches the rim. A make is left alone.
+static func _magnet_predict(s: BallState, launch: Dictionary) -> void:
+	var geo := s.geo
+	var p := run_shot(launch, true, geo.with_magnet(false))
+	if p.made:
+		return
+	var reach := first_reach(p)
+	if float(reach["t"]) < 0.0 or float(reach["hd"]) > geo.magnet_pull_m:
+		return
+	s.magnet_grab_t = float(reach["t"]) * MAGNET_GRAB_FRAC
+
+
+## When a (finished) shot first reached the rim — iron, board or the rim
+## plane, whichever came first — and how far its centre was from the rim
+## axis then: {t, hd}, both -1 when it never got there (an airball).
+static func first_reach(p: BallState) -> Dictionary:
+	var geo := p.geo
+	var t_first := -1.0
+	var hd := -1.0
+	for ev in p.events:
+		if ev["kind"] == Colliders.KIND_RIM or ev["kind"] == Colliders.KIND_BOARD:
+			t_first = float(ev["t"])
+			hd = _horiz_dist_to_axis(float(ev["pos"]["x"]), float(ev["pos"]["z"]), geo.hoop_x, geo.hoop_z)
+			break
+	if p.plane_cross_t >= 0.0 and (t_first < 0.0 or p.plane_cross_t < t_first):
+		t_first = p.plane_cross_t
+		hd = p.plane_cross_hd
+	return {"t": t_first, "hd": hd}
 
 
 ## Pure ballistic advance (no collision) — position is quadratic in dt.
@@ -166,7 +209,11 @@ static func _update_cylinder_state(s: BallState, prev_x: float, prev_y: float, p
 		var f := (prev_y - geo.hoop_y) / (prev_y - pos.y)
 		var xi := prev_x + (pos.x - prev_x) * f
 		var zi := prev_z + (pos.z - prev_z) * f
-		if _horiz_dist_to_axis(xi, zi, geo.hoop_x, geo.hoop_z) < SimConstants.R_RIM:
+		var cross_hd := _horiz_dist_to_axis(xi, zi, geo.hoop_x, geo.hoop_z)
+		if s.plane_cross_t < 0.0:
+			s.plane_cross_t = s.t
+			s.plane_cross_hd = cross_hd
+		if cross_hd < SimConstants.R_RIM:
 			if geo.ice and not s.ice_caught and _touched_iron(s):
 				# Iced over: a ball that has already rattled the rim or board is
 				# grabbed by the ice instead of dropping in. A clean entry (a
@@ -353,53 +400,47 @@ static func _touched_iron(s: BallState) -> bool:
 ## card on (and no ice — the ice rule wins), a logged rim or board touch (so a
 ## clean entry is never taken: the swish rule), and the ball either inside the
 ## ring above make depth or within the capture radius level with the hoop.
-static func _maybe_vortex_capture(s: BallState) -> void:
-	var geo := s.geo
-	if not geo.vortex or geo.ice or s.vortex_caught or s.ice_caught or s.made or s.settled:
-		return
-	if not _touched_iron(s):
-		return
+## The bolt strikes: the ball stops dead where it is and the pull begins.
+static func _magnet_grab(s: BallState) -> void:
 	var pos := s.pos
-	var hd := _horiz_dist_to_axis(pos.x, pos.z, geo.hoop_x, geo.hoop_z)
-	var inside := s.in_cylinder
-	var at_hoop := (not s.in_cylinder) and hd < VORTEX_CAPTURE_R \
-		and pos.y >= geo.hoop_y - VORTEX_CAPTURE_BELOW and pos.y <= geo.hoop_y + VORTEX_CAPTURE_ABOVE
-	if not (inside or at_hoop):
-		return
 	var speed := s.vel.length()
-	s.vortex_caught = true
-	s.vortex_released = false
-	s.vortex_below = inside
-	s.vortex_t = 0.0
-	s.vortex_from = SimVec3.new(pos.x, pos.y, pos.z)
+	s.magnet_caught = true
+	s.magnet_released = false
+	s.magnet_t = 0.0
+	s.magnet_from = SimVec3.new(pos.x, pos.y, pos.z)
 	s.vel = SimVec3.new(0.0, 0.0, 0.0)
 	s.spin = 0.0
 	s.events.push_back({
-		"kind": "vortex_pull", "t": s.t,
+		"kind": "magnet_pull", "t": s.t,
 		"pos": {"x": pos.x, "y": pos.y, "z": pos.z},
 		"normal": {"x": 0.0, "y": 1.0, "z": 0.0},
 		"speed": speed,
 	})
 
 
-## The vortex glide: a smoothstep from the capture point to the hoop axis (at
-## the ball's own height inside the ring, else a hover just above the plane),
-## then a release straight down so the normal stepper fires "enter" and made.
-## The live geo is read every step, so a moving hoop keeps the ball.
-static func _step_vortex_pull(s: BallState) -> void:
+## The magnet drag: MAGNET_JERKS stepped jumps from the grab point to the
+## hover above the rim (off-centre by ABOVE_DX/DZ so the entry is never a
+## swish), a hold, then a release straight down so the normal stepper fires
+## "enter" and made. The live geo is read every step: a moving hoop keeps
+## the ball.
+static func _step_magnet_pull(s: BallState) -> void:
 	s.t += SimConstants.SIM_DT
-	s.vortex_t += SimConstants.SIM_DT
+	s.magnet_t += SimConstants.SIM_DT
 	var geo := s.geo
-	var k := clampf(s.vortex_t / VORTEX_PULL_S, 0.0, 1.0)
-	k = k * k * (3.0 - 2.0 * k)
-	var to_y := s.vortex_from.y if s.vortex_below else geo.hoop_y + VORTEX_HOVER
-	s.pos.x = s.vortex_from.x + (geo.hoop_x - s.vortex_from.x) * k
-	s.pos.y = s.vortex_from.y + (to_y - s.vortex_from.y) * k
-	s.pos.z = s.vortex_from.z + (geo.hoop_z - s.vortex_from.z) * k
-	if s.vortex_t >= VORTEX_PULL_S:
-		s.vortex_released = true
-		s.pos = SimVec3.new(geo.hoop_x, to_y, geo.hoop_z)
-		s.vel = SimVec3.new(0.0, VORTEX_DROP_VY, 0.0)
+	var ax := geo.hoop_x + MAGNET_ABOVE_DX
+	var ay := geo.hoop_y + MAGNET_HOVER
+	var az := geo.hoop_z + MAGNET_ABOVE_DZ
+	if s.magnet_t < MAGNET_PULL_S:
+		var k := minf(floorf(s.magnet_t / MAGNET_PULL_S * MAGNET_JERKS + 1.0) / MAGNET_JERKS, 1.0)
+		s.pos.x = s.magnet_from.x + (ax - s.magnet_from.x) * k
+		s.pos.y = s.magnet_from.y + (ay - s.magnet_from.y) * k
+		s.pos.z = s.magnet_from.z + (az - s.magnet_from.z) * k
+	elif s.magnet_t < MAGNET_PULL_S + MAGNET_HOLD_S:
+		s.pos = SimVec3.new(ax, ay, az)
+	else:
+		s.magnet_released = true
+		s.pos = SimVec3.new(ax, ay, az)
+		s.vel = SimVec3.new(0.0, MAGNET_DROP_VY, 0.0)
 		s.spin = 0.0
 
 
@@ -436,8 +477,13 @@ static func step_shot(s: BallState) -> void:
 	if s.ice_caught and not s.ice_popped:
 		_step_ice_hold(s)
 		return
-	if s.vortex_caught and not s.vortex_released:
-		_step_vortex_pull(s)
+	if s.magnet_caught and not s.magnet_released:
+		_step_magnet_pull(s)
+		return
+	if s.magnet_grab_t >= 0.0 and not s.magnet_caught and s.t >= s.magnet_grab_t \
+			and not s.made and not s.geo.ice and s.geo.magnet:
+		_magnet_grab(s)
+		_step_magnet_pull(s)
 		return
 	var prev_x := s.pos.x
 	var prev_y := s.pos.y
@@ -467,7 +513,6 @@ static func step_shot(s: BallState) -> void:
 	if hit != null and hit.kind == Colliders.KIND_FLOOR:
 		_deck_roll(s)
 	_update_cylinder_state(s, prev_x, prev_y, prev_z)
-	_maybe_vortex_capture(s)
 	# Tunneling invariant: after resolution the ball must sit outside every collider.
 	var residual := Colliders.find_contact(s.pos, s.geo)
 	if residual != null and residual.depth > s.max_penetration:
@@ -488,6 +533,11 @@ static func step_shot(s: BallState) -> void:
 ## Run a launch to completion and classify it. fast=true stops as soon as the
 ## outcome is decided (headless league/AI resolution).
 static func simulate_shot(launch: Dictionary, fast := false, geo: SimGeometry = null) -> Dictionary:
+	return ShotClassify.classify_shot(run_shot(launch, fast, geo))
+
+
+## Step a launch to the end (or to its decision when fast) and hand back the state.
+static func run_shot(launch: Dictionary, fast := false, geo: SimGeometry = null) -> BallState:
 	var s := create_shot(launch, geo)
 	var max_steps := ceili(SimConstants.MAX_SHOT_TIME / SimConstants.SIM_DT) + 1
 	for i in max_steps:
@@ -496,4 +546,4 @@ static func simulate_shot(launch: Dictionary, fast := false, geo: SimGeometry = 
 			break
 		if fast and s.resolved:
 			break
-	return ShotClassify.classify_shot(s)
+	return s

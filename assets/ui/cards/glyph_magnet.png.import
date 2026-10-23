@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://qlduycbmg852"
-path="res://.godot/imported/fx_vortex.png-5157f838dfebdea142e7dac1125cfa16.ctex"
+uid="uid://cvqg03jopf6hr"
+path="res://.godot/imported/glyph_magnet.png-26e22a835a1195a8ebeb654d8fe0c7db.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/textures/cards/fx_vortex.png"
-dest_files=["res://.godot/imported/fx_vortex.png-5157f838dfebdea142e7dac1125cfa16.ctex"]
+source_file="res://assets/ui/cards/glyph_magnet.png"
+dest_files=["res://.godot/imported/glyph_magnet.png-26e22a835a1195a8ebeb654d8fe0c7db.ctex"]
 
 [params]
 

@@ -56,11 +56,17 @@ var ice_popped := false
 var ice_hold_t := 0.0
 var ice_catch := SimVec3.new()
 var ice_seat := SimVec3.new()
-## Card VORTEX (docs/CARDS.md): the rim's pull took the ball — it glides to
-## the axis from `vortex_from` (at its own height when already inside the
-## ring, else to a hover above the plane), then is released straight down.
-var vortex_caught := false
-var vortex_released := false
-var vortex_below := false
-var vortex_t := 0.0
-var vortex_from := SimVec3.new()
+## Card MAGNET (docs/CARDS.md): decided at release — `magnet_grab_t` >= 0 is
+## the moment the bolt strikes (2/3 of the way to the rim on the unpulled
+## line). From `magnet_from` the ball is dragged in stepped jerks to a hover
+## above the rim, held a beat, then released straight down.
+var magnet_grab_t := -1.0
+var magnet_caught := false
+var magnet_released := false
+var magnet_t := 0.0
+var magnet_from := SimVec3.new()
+## The first downward crossing of the rim plane: when, and how far the centre
+## was from the axis (-1 = never). Bookkeeping only; the magnet's prediction
+## reads it. Nothing else does.
+var plane_cross_t := -1.0
+var plane_cross_hd := -1.0

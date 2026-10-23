@@ -24,7 +24,7 @@ func run(t) -> void:
 	_scoring_and_streaks(t)
 	_streak_tiers(t)
 	_card_fire(t)
-	_card_vortex(t)
+	_card_magnet(t)
 	_cold_streak(t)
 	_rapid_fire(t)
 	_buzzer_beater(t)
@@ -443,54 +443,146 @@ func run_endless(t) -> void:
 
 
 
-## The vortex card (docs/CARDS.md): a timed self window on the city rim.
-func _card_vortex(t) -> void:
+## The magnet card (docs/CARDS.md): a timed self window on the city rim, and
+## the streak rules under it (Ross, 2026-10-23): makes never build the
+## streak, a real miss still breaks it, the counter you had is kept.
+func _card_magnet(t) -> void:
 	var g := SimGeometry.city()
 	var tt := TimeTrial.new(g)
-	t.ok(not tt.spin_rim(6.0), "no vortex during the countdown")
+	t.ok(not tt.magnetize_rim(6.0, 0.35), "no magnet during the countdown")
 	_tick_seconds(tt, TimeTrial.COUNTDOWN_SECONDS + 0.05)
 	tt.drain_events()
-	t.ok(tt.spin_rim(6.0), "the card spins the rim")
-	t.ok(tt.vortex_card and tt.geo.vortex, "vortex on, on the live geometry")
-	t.close(tt.vortex_left(), 6.0, 0.01, "six seconds on the card")
-	t.ok(_has_kind(tt.drain_events(), "vortex_on"), "vortex_on event")
-	t.ok(not tt.spin_rim(6.0), "no second card while it pulls")
+	t.ok(tt.magnetize_rim(6.0, 0.35), "the card magnetises the rim")
+	t.ok(tt.magnet_card and tt.geo.magnet and tt.geo.magnet_pull_m == 0.35, "magnet on, on the live geometry, with the threshold")
+	t.close(tt.magnet_left(), 6.0, 0.01, "six seconds on the card")
+	t.ok(_has_kind(tt.drain_events(), "magnet_on"), "magnet_on event")
+	t.ok(not tt.magnetize_rim(6.0), "no second card while it hangs")
 	# A miss does not end it (nothing to "break": it is a make-rate window).
 	var airball := Ballistics.ideal_launch_for(52.0, g)
 	airball["speed"] = airball["speed"] * 0.8
-	t.ok(tt.pickup() and tt.release(airball), "brick under the vortex")
+	t.ok(tt.pickup() and tt.release(airball), "brick under the magnet")
 	_tick_seconds(tt, 2.5)
-	t.ok(tt.vortex_card, "a miss leaves the vortex on")
+	t.ok(tt.magnet_card, "a miss leaves the magnet on")
 	for ev in tt.drain_events():
 		if ev["kind"] == "outcome":
-			t.ok(not ev["outcome"]["made"] and not ev["outcome"].get("vortex", false), "an airball is not pulled in")
+			t.ok(not ev["outcome"]["made"] and not ev["outcome"].get("magnet", false), "an airball is not pulled in")
 	_tick_seconds(tt, 4.0)
-	t.ok(not tt.vortex_card and not tt.geo.vortex, "window closed on the clock")
-	t.eq(tt.vortex_left(), 0.0, "no time left")
+	t.ok(not tt.magnet_card and not tt.geo.magnet, "window closed on the clock")
+	t.eq(tt.magnet_left(), 0.0, "no time left")
 	var offs := []
 	for ev in tt.drain_events():
-		if ev["kind"] == "vortex_off":
+		if ev["kind"] == "magnet_off":
 			offs.push_back(ev["reason"])
-	t.eq(offs, ["time"], "vortex_off by time")
+	t.eq(offs, ["time"], "magnet_off by time")
 	# Ice ends it.
 	var tt2 := TimeTrial.new(g)
 	_tick_seconds(tt2, TimeTrial.COUNTDOWN_SECONDS + 0.05)
-	t.ok(tt2.spin_rim(6.0), "second trial spinning")
+	t.ok(tt2.magnetize_rim(6.0), "second trial magnetised")
 	t.ok(tt2.freeze_rim(), "then iced")
-	t.ok(tt2.iced and not tt2.vortex_card and tt2.geo.ice and not tt2.geo.vortex, "the ice wins")
+	t.ok(tt2.iced and not tt2.magnet_card and tt2.geo.ice and not tt2.geo.magnet, "the ice wins")
 	var reasons := []
 	for ev in tt2.drain_events():
-		if ev["kind"] == "vortex_off":
+		if ev["kind"] == "magnet_off":
 			reasons.push_back(ev["reason"])
-	t.eq(reasons, ["ice"], "vortex_off by ice")
-	t.ok(not tt2.spin_rim(6.0), "no vortex on an iced rim")
+	t.eq(reasons, ["ice"], "magnet_off by ice")
+	t.ok(not tt2.magnetize_rim(6.0), "no magnet on an iced rim")
 	# The last ball of the window still counts: a ball in the air at the
-	# deadline keeps the pull until it lands.
+	# deadline keeps the magnet until it lands.
 	var tt3 := TimeTrial.new(g)
 	_tick_seconds(tt3, TimeTrial.COUNTDOWN_SECONDS + 0.05)
-	t.ok(tt3.spin_rim(0.5), "a half-second window")
+	t.ok(tt3.magnetize_rim(0.5), "a half-second window")
 	t.ok(tt3.pickup() and tt3.release(Ballistics.ideal_launch_for(52.0, g)), "shot on release")
 	_tick_seconds(tt3, 0.6)
-	t.ok(tt3.vortex_card, "still on with a ball in the air past the deadline")
+	t.ok(tt3.magnet_card, "still on with a ball in the air past the deadline")
 	_tick_seconds(tt3, 2.5)
-	t.ok(not tt3.vortex_card, "closed once it landed")
+	t.ok(not tt3.magnet_card, "closed once it landed")
+	_magnet_streak(t, g)
+
+
+## The sweep finds launches by what they do on the plain city rim.
+func _find_launch(g: SimGeometry, want: String) -> Dictionary:
+	for a in range(48, 57, 2):
+		var ideal: float = Ballistics.speed_for_angle(a, g.hoop_x, g.rise)
+		for k in range(-8, 9):
+			var launch := {"angle_deg": float(a), "speed": ideal * (1.0 + 0.02 * k)}
+			var p := ShotSim.run_shot(launch, false, g)
+			var reach := ShotSim.first_reach(p)
+			var type := str(ShotClassify.classify_shot(p)["type"])
+			match want:
+				"swish":
+					if type == ShotClassify.SWISH:
+						return launch
+				"near":
+					if not p.made and float(reach["t"]) >= 0.0 and float(reach["hd"]) <= 0.35:
+						return launch
+				"wide":
+					if not p.made and (float(reach["t"]) < 0.0 or float(reach["hd"]) > 0.35):
+						return launch
+	return {}
+
+
+func _shoot(tt: TimeTrial, launch: Dictionary) -> Dictionary:
+	tt.pickup()
+	tt.release(launch)
+	_tick_seconds(tt, 2.6)
+	for ev in tt.drain_events():
+		if ev["kind"] == "outcome":
+			return ev["outcome"]
+	return {}
+
+
+## The streak under the magnet: frozen against building, paid at the tier
+## you had, broken by a real miss, kept once the window closes.
+func _magnet_streak(t, g: SimGeometry) -> void:
+	var swish := _find_launch(g, "swish")
+	var near := _find_launch(g, "near")
+	var wide := _find_launch(g, "wide")
+	t.ok(not swish.is_empty() and not near.is_empty() and not wide.is_empty(), "the sweep found a swish, a near miss and a wide miss")
+	var tt := TimeTrial.new(g)
+	_tick_seconds(tt, TimeTrial.COUNTDOWN_SECONDS + 0.05)
+	_shoot(tt, swish)
+	_shoot(tt, swish)
+	t.eq(tt.streak, 2, "two makes: streak 2")
+	t.ok(tt.magnetize_rim(30.0, 0.35), "play the magnet at streak 2")
+	tt.drain_events()
+	var o1 := _shoot(tt, swish)
+	t.ok(bool(o1["made"]) and o1["type"] == ShotClassify.SWISH and not o1["magnet"], "a swish under the magnet still swishes")
+	t.ok(bool(o1.get("streak_frozen", false)), "…flagged as a frozen-streak make")
+	t.eq(int(o1["points"]), StreakRules.points_for(2, true), "…paid at the streak you had (2)")
+	t.eq(tt.streak, 2, "the streak did not build")
+	var o2 := _shoot(tt, near)
+	t.ok(bool(o2["made"]) and o2["magnet"] and int(o2["points"]) == StreakRules.points_for(2, false) and o2["type"] != ShotClassify.SWISH, "a near miss is zapped in, never a swish, paid at the frozen tier")
+	t.eq(tt.streak, 2, "still 2 after the zap")
+	_shoot(tt, swish)
+	t.eq(tt.streak, 2, "still 2 after a third make")
+	t.eq(tt.makes, 5, "the makes still count as makes")
+	var before_best := tt.best_streak
+	# A real miss under the magnet breaks it.
+	var o3 := _shoot(tt, wide)
+	t.ok(not bool(o3["made"]) and not o3["magnet"], "a wide miss is a miss under the magnet")
+	t.eq(tt.streak, 0, "…and it breaks the streak")
+	t.eq(int(o3["streak_broken"]), 2, "the broken streak was the frozen 2")
+	t.eq(tt.best_streak, before_best, "best streak untouched by the window")
+	# Keep what you had once the window closes.
+	var tt2 := TimeTrial.new(g)
+	_tick_seconds(tt2, TimeTrial.COUNTDOWN_SECONDS + 0.05)
+	_shoot(tt2, swish)
+	_shoot(tt2, swish)
+	t.ok(tt2.magnetize_rim(1.0, 0.35), "a short magnet at streak 2")
+	_shoot(tt2, swish)
+	_tick_seconds(tt2, 1.5)
+	t.ok(not tt2.magnet_card, "the window closed")
+	t.eq(tt2.streak, 2, "the streak you had before the card is kept")
+	var o4 := _shoot(tt2, swish)
+	t.ok(not o4.has("streak_frozen"), "a make after the window is a normal make")
+	t.eq(tt2.streak, 3, "…and builds again")
+	# Fire then magnet: the lent streak stays where it is.
+	var tt3 := TimeTrial.new(g)
+	_tick_seconds(tt3, TimeTrial.COUNTDOWN_SECONDS + 0.05)
+	t.ok(tt3.light_rim(30.0), "fire lit")
+	t.eq(tt3.streak, StreakRules.FIRE_AT, "the fire lends FIRE_AT")
+	t.ok(tt3.magnetize_rim(30.0, 0.35), "then the magnet")
+	var o5 := _shoot(tt3, swish)
+	t.eq(int(o5["points"]), StreakRules.points_for(StreakRules.FIRE_AT, true), "a make pays at the fire's tier")
+	t.eq(tt3.streak, StreakRules.FIRE_AT, "…but the streak does not climb under the magnet")
+	t.ok(tt3.fire_card and tt3.magnet_card, "both cards stay on")

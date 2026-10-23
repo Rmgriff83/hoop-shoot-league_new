@@ -863,6 +863,7 @@ func _process(dt: float) -> void:
 	# View sync.
 	_holding_visual = trial.holding
 	_pool.update_balls(trial.balls(), _holding_visual, dt)
+	_court.magnet_follow(CourtGeometry.magnet_target(trial.balls()))
 	_court.step_rim(dt)
 	_court.step_net(dt, trial.balls())
 	_hud.update_clock(trial.time_left, trial.countdown, trial.phase)
@@ -911,8 +912,10 @@ func _handle_event(ev: Dictionary) -> void:
 				return
 			if c["kind"] == "ice_catch" or c["kind"] == "ice_pop":
 				return  # the trial's ice_caught / ice_break events carry the show
-			if c["kind"] == "vortex_pull":
-				_court.rim_nudge()   # the rim takes the ball: a shiver, no clang
+			if c["kind"] == "magnet_pull":
+				# The bolt strikes: the magnet takes the ball (RimMagnet draws it).
+				Sfx.score_pop(true)
+				_court.rim_pop_from({"number": "", "word": "ZAP", "color": RimMagnet.GOLD})
 				return
 			Sfx.contact(c["kind"], c["speed"])
 			# GROUND ONLY. The dent offsets the ball's drawn position by up to
@@ -958,13 +961,15 @@ func _handle_event(ev: Dictionary) -> void:
 			if _court.fire_lit():
 				_court.set_fire(false)
 				_court.info.marquee("BURNED OUT" if str(ev.get("reason", "")) == "time" else "COOLED OFF", 24.0, _court.info.accent_color)
-		"vortex_on":
-			# A vortex card: the rim pulls touched balls through for the window.
-			_court.info.marquee("VORTEX", 24.0, _court.info.accent_color)
+		"magnet_on":
+			# A magnet card: it pops up over the rim and zaps near misses in.
+			_court.set_magnet(true)
+			_court.info.marquee("MAGNET", 24.0, _court.info.accent_color)
 			Sfx.score_pop(true)
-		"vortex_off":
+		"magnet_off":
+			_court.set_magnet(false, str(ev.get("reason", "")) == "ice")
 			_court.show_score(trial.score)
-			_court.info.marquee("VORTEX SPENT" if str(ev.get("reason", "")) == "time" else "VORTEX ICED", 24.0, _court.info.accent_color)
+			_court.info.marquee("MAGNET SPENT" if str(ev.get("reason", "")) == "time" else "MAGNET ICED", 24.0, _court.info.accent_color)
 		"heat_up":
 			Sfx.score_pop(true)
 			_court.rim_pop_from(HudCopy.heat_pop())

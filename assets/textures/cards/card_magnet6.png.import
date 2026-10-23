@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cetbwi1ic18wm"
-path="res://.godot/imported/card_vortex6.png-14fe1776ecf0df69554f81be2ffa93d6.ctex"
+uid="uid://n0r5llcf2pbc"
+path="res://.godot/imported/card_magnet6.png-d2d162121058b017bfb95cf652147a29.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/textures/cards/card_vortex6.png"
-dest_files=["res://.godot/imported/card_vortex6.png-14fe1776ecf0df69554f81be2ffa93d6.ctex"]
+source_file="res://assets/textures/cards/card_magnet6.png"
+dest_files=["res://.godot/imported/card_magnet6.png-d2d162121058b017bfb95cf652147a29.ctex"]
 
 [params]
 

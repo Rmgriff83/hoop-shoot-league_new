@@ -43,11 +43,11 @@ func _fields(t) -> void:
 	t.ok(reg.net_drag == SimConstants.NET_DRAG and reg.net_wall_e == SimConstants.E_NET_WALL, "regulation: the nylon net of SimConstants")
 	t.ok(arc.net_drag == SimConstants.NET_DRAG and arc.net_wall_e == SimConstants.E_NET_WALL, "arcade: the same nylon net")
 	t.close(reg.net_rigidity(), 1.0, 1e-12, "nylon rigidity is 1")
-	t.ok(not reg.vortex and not arc.vortex, "no preset starts with the vortex on")
-	t.ok(arc.with_vortex(true).vortex and not arc.vortex, "with_vortex clones")
-	t.ok(arc.with_vortex(true).with_pose(3.1, 0.2).vortex, "with_pose keeps the vortex")
-	var both := arc.with_vortex(true).with_ice(true)
-	t.ok(both.vortex and both.ice, "ice and vortex clones keep each other")
+	t.ok(not reg.magnet and not arc.magnet, "no preset starts with the magnet on")
+	t.ok(arc.with_magnet(true).magnet and not arc.magnet, "with_magnet clones")
+	t.ok(arc.with_magnet(true, 0.5).with_pose(3.1, 0.2).magnet_pull_m == 0.5, "with_pose keeps the magnet and its threshold")
+	var both := arc.with_magnet(true).with_ice(true)
+	t.ok(both.magnet and both.ice, "ice and magnet clones keep each other")
 
 
 func _neck_kind(t) -> void:

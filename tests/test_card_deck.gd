@@ -45,17 +45,17 @@ func run(t) -> void:
 	t.eq(App.loadout_slots("online"), [null, null, null], "tapping the slot takes it out again")
 	t.eq(App.card_count("ice", "online"), 1, "…back to the spares")
 	# A card above your level is owned but not equipped (docs/PROGRESSION.md).
-	var vortex := CardDefs.get_card("vortex6")
+	var vortex := CardDefs.get_card("magnet6")
 	if not Progression.can_use(App.level(), vortex):
 		d = svc.get_cards()
-		CardDefs.league_doc(d, "online")["inventory"] = {"ice": 1, "vortex6": 1}
+		CardDefs.league_doc(d, "online")["inventory"] = {"ice": 1, "magnet6": 1}
 		svc.put_cards(d)
-		t.ok(not App.can_equip("vortex6"), "Vortex waits for level 5")
-		t.ok(not App.equip_card(0, "vortex6", "online"), "…so equip_card refuses it")
+		t.ok(not App.can_equip("magnet6"), "Magnet waits for level 5")
+		t.ok(not App.equip_card(0, "magnet6", "online"), "…so equip_card refuses it")
 		t.eq(App.loadout_slots("online"), [null, null, null], "…and the slot stays empty")
 		sheet.build("online", "ONLINE CARDS")
-		t.ok(sheet.find_child("Lock_vortex6", true, false) != null, "the spare wears its LVL chip")
-		var locked: Control = sheet.find_child("Spare_vortex6", true, false)
+		t.ok(sheet.find_child("Lock_magnet6", true, false) != null, "the spare wears its LVL chip")
+		var locked: Control = sheet.find_child("Spare_magnet6", true, false)
 		(locked.get_meta("button") as TextureButton).pressed.emit()
 		t.eq(App.loadout_slots("online"), [null, null, null], "tapping it equips nothing")
 		t.ok(sheet.status_text().begins_with("REACH LEVEL 5"), "…and says why (%s)" % sheet.status_text())
@@ -67,7 +67,7 @@ func run(t) -> void:
 		var rich: Dictionary = svc.get_cosmetics()
 		rich["tickets"] = 1000
 		svc.put_cosmetics(rich)
-		t.ok(not App.try_buy_card("vortex6", "cage"), "the league shop refuses Vortex under level 5 with the tickets in hand")
+		t.ok(not App.try_buy_card("magnet6", "cage"), "the league shop refuses Magnet under level 5 with the tickets in hand")
 		t.eq(App.tickets(), 1000, "…and takes nothing")
 		cd_doc = svc.get_cards()
 		cd_doc["leagues"]["cage"] = cage_before
@@ -87,12 +87,12 @@ func run(t) -> void:
 	sheet.build("cage", "CAGE CARDS", "SHOP")
 	t.eq(sheet.sub(), "SHOP", "the shop")
 	t.eq((sheet.find_child("Tickets", true, false) as Label).text, "150 TICKETS", "the wallet in the head")
-	for id in ["ice", "fire7", "vortex6"]:
+	for id in ["ice", "fire7", "magnet6"]:
 		t.ok(sheet.find_child("Shop_" + id, true, false) != null, "%s is on the shelf" % id)
 	t.eq((sheet.find_child("Owned_ice", true, false) as Label).text, "OWNED 1", "owned count")
 	t.ok(not (sheet.find_child("Buy_ice", true, false) as Button).disabled, "ice (80) is affordable at 150")
 	t.ok(not (sheet.find_child("Buy_fire7", true, false) as Button).disabled or not App.can_equip("fire7"), "Heat Check (140) is affordable at 150 once its level is reached")
-	t.ok((sheet.find_child("Buy_vortex6", true, false) as Button).disabled, "Vortex is above the level anyway")
+	t.ok((sheet.find_child("Buy_magnet6", true, false) as Button).disabled, "Magnet is above the level anyway")
 	t.ok(App.try_buy_card("ice", "cage"), "the cage shop sells an ice for tickets")
 	t.eq(App.tickets(), 70, "…80 tickets gone")
 	t.eq(App.card_count("ice", "cage"), 2, "…and the ice is in the cage bucket")
@@ -117,7 +117,7 @@ func run(t) -> void:
 	# The pre-match pick (docs/BACKEND.md → Ranked): the loadout and the spares
 	# on the page, under the card cap.
 	d = svc.get_cards()
-	CardDefs.league_doc(d, "online")["inventory"] = {"ice": 1, "vortex6": 1}
+	CardDefs.league_doc(d, "online")["inventory"] = {"ice": 1, "magnet6": 1}
 	CardDefs.league_doc(d, "online")["loadout"] = [null, null, null]
 	svc.put_cards(d)
 	var pre := PreMatchPage.new()
@@ -130,12 +130,12 @@ func run(t) -> void:
 	t.eq(pre.cap_text(), "CARD CAP · LVL 1 · THE LOWER LEVEL PLAYS", "the cap line")
 	t.eq(pre.opp_name(), "GLASS WIZARD", "their name")
 	t.eq(pre.opp_online_text(), "PRO II · 12-9", "their badge and record")
-	t.ok(root.find_child("Lock_vortex6", true, false) != null, "a Vortex above the cap wears its level")
+	t.ok(root.find_child("Lock_magnet6", true, false) != null, "a Magnet above the cap wears its level")
 	t.ok(root.find_child("Lock_ice", true, false) == null, "an ice under the cap does not")
 	var picks := []
 	pre.picked.connect(func(s: Array) -> void: picks.push_back(s))
-	(root.find_child("Spare_vortex6", true, false).get_meta("button") as TextureButton).pressed.emit()
-	t.eq(App.loadout_slots("online"), [null, null, null], "tapping the capped Vortex does nothing")
+	(root.find_child("Spare_magnet6", true, false).get_meta("button") as TextureButton).pressed.emit()
+	t.eq(App.loadout_slots("online"), [null, null, null], "tapping the capped Magnet does nothing")
 	(root.find_child("Spare_ice", true, false).get_meta("button") as TextureButton).pressed.emit()
 	t.eq(App.loadout_slots("online"), ["ice", null, null], "tapping the ice equips it")
 	t.eq(picks.size(), 1, "…and the provisional pick goes out")

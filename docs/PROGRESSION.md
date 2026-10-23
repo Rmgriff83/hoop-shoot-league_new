@@ -49,7 +49,7 @@ breaks the chain, and every card's level must be a band edge.
 |---|---|
 | Deep Freeze (ice) | 1 |
 | Heat Check (fire7) | 3 |
-| Vortex (vortex6) | 5 |
+| Magnet (magnet6) | 5 |
 
 ## 2. A match's XP
 

@@ -37,7 +37,7 @@ static func classify_shot(s: BallState) -> Dictionary:
 	if s.ice_caught:
 		type = ICE_CAUGHT
 	elif s.made:
-		if rim_contacts == 0 and board_contacts == 0:
+		if rim_contacts == 0 and board_contacts == 0 and not s.magnet_caught:
 			type = SWISH
 		elif board_contacts > 0:
 			type = BANK
@@ -73,5 +73,5 @@ static func classify_shot(s: BallState) -> Dictionary:
 		"flight_time": flight_time,
 		"events": s.events,
 		"max_penetration": s.max_penetration,
-		"vortex": s.vortex_caught,
+		"magnet": s.magnet_caught,
 	}

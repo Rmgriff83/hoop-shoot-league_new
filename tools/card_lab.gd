@@ -26,10 +26,17 @@ func _initialize() -> void:
 	if doc.is_empty() or int(doc.get("n", 0)) != n or int(doc.get("seed", 0)) != SEED:
 		doc = {"n": n, "seed": SEED, "generated": "", "cards": {}, "detail": {}}
 	var ids: Array = []
+	var live: Array = []
 	for card in CardDefs.all():
 		var id := str(card["id"])
+		live.push_back(id)
 		if only.is_empty() or only.has(id):
 			ids.push_back(id)
+	# A card that left the deck (the Vortex, 2026-10-23) leaves the file too.
+	for old in doc["cards"].keys():
+		if not live.has(old):
+			doc["cards"].erase(old)
+			doc["detail"].erase(old)
 	var t0 := Time.get_ticks_msec()
 	for league in LeagueData.leagues():
 		var lid := str(league["id"])

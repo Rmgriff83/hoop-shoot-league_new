@@ -59,11 +59,11 @@ const nextSecond = () => new Promise((r) => setTimeout(r, 1005 - (Date.now() % 1
 
 describe("the card list", () => {
   it("reads the cards and keeps a hand honest", () => {
-    expect(Object.keys(CARDS).sort()).toEqual(["fire7", "ice", "vortex6"]);
-    expect(CARDS.vortex6.level).toBe(5);
+    expect(Object.keys(CARDS).sort()).toEqual(["fire7", "ice", "magnet6"]);
+    expect(CARDS.magnet6.level).toBe(5);
     const inv = { inventory: { ice: 1, fire7: 2 }, level: 3 };
     expect(validHand(["ice", "ice", "fire7"], inv)).toEqual(["ice", "", "fire7"]); // one ice owned
-    expect(validHand(["vortex6", "fire7", "fire7"], inv)).toEqual(["", "fire7", "fire7"]); // level 5 card at level 3
+    expect(validHand(["magnet6", "fire7", "fire7"], inv)).toEqual(["", "fire7", "fire7"]); // level 5 card at level 3
     expect(validHand(["nope", "", "ice"], inv)).toEqual(["", "", "ice"]);
     expect(validHand([], inv)).toEqual(["", "", ""]);
   });
@@ -97,7 +97,7 @@ describe("cards in a room", () => {
     await give(b, "fire7", 1);
     const room = uuid();
     const A = await join(a, room, "ice,ice,fire7"); // owns two ice, no fire7
-    const B = await join(b, room, ",vortex6,fire7"); // vortex6 is level 5 (b is 9: fine) but unowned; fire7 is level 3, over the cap of 1
+    const B = await join(b, room, ",magnet6,fire7"); // magnet6 is level 5 (b is 9: fine) but unowned; fire7 is level 3, over the cap of 1
     const sa = await A.until((m) => m.t === "start");
     expect(sa.hands).toEqual({ a: ["ice", "ice", ""], b: ["", "", ""] });
     expect(sa.cap).toBe(1);

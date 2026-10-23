@@ -176,11 +176,13 @@ func _run_heat() -> void:
 	# Cards in the tray (design "Card Icons"): a Deep Freeze and a Heat Check
 	# in the first two slots when they are empty (this touches the dev save).
 	var loadout: Array = App.cards_bucket("cage").get("loadout", [null, null, null])
-	for pair in [[0, "ice"], [1, "fire7"], [2, "vortex6"]]:
+	for pair in [[0, "ice"], [1, "fire7"], [2, "magnet6"]]:
 		if loadout[pair[0]] == null:
 			App.add_card(str(pair[1]), 1, "cage")
 			App.equip_card(int(pair[0]), str(pair[1]), "cage")
 	App.start_league_heat()
+	await _sleep(0.9)
+	await _click_button_named("READY")   # the pre-match pick (docs/CARDS.md § Drops) sits before the heat
 	await _sleep(1.0)
 	await _snap("heat_countdown")
 	await _sleep(3.2)
@@ -199,6 +201,32 @@ func _run_heat() -> void:
 		await _sleep(0.45)
 		await _snap("heat_deal")
 	await _sleep(2.0)
+	# The Magnet (design "Magnet Card FX" 38b): deploy it from the tray (the
+	# horseshoe pops up, the tag counts down), then a scripted near miss so
+	# the bolt grabs the ball and drops it in.
+	var hs: Node = get_tree().current_scene
+	if hs != null and "heat" in hs:
+		var heat: Heat = hs.heat
+		# A level-1 dev save is not dealt the level-5 card: hand it over for the show.
+		if not heat.hands[Heat.PLAYER].has("magnet6"):
+			heat.hands[Heat.PLAYER].push_back("magnet6")
+		if hs.has_method("_deploy"):
+			hs.call("_deploy", 2, "magnet6")
+		elif not heat.play_card(Heat.PLAYER, "magnet6"):
+			print("QA: magnet refused")
+		await _sleep(0.7)
+		await _snap("heat_magnet_up")
+		var near := _near_miss_launch(heat.player.geo)
+		if not near.is_empty() and heat.player.pickup() and heat.player.release(near):
+			var balls := heat.player.balls()
+			var grab := float(balls[balls.size() - 1].magnet_grab_t) if not balls.is_empty() else -1.0
+			print("QA magnet: near miss released, grab at %.2f s" % grab)
+			await _sleep(maxf(grab, 0.0) + 0.2)
+			await _snap("heat_magnet_pull")
+			await _sleep(1.2)
+			await _snap("heat_magnet_in")
+		else:
+			print("QA: no near-miss launch, or the pickup was refused")
 	# The OVERTIME toast (design 4a), shown by hand: the pass never reaches OT.
 	var hud_n: Hud = get_tree().root.find_child("Hud", true, false)
 	if hud_n != null:
@@ -218,6 +246,21 @@ func _run_heat() -> void:
 	await _sleep(1.2)
 	print("QA heat: done")
 	get_tree().quit(0)
+
+
+## A launch the magnet pulls: a miss that reaches the rim within 0.35 m of
+## its centre on this geometry (the sweep the tests use).
+func _near_miss_launch(g: SimGeometry) -> Dictionary:
+	var plain := g.with_magnet(false)
+	for a in range(48, 57, 2):
+		var ideal: float = Ballistics.speed_for_angle(a, g.hoop_x, g.rise)
+		for k in range(-8, 9):
+			var launch := {"angle_deg": float(a), "speed": ideal * (1.0 + 0.02 * k)}
+			var p := ShotSim.run_shot(launch, true, plain)
+			var reach := ShotSim.first_reach(p)
+			if not p.made and float(reach["t"]) >= 0.0 and float(reach["hd"]) <= 0.35:
+				return launch
+	return {}
 
 
 ## Click a button by node name (icon buttons carry no text).
@@ -593,7 +636,7 @@ func _run_heat_result() -> void:
 ## size the game uses, the chips, the tray tags and the deal caption, on the
 ## cage carpet. Snaps frame 0, frame 5 (pinned) and the live loop.
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-cards
-## (Vortex is a real card now — data/cards.json.)
+## (Magnet is a real card now — data/cards.json.)
 
 
 func _run_cards() -> void:
@@ -612,7 +655,7 @@ func _run_cards() -> void:
 	col.add_theme_constant_override("separation", 26)
 	layer.add_child(col)
 	var faces: Array[CardFace] = []
-	for card in [CardDefs.get_card("ice"), CardDefs.get_card("fire7"), CardDefs.get_card("vortex6")]:
+	for card in [CardDefs.get_card("ice"), CardDefs.get_card("fire7"), CardDefs.get_card("magnet6")]:
 		var row := HBoxContainer.new()
 		row.alignment = BoxContainer.ALIGNMENT_END
 		row.add_theme_constant_override("separation", 24)
@@ -629,7 +672,7 @@ func _run_cards() -> void:
 	var chips := HBoxContainer.new()
 	chips.add_theme_constant_override("separation", 10)
 	chips.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	for card in [CardDefs.get_card("ice"), CardDefs.get_card("fire7"), CardDefs.get_card("vortex6"), {}]:
+	for card in [CardDefs.get_card("ice"), CardDefs.get_card("fire7"), CardDefs.get_card("magnet6"), {}]:
 		var chip := ModeCards.chip(card)
 		chips.add_child(chip)
 		if chip is ModeCards.Chip:
@@ -1158,11 +1201,11 @@ func _run_multi() -> void:
 	print("QA multi: found popped=%s vs=%.2f court=%s" % [lobby.found_popped(), lobby.vs_scale(), lobby.court_text()])
 	lobby.show_menu()
 	# The pre-match pick (docs/BACKEND.md → Ranked): a seeded cache (a spare
-	# ice, a Heat Check set, a Vortex above the cap), the opponent's badge,
+	# ice, a Heat Check set, a Magnet above the cap), the opponent's badge,
 	# the cap line, the timer; READY goes gold.
 	var cd: Dictionary = SaveService.get_cards()
 	var ob := CardDefs.league_doc(cd, "online")
-	ob["inventory"] = {"ice": 1, "vortex6": 1}
+	ob["inventory"] = {"ice": 1, "magnet6": 1}
 	ob["loadout"] = ["fire7", null, null]
 	SaveService.put_cards(cd)
 	var staged := QaFakePeer.new()

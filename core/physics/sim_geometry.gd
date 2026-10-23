@@ -48,9 +48,11 @@ var rim_log_impact: float = 0.4
 ## Cold streak: the rim is iced over (ShotSim catches would-be makes). Off by
 ## default so every preset and the golden fixtures are unaffected.
 var ice := false
-## Card VORTEX (docs/CARDS.md): the rim pulls any ball that has touched iron
-## or board through. Off by default, so no preset or fixture sees it.
-var vortex := false
+## Card MAGNET (docs/CARDS.md): a miss that would reach the rim within
+## `magnet_pull_m` of its centre is zapped in (ShotSim decides at release).
+## Off by default, so no preset or fixture sees it.
+var magnet := false
+var magnet_pull_m: float = 0.35
 ## Net material. Regulation / arcade / beach keep SimConstants exactly (the
 ## golden fixtures run the nylon numbers); the city's CHAIN net is lighter on
 ## the ball and stiffer at the wall — see CHAIN_NET_DRAG.
@@ -215,7 +217,8 @@ func _init(p_hoop_x: float, p_hoop_y: float, p_release_h: float,
 func with_pose(dist: float, lateral: float) -> SimGeometry:
 	var g := SimGeometry.new(dist, hoop_y, release_h, board_half_w, board_bottom, board_top, lateral)
 	g.ice = ice
-	g.vortex = vortex
+	g.magnet = magnet
+	g.magnet_pull_m = magnet_pull_m
 	g.net_drag = net_drag
 	g.net_wall_e = net_wall_e
 	g.rim_e = rim_e
@@ -261,11 +264,13 @@ func with_ice(on: bool) -> SimGeometry:
 	return g
 
 
-## Clone with the VORTEX card on (or off), same pose: ShotSim pulls a ball
-## that has touched iron or board through the ring.
-func with_vortex(on: bool) -> SimGeometry:
+## Clone with the MAGNET card on (or off), same pose: ShotSim zaps a near
+## miss (within `pull_m` of the rim centre) in. `pull_m` <= 0 keeps the current.
+func with_magnet(on: bool, pull_m := -1.0) -> SimGeometry:
 	var g := with_pose(hoop_x, hoop_z)
-	g.vortex = on
+	g.magnet = on
+	if pull_m > 0.0:
+		g.magnet_pull_m = pull_m
 	return g
 
 

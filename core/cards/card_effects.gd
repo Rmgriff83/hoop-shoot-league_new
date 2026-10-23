@@ -3,7 +3,7 @@ extends RefCounted
 ## The effect registry: `apply(kind, params, heat, target)` acts on one side of
 ## a Heat. Returns true when the effect took (a card is only consumed then).
 
-const KINDS := ["ice", "fire", "vortex"]
+const KINDS := ["ice", "fire", "magnet"]
 
 
 static func apply(kind: String, params: Dictionary, heat: Heat, target: String) -> bool:
@@ -17,10 +17,11 @@ static func apply(kind: String, params: Dictionary, heat: Heat, target: String) 
 			# The target's own rim burns for `seconds`: makes pay like a hot
 			# streak from FIRE_AT; a miss or the clock puts it out.
 			return side.light_rim(float(params.get("seconds", 0.0)), "card")
-		"vortex":
-			# The target's own rim pulls for `seconds`: any ball that touches
-			# iron or board is dragged through. Only the clock (or ice) ends it.
-			return side.spin_rim(float(params.get("seconds", 0.0)), "card")
+		"magnet":
+			# A magnet over the target's own rim for `seconds`: a miss within
+			# `pull_m` of the rim centre is zapped in. Only the clock (or ice)
+			# ends it; makes under it never build the streak.
+			return side.magnetize_rim(float(params.get("seconds", 0.0)), float(params.get("pull_m", 0.35)), "card")
 		_:
 			return false
 
@@ -33,8 +34,8 @@ static func can_apply(kind: String, heat: Heat, target: String) -> bool:
 		"fire":
 			var side := heat.side(target)
 			return side.phase == TimeTrial.PHASE_RUNNING and not side.iced and not side.fire_card and not StreakRules.is_lit(side.streak)
-		"vortex":
+		"magnet":
 			var side := heat.side(target)
-			return side.phase == TimeTrial.PHASE_RUNNING and not side.iced and not side.vortex_card
+			return side.phase == TimeTrial.PHASE_RUNNING and not side.iced and not side.magnet_card
 		_:
 			return false

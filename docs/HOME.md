@@ -537,7 +537,7 @@ loadout row under the PiP shows dashed 40 px chips for their empty slots.
   trial over ~45 s (cars cross the street, windows switch, the spot shuffle).
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-cards` →
   `user://qa/cards_f0.png`, `cards_f5.png`, `cards_live.png`: the animated
-  card faces (ice, fire, the pending vortex) at tray / loadout / shop / deal
+  card faces (ice, fire, the magnet) at tray / loadout / shop / deal
   size, the chips, the WAIT and `5S` tray tags, the deal caption.
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-heat-result` →
   `user://qa/heat_win.png` (OT, a card drop), `heat_loss.png`, `heat_quick.png`.

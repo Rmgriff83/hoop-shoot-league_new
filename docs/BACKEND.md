@@ -292,7 +292,8 @@ other phone must trust what hits its rim.
   (then `Heat.play_card`, the deal animation), or restores it on a refusal.
   The other phone's `card` lands through `Heat.remote_card` — their ice
   freezes *our* rim in our sim (we own our side and report it), their fire
-  or vortex lights our replay of theirs.
+  or magnet lights our replay of theirs (their magnet pulls in our sim of
+  their shots).
 - **The decision** (no payout yet: no tickets, XP, coins or card drops
   online — the ranked task refills this): at the decision the room writes
   the `matches` row and sends `settled {won, reason}` to each side (reason

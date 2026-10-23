@@ -62,20 +62,21 @@
       "level": 3
     },
     {
-      "id": "vortex6",
-      "name": "Vortex",
+      "id": "magnet6",
+      "name": "Magnet",
       "rarity": "epic",
       "price": 290,
       "target": "self",
       "effect": {
-        "kind": "vortex",
-        "seconds": 6
+        "kind": "magnet",
+        "seconds": 6,
+        "pull_m": 0.35
       },
-      "art": "res://assets/textures/cards/card_vortex6.png",
+      "art": "res://assets/textures/cards/card_magnet6.png",
       "fx": {
-        "sheet": "res://assets/textures/cards/fx_vortex.png",
+        "sheet": "res://assets/textures/cards/fx_magnet.png",
         "frames": 16,
-        "fps": 14.5,
+        "fps": 12,
         "rect": [
           16,
           29,
@@ -83,13 +84,13 @@
           56
         ],
         "chip": [
-          30,
-          36
+          36,
+          32
         ],
-        "chip_bg": "#1E4A41",
-        "glyph": "res://assets/ui/cards/glyph_vortex.png"
+        "chip_bg": "#4A1410",
+        "glyph": "res://assets/ui/cards/glyph_magnet.png"
       },
-      "blurb": "Your rim pulls for 6 s: any ball that touches iron or board is dragged through. A clean swish still pays 2.",
+      "blurb": "A magnet over your rim for 6 s: a near miss gets zapped in (never a swish). Makes don't build your streak while it's on.",
       "level": 5
     }
   ],
@@ -107,8 +108,15 @@
     "loss_streak_n": 4,
     "loss_streak_card": "ice",
     "level_ahead": 1,
-    "difficulty_mult": {"easy": 1.0, "normal": 1.0, "hard": 1.0},
-    "reference": {"close_loss_share": 0.3, "comeback_win_share": 0.25}
+    "difficulty_mult": {
+      "easy": 1.0,
+      "normal": 1.0,
+      "hard": 1.0
+    },
+    "reference": {
+      "close_loss_share": 0.3,
+      "comeback_win_share": 0.25
+    }
   },
   "rarity_bands": {
     "common": [

@@ -87,6 +87,7 @@ var _flip: FlipScoreboard       # the park's flip-card board on the fence (HOME 
 var _led_surfaces := 0          # LedFace/BoardBand meshes bound (hoop or arena)
 var _fire: RimFire
 var _ice: RimIce              # on-fire flames/smoke/glow on the rim
+var _magnet: RimMagnet        # the Magnet card's horseshoe over the rim
 var _beach_fx: BeachFx          # waves + tide, only when arena_set.ocean
 var _arcade_fx: ArcadeFx        # cabinet screens + marquees, only when arena_set.arcade_life
 var _city_fx: CityFx            # traffic, window lights, trees, only when arena_set.traffic
@@ -137,6 +138,7 @@ func _ready() -> void:
 		_build_rim_and_net()
 	_add_rim_fire()
 	_add_rim_ice()
+	_add_rim_magnet()
 	_build_lights()
 	apply_geometry(geo)
 	if debug_markers:
@@ -658,6 +660,50 @@ func ice_grab() -> void:
 
 func iced() -> bool:
 	return _ice != null and _ice.is_iced()
+
+
+## The Magnet card's horseshoe (game/view/rim_magnet.gd), under the pivot so
+## it rides the moving board; hidden until a magnet is played.
+func _add_rim_magnet() -> void:
+	if rim_pivot == null:
+		return
+	_magnet = RimMagnet.new()
+	_magnet.name = "RimMagnet"
+	_magnet.position = _rim_centre() + Vector3(RimMagnet.BACK_X, RimMagnet.HOVER_Y, 0.0)
+	rim_pivot.add_child(_magnet)
+
+
+## Magnet state: played (pops up) or over (SPENT pops down, ICED drops away).
+func set_magnet(on: bool, iced := false) -> void:
+	if _magnet == null:
+		return
+	if on:
+		_magnet.pop()
+	else:
+		_magnet.end(iced)
+
+
+## The ball being dragged in this frame (global position), or null.
+func magnet_follow(target: Variant) -> void:
+	if _magnet != null:
+		_magnet.follow(target)
+
+
+func magnet_up() -> bool:
+	return _magnet != null and _magnet.is_up()
+
+
+func magnet_pulling() -> bool:
+	return _magnet != null and _magnet.pulling()
+
+
+## Which of a side's balls the magnet has (ShotSim's `magnet_caught` until
+## the release), as a global position — or null.
+static func magnet_target(balls: Array) -> Variant:
+	for s in balls:
+		if s is BallState and s.magnet_caught and not s.magnet_released:
+			return Vector3(s.pos.x, s.pos.y, s.pos.z)
+	return null
 
 
 ## Is one of the hoop's authored clips driving the model right now?

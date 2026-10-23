@@ -160,8 +160,10 @@ static func validate() -> PackedStringArray:
 			problems.push_back("card %s has unknown rarity" % c.get("id", "?"))
 		if not (str(c.get("target", "")) in TARGETS):
 			problems.push_back("card %s has unknown target" % c.get("id", "?"))
-		if str(c.get("effect", {}).get("kind", "")) in ["fire", "vortex"] and float(c.get("effect", {}).get("seconds", 0.0)) <= 0.0:
+		if str(c.get("effect", {}).get("kind", "")) in ["fire", "magnet"] and float(c.get("effect", {}).get("seconds", 0.0)) <= 0.0:
 			problems.push_back("card %s %s effect needs seconds > 0" % [c.get("id", "?"), c.get("effect", {}).get("kind", "")])
+		if str(c.get("effect", {}).get("kind", "")) == "magnet" and float(c.get("effect", {}).get("pull_m", 0.0)) <= 0.0:
+			problems.push_back("card %s magnet effect needs pull_m > 0" % c.get("id", "?"))
 		problems.append_array(validate_fx(c))
 	return problems
 
@@ -219,7 +221,7 @@ static func target_of(id: String) -> String:
 ## migrate() drops it (2026-10-19, coins removed) and keeps the cards. Older
 ## docs (v1 referenced slots, v2 one global inventory) are wiped — the
 ## economy changed under them.
-const DOC_VERSION := 4
+const DOC_VERSION := 5
 
 
 static func empty_doc() -> Dictionary:
@@ -326,17 +328,33 @@ static func loadout_slots(doc: Dictionary) -> Array:
 
 ## Bring an older doc up to DOC_VERSION. v3 → v4 drops each league's coin
 ## wallet (balances wiped, not converted — dev saves, by decision) and keeps
-## its inventory and loadout. v1 and v2 held one global inventory paid for
-## with one global wallet; the economy is per league now, so they are wiped.
-## Idempotent; returns true when changed.
+## its inventory and loadout. v4 → v5 renames the Vortex to the Magnet
+## (`vortex6` → `magnet6`, 2026-10-23) in every inventory and loadout. v1 and
+## v2 held one global inventory paid for with one global wallet; the economy
+## is per league now, so they are wiped. Idempotent; returns true when changed.
+const RENAMED := {"vortex6": "magnet6"}
+
 static func migrate(doc: Dictionary) -> bool:
 	var v := int(doc.get("v", 1))
 	if v >= DOC_VERSION and doc.has("leagues"):
 		return false
-	if v == 3 and doc.get("leagues") is Dictionary:
+	if v >= 3 and doc.get("leagues") is Dictionary:
 		for lid in doc["leagues"]:
-			if doc["leagues"][lid] is Dictionary:
-				doc["leagues"][lid].erase("coins")
+			var lg: Variant = doc["leagues"][lid]
+			if not (lg is Dictionary):
+				continue
+			lg.erase("coins")
+			var inv: Dictionary = lg.get("inventory", {}) if lg.get("inventory") is Dictionary else {}
+			for old in RENAMED:
+				if inv.has(old):
+					inv[RENAMED[old]] = int(inv.get(RENAMED[old], 0)) + int(inv[old])
+					inv.erase(old)
+			lg["inventory"] = inv
+			var slots: Array = lg.get("loadout", []) if lg.get("loadout") is Array else []
+			for i in slots.size():
+				if slots[i] != null and RENAMED.has(str(slots[i])):
+					slots[i] = RENAMED[str(slots[i])]
+			lg["loadout"] = slots
 		doc["v"] = DOC_VERSION
 		return true
 	for k in doc.keys():

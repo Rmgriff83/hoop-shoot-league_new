@@ -11,7 +11,7 @@ func run(t) -> void:
 	_spots(t)
 	_modes(t)
 	_endless_trial(t)
-	_vortex(t)
+	_magnet(t)
 
 
 func _geometry(t) -> void:
@@ -43,7 +43,7 @@ func _geometry(t) -> void:
 	t.ok(g.with_ice(true).net_drag == g.net_drag, "with_ice keeps the chain")
 	t.ok(g.has_walls() and g.wall_x_min == -11.2 and g.wall_x_max == 5.7 and g.wall_z_max == 8.6 and g.wall_y_max == INF, "the fence loop, no roof")
 	t.close(g.pole_r, 0.06, 1e-12, "in-ground pole")
-	t.ok(not g.vortex, "no vortex by default")
+	t.ok(not g.magnet, "no magnet by default")
 
 
 func _shots(t) -> void:
@@ -145,55 +145,74 @@ func _endless_trial(t) -> void:
 	t.close(tt.geo.hoop_x, SimGeometry.CITY_DIST, 1e-12, "city hoop stayed put")
 
 
-## The Vortex card on the city rim: every touched miss becomes a 1-point
-## make through one `vortex_pull`; clean swishes stay swishes; airballs stay
-## airballs; the ice rule wins; nothing tunnels; all of it deterministic.
-func _vortex(t) -> void:
+## The Magnet card on the city rim: a miss that would reach the rim within
+## pull_m of its centre is zapped in — a 1-point make through one
+## `magnet_pull` before the entry, never a swish; a clean swish stays a swish;
+## a make left alone is the same shot; a wide miss and an airball are
+## untouched; the ice rule wins; nothing tunnels; all of it deterministic.
+func _magnet(t) -> void:
 	var g := SimGeometry.city()
-	var v := g.with_vortex(true)
-	t.ok(v.vortex and not g.vortex, "with_vortex clones the city geometry")
+	var m := g.with_magnet(true, 0.35)
+	t.ok(m.magnet and not g.magnet and m.magnet_pull_m == 0.35, "with_magnet clones the city geometry with the threshold")
 	var pulled := 0
-	var checked := 0
+	var swishes := 0
+	var wide := 0
 	var pen := 0.0
 	for a in range(48, 57, 2):
 		var ideal: float = Ballistics.speed_for_angle(a, g.hoop_x, g.rise)
-		for k in range(-6, 7):
+		for k in range(-8, 9):
 			var launch := {"angle_deg": float(a), "speed": ideal * (1.0 + 0.02 * k)}
-			var plain := ShotSim.simulate_shot(launch, false, g)
-			var touched: bool = int(plain["rim_contacts"]) + int(plain["board_contacts"]) > 0
-			if plain["made"] and plain["type"] == ShotClassify.SWISH:
-				var sw := ShotSim.simulate_shot(launch, false, v)
-				checked += 1
-				t.ok(sw["type"] == ShotClassify.SWISH and int(sw["points"]) == 2 and not sw["vortex"], "a clean swish is still a swish under the vortex")
-			elif not plain["made"] and touched:
-				var out := ShotSim.simulate_shot(launch, false, v)
+			var p := ShotSim.run_shot(launch, false, g)
+			var plain := ShotClassify.classify_shot(p)
+			var reach := ShotSim.first_reach(p)
+			var out := ShotSim.simulate_shot(launch, false, m)
+			if plain["made"]:
+				t.eq(JSON.stringify(out), JSON.stringify(plain), "a make at %d° x%.2f is left alone (%s)" % [a, 1.0 + 0.02 * k, plain["type"]])
+				if plain["type"] == ShotClassify.SWISH:
+					swishes += 1
+					t.ok(int(out["points"]) == 2 and not out["magnet"], "a clean swish is still a swish under the magnet")
+			elif float(reach["t"]) >= 0.0 and float(reach["hd"]) <= 0.35:
 				pulled += 1
 				pen = maxf(pen, out["max_penetration"])
 				var kinds := []
 				for ev in out["events"]:
 					kinds.push_back(ev["kind"])
-				var pull_i: int = kinds.find("vortex_pull")
+				var pull_i: int = kinds.find("magnet_pull")
 				var enter_i: int = kinds.rfind("enter")
-				t.ok(out["made"] and out["vortex"] and int(out["points"]) == 1 and out["type"] != ShotClassify.SWISH,
-					"a touched miss at %d° x%.2f is pulled in for 1 (%s)" % [a, 1.0 + 0.02 * k, out["type"]])
-				t.ok(pull_i >= 0 and kinds.count("vortex_pull") == 1 and enter_i > pull_i, "one pull, then the entry")
+				t.ok(out["made"] and out["magnet"] and int(out["points"]) == 1 and out["type"] != ShotClassify.SWISH,
+					"a near miss (%.2f m) at %d° x%.2f is zapped in for 1 (%s)" % [reach["hd"], a, 1.0 + 0.02 * k, out["type"]])
+				t.ok(pull_i == 0 and kinds.count("magnet_pull") == 1 and enter_i > pull_i, "the bolt first (before any iron), then the entry")
+				t.ok(float(out["events"][0]["t"]) < float(reach["t"]), "grabbed before the ball reached the rim")
 				if pulled == 1:
-					t.eq(JSON.stringify(out), JSON.stringify(ShotSim.simulate_shot(launch, false, v)), "the pull is deterministic")
-	t.ok(pulled >= 3, "the sweep found touched misses to pull (%d)" % pulled)
-	t.ok(checked >= 1, "and clean swishes to leave alone (%d)" % checked)
-	t.ok(pen < 0.02, "no deep penetration under the vortex (%.4f)" % pen)
+					t.eq(JSON.stringify(out), JSON.stringify(ShotSim.simulate_shot(launch, false, m)), "the pull is deterministic")
+			else:
+				wide += 1
+				t.eq(JSON.stringify(out), JSON.stringify(plain), "a wide miss (%.2f m) at %d° x%.2f is untouched" % [reach["hd"], a, 1.0 + 0.02 * k])
+	t.ok(pulled >= 3, "the sweep found near misses to pull (%d)" % pulled)
+	t.ok(swishes >= 1, "and clean swishes to leave alone (%d)" % swishes)
+	t.ok(wide >= 1, "and wide misses to ignore (%d)" % wide)
+	t.ok(pen < 0.02, "no deep penetration under the magnet (%.4f)" % pen)
 	var short := Ballistics.ideal_launch_for(52.0, g)
 	short["speed"] = short["speed"] * 0.8
-	var air := ShotSim.simulate_shot(short, false, v)
-	t.ok(not air["made"] and air["type"] == ShotClassify.AIRBALL and not air["vortex"], "an airball never scores")
-	# The ice rule wins: iced and spinning, a touched ball is caught, not pulled.
-	var both := v.with_ice(true)
+	var air := ShotSim.simulate_shot(short, false, m)
+	t.ok(not air["made"] and air["type"] == ShotClassify.AIRBALL and not air["magnet"], "an airball never scores")
+	# A tighter threshold pulls fewer: the data knob is live.
+	var tight := g.with_magnet(true, 0.05)
+	var tight_pulled := 0
+	for a in range(48, 57, 2):
+		var ideal: float = Ballistics.speed_for_angle(a, g.hoop_x, g.rise)
+		for k in range(-8, 9):
+			if ShotSim.simulate_shot({"angle_deg": float(a), "speed": ideal * (1.0 + 0.02 * k)}, false, tight)["magnet"]:
+				tight_pulled += 1
+	t.ok(tight_pulled < pulled, "a 5 cm threshold pulls fewer than 35 cm (%d < %d)" % [tight_pulled, pulled])
+	# The ice rule wins: iced and magnetised, nothing is pulled.
+	var both := m.with_ice(true)
 	var caught := 0
 	for a in range(48, 57, 2):
 		var ideal: float = Ballistics.speed_for_angle(a, g.hoop_x, g.rise)
 		for k in range(-6, 7):
 			var out := ShotSim.simulate_shot({"angle_deg": float(a), "speed": ideal * (1.0 + 0.02 * k)}, false, both)
-			t.ok(not out["vortex"], "no pull on an iced rim")
+			t.ok(not out["magnet"], "no pull on an iced rim")
 			if out["type"] == ShotClassify.ICE_CAUGHT:
 				caught += 1
 	t.ok(caught >= 1, "the ice caught touched balls instead (%d)" % caught)
