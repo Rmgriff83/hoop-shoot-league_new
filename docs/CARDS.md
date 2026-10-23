@@ -321,7 +321,10 @@ cards never meet online hands.
    36×32 on `#4A1410`) and `glyph_magnet.png`, all from the design export
    (the Vortex's files and its Lua glyph are gone). The PNGs come from the
    design project's export zip (DesignSync base64 does not transcribe
-   reliably past ~1 KB), copied straight in and re-imported.
+   reliably past ~1 KB), copied straight in and re-imported. The loop is the
+   export's `assets/cards/fx_magnet.png` — the sheet the design page itself
+   renders (held still, the bolt flaring bottom-right, sparks); the
+   `assets/textures/cards/` copy in the export was an earlier iteration.
 
 ## Adding a league
 
