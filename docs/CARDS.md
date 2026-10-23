@@ -319,11 +319,9 @@ cards never meet online hands.
    Magnet (`magnet6`, 2026-10-23, design "Card Icons" 10a): `card_magnet6.png`
    + `fx_magnet.png` (16 frames at 12 fps, rect `[16, 29, 64, 56]`, chip
    36×32 on `#4A1410`) and `glyph_magnet.png`, all from the design export
-   (the Vortex's files and its Lua glyph are gone). **Stand-in (2026-10-23):**
-   the face and the loop checked in are the old Vortex art under the new
-   names — the design PNGs did not survive the DesignSync transcription
-   (docs memory: export the project instead); the glyph is the real one.
-   Replace both from the export and run `--import`.
+   (the Vortex's files and its Lua glyph are gone). The PNGs come from the
+   design project's export zip (DesignSync base64 does not transcribe
+   reliably past ~1 KB), copied straight in and re-imported.
 
 ## Adding a league
 
