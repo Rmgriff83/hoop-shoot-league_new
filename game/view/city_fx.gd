@@ -164,6 +164,19 @@ func setup(arena: Node, set: ArenaSet = null) -> bool:
 	return true
 
 
+## The PiP's static city (CourtGeometry.Profile.PIP): the street, the
+## facades and the sky stay; no car ever joins, no pigeons, the smoke is off,
+## the trees keep the yaw they were built with — and nothing runs per frame.
+var frozen := false   # CourtGeometry.Profile.PIP: built, then still
+
+
+func freeze() -> void:
+	frozen = true
+	for mi in _smoke:
+		mi.visible = false
+	set_process(false)
+
+
 ## The pack's buildings and the tenements: one shared unshaded material per
 ## texture (so the faces still batch), the daylit photos graded to dusk.
 func _bind_facade(mi: MeshInstance3D) -> void:

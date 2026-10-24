@@ -206,3 +206,46 @@ describe("the pre-match step", () => {
     expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM matches WHERE a_id = ?1").bind(a.playerId).first<{ n: number }>()).toEqual({ n: 0 });
   });
 });
+
+describe("the kit on the wire (docs/LOCKER.md → The kit)", () => {
+  it("relays a clean kit in peer_loadout and start, drops a bad one, never errors", async () => {
+    const a = await register(3);
+    const b = await register(3);
+    await give(a, "ice", 1);
+    const room = uuid();
+    const A = await join(a, room);
+    const B = await join(b, room);
+    await A.until((m) => m.t === "matched");
+    await B.until((m) => m.t === "matched");
+    A.send({ t: "loadout", slots: ["ice", "", ""], ready: false, kit: { v: 1, ball: "galaxy", net: "rwb", hoop: "Bad Id!", extra: 7 } });
+    expect(await A.until((m) => m.t === "loadout_ok")).toEqual({ t: "loadout_ok", hand: ["ice", "", ""], ready: false });
+    // The kit comes through cleaned: known string keys that look like ids, the version, nothing else.
+    expect(await B.until((m) => m.t === "peer_loadout")).toEqual({ t: "peer_loadout", slots: ["ice", "", ""], ready: false, from: "a", kit: { v: 1, ball: "galaxy", net: "rwb" } });
+    // A kit this room cannot read (another version, a string) is dropped without a word.
+    B.send({ t: "loadout", slots: [], ready: true, kit: { v: 2, ball: "galaxy" } });
+    const pl = await A.until((m) => m.t === "peer_loadout");
+    expect(pl).toEqual({ t: "peer_loadout", slots: ["", "", ""], ready: true, from: "b" });
+    expect(A.inbox.filter((m) => m.t === "error").length).toBe(0);
+    A.send({ t: "loadout", slots: ["ice", "", ""], ready: true, kit: "nope" });
+    const sa = await A.until((m) => m.t === "start");
+    const sb = await B.until((m) => m.t === "start");
+    // start.kits carries each side's last clean kit (a's bad last one cleared it; b never had one).
+    expect(sa.kits).toEqual({ a: null, b: null });
+    expect(sb.kits).toEqual(sa.kits);
+  });
+  it("keeps the kit a side sent when its later picks carry none", async () => {
+    const a = await register(3);
+    const b = await register(3);
+    const room = uuid();
+    const A = await join(a, room);
+    const B = await join(b, room);
+    await A.until((m) => m.t === "matched");
+    await B.until((m) => m.t === "matched");
+    A.send({ t: "loadout", slots: [], ready: false, kit: { v: 1, ball: "galaxy", net: "rwb" } });
+    await A.until((m) => m.t === "loadout_ok");
+    A.loadout([], true); // no kit key: the stored one stands
+    B.loadout([], true);
+    const sb = await B.until((m) => m.t === "start");
+    expect(sb.kits).toEqual({ a: { v: 1, ball: "galaxy", net: "rwb" }, b: null });
+  });
+});

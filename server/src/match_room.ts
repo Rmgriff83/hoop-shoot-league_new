@@ -60,6 +60,8 @@ interface Meta {
   /** Each side's ledger at the pre-match step, so a loadout is checked without D1. */
   inv: Record<Side, Inventory | null>;
   ready: Record<Side, boolean>;
+  /** Each side's kit — the cosmetic ids the other phone's PiP shows it in (docs/LOCKER.md → The kit). Shape-checked only: cosmetics are local and harmless. */
+  kits?: Record<Side, Kit | null>;
   /** A side that reported its period and then dropped: finished, not forfeiting. */
   leftWaiting: Side | null;
   /** Rematch offers after the decision; both → a fresh room for the pair. */
@@ -68,6 +70,23 @@ interface Meta {
   recorded: boolean;
 }
 interface Attachment { side: Side; pid: string; win: number; n: number }
+/** A kit as the phones send it: a version and up to three ids. */
+interface Kit { v: number; ball?: string; net?: string; hoop?: string }
+
+const KIT_V = 1;
+const KIT_ID = /^[a-z0-9_]{1,24}$/;
+/** A cleaned copy of a kit off the wire, or null when it is not one (never an error: a bad kit is just dropped). */
+export function cleanKit(k: unknown): Kit | null {
+  if (!k || typeof k !== "object" || Array.isArray(k)) return null;
+  const o = k as Record<string, unknown>;
+  if (o.v !== KIT_V || Object.keys(o).length > 8) return null;
+  const out: Kit = { v: KIT_V };
+  for (const key of ["ball", "net", "hoop"] as const) {
+    const v = o[key];
+    if (typeof v === "string" && KIT_ID.test(v)) out[key] = v;
+  }
+  return out;
+}
 
 const other = (s: Side): Side => (s === "a" ? "b" : "a");
 const blank = (): string[] => Array.from({ length: SLOTS }, () => "");
@@ -124,6 +143,7 @@ export class MatchRoom extends DurableObject<Env> {
     return {
       t: "start", seed: m.seed, area: m.area, seconds: HEAT_SECONDS, ot_seconds: OT_SECONDS, ball_return_s: BALL_RETURN_S,
       hands: m.hands, levels: this.levels(m), ranked: m.ranked, cap: m.cap, tiers: this.tiers(m), countdown_s: PREMATCH.countdown_s,
+      kits: m.kits ?? { a: null, b: null },
       ...(resumed ? { resumed: true } : {}),
     };
   }
@@ -264,9 +284,15 @@ export class MatchRoom extends DurableObject<Env> {
       m.hands[att.side] = validHand(slots as string[], inv, m.cap, player?.tier ?? TIERS[0].id);
       m.ready[att.side] = msg.ready;
       m.last = now;
+      // The kit rides with the pick (optional; a bad one is dropped, never refused): the other phone's PiP wears it.
+      if (msg.kit !== undefined) {
+        if (!m.kits) m.kits = { a: null, b: null };
+        m.kits[att.side] = cleanKit(msg.kit);
+      }
       this.send(ws, { t: "loadout_ok", hand: m.hands[att.side], ready: m.ready[att.side] });
       // The other phone watches the pick fill in (design "Pre Match" 37a: THEIR LOADOUT, their READY chip).
-      this.sendSide(other(att.side), { t: "peer_loadout", slots: m.hands[att.side], ready: m.ready[att.side], from: att.side });
+      const kit = m.kits?.[att.side];
+      this.sendSide(other(att.side), { t: "peer_loadout", slots: m.hands[att.side], ready: m.ready[att.side], from: att.side, ...(kit ? { kit } : {}) });
       if (m.ready.a && m.ready.b) await this.startMatch(m, now);
       await this.put(m);
       return;

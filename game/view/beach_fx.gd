@@ -176,6 +176,22 @@ func setup(arena: Node) -> bool:
 	return true
 
 
+## The PiP's static beach (CourtGeometry.Profile.PIP): the ocean and the
+## palms at one instant, the shore at rest, no birds, pelican, ship, plane,
+## jet or waves ever spawn — and no per-frame work at all.
+var frozen := false   # CourtGeometry.Profile.PIP: built, then still
+
+
+func freeze() -> void:
+	frozen = true
+	_ocean_mat.set_shader_parameter("t", 0.0)
+	for m in _palm_mats:
+		m.set_shader_parameter("t", 0.0)
+	if _shore_mat != null:
+		_shore_mat.albedo_color.a = 0.75
+	set_process(false)
+
+
 func bird_count() -> int:
 	return _birds.size()
 

@@ -826,7 +826,17 @@ func _search_ranked(on_state: Callable) -> void:
 func send_loadout(slots: Array, ready: bool) -> void:
 	if room == null or not room.has_method("send"):
 		return
-	room.send(MatchProtocol.loadout(slots, ready))
+	room.send(MatchProtocol.loadout(slots, ready, my_kit(str(pre_match.get("area", match_area)))))
+
+
+## The kit the other phone's PiP shows us in (docs/LOCKER.md → The kit): our
+## ball, the net we hang on this court, and the hoop only where the court
+## lets us pick one (the cage: `App.MODES` fixes the others').
+func my_kit(area: String) -> Dictionary:
+	var modes: Dictionary = AREA_MODES["practice"]
+	var mode_id := str(modes.get(area, "practice"))
+	var hoop_id := hoop_set.id if hoop_set != null and str(mode_config(mode_id).get("hoop", "")) == "" else ""
+	return MatchProtocol.kit(ball_set.id if ball_set != null else "", net_set_for(area).id, hoop_id)
 
 
 ## Open a room and route its messages for the life of the client: the lobby

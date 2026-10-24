@@ -10,6 +10,16 @@ extends Node3D
 
 @export var debug_markers := false
 
+## How much of the area this court draws (docs/PERFORMANCE.md → rule 9).
+## FULL is the court the player shoots at. PIP is the opponent's window in a
+## heat: the same arena, hoop, net, ball fx and LED, but no sun shadows, no
+## atlas call, and every area fx frozen after it is built (a static backdrop
+## — the ocean, palms, trees, facades stand still; no birds, traffic, snow or
+## smoke move), so the small window costs a fraction of the big one. Set
+## before add_child.
+enum Profile { FULL, PIP }
+var profile := Profile.FULL
+
 ## The active hoop bundle (model, net feel, LED skin, flourish anims). Set
 ## before add_child; defaults to the starter set. Model contract: root at the
 ## rim centre; RimPivot required; LedFace/BoardBand/Backboard/Net optional.
@@ -289,7 +299,25 @@ func _build_arena_model() -> bool:
 		else:
 			_park_fx.free()
 			_park_fx = null
+	if profile == Profile.PIP:
+		for fx in [_beach_fx, _arcade_fx, _city_fx, _park_fx]:
+			if fx != null:
+				fx.freeze()
 	return true
+
+
+## The area fx this court built that still animate (tests, the QA driver).
+func live_fx_count() -> int:
+	var n := 0
+	for fx in [_beach_fx, _arcade_fx, _city_fx, _park_fx]:
+		if fx != null and not fx.frozen:
+			n += 1
+	return n
+
+
+func sun_shadows_on() -> bool:
+	var sun := get_node_or_null("Sun") as DirectionalLight3D
+	return sun != null and sun.shadow_enabled
 
 
 func _unshade(node_name: String) -> void:
@@ -994,11 +1022,11 @@ func _build_lights() -> void:
 		sun.rotation = arena_set.sun_rotation_deg * (PI / 180.0)
 		sun.light_energy = arena_set.sun_energy
 		sun.light_color = arena_set.sun_color
-		if arena_set.sun_shadows:
+		if arena_set.sun_shadows and profile == Profile.FULL:
 			sun.shadow_enabled = true
 			sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 			sun.directional_shadow_max_distance = arena_set.shadow_distance
-			# One court is live at a time (the heat's PiP is the same area), so
+			# One court is live at a time (the heat's PiP draws no shadows), so
 			# every area sets the atlas it wants and the park's 1024 never leaks.
 			RenderingServer.directional_shadow_atlas_set_size(arena_set.shadow_size, true)
 		env.background_color = arena_set.background_color

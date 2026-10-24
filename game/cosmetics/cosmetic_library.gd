@@ -194,6 +194,23 @@ static func stock_net(kind: String) -> NetSet:
 	return all[0] if not all.is_empty() else null
 
 
+## A kit off the wire (MatchProtocol.kit: ids only) as the sets this build
+## has: {ball: BallSet, net: NetSet, hoop: HoopSet|null}. An id this catalog
+## does not know — a newer build's net, a typo, {} — resolves to the court's
+## stock: the starter ball, the stock net of `stock_kind` (the court's hoop's
+## kind), no hoop (the court keeps its own). Any net hangs on any hoop
+## (Ross, 2026-10-16), so no fit rule lives here — this is where one would.
+static func resolve_kit(kit: Dictionary, stock_kind: String) -> Dictionary:
+	var ball := get_ball(str(kit.get("ball", "")))
+	var net := get_net(str(kit.get("net", "")))
+	var hoop := get_hoop(str(kit.get("hoop", ""))) if kit.has("hoop") else null
+	return {
+		"ball": ball if ball != null else starter_ball(),
+		"net": net if net != null else stock_net(stock_kind),
+		"hoop": hoop,
+	}
+
+
 ## Every stock net: owned by every save. Every other net is a PEGGY prize.
 static func stock_nets() -> Array[NetSet]:
 	var out: Array[NetSet] = []

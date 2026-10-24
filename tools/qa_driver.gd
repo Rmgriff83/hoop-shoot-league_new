@@ -1289,7 +1289,8 @@ func _run_multi() -> void:
 	# both ways (ours from the cache above; theirs an ice they play on us).
 	var start := {"t": "start", "seed": 4242, "area": "beach", "seconds": 20.0, "ot_seconds": 6.0, "ball_return_s": 1.0,
 		"hands": {"a": ["fire7", "", "ice"], "b": ["ice", "", ""]}, "levels": {"a": 1, "b": 4}, "ranked": true, "cap": 1,
-		"tiers": {"a": {"tier": "rookie", "division": 3}, "b": {"tier": "pro", "division": 2}}}
+		"tiers": {"a": {"tier": "rookie", "division": 3}, "b": {"tier": "pro", "division": 2}},
+		"kits": {"a": null, "b": QaFakePeer.KIT}}
 	var fake := QaFakePeer.new()
 	fake.name = "Match"
 	App.add_child(fake)
@@ -1313,6 +1314,10 @@ func _run_multi() -> void:
 	fake.stage(start, App.geo_for_mode(str(cfg["mode"])), spots, true)
 	await _sleep(7.0)
 	await _snap("online_heat_early")
+	# The opponent's window up close: their galaxy ball and red-white-blue net (the kit), no shadows, frozen fx.
+	if screen != null and screen.get("_pip_frame") != null:
+		var frame: Control = screen.get("_pip_frame")
+		await _snap_rect("pip_kit", Rect2(frame.position, frame.size))
 	await _sleep(9.0)
 	await _snap("online_heat_late")
 	await _sleep(9.0)
@@ -1745,6 +1750,21 @@ func _snap(name_: String) -> void:
 	await RenderingServer.frame_post_draw
 	var img := get_viewport().get_texture().get_image()
 	img.save_png("user://qa/%s.png" % name_)
+	print("QA snap " + name_)
+
+
+## A crop of the screen (design coordinates, 720×1280) at 2× for a close look.
+func _snap_rect(name_: String, rect: Rect2) -> void:
+	await RenderingServer.frame_post_draw
+	var img := get_viewport().get_texture().get_image()
+	var k := Vector2(img.get_size()) / get_viewport().get_visible_rect().size   # the window may be smaller than the design
+	var r := Rect2i(Rect2(rect.position * k, rect.size * k)).intersection(Rect2i(Vector2i.ZERO, img.get_size()))
+	if r.size.x <= 0 or r.size.y <= 0:
+		print("QA snap %s: empty crop" % name_)
+		return
+	var crop := img.get_region(r)
+	crop.resize(r.size.x * 2, r.size.y * 2, Image.INTERPOLATE_NEAREST)
+	crop.save_png("user://qa/%s.png" % name_)
 	print("QA snap " + name_)
 
 

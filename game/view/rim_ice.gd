@@ -200,6 +200,8 @@ func _process(dt: float) -> void:
 	if _light == null or _mist == null:
 		return
 	_t += dt
+	if not _iced and not visible and not _mist.visible and _frost <= 0.0 and _flash <= 0.0:
+		return   # clear and thawed: nothing to animate, no uniform written (docs/PERFORMANCE.md rule 1)
 	var centre := global_position if is_inside_tree() else position
 	# Freeze in / out.
 	if _shatter_t < 0.0:

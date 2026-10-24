@@ -269,6 +269,19 @@ func _build_sky(arena: Node, set: ArenaSet) -> void:
 	AreaSky.hide_dome(arena)
 
 
+## The PiP's static park (CourtGeometry.Profile.PIP): the trees, the cars
+## and the sky stay (the sky's clouds run on the shader's own TIME, no
+## uniform is written), the snowfall goes, and nothing runs per frame.
+var frozen := false   # CourtGeometry.Profile.PIP: built, then still
+
+
+func freeze() -> void:
+	frozen = true
+	if _snow != null:
+		_snow.visible = false
+	set_process(false)
+
+
 ## The Sky the court's Environment shows (null when the area has no sky).
 func sky_resource() -> Sky:
 	return _sky

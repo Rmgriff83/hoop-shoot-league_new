@@ -159,6 +159,57 @@ brings the beach inside and the city close, but not the park; Stage 3's main-vie
 shadow work (fewer casters, then baked shadows) is what the park and the city
 need, since their trials are already over the line without a PiP.
 
+### Stage 2 — the lite opponent view and the kit (2026-10-23)
+
+What changed: the PiP's court runs `CourtGeometry.Profile.PIP` — no sun
+shadows (no atlas call), every area fx frozen after it is built (`freeze()` on
+BeachFx / ParkFx / CityFx / ArcadeFx: a static ocean, palms, trees, facades;
+no birds, pelican, ship, plane, traffic, pigeons, snow or smoke; the shader
+sky stays, it runs on TIME); fog, ambient, fill and sun colour kept. The
+window draws at half rate (`HeatScreen.PIP_EVERY` 2: `UPDATE_ONCE` armed
+every other frame, its ball / rim / net / magnet stepped with both frames'
+dt); minimized, its viewport and its court's processing both stop. The rim
+fire and ice write no uniforms while out. The PiP wears the opponent's
+**kit** (docs/LOCKER.md → The kit) online and the court's stock pair solo.
+
+**Ross's phone**, heats only (trials unchanged within noise; the full table is
+`build/qa/moto_g_-_2025/perf.json`, Stage 1's kept in `…_stage1/`):
+
+    area  mode      | frame p50 before→after | p95 | script p50 | script p95 | fps  | PiP shadow draws
+    cage  heat_pip  |  19.4 → 19.4 | 27.9 → 29.2 | 5.1 → 4.7 |  7.6 →  8.8 | 50 → 49 | 0 → 0
+    cage  heat_min  |  19.7 → 20.8 | 28.9 → 29.0 | 5.2 → 4.8 |  7.6 →  9.1 | 50 → 47 | 0 → 0
+    beach heat_pip  |  22.7 → 20.8 | 28.1 → 29.3 | 4.6 → 4.6 |  6.6 →  8.5 | 44 → 47 | 49 → 0
+    beach heat_min  |  24.2 → 22.2 | 26.5 → 29.2 | 5.0 → 4.3 |  7.2 →  8.4 | 41 → 46 | 49 → 0
+    park  heat_pip  |  34.7 → 33.3 | 41.8 → 41.4 | 12.1 → 10.5 | 15.9 → 18.0 | 29 → 29 | 57 → 0
+    park  heat_min  |  29.2 → 28.3 | 33.1 → 33.3 | 6.8 → 5.9 |  9.8 → 11.0 | 35 → 35 | 57 → 0
+    city  heat_pip  |  30.0 → 27.8 | 33.3 → 33.3 | 7.0 → 5.8 | 10.8 → 10.8 | 33 → 36 | 57 → 0
+    city  heat_min  |  30.7 → 28.3 | 33.3 → 33.3 | 7.0 → 5.9 | 10.7 → 10.5 | 33 → 35 | 57 → 0
+
+- **The beach heats are inside the budget** (p50 20.8 / 22.2 vs the 22.4
+  limit); the city gained 2.2 ms and the park 1.4 ms of p50 — as predicted,
+  the window was 2–5 ms of the frame and the main view's shadow pass is the
+  rest. The PiP's own render time no longer measures (a viewport drawn with
+  `UPDATE_ONCE` reports 0; the frame time carries it).
+- **Script p50 fell, script p95 rose** everywhere by 1–2 ms: the window's
+  ball, rim and net now step every other frame with twice the dt, so the
+  per-frame script cost alternates heavy / light and the 95th percentile
+  reads the heavy frame. The frame-time p95 did not move (the phone is
+  GPU-bound), so it is a measurement artefact of the half rate, not stutter.
+- **The park heat still spends 10.5 ms p50 of script against the cage heat's
+  4.7** while its trial spends 1.8: something the heat does every frame costs
+  the park 6 ms (the flip scoreboard's `set_visitor` is written every frame
+  from `HeatScreen._process`; the first Stage 3 item to measure).
+- Triangles: the PiP's frozen fx and no shadow pass took the beach from 47k
+  to 36k and the park from 142k to 95k (the far trees' shadow casters).
+- PiP before/after crops per area: `build/qa/pip/before_<area>.png` /
+  `after_<area>.png` (Stage 1 and Stage 2 phone snaps, the window at 1:1).
+  The window keeps its look: the ocean, palms, trees, sky and facades stand
+  still and shadowless; the opponent's ball, net, rim fx and LED play on.
+
+Still over after Stage 2: the park and the city heats on p50 (28–33 vs 22.4)
+and script p95, the park heat_pip on p95 / p99, and the park and city trials
+on p50 — the main view's shadow pass (Stage 3).
+
 ## 4. Rules for effects (Stage 3; apply to every new effect)
 
 1. **Animate in the shader with `TIME`.** Never set a shader parameter from

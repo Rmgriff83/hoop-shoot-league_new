@@ -9,15 +9,15 @@ const SHOT := "shot"           # {t, n, launch}            one per release
 const OUTCOME := "outcome"     # {t, n, score}             the sender's running score after it landed
 const PERIOD_END := "period_end"  # {t, period, score, totals}
 const CARD := "card"           # {t, id}                   a card out of the hand the room dealt
-const LOADOUT := "loadout"     # {t, slots: [id|"" ×3], ready}  the pre-match pick (docs/BACKEND.md → Ranked)
+const LOADOUT := "loadout"     # {t, slots: [id|"" ×3], ready, kit?}  the pre-match pick (docs/BACKEND.md → Ranked); kit = our ball/net ids for their PiP
 const REMATCH := "rematch"     # {t}                       on the post-match page: another go?
 const PING := "ping"
 ## Messages the room sends.
 const JOINED := "joined"       # {t, side, room, area, peer|null}
 const PEER := "peer"           # {t, peer}                 the other phone arrived
 const MATCHED := "matched"     # {t, peer, levels: {a, b}, tiers: {a, b}, stats: {a, b}, cap, seconds, countdown_s}  both seated: pick a loadout
-const PEER_LOADOUT := "peer_loadout"  # {t, slots: [id|"" ×3], ready, from}  the other phone's validated pick as it stands
-const START := "start"         # {t, seed, area, seconds, ot_seconds, ball_return_s, hands: {a, b}, levels: {a, b}, ranked, cap, tiers, countdown_s}
+const PEER_LOADOUT := "peer_loadout"  # {t, slots: [id|"" ×3], ready, from, kit?}  the other phone's validated pick as it stands
+const START := "start"         # {t, seed, area, seconds, ot_seconds, ball_return_s, hands: {a, b}, levels: {a, b}, ranked, cap, tiers, countdown_s, kits: {a, b}}
 const CARD_OK := "card_ok"     # {t, id}                   the room took our card
 const LOADOUT_OK := "loadout_ok"  # {t, hand: [id|"" ×3], ready}  the validated pick (what the cap blanked)
 const SETTLED := "settled"     # {t, won, reason, ranked, rating?, rank?, events?, peak?}  the decision
@@ -62,13 +62,53 @@ static func rematch() -> Dictionary:
 	return {"t": REMATCH}
 
 
-## The pre-match pick: three slots (null → ""), ready once READY is pressed.
-static func loadout(slots: Array, ready: bool) -> Dictionary:
+## The pre-match pick: three slots (null → ""), ready once READY is pressed;
+## with a kit, the cosmetics the other phone's PiP should show us in.
+static func loadout(slots: Array, ready: bool, kit_: Dictionary = {}) -> Dictionary:
 	var out := []
 	for i in CardDefs.SLOTS:
 		var s: Variant = slots[i] if i < slots.size() else null
 		out.push_back(str(s) if s != null else "")
-	return {"t": LOADOUT, "slots": out, "ready": ready}
+	var msg := {"t": LOADOUT, "slots": out, "ready": ready}
+	if not kit_.is_empty():
+		msg["kit"] = kit_
+	return msg
+
+
+## The kit (docs/LOCKER.md → The kit): the cosmetic ids one phone shows the
+## other in its PiP — versioned so an older build ignores what it cannot
+## read. Ids only; the receiver resolves them against its own catalog and
+## falls back to the court's stock pair for anything it does not know
+## (CosmeticLibrary.resolve_kit). `hoop` only where the court lets a player
+## pick one (the cage).
+const KIT_V := 1
+
+
+static func kit(ball: String, net: String, hoop := "") -> Dictionary:
+	var out := {"v": KIT_V, "ball": ball, "net": net}
+	if hoop != "":
+		out["hoop"] = hoop
+	return out
+
+
+## A side's kit out of `start.kits` (or a `peer_loadout`'s `kit`): {} when
+## absent, not a v1 kit, or not ours to read.
+static func kit_of(start: Dictionary, side: String) -> Dictionary:
+	var kits: Variant = start.get("kits", {})
+	var k: Variant = kits.get(side, {}) if kits is Dictionary else start.get("kit", {})
+	return clean_kit(k)
+
+
+## A kit as this build reads it: v == KIT_V, the three known string keys,
+## else {}.
+static func clean_kit(k: Variant) -> Dictionary:
+	if not (k is Dictionary) or int(Dictionary(k).get("v", 0)) != KIT_V:
+		return {}
+	var out := {"v": KIT_V}
+	for key in ["ball", "net", "hoop"]:
+		if Dictionary(k).get(key) is String and str(Dictionary(k)[key]) != "":
+			out[key] = str(Dictionary(k)[key])
+	return out
 
 
 static func encode(msg: Dictionary) -> String:
@@ -179,6 +219,7 @@ static func heat_cfg(start: Dictionary, peer: Dictionary, side := "a") -> Dictio
 		"ranked": bool(start.get("ranked", false)),
 		"cap": int(start.get("cap", levels.get("a", 1))),
 		"their_tier": Dictionary(start.get("tiers", {})).get("b" if side == "a" else "a", {}) if start.get("tiers") is Dictionary else {},
+		"their_kit": kit_of(start, "b" if side == "a" else "a"),
 	}
 
 

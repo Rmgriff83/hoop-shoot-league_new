@@ -42,6 +42,17 @@ var _banner: LeagueBanner
 ## Where the PiP sits: below the spot picker row on courts that have one.
 var _pip_pos := Vector2(720 - 36 - 216 - PIP_FRAME, PIP_Y + PIP_FRAME)
 var _pip_size := PIP_SIZE
+## The opponent's window draws at half rate (docs/PERFORMANCE.md rule 9):
+## every other frame its viewport is armed for one draw and its ball, rim,
+## net and magnet step with the two frames' dt together. The sim (heat.tick)
+## runs every frame as always.
+const PIP_EVERY := 2
+var _pip_tick := 0
+var _pip_dt := 0.0
+## The kit the PiP wears (docs/LOCKER.md → The kit): online, the other
+## phone's resolved ball/net (and hoop in the cage); solo, the court's stock
+## pair. Null sets fall back inside CosmeticLibrary.resolve_kit.
+var _pip_kit: Dictionary = {}
 var _tray: Array[TrayCard] = []
 var _tray_ids: Array = []
 var _empties: Array[Control] = []
@@ -759,17 +770,19 @@ func _build_pip() -> void:
 	_pip_vp.name = "PipViewport"
 	_pip_vp.size = _pip_size
 	_pip_vp.own_world_3d = true
-	_pip_vp.render_target_update_mode = SubViewport.UPDATE_ALWAYS
+	_pip_vp.render_target_update_mode = SubViewport.UPDATE_ONCE   # then every other frame (_process)
 	_pip_vp.transparent_bg = false
 	_pip.add_child(_pip_vp)
 
 	_ai_court = CourtGeometry.new()
 	_ai_court.name = "OpponentCourt"
+	_ai_court.profile = CourtGeometry.Profile.PIP   # no shadows, frozen area fx (docs/PERFORMANCE.md rule 9)
 	Sfx.rim_rigidity = base_geo.rim_rigidity()
 	_ai_court.geo = base_geo
 	_ai_court.arena_set = _arena_set
-	_ai_court.hoop_set = _hoop_set
-	_ai_court.net_set = App.net_for_mode(App.next_mode)
+	_pip_kit = pip_kit(_heat_cfg, _hoop_set, str(App.mode_config(App.next_mode).get("hoop", "")) != "")
+	_ai_court.hoop_set = _pip_kit["hoop"] if _pip_kit["hoop"] != null else _hoop_set
+	_ai_court.net_set = _pip_kit["net"]
 	_ai_court.pop_scale = 2.4   # the PiP is a third the width: the pops stay readable
 	_pip_vp.add_child(_ai_court)
 	_ai_court.info.set_text(_mode["led_text"], _ai_court.info.accent_color)
@@ -780,7 +793,7 @@ func _build_pip() -> void:
 	_pip_vp.add_child(_ai_cam)
 	_ai_pool = BallPool.new()
 	_ai_pool.name = "OpponentBalls"
-	_ai_pool.ball_set = App.ball_set
+	_ai_pool.ball_set = _pip_kit["ball"]
 	_pip_vp.add_child(_ai_pool)
 	_place_ai_frame(_spots[0]["pos"])
 
@@ -909,8 +922,31 @@ func _set_pip_minimized(min_: bool) -> void:
 	_pip_frame.visible = not min_
 	_pip_chrome.visible = not min_
 	_pip_chip.visible = min_
-	# A hidden viewport still renders unless told otherwise.
-	_pip_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED if min_ else SubViewport.UPDATE_ALWAYS
+	# A hidden viewport still renders unless told otherwise, and its court's
+	# nodes (the LED, the rim fx) still process: both stop while it is away.
+	# The sim is the heat's; the window's ball, rim and net catch up on restore.
+	_pip_vp.render_target_update_mode = SubViewport.UPDATE_DISABLED if min_ else SubViewport.UPDATE_ONCE
+	_ai_court.process_mode = Node.PROCESS_MODE_DISABLED if min_ else Node.PROCESS_MODE_INHERIT
+	_pip_dt = 0.0
+
+
+## What the opponent's window wears: online, the other phone's kit off the
+## wire resolved against our catalog (unknown ids → the court's stock pair,
+## the court's own hoop); solo, the court's stock pair — a league shooter
+## may name a `kit` in data/shooters.json one day (none does yet). The
+## player's own pause-menu swaps never reach it.
+static func pip_kit(cfg: Dictionary, court_hoop: HoopSet, hoop_fixed: bool) -> Dictionary:
+	var kind := NetSet.kind_of_hoop(court_hoop) if court_hoop != null else "cotton"
+	var kit: Dictionary = {}
+	if bool(cfg.get("online", false)):
+		kit = MatchProtocol.clean_kit(cfg.get("their_kit", {}))
+	elif cfg.get("league", null) != null:
+		var shooter: Dictionary = LeagueData.shooter(str(Dictionary(cfg.get("opponent", {})).get("id", "")))
+		kit = MatchProtocol.clean_kit(shooter.get("kit", {}))
+	var out := CosmeticLibrary.resolve_kit(kit, kind)
+	if hoop_fixed:
+		out["hoop"] = null   # the court fixes its hoop everywhere but the cage
+	return out
 
 
 func pip_minimized() -> bool:
@@ -1082,10 +1118,17 @@ func _process(dt: float) -> void:
 	if heat.ai.geo != _ai_applied_geo:
 		_ai_applied_geo = heat.ai.geo
 		_ai_court.apply_geometry(heat.ai.geo)
-	_ai_pool.update_balls(heat.balls(Heat.AI), heat.ai.holding, dt)
-	_ai_court.magnet_follow(CourtGeometry.magnet_target(heat.balls(Heat.AI)))
-	_ai_court.step_rim(dt)
-	_ai_court.step_net(dt, heat.balls(Heat.AI))
+	# The window at half rate: its ball, rim, net and magnet step with the
+	# frames' dt together, then one draw is armed. Nothing while minimized.
+	_pip_dt += dt
+	_pip_tick += 1
+	if not pip_minimized() and _pip_tick % PIP_EVERY == 0:
+		_ai_pool.update_balls(heat.balls(Heat.AI), heat.ai.holding, _pip_dt)
+		_ai_court.magnet_follow(CourtGeometry.magnet_target(heat.balls(Heat.AI)))
+		_ai_court.step_rim(_pip_dt)
+		_ai_court.step_net(_pip_dt, heat.balls(Heat.AI))
+		_pip_vp.render_target_update_mode = SubViewport.UPDATE_ONCE
+		_pip_dt = 0.0
 	if heat.ai.phase == TimeTrial.PHASE_RUNNING:
 		_ai_court.led.band_flash(_ai_court.led.band_flash_color, LedBoard.band_hz_for(heat.ai.time_left))
 	_pip_chip_label.text = "OPP %d" % heat.score(Heat.AI)
@@ -1144,14 +1187,5 @@ func _after_match_end() -> void:
 	add_child(page)
 
 
-## The pause menu's swaps reach the opponent's window too.
-func _on_ball_changed(id: String) -> void:
-	super(id)
-	if _ai_pool != null:
-		_ai_pool.set_ball_set(App.ball_set)
-
-
-func _on_net_changed(id: String) -> void:
-	super(id)
-	if _ai_court != null:
-		_ai_court.set_net(App.net_for_mode(App.next_mode))
+## The pause menu's swaps are ours alone: the opponent's window wears its
+## own kit (pip_kit) — their cosmetics online, the court's stock pair solo.

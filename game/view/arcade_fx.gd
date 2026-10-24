@@ -211,6 +211,24 @@ func flare() -> void:
 	_flare = FLARE_S
 
 
+## The PiP's static cage (CourtGeometry.Profile.PIP): the cabinet screens,
+## the marquees and the bulbs at one instant, the lights steady, no chase —
+## and nothing runs per frame.
+var frozen := false   # CourtGeometry.Profile.PIP: built, then still
+
+
+func freeze() -> void:
+	frozen = true
+	for m in _screens:
+		m.set_shader_parameter("t", 0.0)
+	for m in _marquees:
+		m.set_shader_parameter("t", 0.0)
+	if _bulb_mat != null:
+		_bulb_mat.set_shader_parameter("t", 0.0)
+		_bulb_mat.set_shader_parameter("flare", 0.0)
+	set_process(false)
+
+
 func _process(dt: float) -> void:
 	_t += dt
 	for m in _screens:

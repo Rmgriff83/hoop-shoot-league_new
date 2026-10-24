@@ -183,13 +183,15 @@ build at any server.
 - **Protocol** (`core/net/match_protocol.gd`, pure, tested): phone → room
   `shot {n, launch}` on release, `outcome {n, score}` when it lands,
   `period_end {period, score, totals}` at the buzzer, `loadout {slots,
-  ready}` in the pre-match pick (→ Ranked), `card {id}`, `rematch`, `ping`;
+  ready, kit?}` in the pre-match pick (→ Ranked; the kit = our ball/net ids
+  for their PiP, docs/LOCKER.md → The kit), `card {id}`, `rematch`, `ping`;
   room → phone `joined {side, area, peer, status, ranked}`, `peer`, `matched
   {peer, levels, tiers, stats, cap, seconds, countdown_s}` once both are
-  seated, `loadout_ok`, `peer_loadout {slots, ready, from}` (the other
-  phone's validated pick as it stands — design "Pre Match" 37a), `start
-  {seed, area, seconds, ot_seconds, ball_return_s, hands, levels, ranked,
-  cap, tiers, countdown_s}` once both are ready or the pick timer runs out
+  seated, `loadout_ok`, `peer_loadout {slots, ready, from, kit?}` (the
+  other phone's validated pick as it stands — design "Pre Match" 37a — and
+  its kit when it sent one), `start {seed, area, seconds, ot_seconds,
+  ball_return_s, hands, levels, ranked, cap, tiers, countdown_s, kits: {a,
+  b}}` once both are ready or the pick timer runs out
   (no clocks to agree on: each phone starts on receipt — then counts
   `countdown_s` on the pre-match page before its tip-off, latency apart), relayed
   messages tagged `from`, `card_ok`, `settled`, `rematch_go`, `peer_left`,
@@ -384,7 +386,14 @@ both sides to the same tier bands).
   room keeps the latest, validated against the ledger, the player's level,
   the cap and the tier floor (a blanked slot comes back in `loadout_ok {hand,
   ready}` and goes to the other phone as `peer_loadout {slots, ready}` so
-  THEIR LOADOUT fills live), and starts when both are ready or the alarm
+  THEIR LOADOUT fills live). The pick may carry a **kit** (`{v: 1, ball, net,
+  hoop?}` — the sender's cosmetic ids, docs/LOCKER.md → The kit): the room
+  checks its shape and size only (`v === 1`, ≤ 8 keys, ids matching
+  `^[a-z0-9_]{1,24}$`; anything else is dropped without an error — cosmetics
+  are local and harmless, so there is no ownership check; a server-held
+  cosmetic would be checked here), keeps the last clean one per side, relays
+  it as `peer_loadout.kit` and hands both out in `start.kits`. The room
+  starts when both are ready or the alarm
   fires (a side that never picked starts empty). `start.countdown_s` is the
   count each phone then runs on the page before tipping off. So a level-7
   card never meets a level-2 player. A disconnect during the pick ends the

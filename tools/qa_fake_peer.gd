@@ -18,6 +18,10 @@ var side := "a"
 ## and badge on `settled`, the way the real room sends them.
 var ranked := true
 
+## The fake's kit (docs/LOCKER.md → The kit): a non-stock pair, so the PiP
+## visibly wears THEIR ball and net, not ours.
+const KIT := {"v": 1, "ball": "galaxy", "net": "rwb"}
+
 var _heat: Heat
 var _hand: Array = []
 var _our_score := 0
@@ -57,7 +61,7 @@ func send(msg: Dictionary) -> void:
 		MatchProtocol.LOADOUT:
 			# The real room validates, tells the other phone, and starts on both READY; the staged
 			# peer answers as if it had picked an ice and readied the moment we did.
-			message.emit.call_deferred({"t": MatchProtocol.PEER_LOADOUT, "slots": ["ice", "", ""], "ready": bool(msg.get("ready", false)), "from": "b"})
+			message.emit.call_deferred({"t": MatchProtocol.PEER_LOADOUT, "slots": ["ice", "", ""], "ready": bool(msg.get("ready", false)), "from": "b", "kit": KIT})
 		MatchProtocol.REMATCH:
 			# The fake always wants another go; a real room would then send rematch_go.
 			message.emit.call_deferred({"t": MatchProtocol.REMATCH, "from": "b"})

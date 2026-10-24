@@ -121,6 +121,12 @@ func _process(dt: float) -> void:
 	if _light == null or _flames == null or _smoke == null:
 		return  # not built (shouldn't happen) — never spam the log
 	_t += dt
+	if not _lit and not _flames.visible and not _smoke.visible:
+		# Out and cold: nothing to animate, no uniform written (docs/PERFORMANCE.md rule 1).
+		_light.light_energy = 0.0
+		if _rim_mat != null:
+			_rim_mat.emission_energy_multiplier = 0.0
+		return
 	var rate := FADE_IN if _lit else FADE_OUT
 	_intensity = lerpf(_intensity, _intensity_target, minf(1.0, rate * dt))
 	if not _lit and _intensity < 0.02:

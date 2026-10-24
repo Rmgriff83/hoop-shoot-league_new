@@ -31,14 +31,16 @@ A net is a **look for the hoop's kind of net** (`game/cosmetics/net_set.gd`,
 city's steel rim), `style` names the body `NetBodies` builds
 (docs/BLENDER_101.md §28–30), `price_coins` is tickets. The feel — the nine
 `net_*` knobs and the make sounds — stays on the court's `HoopSet`; a style
-only changes what hangs. Four nets ship (`assets/nets/<id>/net_set.tres`,
+only changes what hangs. Eight nets ship (`assets/nets/<id>/net_set.tres`,
 `CosmeticLibrary.NETS`): **Cotton** and **Chain** (the stock pair, free,
-owned by every save), **Jack** (a jack chain, 600 tickets — a *mid*
-purchase), **Ladder** (straight drops tied by hoop chains, 1000 — a
-*premium* one), **Wool** (a hand-knitted net in twelve yarn colours, 700 —
-*mid*, for the nylon courts), the **Neon Yellow** / **Neon Orange** cottons
-(the cotton body with a `NetSet.tint`, 400 each — *entry*) and **Red White
-Blue** (the heavy-duty polyester net in colour bands, 500 — *mid*). **Any
+owned by every save), **Jack** (a jack chain, valued 600 — a *mid* tier),
+**Ladder** (straight drops tied by hoop chains, 1000 — *premium*), **Wool**
+(a hand-knitted net in twelve yarn colours, 700 — *mid*, for the nylon
+courts), the **Neon Yellow** / **Neon Orange** cottons (the cotton body with
+a `NetSet.tint`, 400 each — *entry*) and **Red White Blue** (the heavy-duty
+polyester net in colour bands, 500 — *mid*). Every net but the stock pair is
+a PEGGY prize (since 2026-10-15 nothing is bought outright; the value is the
+economy ledger's tier). **Any
 net hangs on any hoop** (Ross, 2026-10-16): a chain on the park's nylon rim,
 cotton on the city's steel. What follows the choice is what you see and
 hear — the body `NetBodies` builds, swung by `NetSim` on the **knobs of
@@ -76,7 +78,21 @@ hoop's native kind, which is the stock fallback when nothing owned is hung.
   mirrored docs). `App.net_set_for(area)` falls back to the hoop's kind's
   stock net when a selection is unowned. `App.net_override` hangs a net
   everywhere without the save (QA, `--qa-jack` / `--qa-ladder`).
-- Cosmetics never go on the wire: in an online heat each phone shows its own.
+- **The kit** (2026-10-23, the opponent view): cosmetics DO go on the wire,
+  as ids only. With every `loadout` a phone sends `kit {v: 1, ball, net,
+  hoop?}` (`App.my_kit(area)`: our ball, the net we hang on that court, the
+  hoop only in the cage where a player picks one); the room shape-checks it
+  and relays it (`peer_loadout.kit`, `start.kits {a, b}` — docs/BACKEND.md).
+  The receiving phone resolves the ids against ITS catalog
+  (`CosmeticLibrary.resolve_kit`): an id it does not know — a newer build's
+  net — falls back to the court's stock pair (the starter ball, the stock
+  net of the court's hoop's kind), an unknown hoop to the court's own. The
+  heat's PiP wears the result (`HeatScreen.pip_kit`); the pre-match page
+  shows no opponent ball (Ross). Solo heats show the court's stock pair (a
+  shooter in `data/shooters.json` may one day name a `kit`; none does).
+  Our pause-menu swaps change our court only, never the window. No fit
+  rule: any net hangs on any hoop, so `resolve_kit` is the one place a rule
+  would live.
 
 Adding a net: a body class (`extends ChainNet` for a chain, `CottonNet` for
 cotton) registered in `NetBodies` — or, for a recolour, the cotton body with

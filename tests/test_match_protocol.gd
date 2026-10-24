@@ -85,6 +85,20 @@ func run(t) -> void:
 	t.eq(MatchProtocol.parse('{"t":"peer_loadout","slots":"ice","ready":true}'), {}, "…refused with slots not a list")
 	t.eq(MatchProtocol.parse('{"t":"peer_loadout","slots":[],"ready":1}'), {}, "…or ready not a bool")
 	t.eq(MatchProtocol.loadout([], true)["slots"], ["", "", ""], "three slots always")
+	# The kit (docs/LOCKER.md → The kit): ids only, versioned, cleaned on the way in.
+	t.eq(MatchProtocol.kit("galaxy", "rwb"), {"v": 1, "ball": "galaxy", "net": "rwb"}, "a kit: ball + net")
+	t.eq(MatchProtocol.kit("galaxy", "rwb", "classic"), {"v": 1, "ball": "galaxy", "net": "rwb", "hoop": "classic"}, "…with a hoop where the court allows one")
+	t.eq(MatchProtocol.loadout(["ice"], false, MatchProtocol.kit("galaxy", "rwb")), {"t": "loadout", "slots": ["ice", "", ""], "ready": false, "kit": {"v": 1, "ball": "galaxy", "net": "rwb"}}, "a loadout carries the kit")
+	t.ok(not MatchProtocol.loadout(["ice"], false).has("kit"), "…and none when no kit is given")
+	var start_k := {"t": "start", "seed": 1, "area": "beach", "kits": {"a": {"v": 1, "ball": "galaxy", "net": "rwb", "zzz": 1}, "b": {"v": 2, "ball": "x"}}}
+	t.eq(MatchProtocol.kit_of(start_k, "a"), {"v": 1, "ball": "galaxy", "net": "rwb"}, "kit_of: a side's kit, unknown keys dropped")
+	t.eq(MatchProtocol.kit_of(start_k, "b"), {}, "…a v2 kit is {} to this build")
+	t.eq(MatchProtocol.kit_of({"t": "start"}, "a"), {}, "…no kits: {}")
+	t.eq(MatchProtocol.kit_of({"kits": {"a": null}}, "a"), {}, "…null: {}")
+	t.eq(MatchProtocol.clean_kit({"v": 1, "ball": 7, "net": "rwb", "hoop": ""}), {"v": 1, "net": "rwb"}, "clean_kit keeps the string ids only")
+	t.eq(MatchProtocol.heat_cfg(start_k, {"name": "X", "tag": "01"}, "b")["their_kit"], {"v": 1, "ball": "galaxy", "net": "rwb"}, "heat_cfg: their_kit is the other side's")
+	t.eq(MatchProtocol.heat_cfg(start_k, {"name": "X", "tag": "01"}, "a")["their_kit"], {}, "…{} when theirs is unreadable")
+	t.eq(MatchProtocol.clean_kit(MatchProtocol.parse('{"t":"peer_loadout","slots":["ice","",""],"ready":false,"from":"b","kit":{"v":1,"ball":"galaxy","net":"rwb"}}')["kit"])["net"], "rwb", "peer_loadout passes the kit through (clean_kit reads JSON's 1.0 as v1)")
 	var rated := MatchProtocol.parse('{"t":"settled","won":true,"reason":"played","ranked":true,"rating":{"before":1500,"after":1518,"delta":18},"rank":{"tier":"pro","division":2},"events":["promoted"]}')
 	t.eq(rated["rank"]["tier"], "pro", "a rated settle carries the rank")
 	var rcfg := MatchProtocol.heat_cfg({"seed": 3, "area": "beach", "ranked": true, "cap": 2, "levels": {"a": 2, "b": 5},
