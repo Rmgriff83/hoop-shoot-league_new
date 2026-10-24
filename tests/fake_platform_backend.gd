@@ -8,6 +8,7 @@ var available := true
 var signed := true
 var proof := {"subject": "fake-1"}
 var sign_in_calls := 0
+var unlocked: Array = []
 
 
 func provider_id() -> String:
@@ -34,3 +35,7 @@ func sign_in() -> void:
 
 func get_identity_proof() -> Dictionary:
 	return proof.duplicate()
+
+
+func unlock(key: String) -> void:
+	unlocked.push_back(key)

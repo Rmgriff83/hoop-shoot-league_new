@@ -15,6 +15,7 @@ FEATURE_MATCH = "on"
 FEATURE_CARDS = "on"
 FEATURE_PLATFORM = "on"
 FEATURE_RANKED = "on"
+FEATURE_DROPS = "on"
 
 [[durable_objects.bindings]]
 name = "ROOM"
@@ -46,6 +47,7 @@ FEATURE_MATCH = "on"
 FEATURE_CARDS = "on"
 FEATURE_PLATFORM = "on"
 FEATURE_RANKED = "on"
+FEATURE_DROPS = "on"
 
 [[env.production.durable_objects.bindings]]
 name = "ROOM"

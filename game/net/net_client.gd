@@ -21,6 +21,12 @@ signal save_pulled(parts: Array)
 signal save_pushed(parts: Array)
 ## The online card cache changed (a refresh, a settle).
 signal cards_changed
+## Ranked Stage B (docs/BACKEND.md → Ranked → Stage B): GET /v1/rewards
+## landed / failed, a CLAIM moved a card, the lobby badge's count changed.
+signal rewards_loaded(data: Dictionary)
+signal rewards_failed
+signal rewards_changed
+signal rewards_badge(pending: int)
 
 const FLUSH_GAP_S := 30.0
 const BOARD_TTL_S := 60.0
@@ -58,6 +64,11 @@ var online_level := 1
 ## Your ladder rank as the server last told it ({tier, division, games, wins,
 ## losses, cons, position?}); {} until a rated game or the first /v1/me.
 var me_rank: Dictionary = {}
+## Grants waiting for a CLAIM (the lobby's REWARDS badge) and the milestone
+## keys the server has witnessed, both from the last /v1/me or /v1/rewards.
+var pending_rewards := 0
+var me_milestones: Array = []
+var _rewards_cache: Dictionary = {}
 var _last_push := -1.0
 var _last_pull := -1.0
 
@@ -233,8 +244,68 @@ func fetch_me() -> void:
 			set_me_rank(Dictionary(r["json"]["rank"]))
 		if r["json"].has("level"):
 			online_level = int(r["json"]["level"])
+		if r["json"].get("milestones") is Array:
+			note_milestones(Array(r["json"]["milestones"]))
+		if r["json"].has("pending"):
+			set_pending_rewards(int(r["json"]["pending"]))
 	elif r["code"] == 401:
 		await _recover_identity()
+
+
+## The milestone keys the server holds → the Platform facade's mirror.
+func note_milestones(keys: Array) -> void:
+	me_milestones = keys.duplicate()
+	var plat: Node = get_tree().root.get_node_or_null("Platform") if is_inside_tree() else null
+	if plat != null and plat.has_method("note_milestones"):
+		plat.call("note_milestones", me_milestones)
+
+
+func set_pending_rewards(n: int) -> void:
+	if n == pending_rewards:
+		return
+	pending_rewards = n
+	rewards_badge.emit(n)
+
+
+## GET /v1/rewards: what waits for a CLAIM, the meter and its odds, the login
+## days, the milestones. Emits rewards_loaded / rewards_failed.
+func load_rewards() -> void:
+	if not _can_call() or not registered():
+		rewards_failed.emit.call_deferred()
+		return
+	var r := await _request("rewards", HTTPClient.METHOD_GET, "/v1/rewards")
+	if r["ok"]:
+		_rewards_cache = Dictionary(r["json"]).duplicate(true)
+		if r["json"].get("unlocked") is Array:
+			note_milestones(Array(r["json"]["unlocked"]))
+		set_pending_rewards(Array(r["json"].get("pending", [])).size())
+		rewards_loaded.emit(_rewards_cache)
+	else:
+		if r["code"] != -1:
+			_back_off(r)
+		rewards_failed.emit()
+
+
+func cached_rewards() -> Dictionary:
+	return _rewards_cache
+
+
+## POST /v1/rewards/claim: the grant becomes a card (the answer carries the
+## inventory, which refreshes the online bucket). False when it could not.
+func claim_reward(key: String) -> bool:
+	if not _can_call() or not registered():
+		return false
+	var r := await _request("rewards_claim", HTTPClient.METHOD_POST, "/v1/rewards/claim", {"key": key})
+	if r["ok"]:
+		_apply_cards(r["json"])
+		var pending: Array = Array(_rewards_cache.get("pending", [])).filter(func(g: Variant) -> bool: return str(Dictionary(g).get("key", "")) != key)
+		_rewards_cache["pending"] = pending
+		set_pending_rewards(pending.size())
+		rewards_changed.emit()
+		return true
+	if r["code"] != -1 and r["code"] != 404 and r["code"] != 409:
+		_back_off(r)
+	return false
 
 
 ## POST /v1/link: bind the platform identity to this account. {ok, code, json};

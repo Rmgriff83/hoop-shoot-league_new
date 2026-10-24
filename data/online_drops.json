@@ -1,3 +1,116 @@
 {
-  "card_min_tier": {"ice": "rookie", "fire7": "rookie", "magnet6": "rookie"}
+  "weekly_card_target": 5,
+  "reference": {
+    "ranked_per_week": 12,
+    "win_rate": 0.5,
+    "close_loss_share": 0.3,
+    "login_days_per_week": 5,
+    "cards_played_per_match": 1.5
+  },
+  "meter": {
+    "win": 10,
+    "close_loss": 8,
+    "loss": 3,
+    "first_win_day": 4,
+    "close": {
+      "margin": 2,
+      "or_ot": true
+    }
+  },
+  "rarity_by_tier": {
+    "rookie": {
+      "common": 80,
+      "rare": 18,
+      "epic": 2
+    },
+    "starter": {
+      "common": 75,
+      "rare": 22,
+      "epic": 3
+    },
+    "pro": {
+      "common": 65,
+      "rare": 28,
+      "epic": 7
+    },
+    "allstar": {
+      "common": 58,
+      "rare": 32,
+      "epic": 10
+    },
+    "mvp": {
+      "common": 50,
+      "rare": 36,
+      "epic": 14
+    },
+    "legend": {
+      "common": 45,
+      "rare": 40,
+      "epic": 15
+    }
+  },
+  "card_min_tier": {
+    "ice": "rookie",
+    "fire7": "rookie",
+    "magnet6": "starter"
+  },
+  "streak_card": {
+    "losses": 4,
+    "card": "ice",
+    "per_day": 1
+  },
+  "insurance": {
+    "losses": 3
+  },
+  "same_opponent_cap_per_day": 2,
+  "logins": {
+    "first": "ice",
+    "schedule": [
+      [
+        1,
+        "common"
+      ],
+      [
+        3,
+        "common"
+      ],
+      [
+        7,
+        "rare"
+      ],
+      [
+        10,
+        "rare"
+      ],
+      [
+        30,
+        "epic"
+      ]
+    ],
+    "welcome_back_days": 7,
+    "welcome_back": "rare"
+  },
+  "milestones": {
+    "first_login": "common",
+    "first_ranked_match": "common",
+    "first_ranked_win": "rare",
+    "first_capture": "common",
+    "tier": "rare",
+    "tier_legend": "epic",
+    "division": "common",
+    "ranked_wins": {
+      "10": "rare",
+      "50": "epic",
+      "100": "epic"
+    }
+  },
+  "shoot_around": {
+    "bonus": 5,
+    "per_day": 1,
+    "after_losses": 2
+  },
+  "ratio_band": [
+    0.2,
+    0.5
+  ]
 }

@@ -134,4 +134,7 @@ is not a band edge fails `Progression.validate()`.
   hour since the account was made — the fastest title run here is ~2 levels
   an hour). The online rank (tier / division) is a separate thing: a rating
   the server keeps, never the level.
-- Prestige / resets; time-trial XP (by decision: leagues only).
+- Prestige / resets; time-trial XP (by decision: leagues only). Online
+  matches grant no XP either; what they grant is the server's — rating,
+  spoils, the drop meter, milestones (docs/BACKEND.md → Ranked Stage B) —
+  and a milestone is a key, not XP.

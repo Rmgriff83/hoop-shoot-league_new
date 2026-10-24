@@ -22,6 +22,8 @@ const CARD_H := 150.0
 const ROW_H := 50.0          # a box score row
 const ROW_H_BRIGHT := 44.0   # …when bright spots follow the rows
 const BRIGHT_H := 28.0       # a bright-spot line
+const ONLINE_CARD_H := 140.0 # the online rewards row (a little shorter: the meter sits under it)
+const METER_H := 40.0        # the meter bar + line under the online rewards row
 const CONT_Y := 1002.0
 const CONT_H := 128.0
 const HOME_Y := 1158.0
@@ -136,10 +138,13 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	var vs := _text(HeatCopy.vs_line(heat), 20)
 	vs.name = "Vs"
 	vs.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	var shift := 0.0
 	if online:
 		# The rank line (docs/BACKEND.md → Ranked): the rating change and the
 		# badge once the room's decision lands; nothing for a casual match.
-		var rank_l := _text(MatchCopy.rank_delta_line(App.online_settle), 18, GOLD, true)
+		# A rated match keeps the row (everything below drops with it) even
+		# while the decision is still on its way.
+		var rank_l := _text(MatchCopy.rank_delta_line(heat), 18, GOLD, true)
 		rank_l.name = "RankLine"
 		rank_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		rank_l.visible = rank_l.text != ""
@@ -149,10 +154,11 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 				rank_l.visible = rank_l.text != ""
 		, CONNECT_ONE_SHOT)
 		head.add_child(rank_l)
+		if bool(heat.get("ranked", false)):
+			shift = 42.0
 	head.add_child(vs)
 	# The level line (docs/PROGRESSION.md) adds a row: everything below drops with it.
 	var lv := HeatCopy.level_line(heat, App.xp())
-	var shift := 0.0
 	if not lv.is_empty():
 		var ll := _text(str(lv["text"]), 16, GOLD if bool(lv["gold"]) else CREAM, true)
 		ll.name = "LevelLine"
@@ -282,8 +288,30 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 			crow.add_child(ch)
 			cont.pressed.connect(App.to_league_hub)
 			chrome.add_child(cont)
-	if online and App.room != null:
-		chrome.add_child(_rematch_card(shift))
+	if online:
+		# Stage B (docs/BACKEND.md → Ranked → Stage B): the tickets beside the
+		# spoils / the granted card, the meter under them, then REMATCH? (and
+		# SHOOT AROUND? after a losing stretch). Filled now and again when the
+		# room's decision lands.
+		var rewards_box := Control.new()
+		rewards_box.name = "OnlineRewards"
+		rewards_box.position = Vector2(MARGIN, CARDS_Y + shift)
+		rewards_box.size = Vector2(RIGHT - MARGIN + ShadowStyle.OFFSET, ONLINE_CARD_H + ShadowStyle.OFFSET + METER_H)
+		rewards_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		chrome.add_child(rewards_box)
+		_fill_online_rewards(rewards_box, heat)
+		var bottom := _hbox(16)
+		bottom.name = "OnlineBottom"
+		bottom.position = Vector2(MARGIN, CONT_Y + shift)
+		bottom.size = Vector2(RIGHT - MARGIN + ShadowStyle.OFFSET, CONT_H + ShadowStyle.OFFSET)
+		chrome.add_child(bottom)
+		_fill_online_bottom(bottom)
+		App.online_settled.connect(func(_s: Dictionary) -> void:
+			if is_instance_valid(rewards_box):
+				_fill_online_rewards(rewards_box, App.last_heat)
+			if is_instance_valid(bottom):
+				_fill_online_bottom(bottom)
+		, CONNECT_ONE_SHOT)
 	var home := ShadowCard.new(CREAM)
 	home.name = "Home"
 	home.position = Vector2(MARGIN, HOME_Y + shift)
@@ -297,15 +325,143 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	return chrome
 
 
+## The online rewards row (MatchCopy.spoils_panel / HeatCopy.rewards): the
+## tickets, then what the decision did with cards; the meter line under.
+func _fill_online_rewards(box: Control, heat: Dictionary) -> void:
+	for c in box.get_children():
+		box.remove_child(c)
+		c.free()
+	var ck := HeatCopy.rewards(heat)
+	var sp := MatchCopy.spoils_panel(heat)
+	var row := _hbox(26 - int(ShadowStyle.OFFSET))
+	row.name = "Cards"
+	row.position = Vector2.ZERO
+	row.size = Vector2(box.size.x, ONLINE_CARD_H + ShadowStyle.OFFSET)
+	box.add_child(row)
+	# Two panels split the row evenly whatever their words measure; one alone takes it all.
+	var half := (box.size.x - ShadowStyle.OFFSET - 21.0) / 2.0 if (not ck.is_empty() and not sp.is_empty()) else 0.0
+	if not ck.is_empty():
+		var rewards := ShadowPanel.new(GOLD, 0.0, 0.22, 22.0)
+		rewards.name = "Rewards"
+		rewards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		rewards.custom_minimum_size = Vector2(half, ONLINE_CARD_H + ShadowStyle.OFFSET)
+		var cr := _hbox(18)
+		cr.alignment = BoxContainer.ALIGNMENT_BEGIN
+		var ticket := PixelIcon.new("icon_ticket", Vector2(48, 32), 3.0)
+		ticket.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		cr.add_child(ticket)
+		var cc := _vbox(12)
+		cc.alignment = BoxContainer.ALIGNMENT_CENTER
+		cc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var big := _text(str(ck.get("big", "+0")), 32, CREAM, true)
+		big.name = "RewardsBig"
+		cc.add_child(big)
+		var sub_l := _text(str(ck.get("sub", "")))
+		sub_l.name = "RewardsSub"
+		cc.add_child(sub_l)
+		var close := MatchCopy.close_loss_line(heat)
+		if close != "":
+			var cl := _text(close, 14, GOLD, true)
+			cl.name = "CloseLine"
+			cl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			cl.custom_minimum_size = Vector2(maxf(half - 120.0, 160.0), 0)
+			cc.add_child(cl)
+		cr.add_child(cc)
+		rewards.add_child(cr)
+		row.add_child(rewards)
+	if not sp.is_empty():
+		var lost := bool(sp.get("lost", false))
+		var dp := ShadowPanel.new(CREAM if lost else RetroTheme.c("teal"), 0.0, 0.22, 20.0)
+		dp.name = "Spoils"
+		dp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		dp.custom_minimum_size = Vector2(half, ONLINE_CARD_H + ShadowStyle.OFFSET)
+		dp.clip_contents = true
+		var dr := _hbox(18)
+		var card := CardDefs.get_card(str(sp.get("card", "")))
+		if not card.is_empty():
+			var art := ModeCards.art(card, Vector2(84, 112), 4.0)
+			art.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			if lost:
+				art.modulate = Color(1, 1, 1, 0.55)
+			dr.add_child(art)
+		var dc := _vbox(12)
+		dc.alignment = BoxContainer.ALIGNMENT_CENTER
+		dc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		var cap_l := _text(str(sp.get("caption", "")), 14, CREAM, true)
+		cap_l.name = "SpoilsCaption"
+		cap_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		# A wrapping label measured before its width is known reports a tower
+		# of lines; a floor on its width keeps the row from growing to fit it.
+		cap_l.custom_minimum_size = Vector2(170, 0)
+		dc.add_child(cap_l)
+		dr.add_child(dc)
+		dp.add_child(dr)
+		row.add_child(dp)
+	row.visible = row.get_child_count() > 0
+	# Filled in-tree (the decision landing after the page): the row keeps its height.
+	row.set_deferred("size", Vector2(box.size.x, ONLINE_CARD_H + ShadowStyle.OFFSET))
+	var ml := MatchCopy.meter_line(heat)
+	if ml != "":
+		var bar := Control.new()
+		bar.name = "MeterBar"
+		bar.position = Vector2(0, ONLINE_CARD_H + ShadowStyle.OFFSET + 4)
+		bar.size = Vector2(box.size.x - ShadowStyle.OFFSET, 8)
+		bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var track := ColorRect.new()
+		track.color = Color(RetroTheme.SCENE_OUTLINE, 0.55)
+		track.set_anchors_preset(Control.PRESET_FULL_RECT)
+		bar.add_child(track)
+		var fill := ColorRect.new()
+		fill.name = "MeterFill"
+		fill.color = GOLD
+		fill.set_anchors_preset(Control.PRESET_LEFT_WIDE)
+		fill.anchor_right = MatchCopy.meter_frac(heat)
+		bar.add_child(fill)
+		box.add_child(bar)
+		var l := _text(ml, 14, GOLD, true)
+		l.name = "MeterLine"
+		l.position = Vector2(0, ONLINE_CARD_H + ShadowStyle.OFFSET + 14)
+		l.size = Vector2(box.size.x, 22)
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		box.add_child(l)
+
+
+## The row at the foot while the room is open: REMATCH?, and beside it
+## SHOOT AROUND? after a losing stretch (App.shoot_around_offered).
+func _fill_online_bottom(bottom: HBoxContainer) -> void:
+	for c in bottom.get_children():
+		bottom.remove_child(c)
+		c.free()
+	if App.room == null:
+		return
+	bottom.add_child(_rematch_card())
+	if App.shoot_around_offered():
+		var sa := ShadowCard.new(RetroTheme.c("teal"))
+		sa.name = "ShootAround"
+		sa.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		sa.custom_minimum_size = Vector2(0, CONT_H + ShadowStyle.OFFSET)
+		var sm := _margin(0, 20)
+		sa.add_child(sm)
+		var col := _vbox(14)
+		col.alignment = BoxContainer.ALIGNMENT_CENTER
+		col.add_child(_text(MatchCopy.shoot_around_title(), 20, CREAM, true))
+		var sub := _text(MatchCopy.shoot_around_sub(int(OnlineDrops.shoot_around_cfg().get("bonus", 0))), 14)
+		sub.name = "ShootAroundSub"
+		col.add_child(sub)
+		sm.add_child(col)
+		sa.pressed.connect(App.start_shoot_around)
+		bottom.add_child(sa)
+
+
 ## REMATCH? (docs/BACKEND.md → Phase 3, Rematch): only here, only while the
 ## room is still open. Orange to ask, gold when they asked (tap to accept),
 ## teal once both have, cream and dead when they left. Restyles on
-## App.rematch_changed.
-func _rematch_card(shift: float) -> Control:
+## App.rematch_changed. Sized by the row that holds it.
+func _rematch_card() -> Control:
 	var card := ShadowCard.new(RetroTheme.c("orange"))
 	card.name = "Rematch"
-	card.position = Vector2(MARGIN, CONT_Y + shift)
-	card.size = Vector2(RIGHT - MARGIN + ShadowStyle.OFFSET, CONT_H + ShadowStyle.OFFSET)
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	card.custom_minimum_size = Vector2(0, CONT_H + ShadowStyle.OFFSET)
 	var cm := _margin(0, 24)
 	card.add_child(cm)
 	var row := _hbox(16)
@@ -363,7 +519,7 @@ func _box_row(r: Dictionary, h := ROW_H) -> Control:
 		c.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		row.add_child(c)
 	var wrap := Control.new()
-	wrap.custom_minimum_size = Vector2(0, 50)
+	wrap.custom_minimum_size = Vector2(0, h)
 	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var rule := RowRule.new()
 	wrap.add_child(rule)

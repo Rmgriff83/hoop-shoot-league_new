@@ -88,6 +88,7 @@ var _settings: SettingsPanel
 var _ranks: RanksPage
 var _lobby: MatchLobbyPage
 var _pre_match: PreMatchPage
+var _rewards: RewardsPage
 var _pre_match_league := false   # the pick is over the league in context (not the lobby)
 var _league_slide: Tween
 var _switching := false
@@ -1215,7 +1216,7 @@ func ranks() -> RanksPage:
 ## The lobby for this area: quick match, a code for a friend, or a friend's
 ## code. App arranges the room and starts the heat; the page shows the way.
 func _open_lobby() -> void:
-	if _lobby != null or _ranks != null or _archive != null or _locker != null or _settings != null or _peggy != null or _switching:
+	if _lobby != null or _ranks != null or _archive != null or _locker != null or _settings != null or _peggy != null or _rewards != null or _switching:
 		return
 	_lobby = MatchLobbyPage.new()
 	_lobby.name = "MatchLobby"
@@ -1232,6 +1233,7 @@ func _open_lobby() -> void:
 			"court": _lobby.set_found_court(str(a))
 			"matched": _open_pre_match(Dictionary(a) if a is Dictionary else {})
 	_lobby.ranked.connect(func() -> void: App.start_online("any", "ranked", "", on_state))
+	_lobby.rewards.connect(_open_rewards)
 	_lobby.quick.connect(func(area: String) -> void: App.start_online(area, "quick", "", on_state))
 	_lobby.create.connect(func(area: String) -> void: App.start_online(area, "create", "", on_state))
 	_lobby.join.connect(func(area: String, code: String) -> void: App.start_online(area, "join", code, on_state))
@@ -1240,6 +1242,7 @@ func _open_lobby() -> void:
 		App.cancel_online())
 	_lobby.closed.connect(func() -> void:
 		_close_pre_match()
+		_close_rewards()
 		_lobby = null
 		_slide_home(false)
 	)
@@ -1295,6 +1298,50 @@ func _close_pre_match() -> void:
 
 func pre_match() -> PreMatchPage:
 	return _pre_match
+
+
+## The rewards page (docs/BACKEND.md → Ranked → Stage B) over the lobby:
+## what waits for a CLAIM, the meter, the login days, the milestones.
+func _open_rewards() -> void:
+	if _rewards != null:
+		return
+	_rewards = RewardsPage.new()
+	_rewards.name = "Rewards"
+	_rewards.build(Net.cached_rewards())
+	_rewards.claim.connect(func(key: String) -> void: Net.claim_reward(key))
+	var on_loaded := func(d: Dictionary) -> void:
+		if _rewards != null:
+			_rewards.set_data(d)
+	var on_failed := func() -> void:
+		if _rewards != null:
+			_rewards.set_offline()
+	var reload := func() -> void: Net.load_rewards()
+	Net.rewards_loaded.connect(on_loaded)
+	Net.rewards_failed.connect(on_failed)
+	Net.rewards_changed.connect(reload)
+	_rewards.closed.connect(func() -> void:
+		Net.rewards_loaded.disconnect(on_loaded)
+		Net.rewards_failed.disconnect(on_failed)
+		Net.rewards_changed.disconnect(reload)
+		_rewards = null
+		if _lobby != null:
+			_lobby.slide_in(true))
+	add_child(_rewards)
+	if _lobby != null:
+		_lobby.slide_out(true, false)
+	_rewards.slide_in()
+	Net.load_rewards()
+
+
+func _close_rewards() -> void:
+	if _rewards != null and is_instance_valid(_rewards):
+		var p := _rewards
+		_rewards = null
+		p.queue_free()
+
+
+func rewards_page() -> RewardsPage:
+	return _rewards
 
 
 ## PLAY HEAT in a league (App.start_league_heat): the pre-match pick over

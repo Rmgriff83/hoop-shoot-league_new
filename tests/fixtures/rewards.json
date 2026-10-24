@@ -1,0 +1,36 @@
+{
+  "note": "A /v1/rewards answer for tests/test_rewards_page.gd and --qa-multi (multi_rewards).",
+  "pending": [
+    {
+      "key": "login_day_3",
+      "kind": "login",
+      "card": "ice",
+      "granted_at": 1760000000000
+    },
+    {
+      "key": "first_ranked_win",
+      "kind": "milestone",
+      "card": "fire7",
+      "granted_at": 1760000100000
+    }
+  ],
+  "unlocked": [
+    "first_login",
+    "first_ranked_match",
+    "first_ranked_win"
+  ],
+  "all_milestones": [],
+  "login_days": 3,
+  "meter": {
+    "progress": 14,
+    "size": 22,
+    "odds": {
+      "common": 0.8163,
+      "rare": 0.1837,
+      "epic": 0.0
+    }
+  },
+  "loss_streak": 1,
+  "tier": "rookie",
+  "next_login_card": 7
+}

@@ -628,6 +628,44 @@ func _run_heat_result() -> void:
 	get_tree().change_scene_to_file(App.HEAT_RESULT_SCENE)
 	await _sleep(1.2)
 	await _snap("heat_quick")
+	# The online page (docs/BACKEND.md → Ranked → Stage B): a rated win with
+	# SPOILS, tickets and a full meter; a rated loss with the lost card, the
+	# insured one, the streak Ice, bright spots and SHOOT AROUND? beside
+	# REMATCH?. The settle is staged the way the room sends it.
+	var peer := QaFakePeer.new()
+	peer.name = "Match"
+	App.add_child(peer)
+	App.room = peer
+	App.match_how = "ranked"
+	for won in [true, false]:
+		var on := base.duplicate(true)
+		on["league"] = null
+		on["card_drop"] = ""
+		on["online"] = true
+		on["ranked"] = true
+		on["won"] = won
+		on["location"] = "beach"
+		on["opponent"] = peer.peer
+		if not won:
+			on["player_score"] = 34
+			on["ai_score"] = 36
+			on["ot"] = 0
+			on["bright"] = ["NEW BEST STREAK · 6", "7 SWISHES · YOUR MOST"]
+		on.erase("tickets")
+		on.erase("xp")
+		App.online_settle = {}
+		App.last_heat = on
+		# The page first, the room's decision a beat later — the live order.
+		get_tree().change_scene_to_file(App.HEAT_RESULT_SCENE)
+		await _sleep(0.6)
+		App.settled_online(peer.settle_message(won))
+		await _sleep(0.8)
+		await _snap("online_result_win" if won else "online_result_loss")
+		print("QA heat result: online %s rank='%s' spoils='%s' meter='%s' shoot=%s" % ["win" if won else "loss", MatchCopy.rank_delta_line(App.last_heat),
+			str(MatchCopy.spoils_panel(App.last_heat).get("caption", "")), MatchCopy.meter_line(App.last_heat), App.shoot_around_offered()])
+	App.online_settle = {}
+	App.room = null
+	peer.queue_free()
 	print("QA heat result: done")
 	get_tree().quit(0)
 
@@ -1200,6 +1238,21 @@ func _run_multi() -> void:
 	await _snap("multi_found")
 	print("QA multi: found popped=%s vs=%.2f court=%s" % [lobby.found_popped(), lobby.vs_scale(), lobby.court_text()])
 	lobby.show_menu()
+	# The rewards page (Stage B): opened over the lobby, then fed the fixture
+	# answer the way Net.rewards_loaded would (the net is off here).
+	var ts: Node = get_tree().current_scene
+	if ts != null and ts.has_method("_open_rewards"):
+		ts.call("_open_rewards")
+		await _sleep(0.6)
+		var rp: RewardsPage = ts.call("rewards_page") if ts.has_method("rewards_page") else null
+		if rp != null:
+			var fx: Variant = JSON.parse_string(FileAccess.open("res://tests/fixtures/rewards.json", FileAccess.READ).get_as_text())
+			rp.set_data(fx)
+			await _sleep(0.4)
+			await _snap("multi_rewards")
+			print("QA multi: rewards pending=%s meter='%s'" % [rp.pending_count(), rp.meter_text()])
+			rp.close()
+			await _sleep(0.5)
 	# The pre-match pick (docs/BACKEND.md → Ranked): a seeded cache (a spare
 	# ice, a Heat Check set, a Magnet above the cap), the opponent's badge,
 	# the cap line, the timer; READY goes gold.
@@ -1241,6 +1294,8 @@ func _run_multi() -> void:
 	fake.message.connect(func(m: Dictionary) -> void:
 		if str(m.get("t", "")) == MatchProtocol.REMATCH:
 			App._set_rematch("both" if App.rematch_state in ["offered", "both"] else "wanted")
+		elif str(m.get("t", "")) == MatchProtocol.SETTLED:
+			App.settled_online(m)   # the real router does this; the staged peer needs the line
 	)
 	var cfg := MatchProtocol.heat_cfg(start, fake.peer, "a")
 	App.start_heat(str(cfg["mode"]), cfg)
@@ -1256,7 +1311,7 @@ func _run_multi() -> void:
 	await _snap("online_heat_late")
 	await _sleep(9.0)
 	await _snap("online_result")
-	print("QA multi: settle rank line '%s'" % MatchCopy.rank_delta_line(App.online_settle))
+	print("QA multi: settle rank line '%s' tickets=%s" % [MatchCopy.rank_delta_line(App.online_settle), str(App.last_heat.get("tickets", "-"))])
 	# The rematch card: they ask (gold), we accept (teal).
 	if is_instance_valid(fake):
 		fake.ask_rematch()

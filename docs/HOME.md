@@ -258,11 +258,24 @@ chevron (the footer says START INSIDE).
   heat with the other phone in the opponent slot; the post-match page reads
   `ONLINE MATCH · BEACH`, a rated match's `RATING +18 · PRO II · PROMOTED`
   line under the score (`MatchCopy.rank_delta_line`; `RATED · NO CHANGE` on a
-  void), no rewards card yet, and the REMATCH? card (orange to ask, gold when
-  they asked, teal once both have, THEY LEFT when the other phone went
-  home). QA: `--qa-multi` (`multi_menu`, `multi_code`, `multi_found`,
-  `multi_failed`, `multi_finding`, `multi_prematch`, `multi_prematch_ready`,
-  `online_result`).
+  void), the rewards row (Stage B, 2026-10-23: `+30 · TICKETS · WIN` beside
+  the spoils panel — `SPOILS · DEEP FREEZE`, or `LOST · HEAT CHECK · INSURED
+  · DEEP FREEZE BACK`, or a granted card `METER FULL · NEW CARD` / `TOUGH
+  STRETCH · HERE'S AN ICE`, or `SAME OPPONENT · NO SPOILS TODAY`; a `CLOSE
+  ONE · THE METER NOTICED` line on a close loss), the meter bar with `METER
+  14/22 · 82% COMMON · 18% RARE`, bright spots in a loss, and the REMATCH?
+  card (orange to ask, gold when they asked, teal once both have, THEY LEFT
+  when the other phone went home) — with SHOOT AROUND? (`A TIME TRIAL · +5
+  TICKETS`) beside it after 2+ straight losses. The lobby's **REWARDS** row
+  (`LOGIN DAYS · MILESTONES · THE METER`, or `3 WAITING TO CLAIM` in gold)
+  opens the **rewards page** (`game/ui/rewards_page.gd` `RewardsPage`): DROP
+  METER with its bar, odds and `A FULL METER DROPS A CARD`, WAITING FOR YOU
+  rows (the card, `LOGIN REWARD` / `MILESTONE`, the name, CLAIM → CLAIMED),
+  `LOGIN DAYS · 7 · NEXT CARD AT DAY 10`, MILESTONES as a two-column grid
+  (unlocked gold with `+`, the rest dim). QA: `--qa-multi` (`multi_menu`,
+  `multi_code`, `multi_found`, `multi_failed`, `multi_finding`,
+  `multi_rewards`, `multi_prematch`, `multi_prematch_ready`, `online_result`),
+  `--qa-heat-result` (`online_result_win`, `online_result_loss`).
 - **Pre-match pick** (`game/ui/pre_match_page.gd` `PreMatchPage`, 2026-10-19,
   docs/BACKEND.md → Ranked; `FaceOffPage` holds the face cards and the
   loadout strip both 1v1 pages build): between PLAYER FOUND and the tip-off,

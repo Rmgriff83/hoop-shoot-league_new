@@ -128,10 +128,14 @@ static func pct_text(side: Dictionary) -> String:
 
 
 ## The rewards card: {big, sub, sub2} — the tickets the heat paid and the
-## XP; {} for a heat outside a league and for an online match (no payout
-## yet — the ranked task; docs/BACKEND.md → Cards online).
+## XP; {} for a heat outside a league, and for an online match until its
+## settle brings `tickets` (docs/BACKEND.md → Ranked → Stage B; no XP online).
 static func rewards(heat: Dictionary) -> Dictionary:
-	if bool(heat.get("online", false)) or league_of(heat).is_empty():
+	if bool(heat.get("online", false)):
+		if int(heat.get("tickets", 0)) <= 0:
+			return {}
+		return {"big": "+%d" % int(heat["tickets"]), "sub": "TICKETS · %s" % ("WIN" if bool(heat.get("won", false)) else "LOSS"), "sub2": ""}
+	if league_of(heat).is_empty():
 		return {}
 	var out := {"big": "+%d" % int(heat.get("tickets", 0)), "sub": "TICKETS · %s" % ("WIN" if bool(heat.get("won", false)) else "LOSS"), "sub2": ""}
 	var xp: Dictionary = heat.get("xp", {})

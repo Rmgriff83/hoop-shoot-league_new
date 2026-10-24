@@ -82,4 +82,6 @@ static func tickets(run: Dictionary, is_best: bool) -> Dictionary:
 	var n := int(run.get("tickets", 0))
 	if n <= 0:
 		return {}
+	if int(run.get("shoot_bonus", 0)) > 0:
+		return {"big": "+%d" % n, "sub": "TICKETS · +%d SHOOT AROUND" % int(run["shoot_bonus"])}
 	return {"big": "+%d" % n, "sub": "TICKETS · BEST BONUS IN" if is_best else "TICKETS"}

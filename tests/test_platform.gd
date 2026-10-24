@@ -43,6 +43,16 @@ func run(t) -> void:
 	net._fails = 0
 	var fake := FakePlatformBackend.new()
 	plat.backend = fake
+	# Stage B (docs/BACKEND.md → Ranked → Stage B): milestone keys from the
+	# server reach the backend once each and stay in the account part.
+	var acc0: Dictionary = save.get_account()
+	acc0.erase("milestones")
+	save.put_account(acc0)
+	plat.note_milestones(["first_login", "first_ranked_win"])
+	t.eq(fake.unlocked, ["first_login", "first_ranked_win"], "new milestone keys reach the backend")
+	plat.note_milestones(["first_login", "first_ranked_win", "tier_pro"])
+	t.eq(fake.unlocked, ["first_login", "first_ranked_win", "tier_pro"], "…each once")
+	t.eq(plat.unlocked(), ["first_login", "first_ranked_win", "tier_pro"], "…and the cache keeps them")
 
 	# The null backend: never available, never linked, nothing to sync.
 	var nul := PlatformBackend.new()

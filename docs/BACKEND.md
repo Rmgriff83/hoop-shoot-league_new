@@ -294,12 +294,12 @@ other phone must trust what hits its rim.
   freezes *our* rim in our sim (we own our side and report it), their fire
   or magnet lights our replay of theirs (their magnet pulls in our sim of
   their shots).
-- **The decision** (no payout yet: no tickets, XP, coins or card drops
-  online — the ranked task refills this): at the decision the room writes
-  the `matches` row and sends `settled {won, reason}` to each side (reason
-  `played` / `forfeit` / `void`). The post-match page shows no rewards card
-  for an online match. (Until 2026-10-19 this paid online coins by an upset
-  multiplier; removed with the online wallet.)
+- **The decision**: at the decision the room writes the `matches` row and
+  sends `settled {won, reason, ranked, …}` to each side (reason `played` /
+  `forfeit` / `void`); a rated room also moves ratings (Ranked, Stage A) and
+  pays spoils, the meter, tickets (Ranked Stage B, 2026-10-23). Casual rooms
+  pay nothing. (Until 2026-10-19 this paid online coins by an upset
+  multiplier; removed with the online wallet. No XP online, by decision.)
 - **Game**: the lobby's card strip (the three slots, `CARDS >`) opens
   `CardDeckSheet` on the online bucket — slots (tap to unequip) and LOADOUT
   (tap a spare to equip) only; no SHOP and no balance for the online bucket.
@@ -385,8 +385,8 @@ both sides to the same tier bands).
   `settled` carries `ranked: true, rating: {before: {mu, rd, cons}, after:
   {…}, delta}, rank: {tier, division, position?}, events: [...], peak`
   (a void: `ranked: true` and nothing else; a desync: `desync: true`, no
-  change). Casual: `settled {won, reason, ranked: false}`. No payout yet —
-  Stage B adds spoils, the drop meter, tickets.
+  change). Casual: `settled {won, reason, ranked: false}`. A rated result
+  also carries the Stage B payout (below).
 - **The board** (`GET /v1/ranked/board`, `FEATURE_RANKED`, `RL_BOARD`): the
   top 50 by `cons` (position, handle, tier, division, record) memoised 30 s
   in the isolate, plus your own live `me` (position = 1 + the count above
@@ -408,11 +408,88 @@ both sides to the same tier bands).
   the phone's RANKED button fails with `offline` (404 on the route), and the
   pre-match step needs the new room too — deploy the Worker together with
   this build.
-- **Stage B (next, after Ross's check)**: spoils (the loser's played cards to
-  the winner; forfeit, void, insurance, a same-opponent cap), the server-side
-  drop meter sized from `WEEKLY_CARD_TARGET`, the loss-streak Ice, cumulative
-  login days, idempotent milestones mirrored to the Platform facade, ranked
-  tickets inside the rate band, the full post-match copy.
+## Ranked Stage B (built 2026-10-23): spoils, the meter, logins, milestones, tickets
+
+Every number is `data/online_drops.json` (+ `data/ranked.json → tickets`),
+read by `server/src/online_drops.ts` (authoritative, pure functions) and
+mirrored by `core/online/online_drops.gd` for display;
+`tests/fixtures/online_drops_cases.json` pins both to the same derivation
+and odds (`server/test/drops.test.ts`, `tests/test_online_drops.gd`);
+`tools/online_ledger.gd` prints it all. Online cards come only from what the
+server witnessed, never from a purchase (docs/ECONOMY.md → The rule), and
+the mechanic is SPOILS — never bet / wager / stake. Kill switch
+`FEATURE_DROPS` (the room still rates with it off; `/v1/rewards*` → 503).
+Migration `0009_online_progress.sql`: `online_progress`, `grants`,
+`players.login_day`, `matches.pay / a_played / b_played`; ledger kinds
+`capture | insured | meter | streak | login | welcome_back | milestone`.
+
+- **Played cards**: the room keeps `played[side]` — a card counts when the
+  room relayed it (`card_ok` is sent only after the ledger moved; a failed
+  write now answers `error {code: card}` and keeps the card in the hand).
+  "Took effect" = relayed: the server cannot witness the other phone's sim.
+- **Spoils** (`settleSpoils`): at a rated decision the loser's played cards
+  move to the winner's `online_cards` (ledger `capture` each); the winner's
+  own played are spent, never returned. Forfeit: the leaver's played go to
+  the one who stayed. Void / desync: nothing. **Insurance**: a loser with
+  `loss_streak_played ≥ 3` before the match keeps ONE played card (the
+  highest rarity, ties to the first played; ledger `insured`), the winner
+  takes the rest. **Same-opponent cap**: the 3rd ranked game between the
+  same pair in a UTC day (`matches` with `pay = 1`) is rated but pays no
+  spoils and no meter (`pay: false`); tickets still pay.
+- **Rematch**: a rematch of a ranked match is ranked (Ross, 2026-10-23) —
+  `rematch_go` writes the new room into `ranked_rooms` first.
+- **The meter** (`meterGain`): win 10, close loss 8 (by ≤ 2 or in OT), loss
+  3, + 4 for the first win of a UTC day; at `METER_SIZE` (derived: 22) one
+  card by the tier's rarity odds over the pool the verified level and
+  `card_min_tier` allow (ledger `meter`; one grant a match, the rest
+  carries). Derivation (`derive()`): the reference player's points a week
+  (12 ranked, p 0.5, 30 % of losses close, 5 login days → ~103) over
+  `weekly_card_target` 5 minus the streak Ice (~0.38/week) → 22; cards in
+  per match 0.42 vs 1.5 played → ratio 0.28 in `ratio_band` [0.2, 0.5].
+  No comeback bonus online (the server keeps only period scores).
+- **The streak Ice**: the 4th straight PLAYED ranked loss grants an Ice
+  (ledger `streak`), at most once a UTC day; a win resets; the leaver's own
+  forfeit neither counts nor resets; the stayer's forfeit win resets.
+- **Milestones** (`milestonesReached`, by peak so it cannot be farmed):
+  `first_ranked_match`, `first_ranked_win`, `first_capture`,
+  `ranked_wins_10/50/100`, `tier_<id>` and `division_<tier>_<n>` for every
+  band between the old and the new peak — `grants` rows (`INSERT OR IGNORE`,
+  so one row per key ever; `settled.milestones` names only the new ones),
+  each with a card of the data's rarity, waiting for a CLAIM.
+- **Logins** (`rewards.ts loginDay`, from `authenticate`'s hourly touch once
+  `players.login_day` ≠ today, off the request): cumulative distinct UTC
+  days, never a streak. `first_login` (an Ice, a milestone), the schedule
+  (`login_day_N` at days 1/3/7/10/30 → common, common, rare, rare, epic),
+  `welcome_back_<day>` (rare) after 7+ days away. All CLAIMed on the phone.
+- **Tickets**: `data/ranked.json → tickets {win 30, loss 14}` in `settled`;
+  the phone grants (`App.settled_online`, once). 8.8/min in the band; the
+  shoot-around (a cage trial + 5) 13.3/min (docs/ECONOMY.md).
+- **Routes** (`FEATURE_DROPS`, `RL_CARDS`): `GET /v1/rewards → {pending:
+  [{key, kind, card, granted_at}], unlocked: [milestone keys], all_milestones,
+  login_days, meter: {progress, size, odds}, loss_streak, tier,
+  next_login_card}`; `POST /v1/rewards/claim {key}` → the card into the
+  ledger (by kind), `{claimed, card, inventory, level}`; 404 / 409 (twice).
+  `GET /v1/me` adds `milestones` (the Platform facade's mirror) and `pending`.
+- **`settled`** (rated): `{…Stage A, pay, tickets, spoils: {captured, lost,
+  insured}, meter: {before, after, size, odds}, granted: [{why: meter |
+  loss_streak, card}], milestones: [new keys], loss_streak}`.
+- **Game**: `App.settled_online` grants the tickets and merges the settle
+  into `last_heat` whichever of it and `settle_heat` lands second
+  (`_merge_online_settle`; the bright spots against `progress.online`); the
+  post-match page's rewards row (tickets · SPOILS / LOST + INSURED / METER
+  FULL · NEW CARD / TOUGH STRETCH · HERE'S AN ICE / SAME OPPONENT · NO
+  SPOILS TODAY), the meter bar + `METER 14/22 · 82% COMMON · 18% RARE`, a
+  `CLOSE ONE · THE METER NOTICED` line, and SHOOT AROUND? beside REMATCH?
+  after 2+ straight losses (`App.start_shoot_around`: a time trial with the
+  once-a-day +5, `progress.online.shoot_day`); the lobby's REWARDS row with
+  the pending count → `RewardsPage` (the meter, CLAIM rows, login days, the
+  milestone grid); `Net.load_rewards / claim_reward`, `Platform.note_milestones`
+  → `PlatformBackend.unlock(key)` (a no-op until the store plugins). QA:
+  `--qa-heat-result` (`online_result_win`, `online_result_loss`),
+  `--qa-multi` (`multi_rewards`).
+- **Deploy** (Ross): `wrangler d1 migrations apply hoop_shoot --env production
+  --remote` (0009), `wrangler deploy --env production` (`FEATURE_DROPS = "on"`
+  is in wrangler.toml).
 
 ## Platform identity (prep, 2026-10-17)
 

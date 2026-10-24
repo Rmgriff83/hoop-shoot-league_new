@@ -261,6 +261,129 @@ static func rematch_active(state: String) -> bool:
 const REMATCH_STATES := ["", "offered", "wanted", "both", "gone"]
 
 
+# ---- the post-match payout (docs/BACKEND.md → Ranked → Stage B) ----------------------------
+
+## Card ids → `DEEP FREEZE, HEAT CHECK`.
+static func card_names(ids: Array) -> String:
+	var out := []
+	for id in ids:
+		var c := CardDefs.get_card(str(id))
+		out.push_back(str(c.get("name", id)).to_upper())
+	return ", ".join(out)
+
+
+## The right-hand panel of the rewards row: what the decision did with cards.
+## {caption, card (id or ""), lost: bool} — the first that applies: a card
+## the server granted (the meter, the streak Ice), the spoils you took, what
+## you lost (and what insurance kept), the cap, a close one; {} for nothing.
+static func spoils_panel(settle: Dictionary) -> Dictionary:
+	if not bool(settle.get("ranked", false)):
+		return {}
+	var granted: Array = settle.get("granted", []) if settle.get("granted") is Array else []
+	for g in granted:
+		var gd: Dictionary = g if g is Dictionary else {}
+		var why := str(gd.get("why", ""))
+		var cap := "TOUGH STRETCH · HERE'S AN ICE" if why == "loss_streak" else "METER FULL · NEW CARD"
+		return {"caption": cap, "card": str(gd.get("card", "")), "lost": false}
+	var sp: Dictionary = settle.get("spoils", {}) if settle.get("spoils") is Dictionary else {}
+	var captured: Array = sp.get("captured", []) if sp.get("captured") is Array else []
+	var lost: Array = sp.get("lost", []) if sp.get("lost") is Array else []
+	var insured := str(sp.get("insured", "")) if sp.get("insured") != null else ""
+	if not captured.is_empty():
+		return {"caption": "SPOILS · " + card_names(captured), "card": str(captured[0]), "lost": false}
+	if not lost.is_empty() or insured != "":
+		var cap := ("LOST · " + card_names(lost)) if not lost.is_empty() else "NOTHING LOST"
+		if insured != "":
+			cap += " · INSURED · %s BACK" % card_names([insured])
+		return {"caption": cap, "card": str(lost[0]) if not lost.is_empty() else insured, "lost": not lost.is_empty()}
+	if settle.has("pay") and not bool(settle.get("pay", true)):
+		return {"caption": "SAME OPPONENT · NO SPOILS TODAY", "card": "", "lost": false}
+	return {}
+
+
+## `METER 14/22 · 70% COMMON · 25% RARE · 5% EPIC`; "" without a meter.
+static func meter_line(settle: Dictionary) -> String:
+	var m: Dictionary = settle.get("meter", {}) if settle.get("meter") is Dictionary else {}
+	if m.is_empty():
+		return ""
+	var line := "METER %d/%d" % [int(m.get("after", 0)), int(m.get("size", OnlineDrops.meter_size()))]
+	var odds := OnlineDrops.odds_text(m.get("odds", {}) if m.get("odds") is Dictionary else {})
+	if odds != "":
+		line += " · " + odds
+	return line
+
+
+## The meter's fill, 0..1.
+static func meter_frac(settle: Dictionary) -> float:
+	var m: Dictionary = settle.get("meter", {}) if settle.get("meter") is Dictionary else {}
+	return clampf(float(m.get("after", 0)) / maxf(float(m.get("size", 1)), 1.0), 0.0, 1.0)
+
+
+## A loss by two or less, or in overtime: the meter paid nearly a win's worth.
+static func close_loss_line(heat: Dictionary) -> String:
+	if bool(heat.get("won", false)) or not bool(heat.get("online", false)):
+		return ""
+	var margin := int(heat.get("player_score", 0)) - int(heat.get("ai_score", 0))
+	var close := int(OnlineDrops.meter_cfg().get("close", {}).get("margin", 2))
+	if absi(margin) <= close or int(heat.get("ot", 0)) > 0:
+		return "CLOSE ONE · THE METER NOTICED"
+	return ""
+
+
+static func shoot_around_title() -> String:
+	return "SHOOT AROUND?"
+
+
+static func shoot_around_sub(bonus: int) -> String:
+	return "A TIME TRIAL · +%d TICKETS" % bonus
+
+
+## The lobby's REWARDS row: what waits, or what the page is for.
+static func rewards_sub(pending: int) -> String:
+	if pending > 0:
+		return "%d WAITING TO CLAIM" % pending if pending > 1 else "1 WAITING TO CLAIM"
+	return "LOGIN DAYS · MILESTONES · THE METER"
+
+
+static func rewards_title() -> String:
+	return "REWARDS"
+
+
+static func meter_head() -> String:
+	return "DROP METER"
+
+
+static func meter_caption() -> String:
+	return "A FULL METER DROPS A CARD · RANKED MATCHES FILL IT"
+
+
+static func pending_head() -> String:
+	return "WAITING FOR YOU"
+
+
+static func nothing_pending() -> String:
+	return "NOTHING WAITING · PLAY RANKED, COME BACK TOMORROW"
+
+
+static func claim_word(claimed: bool) -> String:
+	return "CLAIMED" if claimed else "CLAIM"
+
+
+static func login_line(days: int, next_day: int) -> String:
+	var line := "LOGIN DAYS · %d" % days
+	if next_day > 0:
+		line += " · NEXT CARD AT DAY %d" % next_day
+	return line
+
+
+static func milestones_head() -> String:
+	return "MILESTONES"
+
+
+static func rewards_offline() -> String:
+	return "OFFLINE · REWARDS NEED A SIGNAL"
+
+
 static func strings() -> Array:
 	var out := ["QUICK MATCH", "CREATE CODE", "ENTER CODE", "GO", "CANCEL", "BACK", "<", ">", title(), code_sub(), join_sub(), code_caption(),
 		code_line("ABCDE"), waiting_big("quick"), waiting_big("code"), waiting_line("quick"), waiting_line("code"), found_big(),
@@ -273,7 +396,18 @@ static func strings() -> Array:
 		rank_delta_line({"ranked": true, "rating": {"delta": -7}, "rank": {"tier": "rookie", "division": 3}, "events": ["shielded", "floored", "demoted"]}),
 		rank_delta_line({"ranked": true}),
 		court_note(1), court_note(3), loadout_line(2), spares_caption(true), spares_caption(false), slot_empty(2), "LOADOUT", "YOUR CARDS", "COURT",
-		header({"location": "beach"}), header({"location": "city", "reason": "forfeit"}), header({"location": "cage", "reason": "void"})]
+		header({"location": "beach"}), header({"location": "city", "reason": "forfeit"}), header({"location": "cage", "reason": "void"}),
+		spoils_panel({"ranked": true, "granted": [{"why": "meter", "card": "ice"}]})["caption"],
+		spoils_panel({"ranked": true, "granted": [{"why": "loss_streak", "card": "ice"}]})["caption"],
+		spoils_panel({"ranked": true, "spoils": {"captured": ["ice", "fire7"], "lost": [], "insured": null}})["caption"],
+		spoils_panel({"ranked": true, "spoils": {"captured": [], "lost": ["fire7"], "insured": "ice"}})["caption"],
+		spoils_panel({"ranked": true, "spoils": {"captured": [], "lost": [], "insured": "ice"}})["caption"],
+		spoils_panel({"ranked": true, "pay": false})["caption"],
+		meter_line({"meter": {"after": 14, "size": 22, "odds": {"common": 0.7, "rare": 0.25, "epic": 0.05}}}),
+		close_loss_line({"online": true, "won": false, "player_score": 20, "ai_score": 22}),
+		shoot_around_title(), shoot_around_sub(5), rewards_sub(0), rewards_sub(1), rewards_sub(3), rewards_title(), meter_head(), meter_caption(),
+		pending_head(), nothing_pending(), claim_word(true), claim_word(false), login_line(7, 10), login_line(30, 0), milestones_head(), rewards_offline()]
+	out.append_array(MilestoneCopy.strings())
 	for a in AREAS:
 		out.push_back(court_name(a))
 		out.push_back(court_full(a))

@@ -18,6 +18,8 @@ extends FaceOffPage
 ## show_found / show_failed.
 
 signal ranked
+## The REWARDS row (Stage B): the title opens the rewards page.
+signal rewards
 signal quick(area: String)
 signal create(area: String)
 signal join(area: String, code: String)
@@ -43,6 +45,7 @@ var _wait: VBoxContainer
 var _courts: Dictionary = {}
 var _court_note: Label
 var _quick_sub: Label
+var _rewards_sub: Label
 var _code_edit: LineEdit
 var _code_block: VBoxContainer
 var _code_label: Label
@@ -124,6 +127,19 @@ func _build() -> void:
 	body.add_child(_menu)
 	_build_courts()
 	_menu.add_child(_big_button("Ranked", "RANKED", MatchCopy.ranked_sub(), GOLD, func() -> void: ranked.emit()))
+	# Stage B (docs/BACKEND.md → Ranked → Stage B): the rewards page, with
+	# what waits for a CLAIM on its sub-line.
+	_menu.add_child(_big_button("Rewards", "REWARDS", MatchCopy.rewards_sub(Net.pending_rewards), CREAM, func() -> void: rewards.emit()))
+	_rewards_sub = _menu.get_node("Rewards/Col/Sub")
+	_style_rewards_sub(Net.pending_rewards)
+	var on_badge := func(n: int) -> void:
+		if is_instance_valid(_rewards_sub):
+			_rewards_sub.text = MatchCopy.rewards_sub(n)
+			_style_rewards_sub(n)
+	Net.rewards_badge.connect(on_badge)
+	_menu.tree_exited.connect(func() -> void:
+		if Net.rewards_badge.is_connected(on_badge):
+			Net.rewards_badge.disconnect(on_badge))
 	_menu.add_child(_big_button("Quick", "QUICK MATCH", MatchCopy.quick_sub(area_choice), RetroTheme.c("orange"), func() -> void: quick.emit(area_choice)))
 	_quick_sub = _menu.get_node("Quick/Col/Sub")
 	_menu.add_child(_big_button("Create", "CREATE CODE", MatchCopy.code_sub(), RetroTheme.c("teal"), func() -> void: create.emit(area_choice)))
@@ -303,6 +319,12 @@ func _owned() -> Array:
 		if App.area_unlocked(a):
 			out.push_back(a)
 	return out
+
+
+## A pending count turns the REWARDS sub gold.
+func _style_rewards_sub(n: int) -> void:
+	if is_instance_valid(_rewards_sub):
+		_rewards_sub.add_theme_color_override("font_color", GOLD if n > 0 else CREAM)
 
 
 func _big_button(name_: String, text: String, sub: String, fill: Color, on_press: Callable) -> ShadowCard:

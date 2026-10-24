@@ -35,6 +35,18 @@ static func rates() -> Array:
 		out.push_back({"mode": "trial %s" % loc, "rate": trial_rate(str(loc))})
 	for l in LeagueData.leagues():
 		out.push_back({"mode": "heat %s" % l["id"], "rate": heat_rate(l)})
+	# Online (docs/BACKEND.md → Ranked → Stage B): a rated match pays
+	# data/ranked.json → tickets at the reference win rate over a heat; the
+	# shoot-around is a cage trial plus its once-a-day bonus.
+	var tk := RankedRules.tickets_cfg()
+	if not tk.is_empty():
+		var p := float(ref_player().get("p_win", 0.5))
+		out.push_back({"mode": "ranked", "rate": (p * float(tk.get("win", 0)) + (1.0 - p) * float(tk.get("loss", 0))) / maxf(float(ref_player().get("heat_minutes", 2.5)), 0.1)})
+	var sa := OnlineDrops.shoot_around_cfg()
+	if not sa.is_empty():
+		var score := float(Dictionary(ref_player().get("avg_score", {})).get("cage", 24))
+		var n := Economy.trial_tickets({"score": score, "location": "cage"}, false) + int(sa.get("bonus", 0))
+		out.push_back({"mode": "shoot around", "rate": float(n) / maxf(float(ref_player().get("trial_minutes", 1.5)), 0.1)})
 	return out
 
 

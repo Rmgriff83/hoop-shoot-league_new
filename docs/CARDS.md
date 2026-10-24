@@ -284,16 +284,40 @@ the server (docs/BACKEND.md → Cards online): only cards the server ledger
 holds can be brought into a room, the server deals both validated hands, and
 a play is a relayed, receipted message. Online cards are **never bought**
 (docs/ECONOMY.md → The rule: no path from real money to online cards; the
-online shop and wallet were removed 2026-10-19); they will come only from
-verified server drops and spoils (the next task). The level rule is the leagues' (`Progression.can_use`),
+online shop and wallet were removed 2026-10-19). The level rule is the leagues' (`Progression.can_use`),
 checked on the phone and again on the server — and since 2026-10-19 **the
 card cap** (docs/BACKEND.md → Ranked): in every online match both loadouts
 stop at the lower of the two verified levels, picked on the pre-match page
 and validated by the room, so a level-5 Magnet never meets a level-2 player.
 `data/online_drops.json` → `card_min_tier` adds a ladder-tier floor per card
-(all rookie until the drop task). There is no card-drop path and no parity
-envelope online yet; `card_parity` and `CardBudget` remain per league. AI
-cards never meet online hands.
+(ice and fire7 from ROOKIE, the Magnet from STARTER). There is no parity
+envelope online; `card_parity` and `CardBudget` remain per league. AI cards
+never meet online hands.
+
+### Online cards: where they come from (Ranked Stage B, 2026-10-23)
+
+Only from what the server witnessed, all in `data/online_drops.json`
+(docs/BACKEND.md → Ranked Stage B has every rule; `tools/online_ledger.gd`
+the numbers):
+
+1. **Spoils** — a rated win takes every card the loser played (the winner's
+   own played are spent). Forfeit: the leaver's played to the stayer. A loser
+   on 3+ straight played losses keeps one (insurance). The 3rd game against
+   the same opponent in a day pays none.
+2. **The drop meter** — every rated result adds points (win 10, close loss
+   8, loss 3, + 4 for the day's first win); a full meter (22, derived so the
+   reference player earns `weekly_card_target` 5 cards a week from all
+   sources) drops one card by the tier's rarity odds (`rarity_by_tier`) over
+   what the verified level and `card_min_tier` allow. The odds show on the
+   post-match page and the rewards page.
+3. **The streak Ice** — the 4th straight played loss, once a day.
+4. **Logins** — cumulative distinct days: the first login, days 1 / 3 / 7 /
+   10 / 30, a welcome-back card after 7+ days away; CLAIMed on the rewards page.
+5. **Milestones** — one-time grants by key (first match / win / spoils, win
+   counts, every rank band reached by peak), CLAIMed the same way; the keys
+   mirror to the Platform facade for the store achievements later.
+
+Never from tickets or money (docs/ECONOMY.md → The rule).
 
 ## Adding a card
 

@@ -1,0 +1,63 @@
+{
+  "note": "Shared by server/test/drops.test.ts and tests/test_online_drops.gd: the derivation from data/online_drops.json and the odds per (tier, level).",
+  "derive": {
+    "points_per_match": 7.25,
+    "first_win_days": 4.0527,
+    "points_per_week": 103.2107,
+    "streak_cards_per_week": 0.375,
+    "meter_size": 22,
+    "cards_in_per_match": 0.4167,
+    "ratio": 0.2778
+  },
+  "odds": [
+    {
+      "tier": "rookie",
+      "level": 1,
+      "common": 1.0,
+      "rare": 0.0,
+      "epic": 0.0
+    },
+    {
+      "tier": "rookie",
+      "level": 3,
+      "common": 0.8163,
+      "rare": 0.1837,
+      "epic": 0.0
+    },
+    {
+      "tier": "rookie",
+      "level": 5,
+      "common": 0.8163,
+      "rare": 0.1837,
+      "epic": 0.0
+    },
+    {
+      "tier": "starter",
+      "level": 5,
+      "common": 0.75,
+      "rare": 0.22,
+      "epic": 0.03
+    },
+    {
+      "tier": "pro",
+      "level": 5,
+      "common": 0.65,
+      "rare": 0.28,
+      "epic": 0.07
+    },
+    {
+      "tier": "legend",
+      "level": 7,
+      "common": 0.45,
+      "rare": 0.4,
+      "epic": 0.15
+    },
+    {
+      "tier": "mvp",
+      "level": 2,
+      "common": 1.0,
+      "rare": 0.0,
+      "epic": 0.0
+    }
+  ]
+}

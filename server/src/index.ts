@@ -6,6 +6,7 @@
  * game shows its device board).
  */
 import { Hono } from "hono";
+import { claim, grantsOf, rewardsOf } from "./rewards";
 import type { Env, PlayerRow } from "./env";
 import { authenticate, matchSecret, replaceSecretsStatements, secretsOf, sha256Hex } from "./auth";
 import { deleteAccountStatements, link, providersOf } from "./platform_routes";
@@ -110,8 +111,13 @@ app.get("/v1/me", authenticate, async (c) => {
   const p = c.get("player");
   const lim = await minuteLimit(c.env.RL_ME, `me:${p.id}`, 5);
   if (!lim.allowed) return throttled(c, lim);
-  const [providers, rating] = await Promise.all([providersOf(c.env.DB, p.id), db.ratingOf(c.env.DB, p.id)]);
-  return c.json({ playerId: p.id, name: p.name, tag: p.tag, level: p.level ?? 1, providers, rank: rating ? await rankOf(c.env.DB, rating) : null });
+  const [providers, rating, grants] = await Promise.all([providersOf(c.env.DB, p.id), db.ratingOf(c.env.DB, p.id), grantsOf(c.env.DB, p.id)]);
+  return c.json({
+    playerId: p.id, name: p.name, tag: p.tag, level: p.level ?? 1, providers, rank: rating ? await rankOf(c.env.DB, rating) : null,
+    // Stage B: the milestone keys the server has witnessed (the Platform facade's mirror) and what waits for a CLAIM.
+    milestones: grants.filter((g) => g.kind === "milestone").map((g) => g.key),
+    pending: grants.filter((g) => g.claimed_at === null).length,
+  });
 });
 
 /** The rank line the game shows (me.rank): legend carries its world position instead of a division. */
@@ -186,6 +192,34 @@ app.use("/v1/cards/*", authenticate, cardsGate);
 app.get("/v1/cards", async (c) => {
   const p = c.get("player");
   return c.json(await inventoryOf(c.env.DB, p.id));
+});
+
+// ---- rewards (rewards.ts, docs/BACKEND.md → Ranked → Stage B) ----------------------------------
+
+const dropsGate = async (c: any, next: any) => {
+  if (!on(c.env.FEATURE_DROPS)) return off(c);
+  const p = c.get("player");
+  const minute = await minuteLimit(c.env.RL_CARDS, `cards:${p.id}`, CARDS_PER_MINUTE);
+  if (!minute.allowed) return throttled(c, minute);
+  await next();
+};
+app.use("/v1/rewards", authenticate, dropsGate);
+app.use("/v1/rewards/*", authenticate, dropsGate);
+
+/** What waits for a CLAIM, what is unlocked, the meter and its odds, the login count. */
+app.get("/v1/rewards", async (c) => {
+  const p = c.get("player");
+  return c.json(await rewardsOf(c.env.DB, p));
+});
+
+/** A pending grant becomes a card in the ledger, once; answers the inventory so the phone refreshes in one call. */
+app.post("/v1/rewards/claim", async (c) => {
+  const p = c.get("player");
+  const b = await body(c, ["key"]);
+  if (!b || typeof b.key !== "string" || b.key.length > 64) return c.json({ error: "bad_request" }, 400);
+  const r = await claim(c.env.DB, p, b.key, Date.now());
+  if (!r.ok) return c.json({ error: r.status === 404 ? "not_found" : "claimed" }, r.status);
+  return c.json({ claimed: b.key, card: r.card, ...r.inventory });
 });
 
 // ---- scores + boards --------------------------------------------------------------

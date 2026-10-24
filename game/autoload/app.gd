@@ -959,11 +959,14 @@ func settled_online(msg: Dictionary) -> void:
 	if not online_settle.is_empty():
 		return   # once (the screen and this autoload both hear the room)
 	online_settle = msg.duplicate(true)
+	# Stage B (docs/BACKEND.md → Ranked → Stage B): the tickets the server
+	# reports are granted here, once; cards the server moved come with the
+	# refresh below. The settle's keys ride into last_heat whichever of this
+	# and settle_heat lands second.
+	if msg.has("tickets") and int(msg["tickets"]) > 0:
+		grant_tickets(int(msg["tickets"]))
+	_merge_online_settle()
 	if bool(msg.get("ranked", false)):
-		last_heat["ranked"] = true
-		for k in ["rating", "rank", "events", "peak"]:
-			if msg.has(k):
-				last_heat[k] = msg[k]
 		if msg.get("rank") is Dictionary:
 			# The decision's rank carries the tier; the record follows from
 			# what we knew plus this result, until the next /v1/me.
@@ -979,6 +982,69 @@ func settled_online(msg: Dictionary) -> void:
 			Net.fetch_me()
 	Net.refresh_cards()
 	online_settled.emit(online_settle)
+
+
+## The decision's keys onto the result page's dict, and the bright spots
+## against the online store once the result (`sides`) is there too.
+const SETTLE_KEYS := ["ranked", "rating", "rank", "events", "peak", "tickets", "pay", "spoils", "meter", "granted", "milestones", "loss_streak"]
+
+func _merge_online_settle() -> void:
+	if online_settle.is_empty() or not bool(last_heat.get("online", false)):
+		return
+	for k in SETTLE_KEYS:
+		if online_settle.has(k):
+			last_heat[k] = online_settle[k]
+	if str(online_settle.get("reason", "")) != "" and not last_heat.has("reason"):
+		last_heat["reason"] = online_settle["reason"]
+	if last_heat.has("sides") and not last_heat.has("bright"):
+		var prog := progress()
+		var online: Dictionary = prog.get("online", {}) if prog.get("online") is Dictionary else {}
+		last_heat["bright"] = BrightSpots.note(online, last_heat)
+		prog["online"] = online
+		SaveService.put_progress(prog)
+
+
+## SHOOT AROUND? (docs/BACKEND.md → Ranked → Stage B): after a losing stretch
+## the post-match page offers a time trial with a small ticket bonus, once a
+## UTC day (the phone's stamp, `progress.online.shoot_day`).
+var _shoot_bonus_pending := false
+
+static func utc_day() -> int:
+	return int(Time.get_unix_time_from_system() / 86400.0)
+
+
+func shoot_around_offered() -> bool:
+	var cfg := OnlineDrops.shoot_around_cfg()
+	if cfg.is_empty() or online_settle.is_empty():
+		return false
+	if int(online_settle.get("loss_streak", 0)) < int(cfg.get("after_losses", 2)):
+		return false
+	var online: Dictionary = progress().get("online", {}) if progress().get("online") is Dictionary else {}
+	return int(online.get("shoot_day", -1)) != utc_day()
+
+
+## The shoot-around's bonus when a trial started from the offer finishes
+## (OnlineDrops.shoot_around_cfg), once a UTC day: the day is stamped here.
+func take_shoot_bonus() -> int:
+	if not _shoot_bonus_pending:
+		return 0
+	_shoot_bonus_pending = false
+	var bonus := int(OnlineDrops.shoot_around_cfg().get("bonus", 0))
+	var prog := progress()
+	var online: Dictionary = prog.get("online", {}) if prog.get("online") is Dictionary else {}
+	online["shoot_day"] = utc_day()
+	prog["online"] = online
+	SaveService.put_progress(prog)
+	return bonus
+
+
+func start_shoot_around() -> void:
+	if not shoot_around_offered():
+		return
+	_shoot_bonus_pending = true
+	var area := str(last_heat.get("location", "cage"))
+	cancel_online()
+	start_area("trial", area if area_unlocked(area) else "cage")
 
 
 ## Leave the lobby / the room (a cancel, a back, a finished match).
@@ -1123,6 +1189,8 @@ func settle_heat(result: Dictionary) -> Dictionary:
 	last_heat["online"] = bool(next_heat.get("remote", false))
 	if last_heat["online"]:
 		last_heat["their_level"] = int(next_heat.get("their_level", 1))
+		last_heat["ranked"] = bool(next_heat.get("ranked", false))
+		_merge_online_settle()
 	if last_heat["league"] != null:
 		_apply_league_heat(last_heat)
 		Net.push_save()
@@ -1507,6 +1575,10 @@ func finish_run(run: Dictionary) -> void:
 	# Tickets for the run (docs/ECONOMY.md). Practice never gets here: endless
 	# modes have no clock to run out.
 	var earned := Economy.trial_tickets(run, last_run_was_best)
+	var shoot := take_shoot_bonus()
+	if shoot > 0:
+		earned += shoot
+		last_run["shoot_bonus"] = shoot   # (`bonus` is the run's streak points)
 	grant_tickets(earned)
 	last_run["tickets"] = earned
 	# The global board (docs/BACKEND.md): queued in the outbox, sent when the

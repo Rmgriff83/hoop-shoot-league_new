@@ -37,3 +37,9 @@ func sign_in() -> void:
 ## The proof for the server: {} when there is none. A coroutine on a real backend.
 func get_identity_proof() -> Dictionary:
 	return {}
+
+
+## A server milestone to mirror as a platform achievement (docs/BACKEND.md →
+## Ranked → Stage B). The null backend has nowhere to put it.
+func unlock(_key: String) -> void:
+	pass

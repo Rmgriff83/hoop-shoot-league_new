@@ -17,8 +17,11 @@ import { DurableObject } from "cloudflare:workers";
 import type { Env } from "./env";
 import { SLOTS, inventoryOf, validHand, type Inventory } from "./cards";
 import { rankedPosition, ratingOf, upsertRatingStatement } from "./db";
+import { dayOf, dayStart } from "./days";
+import { DROPS, METER_SIZE, meterGain, milestonesReached, nextLossStreak, rarityOdds, settleSpoils } from "./online_drops";
 import { applyResult, currentRd, defaultRow, type RatingRow } from "./rank";
-import { DIVISIONS, PREMATCH, TIERS } from "./ranked_data";
+import { DIVISIONS, PREMATCH, TICKETS, TIERS } from "./ranked_data";
+import { cardOfRarity, cardStatements, grantStatement, meterCard, progressOf, upsertProgressStatement, type Progress } from "./rewards";
 
 export const MAX_PER_S = 5;
 export const MAX_BYTES = 2048;
@@ -44,6 +47,8 @@ interface Meta {
   ends: Record<Side, Record<string, { score: number; totals: unknown }>>;
   /** Each side's validated hand (card ids; a played card leaves it). */
   hands: Record<Side, string[]>;
+  /** Each side's cards the room relayed (the spoils at the decision; Stage B). */
+  played: Record<Side, string[]>;
   /** The Lobby paired this room for ranked play (the Worker says so, never the phone). */
   ranked: boolean;
   /** The card level cap: the lower of the two levels. */
@@ -131,7 +136,7 @@ export class MatchRoom extends DurableObject<Env> {
     if (!m) {
       m = {
         area, created: now, status: "waiting", seed: 0, started: 0, last: now, a: null, b: null, ends: { a: {}, b: {} },
-        hands: { a: blank(), b: blank() }, ranked, cap: 0, inv: { a: null, b: null }, ready: { a: false, b: false },
+        hands: { a: blank(), b: blank() }, played: { a: [], b: [] }, ranked, cap: 0, inv: { a: null, b: null }, ready: { a: false, b: false },
         leftWaiting: null, rematch: { a: false, b: false }, reason: "", recorded: false,
       };
       await this.ctx.storage.setAlarm(now + WAIT_MS);
@@ -213,6 +218,14 @@ export class MatchRoom extends DurableObject<Env> {
       this.sendSide(other(att.side), { t: "rematch", from: att.side });
       if (m.rematch.a && m.rematch.b) {
         const room = crypto.randomUUID();
+        if (m.ranked && m.a && m.b) {
+          // A rematch of a ranked match stays ranked (Ross, 2026-10-23): the Worker reads this row at the upgrade.
+          try {
+            await this.env.DB.prepare("INSERT OR IGNORE INTO ranked_rooms (room, area, a_id, b_id, created_at) VALUES (?1, ?2, ?3, ?4, ?5)").bind(room, m.area, m.a.id, m.b.id, now).run();
+          } catch (e) {
+            console.error("rematch ranked_rooms", e);
+          }
+        }
         for (const s of this.sockets()) this.send(s, { t: "rematch_go", room, area: m.area });
         await this.ctx.storage.setAlarm(now + 5_000);
       } else {
@@ -258,8 +271,14 @@ export class MatchRoom extends DurableObject<Env> {
             this.env.DB.prepare("INSERT INTO online_ledger (player_id, kind, card_id, coins, room, at) VALUES (?1, 'play', ?2, 0, ?3, ?4)").bind(pid, id, this.ctx.id.toString(), now),
           ]);
         } catch (e) {
+          // The ledger did not move: the card is still theirs, and nothing was relayed.
           console.error("card ledger", e);
+          hand.splice(at, 0, id);
+          this.send(ws, { t: "error", code: "card", id });
+          break;
         }
+        if (!m.played) m.played = { a: [], b: [] };
+        m.played[att.side].push(id);
         this.send(ws, { t: "card_ok", id });
         this.sendSide(other(att.side), { t: "card", id, from: att.side });
         break;
@@ -362,6 +381,10 @@ export class MatchRoom extends DurableObject<Env> {
     const stmts: D1PreparedStatement[] = [];
     let mus: Record<Side, { before: number | null; after: number | null }> = { a: { before: null, after: null }, b: { before: null, after: null } };
     let rows: Record<Side, RatingRow> | null = null;
+    const played: Record<Side, string[]> = m.played ?? { a: [], b: [] };
+    let pay = 1;
+    // Where each side's milestone grants sit in the batch: a key is NEW only when its INSERT OR IGNORE changed a row.
+    const grantAt: Record<Side, { key: string; at: number }[]> = { a: [], b: [] };
     try {
       if (rated) {
         const [ra, rb] = await Promise.all([ratingOf(db, m.a.id), ratingOf(db, m.b.id)]);
@@ -382,14 +405,77 @@ export class MatchRoom extends DurableObject<Env> {
           settled[s].events = r.events;
           settled[s].peak = { tier: r.row.peak_tier, division: r.row.peak_division };
         }
+        if ((this.env.FEATURE_DROPS ?? "on") === "on") {
+          // Stage B (docs/BACKEND.md → Ranked → Stage B): spoils, the meter, the streak Ice, milestones, tickets.
+          const today = dayOf(now);
+          const pairRow = await db
+            .prepare("SELECT COUNT(*) AS n FROM matches WHERE ranked = 1 AND pay = 1 AND ended_at >= ?1 AND ((a_id = ?2 AND b_id = ?3) OR (a_id = ?3 AND b_id = ?2))")
+            .bind(dayStart(today), m.a.id, m.b.id)
+            .first<{ n: number }>();
+          pay = (pairRow?.n ?? 0) < DROPS.same_opponent_cap_per_day ? 1 : 0;
+          const [pa, pb] = await Promise.all([progressOf(db, m.a.id), progressOf(db, m.b.id)]);
+          const progress: Record<Side, Progress> = { a: pa, b: pb };
+          const loser: Side = winner === "a" ? "b" : "a";
+          const insured = progress[loser].loss_streak_played >= DROPS.insurance.losses;
+          const spoils = pay ? settleSpoils(winner, m.reason, played, insured) : settleSpoils(null, m.reason, played, false);
+          for (const s of ["a", "b"] as Side[]) {
+            const pid = m[s]!.id;
+            const level = m[s]!.level;
+            const won = winner === s;
+            const row = rows[s];
+            const p = progress[s];
+            const sp = spoils[s];
+            const granted: { why: string; card: string }[] = [];
+            for (const id of sp.captured) stmts.push(...cardStatements(db, pid, id, "capture", room, now));
+            if (sp.insured) stmts.push(...cardStatements(db, pid, sp.insured, "insured", room, now));
+            const meterBefore = p.meter;
+            if (pay) {
+              const firstWinToday = won && p.first_win_day !== today;
+              p.meter += meterGain({ won, margin: s === "a" ? a - b : b - a, period, firstWinToday });
+              if (firstWinToday) p.first_win_day = today;
+              if (p.meter >= METER_SIZE) {
+                const card = meterCard(row.tier, level, `${room}:${s}:${row.games}`);
+                if (card) {
+                  p.meter -= METER_SIZE;
+                  stmts.push(...cardStatements(db, pid, card, "meter", room, now));
+                  granted.push({ why: "meter", card });
+                }
+              }
+            }
+            const leaver = m.reason === "forfeit" && !won;
+            p.loss_streak_played = nextLossStreak(p.loss_streak_played, won, m.reason, leaver);
+            if (p.loss_streak_played >= DROPS.streak_card.losses && p.streak_card_day !== today) {
+              p.streak_card_day = today;
+              stmts.push(...cardStatements(db, pid, DROPS.streak_card.card, "streak", room, now));
+              granted.push({ why: "loss_streak", card: DROPS.streak_card.card });
+            }
+            for (const h of milestonesReached(before[s], row, won, sp.captured.length)) {
+              grantAt[s].push({ key: h.key, at: stmts.length });
+              stmts.push(grantStatement(db, pid, h.key, "milestone", cardOfRarity(row.tier, level, h.rarity, `${pid}:${h.key}`), now));
+            }
+            p.updated_at = now;
+            stmts.push(upsertProgressStatement(db, p));
+            settled[s].pay = pay === 1;
+            settled[s].tickets = won ? TICKETS.win : TICKETS.loss;
+            settled[s].spoils = sp;
+            settled[s].meter = { before: meterBefore, after: p.meter, size: METER_SIZE, odds: rarityOdds(row.tier, level) };
+            settled[s].granted = granted;
+            settled[s].loss_streak = p.loss_streak_played;
+            settled[s].milestones = [];
+          }
+        }
       }
-      stmts.unshift(
-        db.prepare(
-          `INSERT OR IGNORE INTO matches (room, area, a_id, b_id, a_score, b_score, ot, reason, desync, ended_at, ranked, winner, a_level, b_level, cap, a_mu_before, a_mu_after, b_mu_before, b_mu_after)
-           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19)`,
-        ).bind(room, m.area, m.a.id, m.b.id, a, b, period, m.reason, desync, now, m.ranked ? 1 : 0, winner, m.a.level, m.b.level, m.cap, mus.a.before, mus.a.after, mus.b.before, mus.b.after),
-      );
-      await db.batch(stmts);
+      const matchStmt = db
+        .prepare(
+          `INSERT OR IGNORE INTO matches (room, area, a_id, b_id, a_score, b_score, ot, reason, desync, ended_at, ranked, winner, a_level, b_level, cap, a_mu_before, a_mu_after, b_mu_before, b_mu_after, pay, a_played, b_played)
+           VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)`,
+        )
+        .bind(room, m.area, m.a.id, m.b.id, a, b, period, m.reason, desync, now, m.ranked ? 1 : 0, winner, m.a.level, m.b.level, m.cap, mus.a.before, mus.a.after, mus.b.before, mus.b.after, pay, JSON.stringify(played.a), JSON.stringify(played.b));
+      const results = await db.batch([matchStmt, ...stmts]);
+      for (const s of ["a", "b"] as Side[]) {
+        if (!grantAt[s].length) continue;
+        settled[s].milestones = grantAt[s].filter(({ at }) => ((results[at + 1]?.meta as { changes?: number } | undefined)?.changes ?? 0) > 0).map(({ key }) => key);
+      }
       if (rows) {
         // Legend shows where it stands in the world rather than a division.
         const legend = TIERS[TIERS.length - 1].id;

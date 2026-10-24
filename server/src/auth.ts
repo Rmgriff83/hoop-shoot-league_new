@@ -1,4 +1,6 @@
 import type { Context, Next } from "hono";
+import { dayOf } from "./days";
+import { loginDay } from "./rewards";
 import type { Env, PlayerRow } from "./env";
 import { UUID_RE } from "./rules";
 
@@ -89,6 +91,10 @@ export async function authenticate(c: Context<Vars>, next: Next) {
       c.env.DB.prepare("UPDATE players SET last_seen = ?1 WHERE id = ?2").bind(now, row.id),
       c.env.DB.prepare("UPDATE player_secrets SET last_seen = ?1 WHERE player_id = ?2 AND secret_hash = ?3").bind(now, row.id, hit.secret_hash),
     ]));
+    // A new UTC day for this player: the login pass (rewards.ts), once a day, off the request.
+    if ((c.env.FEATURE_DROPS ?? "on") === "on" && (row.login_day ?? 0) !== dayOf(now)) {
+      c.executionCtx.waitUntil(loginDay(c.env.DB, row, now).catch((e) => console.error("login day", e)));
+    }
   }
   c.set("player", row);
   await next();

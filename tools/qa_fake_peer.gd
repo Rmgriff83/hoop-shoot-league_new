@@ -74,13 +74,41 @@ func _maybe_settle() -> void:
 		return
 	_settled = true
 	var won := _our_score > _heat.ai.score
+	message.emit.call_deferred(settle_message(won))
+
+
+## The room's `settled` as the real one sends it (docs/BACKEND.md → Ranked →
+## Stage B): the rating as {mu, rd, cons} objects, the rank, then the payout —
+## a win takes the fake peer's played ice as SPOILS and fills the meter; a
+## loss loses the Heat Check, keeps the ice (insured) and lands the streak Ice.
+func settle_message(won: bool) -> Dictionary:
 	var settle := {"t": MatchProtocol.SETTLED, "won": won, "reason": "played", "ranked": ranked}
-	if ranked:
-		settle["rating"] = {"before": 1500.0, "after": 1518.0 if won else 1483.0, "delta": 18.0 if won else -17.0, "cons": 860.0}
-		settle["rank"] = {"tier": "rookie", "division": 2 if won else 3, "games": 1, "wins": 1 if won else 0, "losses": 0 if won else 1}
-		settle["events"] = ["promoted"] if won else []
-		settle["peak"] = {"tier": "rookie", "division": 2 if won else 3}
-	message.emit.call_deferred(settle)
+	if not ranked:
+		return settle
+	var before := {"mu": 1500.0, "rd": 350.0, "cons": 800.0}
+	var after := {"mu": 1518.0 if won else 1483.0, "rd": 290.0, "cons": 938.0 if won else 903.0}
+	settle["rating"] = {"before": before, "after": after, "delta": float(after["mu"]) - float(before["mu"])}
+	settle["rank"] = {"tier": "rookie", "division": 2 if won else 3, "games": 1, "wins": 1 if won else 0, "losses": 0 if won else 1}
+	settle["events"] = ["promoted"] if won else []
+	settle["peak"] = {"tier": "rookie", "division": 2 if won else 3}
+	var tk := RankedRules.tickets_cfg()
+	settle["pay"] = true
+	settle["tickets"] = int(tk.get("win", 30)) if won else int(tk.get("loss", 14))
+	var size := OnlineDrops.meter_size()
+	var odds := OnlineDrops.odds_for("rookie", 1)
+	if won:
+		settle["spoils"] = {"captured": ["ice"], "lost": [], "insured": null}
+		settle["meter"] = {"before": size - 4, "after": 10, "size": size, "odds": odds}
+		settle["granted"] = [{"why": "meter", "card": "ice"}]
+		settle["milestones"] = ["first_ranked_match", "first_ranked_win", "first_capture"]
+		settle["loss_streak"] = 0
+	else:
+		settle["spoils"] = {"captured": [], "lost": ["fire7"], "insured": "ice"}
+		settle["meter"] = {"before": 6, "after": 14, "size": size, "odds": odds}
+		settle["granted"] = [{"why": "loss_streak", "card": "ice"}]
+		settle["milestones"] = ["first_ranked_match"]
+		settle["loss_streak"] = 4
+	return settle
 
 
 ## The room's `matched`, for the pre-match page (the driver calls it).

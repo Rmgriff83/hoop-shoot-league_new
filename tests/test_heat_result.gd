@@ -65,7 +65,8 @@ func _copy(t) -> void:
 	t.eq(HeatCopy.level_line({"league": null, "xp": {"gained": 5}}, 5), {}, "no line outside a league")
 	t.eq(HeatCopy.rewards(_heat(false, 0, ""))["sub"], "TICKETS · LOSS", "a loss says so")
 	t.eq(HeatCopy.rewards({"league": null, "tickets": 9}), {}, "no card outside a league")
-	t.eq(HeatCopy.rewards({"online": true, "won": true, "league": null}), {}, "no card for an online match: no payout yet")
+	t.eq(HeatCopy.rewards({"online": true, "won": true, "league": null}), {}, "no card for an online match until its settle brings tickets")
+	t.eq(HeatCopy.rewards({"online": true, "won": true, "league": null, "tickets": 30}), {"big": "+30", "sub": "TICKETS · WIN", "sub2": ""}, "the online tickets, no XP")
 	t.eq(HeatCopy.drop(win)["id"], "fire7", "the dropped card")
 	t.eq(HeatCopy.drop(_heat(true, 0, "")), {}, "no drop, no card")
 	var display := UiFont.display()
@@ -128,5 +129,31 @@ func _chrome(t) -> void:
 	t.eq((c.find_child("Header", true, false) as Label).text, "QUICK HEAT", "a quick heat's header")
 	t.ok(c.find_child("Rewards", true, false) == null and c.find_child("ContinueSeason", true, false) == null, "no rewards card, no continue")
 	t.ok(c.find_child("Home", true, false) != null, "HOME stays")
+	c.free()
+	# Online (docs/BACKEND.md → Ranked → Stage B): the rank line reserves its
+	# row, the tickets beside the spoils, the meter under them, bright rows slim.
+	var on := _heat(false, 0, "")
+	on["league"] = null
+	on["online"] = true
+	on["ranked"] = true
+	on["tickets"] = 14
+	on["rating"] = {"before": {"mu": 1500.0, "rd": 350.0, "cons": 800.0}, "after": {"mu": 1483.0, "rd": 290.0, "cons": 903.0}, "delta": -17.0}
+	on["rank"] = {"tier": "rookie", "division": 3}
+	on["events"] = []
+	on["spoils"] = {"captured": [], "lost": ["fire7"], "insured": "ice"}
+	on["meter"] = {"before": 6, "after": 14, "size": 22, "odds": {"common": 0.8163, "rare": 0.1837, "epic": 0.0}}
+	on["granted"] = []
+	on["bright"] = ["NEW BEST STREAK · 6", "7 SWISHES · YOUR MOST"]
+	c = screen.build_chrome(on, {}, {})
+	t.eq((c.find_child("RankLine", true, false) as Label).text, "RATING -17 · ROOKIE III", "the rank line from the heat's merged settle")
+	t.ok((c.find_child("Box", true, false) as Control).position.y == 392.0 + 42.0, "the box drops under the rank line")
+	t.eq((c.find_child("RewardsBig", true, false) as Label).text, "+14", "the online tickets")
+	t.eq((c.find_child("RewardsSub", true, false) as Label).text, "TICKETS · LOSS", "…for the loss")
+	t.eq((c.find_child("SpoilsCaption", true, false) as Label).text, "LOST · HEAT CHECK · INSURED · DEEP FREEZE BACK", "what the loss cost, and what insurance kept")
+	t.eq((c.find_child("MeterLine", true, false) as Label).text, "METER 14/22 · 82% COMMON · 18% RARE", "the meter line")
+	t.close((c.find_child("MeterFill", true, false) as ColorRect).anchor_right, 14.0 / 22.0, 1e-6, "the meter bar")
+	t.eq(c.find_child("Row_ICED_OVER", true, false).custom_minimum_size.y, 44.0, "box rows slim under bright spots")
+	t.ok(c.find_child("Bright", true, false) != null, "the bright spots in a loss")
+	t.ok(c.find_child("Rematch", true, false) == null, "no REMATCH without a room")
 	c.free()
 	screen.free()

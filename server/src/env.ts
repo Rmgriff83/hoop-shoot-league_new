@@ -14,6 +14,8 @@ export interface Env {
   FEATURE_CARDS?: string;
   /** Ranked online: the queue, the board, the rated rooms (index.ts, lobby.ts). */
   FEATURE_RANKED?: string;
+  /** Ranked Stage B: spoils, the drop meter, logins, milestones, tickets, /v1/rewards (rewards.ts, match_room.ts). */
+  FEATURE_DROPS?: string;
   /** Platform identity link/restore/unlink (platform_routes.ts); DELETE /v1/me has no switch. */
   FEATURE_PLATFORM?: string;
   /** Vitest only: enables the `test` proof verifier (platform.ts). Never a wrangler var. */
@@ -42,4 +44,6 @@ export interface PlayerRow {
   last_seen: number;
   flags: number;
   level: number;
+  /** The last UTC day the login pass ran for (rewards.ts loginDay). */
+  login_day?: number;
 }

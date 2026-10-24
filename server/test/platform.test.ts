@@ -209,7 +209,7 @@ describe("delete account", () => {
     const res = await SELF.fetch("https://api/v1/me", { method: "DELETE", headers: auth(p) });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ deleted: true });
-    for (const [table, col] of [["players", "id"], ["player_identities", "player_id"], ["player_secrets", "player_id"], ["transfer_codes", "player_id"], ["tt_best", "player_id"], ["tt_week_best", "player_id"], ["seen_runs", "player_id"], ["save_parts", "player_id"], ["online_cards", "player_id"], ["online_ledger", "player_id"], ["ratings", "player_id"]]) {
+    for (const [table, col] of [["players", "id"], ["player_identities", "player_id"], ["player_secrets", "player_id"], ["transfer_codes", "player_id"], ["tt_best", "player_id"], ["tt_week_best", "player_id"], ["seen_runs", "player_id"], ["save_parts", "player_id"], ["online_cards", "player_id"], ["online_ledger", "player_id"], ["ratings", "player_id"], ["online_progress", "player_id"], ["grants", "player_id"]]) {
       const n = await env.DB.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${col} = ?1`).bind(p.playerId).first<any>();
       expect(n.n, table).toBe(0);
     }

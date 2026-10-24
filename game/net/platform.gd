@@ -13,6 +13,9 @@ extends Node
 
 signal conflict(info: Dictionary)
 signal link_changed
+## A milestone the server witnessed reached this device for the first time
+## (the future achievement mirror; docs/BACKEND.md → Ranked → Stage B).
+signal milestone_unlocked(key: String)
 
 var backend: PlatformBackend = PlatformBackend.new()
 var _pending_conflict := {}
@@ -26,6 +29,31 @@ func _ready() -> void:
 ## Providers linked to this account, from the account part (never a proof).
 func linked_providers() -> Array:
 	return Array(Net.account().get("linked", []))
+
+
+## The milestone keys mirrored so far (the account part, device-local; the
+## server is the source of truth — GET /v1/me → milestones).
+func unlocked() -> Array:
+	return Array(Net.account().get("milestones", []))
+
+
+## New keys from the server: remember them and hand each to the backend once.
+func note_milestones(keys: Array) -> void:
+	var had := unlocked()
+	var fresh := []
+	for k in keys:
+		if not had.has(str(k)):
+			fresh.push_back(str(k))
+	if fresh.is_empty():
+		return
+	var a := Net.account()
+	var all := had.duplicate()
+	all.append_array(fresh)
+	a["milestones"] = all
+	SaveService.put_account(a)
+	for k in fresh:
+		backend.unlock(str(k))
+		milestone_unlocked.emit(str(k))
 
 
 func is_linked() -> bool:

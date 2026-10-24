@@ -52,8 +52,12 @@ the results screen (`+N TICKETS`).
 `App._apply_league_heat`, shown on the heat result screen (`+36 · TICKETS ·
 WIN · +18 XP`), and the card drop lands in that league's inventory. Quick
 heats are gone from the game (a test-only path remains) and pay nothing.
-Online matches pay nothing yet (`settled {won, reason}`; the ranked task
-refills it).
+**Ranked online** — `data/ranked.json` → `tickets {win 30, loss 14}`,
+reported by the room in `settled` and granted by `App.settled_online`
+(once). Casual online matches pay nothing. After 2+ straight ranked losses
+the post-match page offers SHOOT AROUND? — a time trial with
+`data/online_drops.json → shoot_around.bonus` (5) on top, once a UTC day
+(`App.take_shoot_bonus`). Both sit in `EconomyBudget.rates()` and the band.
 
 ## The envelope — `core/economy/economy_budget.gd` (`EconomyBudget`)
 
@@ -103,6 +107,8 @@ The ledger prints all of it and exits non-zero on a break:
 | heat, beach | 40 / 18 / title 180 | 29 a heat, ~11.6 tickets/min |
 | heat, park | 43 / 20 / title 200 | 31.5 a heat, ~12.6 tickets/min |
 | heat, city | 47 / 21 / title 220 | 34 a heat, ~13.6 tickets/min |
+| ranked online | 30 win / 14 loss | 22 a match, ~8.8 tickets/min |
+| shoot around | a cage trial + 5 bonus, once a day | 20, ~13.3 tickets/min |
 
 Rate band 6–14/min. With one wallet the heats carry it and a trial pays a
 bit less than a heat a minute (Ross's call; trials dropped ~15 % from 6 +
