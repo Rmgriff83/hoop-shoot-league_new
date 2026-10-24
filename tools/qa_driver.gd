@@ -41,7 +41,7 @@ func _ready() -> void:
 	# --qa-hud-side: the HUD pass with HUD SIDE: RIGHT (the toasts and the note mirrored), then back.
 	if args.has("--qa-hud-side"):
 		App.set_hud_side("right")
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# The splash is the main scene now: every other pass starts from the title.
@@ -62,6 +62,8 @@ func _ready() -> void:
 		_run_heat_result.call_deferred()
 	elif args.has("--qa-hud-side"):
 		_run_hud_side.call_deferred()
+	elif args.has("--qa-best"):
+		_run_best.call_deferred()
 	elif args.has("--qa-hud"):
 		_run_hud.call_deferred()
 	elif args.has("--qa-heat"):
@@ -466,6 +468,48 @@ func _run_net_in(prefix: String, city: bool) -> void:
 		print("QA %s: %s %d bones, %d surfaces, %d tris%s" % [prefix, body.name, body.bone_count(), body.surface_count(), body.tri_count(), extra])
 	print("QA %s: done" % prefix)
 	get_tree().quit(0)
+
+
+## The home's TIME TRIAL card after every way of leaving and coming back
+## (Ross, 2026-10-24: "BEST n" showed on the first load and was gone after
+## navigating away and back): prints the card's sub-line at each step.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-best
+func _run_best() -> void:
+	await _sleep(1.2)
+	await _close_archive()
+	_print_best("first load")
+	var scene := get_tree().current_scene
+	var menu: Button = get_tree().root.find_child("Menu", true, false)
+	if menu != null:
+		menu.pressed.emit()
+		await _sleep(0.8)
+		_print_best("settings open")
+		await _click_button_named("CLOSE")
+		await _sleep(0.8)
+		_print_best("settings closed")
+	var locker: Button = get_tree().root.find_child("Locker", true, false)
+	if locker != null:
+		locker.pressed.emit()
+		await _sleep(0.8)
+		await _click_button_named("CLOSE")
+		await _sleep(0.8)
+		_print_best("locker closed")
+	# A whole scene away and back: practice, then QUIT TO TITLE's path.
+	if scene != null and scene.has_method("_pick"):
+		scene.call("_pick", "practice")
+		await _sleep(2.5)
+		App.to_title()
+		await _sleep(2.0)
+		await _close_archive()
+		_print_best("back from practice")
+	print("QA best: done")
+	get_tree().quit(0)
+
+
+func _print_best(when: String) -> void:
+	var card: Button = get_tree().root.find_child("TrialCard", true, false)
+	var top := SaveService.top_scores(1, "cage")
+	print("QA best [%s]: card '%s' · top_scores(cage) %s · docs in memory %d" % [when, ModeCards.sub_text(card) if card != null else "(no TrialCard)", str(top[0]["score"]) if not top.is_empty() else "none", SaveService.score_count()])
 
 
 ## HUD SIDE: RIGHT (Ross, 2026-10-24): a cage trial with a toast up and the

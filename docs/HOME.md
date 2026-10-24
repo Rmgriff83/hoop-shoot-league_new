@@ -29,7 +29,7 @@ is listed. Its PEGGY button opens the
 wins balls and nets — tickets buy nothing else; the hoop counter is closed
 for now (`App.HOOPS_IN_LOCKER`). The locker icon carries a gold dot while a
 won prize has not been looked at.
-**The board** sits mid-court (`BoardPreview`, (140, 440), 440 wide — design 3a, 2026-10-17): the area's top five this week and YOUR row after a gap; a tap opens the global boards (below). It slides off left as the league opens. **ONLINE** is the one cream card beside the area name (the 1v1 icon + the word): the lobby.
+**The board** sits mid-court (`BoardPreview`, (140, 440), 440 wide — design 3a, 2026-10-17): the area's top five ALL TIME (Ross, 2026-10-24: the forever list, never the week's; the server's `period=all` board, else the device's own runs while the fetch is out or the server's board is still empty) and YOUR row after a gap; a tap opens the global boards (below) on the same ALL TIME tab. It slides off left as the league opens. **ONLINE** is the one cream card beside the area name (the 1v1 icon + the word): the lobby.
 **Shop is not on the home page**: it lives inside each league, selling
 cards usable only in that league for tickets (docs/ECONOMY.md: one currency
 since 2026-10-19); the pill shows TICKETS, the one wallet.

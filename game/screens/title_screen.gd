@@ -147,25 +147,32 @@ const BOARD_Y := 440.0
 var _board: BoardPreview
 
 
-## The preview's rows: the cached server board for this area (THIS WEEK),
-## else the device's own runs. `fetch` asks the server once when the chrome
-## builds; the board_loaded handler below only re-renders — asking again
-## from it would loop (a cached board answers on a deferred emit).
+## The preview's rows: the cached server board for this area — ALL TIME
+## (Ross, 2026-10-24: the home shows the forever list, not the week's) —
+## else the device's own runs (also while the server's board is still
+## empty, so a fresh server never blanks the runs on this phone). `fetch`
+## asks the server once when the chrome builds; the board_loaded handler
+## below only re-renders — asking again from it would loop (a cached board
+## answers on a deferred emit).
+const BOARD_PERIOD := "all"
+
+
 func _refresh_board(fetch := true) -> void:
 	if _board == null:
 		return
 	var area := str(CARDS[_index]["area"])
-	var data: Dictionary = Net.cached_board(area, "week")
-	if not data.is_empty():
-		_board.set_rows(RanksCopy.rows(data), Dictionary(data.get("me", {})) if data.get("me") is Dictionary else {})
+	var data: Dictionary = Net.cached_board(area, BOARD_PERIOD)
+	var rows: Array = RanksCopy.rows(data) if not data.is_empty() else []
+	if not rows.is_empty():
+		_board.set_rows(rows, Dictionary(data.get("me", {})) if data.get("me") is Dictionary else {})
 	else:
 		_board.set_rows(RanksCopy.local_rows(SaveService.top_scores(RanksCopy.BOARD_SIZE, area)))
 	if fetch and Net.enabled and Net.registered():
-		Net.load_board(area, "week")
+		Net.load_board(area, BOARD_PERIOD)
 
 
 func _on_board_for_preview(area: String, period: String, _data: Dictionary) -> void:
-	if period == "week" and _board != null and area == str(CARDS[_index]["area"]):
+	if period == BOARD_PERIOD and _board != null and area == str(CARDS[_index]["area"]):
 		_refresh_board(false)
 
 
@@ -1164,7 +1171,7 @@ func archive() -> AreaArchivePage:
 # ---- ranks (docs/HOME.md → Ranks) ------------------------------------------------------
 
 
-## The global boards, opened on this area's tab and THIS WEEK. The page asks
+## The global boards, opened on this area's tab and ALL TIME (the home board's list). The page asks
 ## for data through `request`; Net answers with a board or a failure, and a
 ## failure shows the device's own board for the area.
 func _open_ranks() -> void:
@@ -1203,7 +1210,7 @@ func _open_ranks() -> void:
 	)
 	add_child(_ranks)
 	_ranks.slide_in()
-	_ranks.select(str(CARDS[_index]["area"]), "week")
+	_ranks.select(str(CARDS[_index]["area"]), BOARD_PERIOD)   # the tab the home board shows
 
 
 func ranks() -> RanksPage:
