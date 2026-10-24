@@ -58,8 +58,10 @@ static func prims_total(row: Dictionary) -> int:
 
 ## The limits a row must sit under, from the baseline row × the headroom:
 ## {frame_p50, frame_p95, frame_p99, hitches_per_60s, spikes_per_60s, draws_total, script_p95, coverage_max}.
-## Hitches are frames over an absolute `hitch_ms`; spikes are frames over
-## 1.5 × that run's own p50 — the stutter a player feels at any frame rate.
+## Hitches are frames over an absolute `hitch_ms`; spikes are frames one
+## refresh period over that run's own p50 (never under 1.5 × it) — the stutter
+## a player feels at any frame rate, without counting a vsync phone's ordinary
+## dropped frames.
 ## On a device whose baseline p50 already sits near `hitch_ms` (the phone runs
 ## the cage at ~19 ms) nearly every frame is a "hitch", so the absolute count
 ## is not enforced there (limit INF; `hitches_enforced` says so) — the spikes
@@ -94,7 +96,7 @@ static func compare(row: Dictionary, base: Dictionary, hr: Dictionary) -> Packed
 		out.push_back("%s hitches %.1f/60s > %.1f" % [who, h, lim["hitches_per_60s"]])
 	var s := float(row.get("spikes_per_60s", 0.0))
 	if s > float(lim["spikes_per_60s"]):
-		out.push_back("%s spikes %.1f/60s > %.1f (frames over 1.5x the run's p50)" % [who, s, lim["spikes_per_60s"]])
+		out.push_back("%s spikes %.1f/60s > %.1f (frames a refresh period over the run's p50)" % [who, s, lim["spikes_per_60s"]])
 	var d := draws_total(row)
 	if d > float(lim["draws_total"]):
 		out.push_back("%s draws %d > %d (visible + shadow, both views)" % [who, d, roundi(lim["draws_total"])])

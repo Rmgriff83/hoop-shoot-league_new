@@ -10,10 +10,18 @@ extends Node
 const WIN := Vector2(360, 640)
 
 var _outcomes: Array[String] = []
+var _snap_suffix := ""   # --qa-ab=<levers> tags every snap of the run (beach_02@no_shadows)
 
 
 func _ready() -> void:
 	var args := _args()
+	# `--qa-ab=no_shadows,no_fill` runs any QA pass with those CourtGeometry.ab levers on
+	# (the perf A/B levers, docs/PERFORMANCE.md) — the before/after shots of a proposal.
+	var ab := _arg_value(args, "--qa-ab=", "")
+	if ab != "":
+		for lever in ab.split(",", false):
+			CourtGeometry.ab[str(lever)] = true
+		_snap_suffix = "@" + ab.replace(",", "+")
 	# `--net=<id>` hangs that net everywhere for the run (any net on any hoop):
 	# --qa-park-chain is --qa-park with the jack chain.
 	for a in args:
@@ -1749,8 +1757,8 @@ func _render_stats() -> String:
 func _snap(name_: String) -> void:
 	await RenderingServer.frame_post_draw
 	var img := get_viewport().get_texture().get_image()
-	img.save_png("user://qa/%s.png" % name_)
-	print("QA snap " + name_)
+	img.save_png("user://qa/%s%s.png" % [name_, _snap_suffix])
+	print("QA snap " + name_ + _snap_suffix)
 
 
 ## A crop of the screen (design coordinates, 720×1280) at 2× for a close look.
@@ -1912,13 +1920,16 @@ func _run_perf(args: PackedStringArray) -> void:
 	var was_gating: bool = App.league_gating
 	App.league_gating = false   # every court measured whatever this save has opened
 	var runs := []
-	for variant in variants:
-		# Every lever is measured against the same reference: the scenery caster rules OFF
-		# (the game's default has them on); "casters" alone turns them on.
-		CourtGeometry.ab = {"casters": str(variant) == "casters"}
-		if str(variant) not in ["base", "casters"]:
-			CourtGeometry.ab[str(variant)] = true
-		for area in areas:
+	# Area-outer, variant-inner: a phone warms up over a sweep (the first A/B sweep drifted
+	# 3 ms of GPU time end to end, as much as most levers), so one area's variants run back
+	# to back and the area closes with its reference again — the drift row (mode*).
+	for area in areas:
+		for variant in variants:
+			# Every lever is measured against the same reference: the scenery caster rules OFF
+			# (the game's default has them on); "casters" alone turns them on.
+			CourtGeometry.ab = {"casters": str(variant) == "casters"} if variants.size() > 1 else {}
+			if str(variant) not in ["base", "casters"]:
+				CourtGeometry.ab[str(variant)] = true
 			for mode in modes:
 				var row := await _perf_run(str(area), str(mode), seconds)
 				if not row.is_empty():
@@ -1927,14 +1938,13 @@ func _run_perf(args: PackedStringArray) -> void:
 						row["mode"] = str(mode) + "@" + str(variant)
 					runs.push_back(row)
 					print("PERF " + PerfBudget.row_text(row))
-	# The drift check: the first scenario again at the end, as the reference ran (a warm phone runs slower).
-	if areas.size() * modes.size() * variants.size() > 1:
-		CourtGeometry.ab = {"casters": false}
-		var again := await _perf_run(str(areas[0]), str(modes[0]), seconds)
-		if not again.is_empty():
-			again["mode"] = str(modes[0]) + "*"
-			runs.push_back(again)
-			print("PERF " + PerfBudget.row_text(again))
+		if modes.size() * variants.size() > 1:
+			CourtGeometry.ab = {"casters": false}
+			var again := await _perf_run(str(area), str(modes[0]), seconds)
+			if not again.is_empty():
+				again["mode"] = str(modes[0]) + "*"
+				runs.push_back(again)
+				print("PERF " + PerfBudget.row_text(again))
 	CourtGeometry.ab = {}
 	App.league_gating = was_gating
 	for a in PERF_AREAS:
@@ -2036,11 +2046,15 @@ class PerfProbe extends Node:
 	var _cov_tick := 0
 	var _vp_sum := {}   # "main"/"pip" → {cpu, gpu, n, draws_v, draws_s, prims_v, prims_s, objs_v, objs_s}
 	var _hitches: Array = []
-	## Spikes (frames over 1.5× the run's running p50, after the first 60) with
-	## what was on screen — the shader-stutter check (docs/PERFORMANCE.md rule 8):
-	## a spike that lines up with a first appearance is a pipeline compile.
+	## Spikes (frames over the run's running p50 by more than one refresh period,
+	## and over 1.5× it — after the first 60 frames) with what was on screen: the
+	## shader-stutter check (docs/PERFORMANCE.md rule 8); a spike that lines up
+	## with a first appearance is a pipeline compile. A phone at vsync quantises
+	## frames to 16.7 / 33.3 ms, so a plain 1.5× p50 at a p50 of 20 ms counted
+	## every ordinary dropped frame as a spike.
 	var _spike_log: Array = []
 	var _spike_p50 := 0.0
+	var _period := 1000.0 / maxf(DisplayServer.screen_get_refresh_rate(), 30.0)   # -1 when unknown → 33 ms floor
 	var _seen := {}   # tag → true once it has appeared (so "first:<tag>" marks the debut)
 	var _t := 0.0
 	var _alpha_cache := {}   # shader RID → bool
@@ -2083,7 +2097,7 @@ class PerfProbe extends Node:
 			var fr := _frames.duplicate()
 			fr.sort()
 			_spike_p50 = _pct(fr, 0.5)
-		if _spike_p50 > 0.0 and ms > 1.5 * _spike_p50 and _spike_log.size() < 60:
+		if _spike_p50 > 0.0 and ms > spike_ms(_spike_p50) and _spike_log.size() < 60:
 			_spike_log.push_back({"t": snappedf(_t, 0.01), "ms": snappedf(ms, 0.1), "tags": tags})
 		for tg in tags:
 			_seen[str(tg).trim_prefix("first:")] = true
@@ -2212,6 +2226,11 @@ class PerfProbe extends Node:
 					return true
 		return false
 
+	## The spike threshold for a run whose p50 is `p50`: one refresh period over it, never under 1.5×.
+	func spike_ms(p50: float) -> float:
+		return maxf(1.5 * p50, p50 + _period)
+
+
 	static func _pct(sorted: PackedFloat64Array, q: float) -> float:
 		if sorted.is_empty():
 			return 0.0
@@ -2231,7 +2250,7 @@ class PerfProbe extends Node:
 		var p50 := _pct(fr, 0.5)
 		var spikes := 0
 		for v in _frames:
-			if v > 1.5 * p50:
+			if v > spike_ms(p50):
 				spikes += 1
 		var row := {
 			"frames": _frames.size(), "seconds": snappedf(_t, 0.01),
@@ -2239,7 +2258,7 @@ class PerfProbe extends Node:
 			"frame_max": snappedf(fr[fr.size() - 1] if not fr.is_empty() else 0.0, 0.01),
 			"fps": snappedf(_frames.size() / maxf(_t, 0.001), 0.1),
 			"hitches": _hitches.size(), "hitches_per_60s": snappedf(_hitches.size() * 60.0 / maxf(_t, 0.001), 0.1), "hitch_log": _hitches.slice(0, 20),
-			"spikes": spikes, "spikes_per_60s": snappedf(spikes * 60.0 / maxf(_t, 0.001), 0.1),
+			"spikes": spikes, "spikes_per_60s": snappedf(spikes * 60.0 / maxf(_t, 0.001), 0.1), "spike_ms": snappedf(spike_ms(p50), 0.1),
 			"spike_log": _spike_log, "spike_tags": _spike_tag_counts(),
 			"loop_p50": snappedf(_pct(sc, 0.5), 0.01), "loop_p95": snappedf(_pct(sc, 0.95), 0.01),
 			"script_p50": snappedf(_pct(sp, 0.5), 0.01), "script_p95": snappedf(_pct(sp, 0.95), 0.01),

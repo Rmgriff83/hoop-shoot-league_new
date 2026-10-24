@@ -25,8 +25,9 @@ var profile := Profile.FULL
 ## baked-shadows upper bound), "casters" (the scenery caster rules, off while
 ## they are measured), "no_fill" (no fill light), "no_omni" (every omni / spot
 ## light hidden), "no_sky" (a flat background instead of the shader sky),
-## "no_fog", "scale85" (render scale 0.85), "shadow1024" (a 1024 atlas).
-## Empty in the game.
+## "no_fog", "scale85" (render scale 0.85), "shadow1024" (a 1024 atlas),
+## "fill_ambient" (the fill light folded into the ambient: the same lift from
+## every side, the proposal's look check). Empty in the game.
 static var ab: Dictionary = {}
 
 ## The scenery that never casts a shadow (docs/PERFORMANCE.md → Stage 3):
@@ -1091,7 +1092,11 @@ func _build_lights() -> void:
 		env.background_color = arena_set.background_color
 		env.ambient_light_color = arena_set.ambient_color
 		env.ambient_light_energy = arena_set.ambient_energy
-		if arena_set.fill_energy > 0.0 and not bool(ab.get("no_fill", false)):
+		if arena_set.fill_energy > 0.0 and bool(ab.get("fill_ambient", false)):
+			# The proposal's look check: the fill's light as an all-round lift instead of a second sun.
+			env.ambient_light_color = arena_set.ambient_color.lerp(arena_set.fill_color, 0.5)
+			env.ambient_light_energy = arena_set.ambient_energy + arena_set.fill_energy * 0.6
+		if arena_set.fill_energy > 0.0 and not bool(ab.get("no_fill", false)) and not bool(ab.get("fill_ambient", false)):
 			var fill := DirectionalLight3D.new()
 			fill.name = "Fill"
 			fill.rotation = arena_set.fill_rotation_deg * (PI / 180.0)

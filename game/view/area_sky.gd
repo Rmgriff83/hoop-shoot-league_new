@@ -8,8 +8,12 @@ extends RefCounted
 ## ArenaSet's `sky_*` exports; the clouds' clock is the shader's own TIME
 ## plus one phase set here (a per-frame uniform write re-rendered the
 ## radiance cubemap every frame), the radiance map is 64 (reflections only;
-## the clouds skip the cubemap pass) and renders once. The glb's painted
-## `Sky` dome would hide it, so hide_dome() turns it off.
+## the clouds skip the cubemap pass). A shader that reads TIME still marks
+## the radiance dirty every frame (renderer_rd/environment/sky.cpp,
+## `uses_time`), so at 64 it is rebuilt one layer per frame in the
+## background — small; the sky's cost on the phone is the full-screen cloud
+## shader itself (docs/PERFORMANCE.md → Stage 3). The glb's painted `Sky`
+## dome would hide it, so hide_dome() turns it off.
 
 const SHADER := preload("res://game/court/park_sky.gdshader")
 ## Every load sees the same sky (the concept starts at page-load time).

@@ -33,7 +33,7 @@ budget and the rules live in.
 - **The probe** (`QaDriver.PerfProbe`, one `_process` a frame): frame time
   (`delta`) → p50 / p95 / p99 / max, fps, **hitches** (frames over
   `perf_budget.json → hitch_ms` 20, counted and normalised per 60 s, the first 20
-  logged with their time) and **spikes** (frames over 1.5 × the run's own p50 —
+  logged with their time) and **spikes** (frames one refresh period over the run's own p50, never under 1.5 × it —
   the stutter a player feels whatever the frame rate; at a 30 fps p50 every
   frame is a "hitch" by the absolute rule, so the budget uses both); per
   viewport (the main view and the PiP)
@@ -76,7 +76,7 @@ baseline × **headroom**:
 | frame p95 | ×1.25 | the slow 5 % a quarter more |
 | frame p99 | ×1.35 | the slowest 1 % a third more |
 | hitches / 60 s | cage + 2, floor 3 | a handful of >20 ms frames a minute is invisible; a run of them is "the lag" — not enforced when the baseline p50 is already within 80 % of `hitch_ms` (the phone), where every frame would count |
-| spikes / 60 s | cage + 3, floor 6 | frames over 1.5 × the run's own p50: stutter at any frame rate |
+| spikes / 60 s | cage + 3, floor 6 | frames one refresh period over the run's own p50 (never under 1.5 ×): stutter at any frame rate, without a vsync phone's ordinary dropped frames |
 | draw calls (visible + shadow, both views) | ×1.5 | the cage's 177 surfaces are many small draws; an area may spend more draws, not many more |
 | script p95 | ×1.3 | the fx scripts' share |
 | see-through coverage | 1.5 screens (absolute) | the cage has none; one and a half screens of blended pixels is the ceiling |
@@ -210,6 +210,132 @@ Still over after Stage 2: the park and the city heats on p50 (28–33 vs 22.4)
 and script p95, the park heat_pip on p95 / p99, and the park and city trials
 on p50 — the main view's shadow pass (Stage 3).
 
+### Stage 3 — the main view: casters, levers, and what the phone's GPU actually buys (2026-10-24)
+
+What shipped: the **scenery caster rules** (`CourtGeometry.NO_CAST_SCENERY` by
+mesh name plus the ground-plane rule — any mesh thinner than 15 cm and wider
+than 4 m — applied in `_build_arena_model`; `apply_caster_rules()` returns the
+count, `caster_count()` what still casts), the **A/B levers**
+(`CourtGeometry.ab`, QA only: `--qa-perf-ab=casters,no_shadows,shadow1024,
+no_fill,fill_ambient,no_omni,no_sky,no_fog,scale85`, and `--qa-ab=<levers>` on
+any snap pass for the look check), the **sim column** (`sim` = the rules tick
+alone), the **spike tags** (what was on screen in a spiking frame, `first:x` on
+a debut) and `tools/arena_meshes.gd` (an arena's casters, tris and distances).
+The sweep runs area-outer with a closing reference row per area (`mode*`): the
+phone drifts ~3 ms of GPU time over a 20-minute sweep, as much as most levers,
+so a lever only compares against a base row from the same minutes.
+
+**The A/B sweep, Ross's phone, trials** (`build/qa/moto_g_-_2025/perf_ab2.json`;
+GPU ms of the main view, each lever against its area's base; the phone was warm,
+so the base rows sit above Stage 1's cold numbers):
+
+    area   lever        | main GPU ms | Δ     | shadow draws | tris   | the look (Mac snap diff vs base)
+    beach  base         |  16.9       |       |  48          | 22.4k  |
+    beach  casters      |  15.8       | −1.1  |  39          | 21.7k  | identical
+    beach  no_shadows   |  15.1       | −1.8  |   0          | 11.2k  | 3.5 % of pixels (palm / pole shadows)
+    beach  no_fill      |  15.6       | −1.3  |  48          |        |
+    beach  fill_ambient |  15.5       | −1.4  |  48          |        | mean 2.6/255
+    beach  no_sky       |  15.9       | −1.0  |  48          |        | (the beach has no shader sky: noise)
+    beach  scale85      |  15.7       | −1.2  |  48          |        |
+    beach  drift*       |  16.2       | −0.7  |              |        |
+    park   base         |  25.1       |       |  55          | 69.8k  |
+    park   casters      |  24.4       | −0.7  |  46          | 68.6k  | identical
+    park   no_shadows   |  20.3       | −4.8  |   0          | 56.1k  | 1.9 % of pixels
+    park   no_fill      |  18.1       | −7.0  |  55          |        | 25 % of pixels, mean 1.5/255
+    park   fill_ambient |  17.4       | −7.7  |  55          |        | 9 % of pixels, mean 1.7/255
+    park   no_sky       |  18.8       | −6.3  |  55          |        | the sky gone (flat colour): 50 %
+    park   scale85      |  16.1       | −9.0  |  55          |        | softer
+    park   drift*       |  25.0       | −0.1  |              |        |
+    city   base         |  20.3       |       |  56          | 74.5k  |
+    city   casters      |  20.7       | +0.4  |  56          |        | (CityFx already lists its casters)
+    city   no_shadows   |  19.5       | −0.8  |   0          | 65.1k  | 2.7 % of pixels
+    city   no_fill      |  16.1       | −4.2  |  56          |        | 39 % of pixels, mean 3.6/255
+    city   fill_ambient |  17.0       | −3.3  |  56          |        | 7 % of pixels, mean 1.0/255
+    city   no_sky       |  16.7       | −3.6  |  56          |        | the sky gone: 37 %
+    city   scale85      |  16.0       | −4.3  |  56          |        | softer
+    city   drift*       |  21.1       | +0.8  |              |        |
+
+(The first sweep, `perf_ab.json`, ran lever-outer and drifted 12.3 → 15.2 ms
+on the cage over its 20 minutes; it is kept for the record, not read.
+`shadow1024`, `no_omni` and `no_fog` moved nothing beyond that noise.)
+
+- **The shadow pass was the wrong suspect on the city and only third on the
+  park.** The second `DirectionalLight3D` — the arena's *fill* — costs the park
+  7 ms and the city 4 ms of GPU: the mobile renderer lights every fragment
+  twice. The shader sky (`park_sky.gdshader`: a gradient plus two fbm cloud
+  layers per pixel, 4 + 2 octaves of value noise over ~40 % of the screen)
+  costs the park 6 ms and the city 3.6. The shadow pass is 5 ms on the park
+  (its trees), 2 on the beach, under 1 on the city (its buildings never cast).
+  The caster rules buy ~1 ms where the scenery cast.
+- **Folding the fill into the ambient looks the same** (`fill_ambient`: the
+  ambient colour halfway to the fill's, energy + 0.6 × the fill's — a Mac
+  frame differs by 1–3 / 255 on average, `build/qa/levers/<area>_03_fill_ambient.png`
+  against `_base.png`) and is worth the whole fill. That is Ross's call: it
+  is a lighting change to three `arena_set.tres` (fill_energy → 0, ambient up).
+- **The sky**: a shader that reads `TIME` keeps the radiance map dirty every
+  frame (`renderer_rd/environment/sky.cpp`, `uses_time`), so at 64 it is
+  rebuilt one layer per frame — small; the cost is the full-screen cloud
+  shader. Two ways to the same look at one texture fetch per pixel, both for
+  Ross: (a) bake the two noise fields once into a tiling texture (the noise
+  made periodic: octave step 2.0 instead of 2.03 and a wrapped hash — a hair
+  of cloud-shape change) and scroll the lookup by `drift × TIME` in the sky
+  shader (the drift and the pixel stepping stay, `TIME` leaves the sky
+  shader so the radiance renders once); (b) render the cloud field into a
+  small 2D viewport every few frames and sample it. (a) is the cheaper and
+  simpler one.
+- **Shadows**: the park's 5 ms is real; the beach's 2 and the city's 1 are
+  not worth a bake on their own. The proposal stands for the park (rule 6:
+  baked ground shadows plus a blob under the ball, `sun_shadows = false`);
+  the shots are `build/qa/shadows/park_03_shadows.png` against
+  `park_03_baked_bound.png` (the upper bound: no shadows at all — 1.9 % of
+  the frame's pixels differ at phone size).
+- **Render scale 0.85** is worth 4–9 ms on the park and city and stays the
+  last resort (rule 7).
+- **The fx rules (§4) are not where the phone's time goes**: every trial's
+  script time is 1.2–1.9 ms p50 and every heat's 5–6 ms, of which the rules
+  tick is 1.5–1.9 (`sim`). The existing per-frame uniform writes (the beach's
+  ocean / palms / birds, the city's pigeons / smoke, the arcade's screens) are
+  within that; they stay as they are, the rules bind new effects.
+- **The park heat's "+6 ms of script"** (Stage 2's lead) was noise: with the
+  sim column in, the park heat spends 5.7 ms p50 of script against the cage
+  heat's 4.9 and the same 1.5–1.9 ms rules tick. Nothing in the heat is
+  area-specific.
+- **Shader stutter**: the tagged spikes line up with `flight` + `pip` (a ball
+  in the air with the window live — load, not compiles); a debut shows once
+  per effect per match (`first:fire` on the beach, `ice` twice on the city).
+  A pre-match warm-up would remove one or two frames a match: low priority.
+- **Spikes redefined**: a vsync phone quantises frames to 16.7 / 33.3 ms, so
+  "over 1.5 × p50" at a p50 of 20 ms counted every ordinary dropped frame
+  (the Stage 2 sweep read 0–163 spikes/60 s for the same scene). A spike is
+  now a frame one refresh period over the run's p50 (never under 1.5 ×);
+  the row carries the threshold as `spike_ms`.
+
+**The heat sweep after Stage 3** (`build/qa/moto_g_-_2025/perf_stage3.json`,
+2026-10-24 01:01, straight after the 20-minute A/B sweep — a warm phone —
+and with the plain sweep still running the levers' reference, i.e. the
+caster rules off; the clean re-measure waits for the phone to be unlocked):
+
+    area  mode      | frame p50 Stage 2 → 3 | p95        | main GPU | script p50 / p95 | sim p50 / p95
+    cage  heat_pip  |  19.4 → 20.0 | 29.2 → 27.6 | 14.2 |  4.9 /  9.4 | 1.5 / 3.0
+    cage  heat_min  |  20.8 → 20.0 | 29.0 → 30.1 | 14.4 |  5.1 /  9.1 | 1.5 / 3.3
+    beach heat_pip  |  20.8 → 20.8 | 29.3 → 31.4 | 16.4 |  4.1 /  7.5 | 1.2 / 2.5
+    beach heat_min  |  22.2 → 24.8 | 29.2 → 31.6 | 17.9 |  5.4 /  9.3 | 1.4 / 2.8
+    park  heat_pip  |  33.3 → 27.8 | 41.4 → 33.2 | 24.2 |  5.7 / 10.5 | 1.6 / 3.6
+    park  heat_min  |  28.3 → 28.0 | 33.3 → 33.3 | 24.2 |  6.2 / 11.1 | 1.7 / 3.5
+    city  heat_pip  |  27.8 → 28.8 | 33.3 → 33.6 | 24.9 |  6.3 / 11.8 | 1.9 / 4.0
+    city  heat_min  |  28.3 → 25.2 | 33.3 → 32.2 | 21.9 |  6.0 / 11.0 | 1.7 / 3.7
+    park  trial     |  (S1 22.2) → 22.7 | 27.3 | 20.9 | 1.2 / 1.8 | 0.1
+    city  trial     |  (S1 24.2) → 24.2 | 30.9 | 22.6 | 1.6 / 2.3 | 0.1
+
+The ledger's verdict is unchanged from Stage 2 — the park and city heats and
+trials over the p50 limit (22.4), their script p95 a hair over 9.9 (the cage's
+own reads 9.4 warm) — and the ±2 ms between the two sweeps is the phone's
+temperature, not the code: the heat is GPU-bound at 22–25 ms of main-view
+GPU on the park and the city, and the A/B table above says where that goes.
+What the caster rules buy (~1 ms) is below that noise; what would bring the
+park and the city under the limit is the fill (−4 to −7 ms) and the sky (−4
+to −6), then the park's shadows (−5) — the three proposals.
+
 ## 4. Rules for effects (Stage 3; apply to every new effect)
 
 1. **Animate in the shader with `TIME`.** Never set a shader parameter from
@@ -225,15 +351,29 @@ on p50 — the main view's shadow pass (Stage 3).
    (the beach shoreline); the probe's coverage number is the check.
 5. **Visibility ranges** (`visibility_range_begin/end`) for far detail.
 6. **Shadows**: only the ball, hoop, net and near props cast; scenery and far
-   props are `cast_shadow = OFF`. Baked shadows in the ground/court textures
-   (a Blender pass) with a blob under the ball let an area run `sun_shadows =
-   false` like the cage — proposed with before/after shots, never shipped
-   without Ross's OK (`arena_set.tres` is his).
+   props are `cast_shadow = OFF` (`CourtGeometry.NO_CAST_SCENERY` and the
+   ground-plane rule do it at build time — a new arena's ground, water, sky
+   dome and far dressing need no flag, but name a new big backdrop in the
+   list). Baked shadows in the ground/court textures (a Blender pass) with a
+   blob under the ball let an area run `sun_shadows = false` like the cage —
+   proposed with before/after shots, never shipped without Ross's OK
+   (`arena_set.tres` is his).
+6b. **One sun.** A second `DirectionalLight3D` lights every fragment twice:
+   on the phone the fill costs more than the shadow pass (Stage 3). New areas
+   get their fill from the ambient colour and energy, not a light; the three
+   arenas that have one are a proposal for Ross (`fill_ambient` lever).
+6c. **The sky is one fetch per pixel.** A procedural cloud shader runs for
+   every sky pixel every frame (4–6 ms on the phone); bake the noise fields
+   to a tiling texture and scroll the lookup. A sky shader that reads `TIME`
+   also keeps its radiance map dirty, so the clock belongs in the texture
+   scroll or a uniform written once.
 7. **`arena_set.render_scale` is a last resort**, proposed per area with
    screenshots only, and never under 0.85 (0.7 was rejected as blurry).
-8. **Shader stutter**: a hitch that lines up with an effect's first appearance
-   (a card's fx, the rim pop, the PiP's first frame) is a pipeline compile;
-   warm the material on the pre-match page.
+8. **Shader stutter**: a spike that lines up with an effect's first appearance
+   (a card's fx, the rim pop, the PiP's first frame — the probe tags it
+   `first:<fx>`) is a pipeline compile; warm the material on the pre-match
+   page when the tags show more than the one-or-two a match measured in
+   Stage 3.
 9. **The opponent view is lite** (`CourtGeometry.profile = PIP`): no sun
    shadows, no area fx motion, a static backdrop, drawn at 30 Hz; it keeps the
    fog, the ambient and the sun colour, and the opponent's net, ball and their
