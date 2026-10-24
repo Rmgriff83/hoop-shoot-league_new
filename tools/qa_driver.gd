@@ -20,8 +20,12 @@ func _ready() -> void:
 	var ab := _arg_value(args, "--qa-ab=", "")
 	if ab != "":
 		for lever in ab.split(",", false):
-			CourtGeometry.ab[str(lever)] = true
-		_snap_suffix = "@" + ab.replace(",", "+")
+			# `name` is a switch; `name=a:b` carries a value (the sky's cover thresholds, its tile offset).
+			if "=" in str(lever):
+				CourtGeometry.ab[str(lever).get_slice("=", 0)] = str(lever).get_slice("=", 1)
+			else:
+				CourtGeometry.ab[str(lever)] = true
+		_snap_suffix = "@" + ab.replace(",", "+").replace("=", "_").replace(":", "-")
 	# `--net=<id>` hangs that net everywhere for the run (any net on any hoop):
 	# --qa-park-chain is --qa-park with the jack chain.
 	for a in args:

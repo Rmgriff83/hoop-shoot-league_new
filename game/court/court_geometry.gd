@@ -27,8 +27,9 @@ var profile := Profile.FULL
 ## light hidden), "no_sky" (a flat background instead of the shader sky),
 ## "no_fog", "scale85" (render scale 0.85), "shadow1024" (a 1024 atlas),
 ## "fill_light" (the arena's fill as a second DirectionalLight3D, the way it
-## shipped before 2026-10-24 — the before shot and the A/B base). Empty in
-## the game.
+## shipped before 2026-10-24 — the before shot and the A/B base), "sky_fbm"
+## (the sky's clouds computed per pixel instead of fetched from the baked
+## texture, likewise). Empty in the game.
 static var ab: Dictionary = {}
 
 ## How the arena's fill folds into the ambient: the ambient colour moves this

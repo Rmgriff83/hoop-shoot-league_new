@@ -99,6 +99,15 @@ func run(t) -> void:
 	t.close(fx.clock(), ParkFx.CLOUD_T0 + 0.5, 1e-6, "…the drift rides the shader's TIME")
 	t.ok((fx.sky_resource() as Sky).radiance_size == Sky.RADIANCE_SIZE_64, "a small radiance map (reflections only)")
 	t.ok(FileAccess.get_file_as_string("res://game/court/park_sky.gdshader").contains("drift * (TIME + cloud_time)"), "the shader drifts on TIME")
+	# The clouds' noise is baked (Stage 3c): one tiling texture, fetched once per pixel.
+	var mat := (fx.sky_resource() as Sky).sky_material as ShaderMaterial
+	var clouds := mat.get_shader_parameter("clouds") as Texture2D
+	t.ok(clouds != null and clouds.get_width() == 1024 and clouds.get_height() == 1024, "the baked cloud fields are a 1024² texture on the sky material")
+	t.close(float(mat.get_shader_parameter("baked")), 1.0, 1e-6, "…fetched by default")
+	t.ok(FileAccess.get_file_as_string("res://game/court/park_sky.gdshader").contains("texture(clouds, q / cloud_period)"), "…the shader samples it by the drifted noise coordinate over the period")
+	CourtGeometry.ab = {"sky_fbm": true}
+	t.close(float((AreaSky.build(arena).sky_material as ShaderMaterial).get_shader_parameter("baked")), 0.0, 1e-6, "the sky_fbm lever runs the noise per pixel (the before shot)")
+	CourtGeometry.ab = {}
 	t.ok(float(ProjectSettings.get_setting("rendering/limits/time/time_rollover_secs", 3600.0)) >= 86400.0, "TIME rolls over in days, not the hour")
 	var snow: MeshInstance3D = inst.find_child("Snowfall", true, false)
 	t.ok(snow != null and snow.mesh.surface_get_primitive_type(0) == Mesh.PRIMITIVE_POINTS, "the snow is one points mesh")

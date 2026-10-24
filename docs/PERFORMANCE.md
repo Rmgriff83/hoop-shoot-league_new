@@ -402,6 +402,77 @@ the Stage 3 baseline):
   the GPU (a `set_shader_parameter` or a viewport query blocks behind a
   busy queue); the rules tick reads 1.1–1.5 ms.
 
+### Stage 3c — the sky's clouds baked (2026-10-24, Ross's call)
+
+`tools/bake_sky_clouds.gd` bakes the two cloud noise fields (the 4-octave fbm
+that sets the cover, the 2-octave one that shades it) into one 1024² tiling
+texture, `game/court/sky_clouds.png` (592 KB; 16 noise units a tile, 64 texels
+a unit, lossless import, no mipmaps), and `park_sky.gdshader` fetches it once
+per pixel at the drifted, pixel-stepped coordinate (`texture(clouds, q /
+cloud_period)`) instead of running 24 hash lookups per sky pixel per frame.
+The gradient, the sun's glow, the pixel stepping and the drift on `TIME` are
+unchanged; `--qa-ab=sky_fbm` runs the noise in place (the before shot and
+the A/B base), `sky_fade`, `sky_cov=lo:hi` and `sky_off=x:y` nudge the look
+without a rebake.
+
+- **Every GPU drew its own sky.** The noise hashed `fract(sin(x) * 43758)`
+  with `x` in the thousands near the horizon, and a 32-bit sine of a number
+  that size is rounded differently by every GPU: the Mac showed cloud blocks
+  over a blue park where the phone's snap was nearly clear. The bake is one
+  draw everywhere (the hash evaluated in float64 on a wrapped lattice, octave
+  step 2.0 so every octave tiles).
+- **The thresholds moved for the bake.** The baked field matches the
+  shader's noise statistically to three decimals (mean 0.47, sd 0.12, 26 %
+  of samples over the old 0.56 midpoint), yet the first bake came out
+  overcast: the visible window is ~3 noise cells wide, so the look is a
+  draw, and the GPU's rounding happens to spread its values wider. Cover
+  thresholds 0.60 / 0.72 (from 0.50 / 0.62) put the park's sky region at
+  19 % cloud and 50 % blue against the noise version's 28 % and 50 %; Ross
+  compared `build/qa/sky/sky_compare_<area>_<frame>.png` and the live game
+  and took it.
+- A shader that reads `TIME` keeps its radiance map dirty, so the 64-texel
+  radiance still rebuilds one layer a frame; it is small and the drift
+  needs the clock (rule 6c).
+
+**The A/B on Ross's phone** (`perf_ab4.json`, trials, the bake as the base
+and the noise as the lever; the phone at 31 °C after the fold's sweeps):
+
+    area  | main GPU ms  bake → noise | frame p50
+    park  | 15.3 → 17.6  (−2.3)       | 16.7 → 19.1
+    city  | 15.4 → 17.5  (−2.1)       | 16.9 → 19.1
+
+(Stage 3's "no sky at all" read −6.3 / −3.6 on a cooler phone with the fill
+light still lit: a gradient-only sky still draws every sky pixel, and the
+fill was already paying for part of the same pixels.)
+
+**The heat sweep with the fold and the bake** (`perf_stage3_sky.json`, 07:48,
+the phone warm at ~31 °C; the ledger against the Stage 3 baseline):
+
+    area  mode      | frame p50 S3 → 3b → 3c | p95  | main GPU S3 → 3c | script p50 / p95 | spikes/60 s
+    cage  heat_pip  |  19.7 → 18.3 → 18.8 | 28.4 | 13.7 → 14.1 | 4.5 / 8.3 | 0.0
+    cage  heat_min  |  20.4 → 18.5 → 18.4 | 25.4 | 14.4 → 14.3 | 4.4 / 7.6 | 0.0
+    beach heat_pip  |  23.3 → 19.1 → 18.3 | 25.1 | 16.7 → 14.5 | 4.4 / 8.3 | 0.0
+    beach heat_min  |  22.9 → 18.5 → 18.8 | 27.2 | 17.1 → 14.5 | 4.5 / 8.1 | 0.0
+    park  heat_pip  |  28.0 → 25.0 → 19.1 | 30.4 | 24.2 → 14.6 | 4.7 / 8.4 | 4.7
+    park  heat_min  |  27.8 → 24.6 → 19.1 | 27.8 | 23.9 → 14.6 | 4.7 / 8.2 | 0.0
+    city  heat_pip  |  25.0 → 25.0 → 20.5 | 27.6 | 20.6 → 16.1 | 4.2 / 8.3 | 2.3
+    city  heat_min  |  25.5 → 23.9 → 19.4 | 29.1 | 22.1 → 15.6 | 4.5 / 8.7 | 7.0
+    beach trial     |  19.1 → 16.7 → 16.7 | 18.1 | 15.7 → 15.1 | 1.4 / 1.9 | 0.0
+    park  trial     |  24.8 → 17.0 → 16.7 | 18.1 | 21.9 → 15.3 | 1.0 / 1.5 | 0.0
+    city  trial     |  25.0 → 18.1 → 16.7 | 18.1 | 22.7 → 15.4 | 1.3 / 1.8 | 0.0
+
+- **Every area and mode is inside the budget** — the park and city heats
+  run at the cage's rate (18–20 ms p50, 14.6–16.1 ms of main-view GPU
+  against the cage's 14.1) and every trial sits on the 16.7 ms vsync floor.
+  The one line the ledger prints is the city heat_min's 7 spikes a minute
+  against a limit of 6 — three double frames in 25 s, 0 in the drift row.
+- Stage 3's three proposals are two shipped (the fill, the sky) and one
+  left: the park's shadow bake (−5 ms on a trial) is no longer needed for
+  the budget and stays a proposal for the look only.
+- Script time reads 4.2–4.7 ms p50 in every heat now (the rules tick
+  1.1–1.4): the heat's fixed cost, nothing area-specific.
+
+
 ## 4. Rules for effects (Stage 3; apply to every new effect)
 
 1. **Animate in the shader with `TIME`.** Never set a shader parameter from
@@ -429,11 +500,12 @@ the Stage 3 baseline):
    folds every arena's `fill_*` into the ambient (`CourtGeometry.FILL_TONE`,
    `FILL_LIFT`, Stage 3b) — an arena's fill fields are the ambient's second
    tone, never a light; `--qa-ab=fill_light` is the old look for a comparison.
-6c. **The sky is one fetch per pixel.** A procedural cloud shader runs for
-   every sky pixel every frame (4–6 ms on the phone); bake the noise fields
-   to a tiling texture and scroll the lookup. A sky shader that reads `TIME`
-   also keeps its radiance map dirty, so the clock belongs in the texture
-   scroll or a uniform written once.
+6c. **The sky is one fetch per pixel.** A procedural cloud shader ran for
+   every sky pixel every frame (2–6 ms on the phone, and a different draw on
+   every GPU); the noise fields are baked to a tiling texture
+   (`tools/bake_sky_clouds.gd` → `game/court/sky_clouds.png`, Stage 3c) and
+   the shader scrolls the lookup. A new sky effect bakes the same way; a
+   sky shader that reads `TIME` keeps its radiance map dirty (small at 64).
 7. **`arena_set.render_scale` is a last resort**, proposed per area with
    screenshots only, and never under 0.85 (0.7 was rejected as blurry).
 8. **Shader stutter**: a spike that lines up with an effect's first appearance
