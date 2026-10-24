@@ -211,29 +211,43 @@ func _add_pause_button(layer: CanvasLayer) -> void:
 	add_child(_pause_layer)
 
 
-## MUSIC (every mode, 2026-10-16): the note at the bottom-left toggles the
+## MUSIC (every mode, 2026-10-16): the note at the bottom (left, or right
+## with HUD SIDE: RIGHT) toggles the
 ## shared level playlist (App.LEVEL_MUSIC on Sfx's track channel) and the
 ## choice is remembered (App.music_on). It sits inside the flick input's
 ## grab zone, but a Button takes the press before _unhandled_input sees it,
 ## so a tap on the note never becomes a grab.
 const MUSIC_POS := Vector2(36, 1192)
-## The next-song chevron, smaller, on the note's right (Ross, 2026-10-17).
+## The next-song chevron, smaller, beside the note (Ross, 2026-10-17).
 const NEXT_SIZE := 44.0
-const NEXT_POS := Vector2(36 + IconButton.SIZE + 10, 1192 + (IconButton.SIZE - NEXT_SIZE))
+const NEXT_GAP := 10.0
+const NEXT_POS := Vector2(36 + IconButton.SIZE + NEXT_GAP, 1192 + (IconButton.SIZE - NEXT_SIZE))
 var _music_button: IconButton
 var _next_button: IconButton
 
 
+## Where the note and the chevron sit for a HUD side (App.hud_side, Ross
+## 2026-10-24): LEFT is the note at the bottom-left with the chevron on its
+## right; RIGHT mirrors it — the note at the bottom-right, the chevron on its
+## left (still pointing on). {music, next}.
+static func music_positions(side: String) -> Dictionary:
+	if side == "right":
+		var music := Vector2(720.0 - 36.0 - IconButton.SIZE, MUSIC_POS.y)
+		return {"music": music, "next": Vector2(music.x - NEXT_GAP - NEXT_SIZE, NEXT_POS.y)}
+	return {"music": MUSIC_POS, "next": NEXT_POS}
+
+
 func _add_music_button(layer: CanvasLayer) -> void:
+	var at := music_positions(Hud.toast_side())
 	_music_button = IconButton.new("music")
 	_music_button.name = "MusicButton"
-	_music_button.position = MUSIC_POS
+	_music_button.position = at["music"]
 	_music_button.active = App.music_on
 	_music_button.pressed.connect(toggle_music)
 	layer.add_child(_music_button)
 	_next_button = IconButton.new("next", NEXT_SIZE)
 	_next_button.name = "NextTrackButton"
-	_next_button.position = NEXT_POS
+	_next_button.position = at["next"]
 	_next_button.pressed.connect(next_track)
 	layer.add_child(_next_button)
 
@@ -975,14 +989,21 @@ func _handle_event(ev: Dictionary) -> void:
 			_court.show_score(trial.score)
 			_court.info.marquee("MAGNET SPENT" if str(ev.get("reason", "")) == "time" else "MAGNET ICED", 24.0, _court.info.accent_color)
 		"heat_up":
+			# The hoop starts moving (the trial's last 30 s, or 30S MODE in the
+			# cage): the LED and the lights say so; no message at the rim
+			# (Ross, 2026-10-24 — the practice toggle has its toast).
 			Sfx.score_pop(true)
-			_court.rim_pop_from(HudCopy.heat_pop())
 			_court.info.marquee("HEATING UP", 24.0, _court.info.accent_color)
 			_court.flare_lights()
 		"buzzer":
 			_court.arcade_chase_stop()
 			Sfx.buzzer()
-			_hud.banner("TIME!", RetroTheme.LIGHT["orange"])
+			if bool(_mode.get("heat", false)):
+				_hud.banner("TIME!", RetroTheme.LIGHT["orange"])
+			else:
+				# TIME! over the score (design 5a) — NEW BEST when it beats the saved one.
+				var best := _best_score()
+				_hud.time_toast(trial.score, trial.score > best and trial.score > 0)
 			_court.info.set_text("TIME")
 			_court.led.band_solid(_court.led.band_buzzer_color, 2.0)
 			_court.play_arena("CageShake")

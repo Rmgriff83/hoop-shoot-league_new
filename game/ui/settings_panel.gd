@@ -21,6 +21,7 @@ const FIELD_BG := Color(34.0 / 255.0, 28.0 / 255.0, 24.0 / 255.0, 0.55)
 var _shot_help: ShadowCard
 var _difficulty: ShadowCard
 var _dark: ShadowCard
+var _hud_side: ShadowCard
 var _tuning: ShadowCard
 var _gates: ShadowCard
 var _name_edit: LineEdit
@@ -73,6 +74,16 @@ func _build() -> void:
 		dark_mode_changed.emit(App.dark_mode)
 	)
 	_list.add_child(_dark)
+
+	# HUD SIDE (Ross, 2026-10-24): the match toasts and the music note on the
+	# left (the design's layout) or the right. Gold when it is off LEFT.
+	_hud_side = _row("HudSide", _hud_side_label(), App.hud_side != "left")
+	_hud_side.pressed.connect(func() -> void:
+		App.cycle_hud_side()
+		_hud_side.text = _hud_side_label()
+		_tone(_hud_side, App.hud_side != "left")
+	)
+	_list.add_child(_hud_side)
 	_list.add_child(_spacer(8))
 
 	_build_player()
@@ -367,6 +378,14 @@ func has_difficulty() -> bool:
 
 func _dark_label() -> String:
 	return "DARK MODE: ON" if App.dark_mode else "DARK MODE: OFF"
+
+
+func _hud_side_label() -> String:
+	return "HUD SIDE: %s" % str(App.hud_side).to_upper()
+
+
+func has_hud_side() -> bool:
+	return _hud_side != null
 
 
 func _tuning_label() -> String:

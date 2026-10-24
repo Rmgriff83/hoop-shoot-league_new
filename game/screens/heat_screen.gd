@@ -569,24 +569,20 @@ func ot_break_shown() -> bool:
 
 
 ## Card play "deal": the card slides out of its tray slot, grows to the middle
-## of the screen over a dithered ink shadow with a caption chip under it
-## (`DEEP FREEZE > OLLIE`, blue for your plays, orange for theirs), then flies
-## to whoever it acts on — your own hoop for a self card, the opponent's
-## window (or its minimized chip) for a card played against them. The
-## opponent's plays run the same path from the window.
+## of the screen over a dithered ink shadow, then flies to whoever it acts
+## on — your own hoop for a self card, the opponent's window (or its
+## minimized chip) for a card played against them. The opponent's plays run
+## the same path from the window. The caption is the HUD's card toast
+## (design 4a, 2026-10-24): the card's thumb, DEEP FREEZE over PLAYED ON
+## OLLIE, the target badge — blue for your plays, orange for theirs.
 const DEAL_BIG := Vector2(168, 224)
 const DEAL_SMALL := Vector2(26, 34)
 const DEAL_CENTRE := Vector2(360, 502)
-const DEAL_CHIP_Y := 648.0
 const DEAL_OUT_S := 0.35
 const DEAL_HOLD_S := 0.55
 const DEAL_FLY_S := 0.4
 
 var _deal: DealCard
-var _deal_chip: ShadowPanel
-var _deal_glyph: TextureRect
-var _deal_left: Label
-var _deal_right: Label
 var _deal_tween: Tween
 
 
@@ -619,39 +615,6 @@ func _build_toast() -> void:
 	_deal.name = "Deal"
 	_deal.visible = false
 	layer.add_child(_deal)
-	_deal_chip = ShadowPanel.new(LeagueContext.BLUE, 0.0, 0.30, 18.0)
-	_deal_chip.name = "DealText"
-	_deal_chip.anchor_left = 0.5
-	_deal_chip.anchor_right = 0.5
-	_deal_chip.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_deal_chip.offset_top = DEAL_CHIP_Y
-	_deal_chip.offset_bottom = DEAL_CHIP_Y + 50 + ShadowStyle.OFFSET
-	_deal_chip.visible = false
-	layer.add_child(_deal_chip)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 14)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_deal_chip.add_child(row)
-	# The card's glyph leads the caption (design 8d: the 42 px snowflake).
-	_deal_glyph = TextureRect.new()
-	_deal_glyph.name = "Glyph"
-	_deal_glyph.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	_deal_glyph.stretch_mode = TextureRect.STRETCH_SCALE
-	_deal_glyph.custom_minimum_size = Vector2(42, 42)
-	_deal_glyph.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	_deal_glyph.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_deal_glyph.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_deal_glyph.visible = false
-	row.add_child(_deal_glyph)
-	_deal_left = _ot_text("", 16, RetroTheme.SCENE_TEXT, true)
-	_deal_left.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	row.add_child(_deal_left)
-	var arrow := _ot_text(">", 24, RetroTheme.SCENE_TEXT, true)
-	arrow.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	row.add_child(arrow)
-	_deal_right = _ot_text("", 16, RetroTheme.SCENE_TEXT, true)
-	_deal_right.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	row.add_child(_deal_right)
 
 
 ## LED line for the side that did NOT play a card: `against_me` when the card
@@ -688,45 +651,35 @@ func _show_card_play(card_id: String, by_ai: bool, target: String) -> void:
 	var on_you := target == Heat.PLAYER
 	var from: Rect2 = Rect2(_pip_point() - DEAL_SMALL * 0.5, DEAL_SMALL) if by_ai else _dealt_from
 	var to: Vector2 = _hoop_point() if on_you else _pip_point()
-	_deal_card(card, from, to, HudCopy.deal_caption(cname, on_you, _opp_short), RetroTheme.LIGHT["orange"] if by_ai else LeagueContext.BLUE)
+	var copy := HudCopy.deal_toast(cname, on_you, _opp_short)
+	_hud.card_toast(str(copy["title"]), str(copy["sub"]), card, str(copy["target"]), RetroTheme.LIGHT["orange"] if by_ai else LeagueContext.BLUE)
+	_deal_card(card, from, to)
 
 
-func _deal_card(card: Dictionary, from: Rect2, to: Vector2, caption: Array, colour: Color) -> void:
+func _deal_card(card: Dictionary, from: Rect2, to: Vector2) -> void:
 	if _deal_tween != null:
 		_deal_tween.kill()
 	_deal.face.set_card(card)
-	var fx: Dictionary = card["fx"] if card.get("fx", null) is Dictionary else {}
-	_deal_glyph.texture = CardFace.tex(str(fx.get("glyph", "")))
-	_deal_glyph.visible = _deal_glyph.texture != null
 	_deal.position = from.position
 	_deal.size = from.size
 	_deal.modulate = Color.WHITE
 	_deal.visible = true
-	_deal_left.text = str(caption[0])
-	_deal_right.text = str(caption[1])
-	_deal_chip.color = colour
-	_deal_chip.queue_redraw()
-	_deal_chip.modulate.a = 0.0
-	_deal_chip.visible = true
 	Sfx.score_pop(true)
 	_deal_tween = create_tween()
 	_deal_tween.set_parallel(true)
-	# Out of the slot and up to size in the middle (the caption fades in under it).
+	# Out of the slot and up to size in the middle.
 	_deal_tween.tween_property(_deal, "position", DEAL_CENTRE - DEAL_BIG * 0.5, DEAL_OUT_S).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	_deal_tween.tween_property(_deal, "size", DEAL_BIG, DEAL_OUT_S).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-	_deal_tween.tween_property(_deal_chip, "modulate:a", 1.0, 0.2).set_delay(0.15)
 	# Hold, then fly to the target while shrinking and fading.
 	_deal_tween.chain().tween_interval(DEAL_HOLD_S)
 	_deal_tween.chain().tween_property(_deal, "position", to - DEAL_SMALL * 0.5, DEAL_FLY_S).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	_deal_tween.tween_property(_deal, "size", DEAL_SMALL, DEAL_FLY_S).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
 	_deal_tween.tween_property(_deal, "modulate:a", 0.0, DEAL_FLY_S * 0.6).set_delay(DEAL_FLY_S * 0.4)
-	_deal_tween.tween_property(_deal_chip, "modulate:a", 0.0, 0.25)
 	_deal_tween.chain().tween_callback(_hide_deal)
 
 
 func _hide_deal() -> void:
 	_deal.visible = false
-	_deal_chip.visible = false
 
 
 ## Where the deal is right now (for probes): null when idle.
@@ -1043,7 +996,6 @@ func _handle_ai_event(ev: Dictionary) -> void:
 		"heat_up":
 			_ai_court.info.marquee("HEATING UP", 24.0, _ai_court.info.accent_color)
 			_ai_court.flare_lights()
-			_ai_court.rim_pop_from(HudCopy.heat_pop())
 		"ai_spot":
 			var sp: Dictionary = ev["spot"]
 			_place_ai_frame(Vector3(float(sp["x"]), float(sp["y"]), float(sp["z"])))

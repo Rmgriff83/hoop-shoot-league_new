@@ -476,28 +476,42 @@ and gets only HOME.
 `game/view/hud.gd` (`Hud`, a CanvasLayer over the live game; copy in
 `game/view/hud_copy.gd`, `tests/test_hud.gd`): the top row — PAUSE
 (`IconButton("pause")`; and since 2026-10-16 the MUSIC note, `IconButton("music")`, at the
-bottom-left (36, 1192) on every court: a tap toggles the shared level playlist
+bottom (36, 1192) on every court: a tap toggles the shared level playlist
 (`App.LEVEL_MUSIC` → `Sfx.start_level_music`, a random track, looping, beside the ambience),
 struck through in gold while off; remembered as the `musicOn` setting, off on a fresh install;
-a smaller right chevron beside it, `IconButton("next", 44)`, skips to the next song in the
+a smaller chevron beside it, `IconButton("next", 44)`, skips to the next song in the
 playlist, turning the music on first if it was off), the clock card (stopwatch + seconds, gold in the last
 ten; `OT1 12.3` in overtime) or the teal PRACTICE card, the orange SCORE card
 with the springy count-up and, in a trial, the gold BEST chip (`NEW BEST`
-once you pass it) — and the **toast chips** (designs 4a / 5a, 2026-10-14;
-`game/ui/toast.gd`, `HudCopy.toast_for`): the countdown is the big chip at
-y 300 (`STARTS IN` over the digit, then `GO` in orange for 0.9 s), and every
-mid-play call is the small 64 px chip at y 196 for 2.6 s — `TIME!` (orange,
-stopwatch), `30S MODE · ON / OFF` (orange, stopwatch), the spot shuffle's
-`NEXT / L ELBOW / IN 3` (gold, staying while the seconds swap) and `NOW
-SHOOTING / L ELBOW` (cream, 1.6 s). The old centre banner (48 / 72 px at
-y 450) and the 160 px digit are gone: nothing sits over the hoop while you
-shoot. `Hud.banner(text, color)` keeps its name; the mapping is the copy.
+once you pass it) — and the **toast chips** (designs 4a / 5a, 2026-10-24;
+`game/ui/toast.gd` `Mode.SIDE`, `HudCopy.toast_for`): a chip hangs off the
+screen's edge 36 px in with its centre a third of the way up (y 853, clear of
+the opponent window and the hoop), slides in from off-screen with an 8 px
+overshoot (0.4 s), holds and slides back out (0.45 s; 2.8 s in all). The
+countdown is the big chip (`STARTS IN` over the 56 px digit, which pops on
+every tick, min 260 wide and 150 tall; then `GO` centred in orange for
+0.9 s) and every mid-play call is the small 72 px chip (min 300 wide: a
+32 px icon beside the title over the sub) — `TIME!` over `SCORE 31 · NEW
+BEST` (orange, stopwatch; `Hud.time_toast`), `30S MODE` over `ON · SPOTS
+SHUFFLE` / `ON · HOOP ON THE MOVE` / `OFF` (orange, stopwatch), the spot
+shuffle's `NEXT SPOT` over `L ELBOW IN 3` (gold, stopwatch, staying while
+the seconds swap) and `NEW SPOT` over `MOVE TO L ELBOW` (gold, 1.6 s). The
+old centre banner and the 160 px digit are gone: nothing sits over the hoop
+while you shoot. `Hud.banner(text, color)` keeps its name; the mapping is
+the copy. **HUD SIDE** (Ross, 2026-10-24; the settings row under DARK MODE,
+`App.hud_side`, the `hudSide` setting): `LEFT` is the design's layout;
+`RIGHT` mirrors the toasts to the right edge and moves the note to the
+bottom-right with the chevron on its left (`music_positions(side)`); the
+screens read it when they build. The cage hoop starting to move (`heat_up`:
+the trial's last 30 s, or 30S MODE in practice) keeps its `HEATING UP` LED
+marquee and the light flare but pops nothing at the rim any more (Ross,
+2026-10-24); the practice toggle has its toast.
 
 **Rim pops** (design "Solo Modes HUD" 5a, 2026-10-03; `game/view/rim_pop.gd`,
 `RimPop`, `tests/test_rim_pop.gd`): every scoring call — `+1`, `+2` under
-`SWISH` (gold), `BUZZER BEATER`, `HEATING UP`, `ON FIRE` (orange), `IN AND
-OUT` — is a small 3D pop that rises off the hoop instead of a centre banner,
-in every mode. `CourtGeometry.rim_pop()` spawns one just above the rim
+`SWISH` (gold), `BUZZER BEATER`, `ON FIRE` (orange), `IN AND OUT` — is a
+small 3D pop that rises off the hoop instead of a centre banner, in every
+mode (`HEATING UP` stays in the copy but no screen pops it since 2026-10-24). `CourtGeometry.rim_pop()` spawns one just above the rim
 centre (so it follows the moving board); two billboarded `Label3D`s (the
 number in Press Start 2P at 32 px, the word above in Silkscreen bold at
 16 px, ink outline, an offset ink shadow copy) on the mock's 1.1 s curve:
@@ -521,23 +535,31 @@ BACK button lives there now.
 **League match** (design "League Match HUD", `game/screens/heat_screen.gd`):
 the same row with two 162×50 score cards in place of SCORE — YOU in orange,
 the opponent's first name in their shooter colour — a gold `OT1` tag in the
-clock card in overtime, and the ball-return wait as a NEXT BALL chip. The
+clock card in overtime, and the ball-return wait as the `NEXT BALL` over
+`IN 0.8S` toast (cream, staying, the seconds swapped in place; any other
+notice takes the slot and the wait returns once it has gone —
+`Hud.set_ball_wait`). The
 opponent's window sits under the row at the right margin in a frame of their
 colour with a dithered shadow (`PipFrame`), OPP top-left, a minimize button
 top-right and their loadout hanging off the bottom as chips; minimized it is
 a chip in their colour with their score and a restore glyph. The card tray
 (`TrayCard`) puts each card on a dithered ink shadow with a press state and a
 chip across its middle for WAIT (dimmed) or the fire window's seconds. A
-played card grows in the middle over its shadow with a caption chip
-(`DEEP FREEZE > OLLIE`; blue for yours, orange for theirs) then flies to its
-target. ON FIRE is a rim pop like the rest. **Toasts (design 4a update,
-2026-10-04; `game/ui/toast.gd`, `Toast`)**: the league's countdown is a chip
-at y 300 — `STARTS IN` over the digit, min 240 wide, dark fill under the
-colour's dots, the checker shadow — that slides in from above and swaps its
-digit; GO is the same chip in orange for 0.9 s (`Hud.countdown_toast`,
-`go_toast`). The overtime break is the small chip at y 196 — stopwatch,
-OVERTIME (or OVERTIME 2), `20S` in gold — up for the break (`Hud.toast`,
-`HudCopy.ot_toast`); the dim and the TIED line are gone. The tray shows a
+played card grows in the middle over its shadow then flies to its target,
+while the card toast slides in from the edge (design 4a, 2026-10-24;
+`Hud.card_toast`, `Toast.set_card`, `HudCopy.deal_toast`): the card's 54×72
+thumb with its fx loop over a hard ink shadow, `DEEP FREEZE` over `PLAYED ON
+OLLIE` (or `PLAYED ON YOU`), the target badge at the chip's corner
+(`assets/ui/cards/badge_opp_a.png` / `badge_self_b.png`, the design's 11 px
+badges at 3×); blue for yours, orange for theirs; 100 tall. ON FIRE is a rim
+pop like the rest. **Toasts (`game/ui/toast.gd`, `Toast`)**: the league's
+countdown is the big edge chip — `STARTS IN` over the digit, dark fill under
+the colour's dots, the checker shadow — that slides in once and swaps (pops)
+its digit; GO is the same chip in orange for 0.9 s (`Hud.countdown_toast`,
+`go_toast`). The overtime break is the small chip — stopwatch, OVERTIME (or
+OVERTIME 2) over `20S ON THE CLOCK` in gold — up for the break (`Hud.toast`,
+`HudCopy.ot_toast`); the dim and the TIED line are gone. The title screen's
+WELCOME toast keeps the centred-top style (`Toast.Mode.CENTER`). The tray shows a
 dashed empty box in every slot without a card (a played card leaves one
 behind; the full stack stays centred, `tray_layout`), and the opponent's
 loadout row under the PiP shows dashed 40 px chips for their empty slots.
@@ -546,13 +568,17 @@ loadout row under the PiP shows dashed 40 px chips for their empty slots.
 
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-heat` →
   `user://qa/heat_countdown.png`, `heat_live.png` (the tray's animated
-  faces), `heat_deal.png` (the deal and its glyph caption), `heat_pipmin.png`,
+  faces, the NEXT BALL toast), `heat_deal.png` (the deal and its card toast), `heat_pipmin.png`,
   `heat_pause.png` on a real cage league heat (it equips ice + fire7 in
   empty slots of the dev save).
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-hud` →
   `user://qa/hud_countdown.png`, `hud_live.png`, `hud_pause.png`,
   `locker_slide.png` (mid-move), `locker_balls.png`, `locker_nets.png`,
   `locker_nets_chain.png`, `hud_practice.png`, `hud_practice30.png`.
+- `godot --path hoop_shoot --resolution 360x640 -- --qa-hud-side` → the cage
+  trial with HUD SIDE: RIGHT — `hud_right_countdown.png`, `hud_right_live.png`,
+  `hud_right_toast.png` (the toasts off the right edge, the note at the
+  bottom-right); the setting goes back to LEFT after.
 
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-city` →
   `user://qa/city_home.png` (the third page: CITY COURT, three stars, the

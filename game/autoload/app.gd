@@ -182,6 +182,7 @@ func _ready() -> void:
 	dark_mode = bool(SaveService.get_settings().get("darkMode", false))
 	music_on = bool(SaveService.get_settings().get("musicOn", false))
 	ai_difficulty = AiDifficulty.normalize(SaveService.get_settings().get("aiDifficulty", AiDifficulty.DEFAULT))
+	hud_side = hud_side_from_saved(SaveService.get_settings().get("hudSide", "left"))
 	tuning.apply_dict(saved.get("fields", {}))
 	_resolve_cosmetics()
 	# The device account (docs/BACKEND.md): minted locally now, registered
@@ -198,6 +199,7 @@ func _on_save_pulled(parts: Array) -> void:
 		dark_mode = bool(SaveService.get_settings().get("darkMode", false))
 		music_on = bool(SaveService.get_settings().get("musicOn", false))
 		ai_difficulty = AiDifficulty.normalize(SaveService.get_settings().get("aiDifficulty", AiDifficulty.DEFAULT))
+		hud_side = hud_side_from_saved(SaveService.get_settings().get("hudSide", "left"))
 	if parts.has(SaveService.COSMETICS_PART):
 		_resolve_cosmetics()
 	var scene := get_tree().current_scene
@@ -271,6 +273,29 @@ func set_ai_difficulty(level: String) -> void:
 ## The settings row's tap: easy → normal → hard → easy.
 func cycle_ai_difficulty() -> void:
 	set_ai_difficulty(AiDifficulty.next(ai_difficulty))
+
+
+## HUD SIDE (Ross, 2026-10-24): which edge the match toasts slide in from and
+## where the music note sits — "left" (the design's layout) or "right".
+## Remembered across launches and synced as the `hudSide` setting; the
+## screens read it when they build.
+var hud_side := "left"
+
+
+static func hud_side_from_saved(raw: Variant) -> String:
+	return "right" if str(raw) == "right" else "left"
+
+
+func set_hud_side(side: String) -> void:
+	hud_side = hud_side_from_saved(side)
+	var s := SaveService.get_settings()
+	s["hudSide"] = hud_side
+	SaveService.put_settings(s)
+
+
+## The settings row's tap: left ↔ right.
+func cycle_hud_side() -> void:
+	set_hud_side("right" if hud_side == "left" else "left")
 
 
 func set_dark_mode(on: bool) -> void:

@@ -524,6 +524,21 @@ func _widgets(t) -> void:
 		t.eq(diff.text, "AI DIFFICULTY: NORMAL", "then back to NORMAL")
 		t.eq(str(SaveService.get_settings().get("aiDifficulty", "")), "normal", "…and the settings part remembers")
 	_app().set_ai_difficulty(was_diff)
+	# HUD SIDE (2026-10-24): under DARK MODE, LEFT ↔ RIGHT, gold off LEFT.
+	var was_side: String = _app().hud_side
+	_app().set_hud_side("left")
+	var hs: ShadowCard = panel.find_child("HudSide", true, false)
+	t.ok(panel.has_hud_side() and hs != null, "settings has the HUD SIDE row")
+	if hs != null:
+		t.eq(hs.text, "HUD SIDE: LEFT", "the row reads the saved setting")
+		t.eq(hs.get_index(), (panel.find_child("DarkMode", true, false) as Control).get_index() + 1, "…right under DARK MODE")
+		hs.pressed.emit()
+		t.eq([_app().hud_side, hs.text], ["right", "HUD SIDE: RIGHT"], "a tap flips it to RIGHT")
+		t.ok(hs.color == RetroTheme.LIGHT["gold"], "…in gold, off LEFT")
+		t.eq(str(SaveService.get_settings().get("hudSide", "")), "right", "…and the settings part remembers")
+		hs.pressed.emit()
+		t.eq(hs.text, "HUD SIDE: LEFT", "then back to LEFT")
+	_app().set_hud_side(was_side)
 	t.eq(panel.has_tuning(), OS.is_debug_build(), "tuning toggle only in a debug build")
 	t.eq(panel.has_gates(), OS.is_debug_build(), "the LEVEL GATES toggle only in a debug build")
 	if OS.is_debug_build():

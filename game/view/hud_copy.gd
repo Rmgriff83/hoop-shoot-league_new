@@ -5,8 +5,8 @@ extends RefCounted
 ## and its last-ten-seconds colour, the BEST chip, the shot-help value.
 
 const HOT_SECONDS := 10.0
-## The toasts' seconds (designs 4a / 5a: toastIn is 2.6 s).
-const TOAST_S := 2.6
+## The toasts' seconds (designs 4a / 5a: toastSlide is 2.8 s).
+const TOAST_S := 2.8
 const SHOOTING_TOAST_S := 1.6
 const POP_CREAM := Color("#F1E8D0")
 const POP_GOLD := Color("#F0B84A")
@@ -23,6 +23,9 @@ static func rim_pop(outcome_type: String, pts: int, buzzer := false) -> Dictiona
 	return {"number": "+%d" % pts, "word": "", "color": POP_CREAM}
 
 
+## The HEATING UP pop. No screen pops it any more (Ross, 2026-10-24: the
+## cage hoop starting to move keeps its LED marquee and the light flare, not
+## a message at the rim); kept for the LED copy and the tests that pin it.
 static func heat_pop() -> Dictionary:
 	return {"number": "", "word": "HEATING UP", "color": POP_ORANGE}
 
@@ -36,14 +39,15 @@ static func in_out_pop() -> Dictionary:
 
 
 ## Every call the screens send to Hud.banner, as the toast chip the designs
-## draw it with (4a / 5a: nothing big in the middle of the screen any more):
-## {kind: big|small, pre, title, sub, icon, color, seconds, stay}.
-## GO! → the big orange GO (up GO_TOAST_S, it sits over the hoop); TIME! →
-## the small orange chip with the stopwatch; the 30S MODE notes → `30S MODE`
-## with ON / OFF; `NEXT: <spot> IN n` → NEXT / the spot / IN n in gold,
+## draw it with (4a / 5a, 2026-10-24: a chip sliding in from the edge —
+## title over sub beside an icon): {kind: big|small, pre, title, sub, icon,
+## color, seconds, stay}. GO! → the big orange GO (up GO_TOAST_S); TIME! →
+## the orange chip with the stopwatch (Hud.time_toast adds the score); the
+## 30S MODE notes → `30S MODE` over `ON · SPOTS SHUFFLE` / `ON · HOOP ON THE
+## MOVE` / `OFF`; `NEXT: <spot> IN n` → NEXT SPOT over `<spot> IN n` in gold,
 ## staying (the screen re-sends each second and the text swaps); `NOW
-## SHOOTING: <spot>` → cream for a moment; anything else → a small chip with
-## the text upper-cased in the colour given.
+## SHOOTING: <spot>` → NEW SPOT over `MOVE TO <spot>` in gold for a moment;
+## anything else → a chip with the text upper-cased in the colour given.
 static func toast_for(text: String, color: Color) -> Dictionary:
 	var clean := ascii(text).strip_edges()
 	var upper := clean.to_upper()
@@ -58,23 +62,39 @@ static func toast_for(text: String, color: Color) -> Dictionary:
 		out["icon"] = "icon_stopwatch"
 	elif upper.begins_with("30S MODE"):
 		out["title"] = "30S MODE"
-		out["sub"] = "OFF" if upper.contains("OFF") else "ON"
+		if upper.contains("OFF"):
+			out["sub"] = "OFF"
+		elif upper.contains("HOOP"):
+			out["sub"] = "ON · HOOP ON THE MOVE"
+		else:
+			out["sub"] = "ON · SPOTS SHUFFLE"
 		out["color"] = POP_ORANGE
 		out["icon"] = "icon_stopwatch"
 	elif upper.begins_with("NEXT: "):
-		var rest := upper.trim_prefix("NEXT: ")
-		var at := rest.rfind(" IN ")
-		out["pre"] = "NEXT"
-		out["title"] = rest.substr(0, at) if at > 0 else rest
-		out["sub"] = rest.substr(at + 1) if at > 0 else ""
+		out["title"] = "NEXT SPOT"
+		out["sub"] = upper.trim_prefix("NEXT: ")
 		out["color"] = POP_GOLD
+		out["icon"] = "icon_stopwatch"
 		out["stay"] = true
 	elif upper.begins_with("NOW SHOOTING: "):
-		out["pre"] = "NOW SHOOTING"
-		out["title"] = upper.trim_prefix("NOW SHOOTING: ")
-		out["color"] = POP_CREAM
+		out["title"] = "NEW SPOT"
+		out["sub"] = "MOVE TO %s" % upper.trim_prefix("NOW SHOOTING: ")
+		out["color"] = POP_GOLD
+		out["icon"] = "icon_stopwatch"
 		out["seconds"] = SHOOTING_TOAST_S
 	return out
+
+
+## The buzzer's toast (design 5a): TIME! over `SCORE n` (`· NEW BEST` when it is).
+static func time_toast(score: int, new_best: bool) -> Dictionary:
+	return {"kind": "small", "pre": "", "title": "TIME!", "sub": ("SCORE %d · NEW BEST" % score) if new_best else ("SCORE %d" % score),
+		"icon": "icon_stopwatch", "color": POP_ORANGE, "seconds": TOAST_S, "stay": false}
+
+
+## The card-played toast (design 4a): the card's name over PLAYED ON YOU /
+## PLAYED ON <the opponent's first name>, the badge for the side it landed on.
+static func deal_toast(card_name: String, on_you: bool, opp_short: String) -> Dictionary:
+	return {"title": card_name.to_upper(), "sub": "PLAYED ON %s" % ("YOU" if on_you else opp_short.to_upper()), "target": "self" if on_you else "opp"}
 
 
 static func ascii(text: String) -> String:
@@ -115,9 +135,9 @@ static func countdown_pre() -> String:
 	return "STARTS IN"
 
 
-## The overtime toast: {title, sub} — OVERTIME (or OVERTIME n) and the period's seconds.
+## The overtime toast: {title, sub} — OVERTIME (or OVERTIME n) over `20S ON THE CLOCK`.
 static func ot_toast(n: int, seconds: int) -> Dictionary:
-	return {"title": "OVERTIME" if n <= 1 else "OVERTIME %d" % n, "sub": "%dS" % seconds}
+	return {"title": "OVERTIME" if n <= 1 else "OVERTIME %d" % n, "sub": "%dS ON THE CLOCK" % seconds}
 
 
 ## The overtime break card: {sub, title, note}.

@@ -38,7 +38,10 @@ func _ready() -> void:
 		App.to_title.call_deferred()
 		_run_perf.call_deferred(args)
 		return
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi")):
+	# --qa-hud-side: the HUD pass with HUD SIDE: RIGHT (the toasts and the note mirrored), then back.
+	if args.has("--qa-hud-side"):
+		App.set_hud_side("right")
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# The splash is the main scene now: every other pass starts from the title.
@@ -57,6 +60,8 @@ func _ready() -> void:
 		_run_results.call_deferred()
 	elif args.has("--qa-heat-result"):
 		_run_heat_result.call_deferred()
+	elif args.has("--qa-hud-side"):
+		_run_hud_side.call_deferred()
 	elif args.has("--qa-hud"):
 		_run_hud.call_deferred()
 	elif args.has("--qa-heat"):
@@ -200,7 +205,13 @@ func _run_heat() -> void:
 	App.start_league_heat()
 	await _sleep(0.9)
 	await _click_button_named("READY")   # the pre-match pick (docs/CARDS.md § Drops) sits before the heat
-	await _sleep(1.0)
+	# The pre-match page counts down (design 37a) before the heat screen comes up: wait for it.
+	for i in 40:
+		var sc := get_tree().current_scene
+		if sc != null and "heat" in sc:
+			break
+		await _sleep(0.5)
+	await _sleep(0.6)
 	await _snap("heat_countdown")
 	await _sleep(3.2)
 	_hook_trial()
@@ -247,7 +258,8 @@ func _run_heat() -> void:
 	# The OVERTIME toast (design 4a), shown by hand: the pass never reaches OT.
 	var hud_n: Hud = get_tree().root.find_child("Hud", true, false)
 	if hud_n != null:
-		hud_n.toast("OVERTIME", "20S", "icon_stopwatch", Hud.GOLD)
+		var otc := HudCopy.ot_toast(1, 20)
+		hud_n.toast(str(otc["title"]), str(otc["sub"]), "icon_stopwatch", Hud.GOLD)
 		await _sleep(0.5)
 		await _snap("heat_ot_toast")
 		hud_n.hide_toast()
@@ -453,6 +465,36 @@ func _run_net_in(prefix: String, city: bool) -> void:
 		var extra := " %d links" % body.link_count() if body is ChainNet else ""
 		print("QA %s: %s %d bones, %d surfaces, %d tris%s" % [prefix, body.name, body.bone_count(), body.surface_count(), body.tri_count(), extra])
 	print("QA %s: done" % prefix)
+	get_tree().quit(0)
+
+
+## HUD SIDE: RIGHT (Ross, 2026-10-24): a cage trial with a toast up and the
+## note at the bottom-right — hud_right_live, hud_right_toast — then the
+## setting goes back to LEFT.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-hud-side
+func _run_hud_side() -> void:
+	await _sleep(1.2)
+	for attempt in 3:
+		await _close_archive()
+		await _click_button_named("TIME TRIAL")
+		await _sleep(0.5)
+		var sc := get_tree().current_scene
+		if sc != null and "trial" in sc:
+			break
+		await _sleep(0.8)
+	await _snap("hud_right_countdown")
+	await _sleep(3.3)
+	_hook_trial()
+	await _flick(1.9, 0.30, 0.0)
+	await _sleep(1.6)
+	await _snap("hud_right_live")
+	var sc_t := get_tree().current_scene
+	if sc_t != null and "_hud" in sc_t:
+		(sc_t.get("_hud") as Hud).banner("NEXT: L ELBOW IN 3", Color.WHITE)
+		await _sleep(0.6)
+		await _snap("hud_right_toast")
+	App.set_hud_side("left")
+	print("QA hud-side: done")
 	get_tree().quit(0)
 
 

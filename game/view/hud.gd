@@ -5,8 +5,9 @@ extends CanvasLayer
 ## or the PRACTICE card, the orange SCORE card with the springy count-up and,
 ## in a trial, the gold BEST chip under it (NEW BEST once you pass it) — the
 ## countdown in the big toast chip (STARTS IN over the digit, then GO), and
-## every mid-play call (TIME!, 30S MODE, the spot shuffle's NEXT / NOW
-## SHOOTING) as the small toast chip at the top (designs 4a / 5a, 2026-10-14:
+## every mid-play call (TIME!, 30S MODE, the spot shuffle's NEXT SPOT / NEW
+## SPOT) as the small toast chip sliding in from the screen's edge a third
+## of the way up (designs 4a / 5a, 2026-10-24; App.hud_side picks the edge;
 ## nothing big in the middle of the screen while shooting; the scoring
 ## calls are rim pops off the hoop). All Controls are decorative →
 ## mouse_filter IGNORE so flicks pass
@@ -14,7 +15,7 @@ extends CanvasLayer
 ## (design "League Match HUD") swaps the score card for two 162×50 cards —
 ## YOU in orange, the opponent's first name in their shooter colour — puts
 ## a gold OT tag in the clock card in overtime, and shows the ball-return
-## wait as a NEXT BALL chip. Copy from HudCopy (pure).
+## wait as the NEXT BALL toast. Copy from HudCopy (pure).
 
 const CREAM := RetroTheme.SCENE_TEXT
 const GOLD := Color("#F0B84A")
@@ -27,12 +28,10 @@ const BEST_SIZE := Vector2(164, 40)
 const YOU_POS := Vector2(340, 32)
 const OPP_POS := Vector2(522, 32)
 const SIDE_SIZE := Vector2(162, 50)
-const WAIT_Y := 860.0
-## The NEXT BALL chip's height (design 4a).
-const WAIT_H := 46.0
-## The toasts (designs 4a / 5a): the countdown chip and the notice chip.
-const TOAST_BIG_Y := 300.0
-const TOAST_SMALL_Y := 196.0
+## The toasts (designs 4a / 5a, 2026-10-24): the countdown chip and the
+## notice chip both hang off the screen's edge (App.hud_side) with their
+## centre a third of the way up — clear of the opponent window and the hoop.
+const TOAST_Y := 853.0
 const GO_TOAST_S := 0.9
 
 var _clock_card: ShadowPanel
@@ -43,14 +42,15 @@ var _ot_tag: Label
 var _score_card: ShadowPanel
 var _you_score: Label
 var _opp_score: Label
-var _wait_chip: ShadowPanel
 var _practice_card: ShadowPanel
 var _score: Label
 var _score_caps: Label
 var _best_chip: ShadowPanel
 var _best_label: Label
 var _best_val: Label
-var _wait: Label
+## The NEXT BALL toast is up (it yields the slot to any other notice and
+## comes back when the screen asks again).
+var _wait_shown := false
 var _score_spring := JuiceSpring.new(0.0, 90.0, 0.75)
 ## Heat mode: the score line reads YOU-OPP, the clock can carry an OT tag,
 ## and a small wait readout shows when the next ball can be picked up.
@@ -135,25 +135,19 @@ func _ready() -> void:
 	_best_val.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	br.add_child(_best_val)
 	_best_chip.add_child(br)
-	# The toasts (designs 4a / 5a): the countdown / GO chip and the notice chip.
-	_toast_big = Toast.new(CREAM, TOAST_BIG_Y)
+	# The toasts (designs 4a / 5a): the countdown / GO chip and the notice
+	# chip, from the side the setting says (read once: settings change at home).
+	_toast_big = Toast.new(CREAM, TOAST_Y, Toast.Mode.SIDE, toast_side())
 	_toast_big.name = "CountdownToast"
 	add_child(_toast_big)
-	_toast_small = Toast.new(GOLD, TOAST_SMALL_Y)
+	_toast_small = Toast.new(GOLD, TOAST_Y, Toast.Mode.SIDE, toast_side())
 	_toast_small.name = "Toast"
 	add_child(_toast_small)
-	# The heat's ball-wait readout: NEXT BALL · 0.8, 46 tall (design 4a).
-	_wait_chip = ShadowPanel.new(CREAM, 0.0, 0.22, 16.0)
-	_wait_chip.name = "Wait"
-	_wait_chip.custom_minimum_size = Vector2(0, WAIT_H + ShadowStyle.OFFSET)
-	_wait_chip.visible = false
-	add_child(_wait_chip)
-	var wr := _hbox(14)
-	wr.add_child(_text("NEXT BALL"))
-	_wait = _text("0.0", 16, CREAM, true)
-	_wait.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	wr.add_child(_wait)
-	_wait_chip.add_child(wr)
+
+
+## Which edge the toasts hang off: App.hud_side (left unless the setting says right).
+static func toast_side() -> String:
+	return "right" if str(App.hud_side) == "right" else "left"
 
 
 func _process(dt: float) -> void:
@@ -164,8 +158,6 @@ func _process(dt: float) -> void:
 		_opp_score.text = str(roundi(_opp_spring.value))
 	else:
 		_score.text = str(roundi(_score_spring.value))
-	if _wait_chip.visible:
-		_wait_chip.position = Vector2((720.0 - _wait_chip.size.x) / 2.0, WAIT_Y)
 
 
 # ---- modes -----------------------------------------------------------------------
@@ -213,13 +205,30 @@ func set_ot(n: int) -> void:
 	_ot_tag.text = "OT%d" % n
 
 
-## Seconds until the next ball may be picked up (0 hides the chip).
+## Seconds until the next ball may be picked up (0 hides it): the NEXT BALL ·
+## IN 0.8S toast (design 4a), staying, its seconds swapped in place. Any other
+## notice takes the slot; the screen asks every frame, so the wait comes back
+## once that notice has gone.
 func set_ball_wait(seconds: float) -> void:
 	if seconds <= 0.0:
-		_wait_chip.visible = false
+		if _wait_shown:
+			_toast_small.hide_now()
+			_wait_shown = false
 		return
-	_wait_chip.visible = true
-	_wait.text = "%.1f" % seconds
+	var sub := "IN %.1fS" % seconds
+	if _wait_shown:
+		_toast_small.set_small("NEXT BALL", sub)
+		return
+	if _toast_small.visible:
+		return   # another notice has the slot
+	_toast_small.color = CREAM
+	_toast_small.set_small("NEXT BALL", sub)
+	_toast_small.show_stay()
+	_wait_shown = true
+
+
+func wait_shown() -> bool:
+	return _wait_shown and _toast_small.visible
 
 
 ## Endless practice: the clock slot reads PRACTICE (or the area's label) and the countdown never shows.
@@ -271,8 +280,8 @@ func set_score(score: int) -> void:
 # ---- toasts (league HUD, design 4a) --------------------------------------------------
 
 
-## The big chip at y 300: `pre` (may be "") over the digit/word; slides in
-## once and then only swaps its text while it stays up.
+## The big chip: `pre` (may be "") over the digit/word; slides in once and
+## then only swaps its text (the digit pops) while it stays up.
 func countdown_toast(title: String, pre: String, color: Color) -> void:
 	var fresh := not _toast_big.visible or _toast_big.color != color
 	_toast_big.color = color
@@ -293,14 +302,34 @@ func go_toast() -> void:
 	_toast_big.show_once(GO_TOAST_S)
 
 
-## The small notice chip at y 196 (OVERTIME · 20S with the stopwatch); stays until hidden.
+## The small notice chip (OVERTIME · 20S ON THE CLOCK with the stopwatch); stays until hidden.
 func toast(title: String, sub := "", icon_name := "", color := GOLD) -> void:
+	_wait_shown = false
 	_toast_small.color = color
 	_toast_small.set_small(title, sub, icon_name)
 	_toast_small.show_stay()
 
 
+## A card played (design 4a): the card's thumb, its name over PLAYED ON …,
+## the target badge; blue for your plays, orange for theirs; gone by itself.
+func card_toast(title: String, sub: String, card: Dictionary, target: String, color: Color) -> void:
+	_wait_shown = false
+	_toast_small.color = color
+	_toast_small.set_card(title, sub, card, target)
+	_toast_small.show_once(HudCopy.TOAST_S)
+
+
+## The buzzer (design 5a): TIME! over SCORE n (· NEW BEST when it is), orange, the stopwatch.
+func time_toast(score: int, new_best: bool) -> void:
+	var t := HudCopy.time_toast(score, new_best)
+	_wait_shown = false
+	_toast_small.color = t["color"]
+	_toast_small.set_small(str(t["title"]), str(t["sub"]), str(t["icon"]))
+	_toast_small.show_once(float(t["seconds"]))
+
+
 func hide_toast() -> void:
+	_wait_shown = false
 	_toast_small.hide_now()
 
 
@@ -323,7 +352,8 @@ func banner(text: String, color := GOLD) -> void:
 		_toast_big.set_big(str(t["pre"]), str(t["title"]))
 		_toast_big.show_once(float(t["seconds"]))
 		return
-	var same_stay := bool(t["stay"]) and _toast_small.visible and _toast_small.staying()
+	var same_stay := bool(t["stay"]) and _toast_small.visible and _toast_small.staying() and not _wait_shown
+	_wait_shown = false
 	_toast_small.color = t["color"]
 	_toast_small.set_small(str(t["title"]), str(t["sub"]), str(t["icon"]), str(t["pre"]))
 	if bool(t["stay"]):
