@@ -22,8 +22,10 @@ extends CosmeticSet
 @export var ambient_energy := 0.55
 @export var background_color := Color(0.03, 0.02, 0.02)
 
-## Optional cool fill light from the other side (0 energy = none), key-light
-## shadows, and distance haze.
+## The fill: since 2026-10-24 NOT a second light — CourtGeometry folds its
+## colour and energy into the ambient (the ambient's second tone; a second
+## DirectionalLight3D cost the phone 4–7 ms, docs/NEW_AREA_PERFORMANCE.txt).
+## Then key-light shadows and distance haze.
 @export var fill_rotation_deg := Vector3(-35.0, -70.0, 0.0)
 @export var fill_energy := 0.0
 @export var fill_color := Color(0.5, 0.6, 0.95)

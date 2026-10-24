@@ -475,6 +475,10 @@ the phone warm at ~31 °C; the ledger against the Stage 3 baseline):
 
 ## 4. Rules for effects (Stage 3; apply to every new effect)
 
+The short version for building a new area — the limits, what costs what on
+the phone, the asset rules and the check before it ships — is
+`docs/NEW_AREA_PERFORMANCE.txt`.
+
 1. **Animate in the shader with `TIME`.** Never set a shader parameter from
    GDScript every frame (the city clouds' per-frame uniform write was the
    precedent that lagged). A value that must be shared (the tide, the wind) is

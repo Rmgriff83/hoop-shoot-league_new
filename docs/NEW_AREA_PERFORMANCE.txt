@@ -1,0 +1,174 @@
+HOOP SHOOT — PERFORMANCE LIMITS AND TECHNIQUES FOR NEW AREAS
+==============================================================
+Written 2026-10-24 after the Stage 1–3 performance work (docs/PERFORMANCE.md
+has the measurements; this is the short version for building the next area).
+
+The reference device is Ross's phone: moto g (2025), Mali-G57 MC2, 720×1604
+window, Godot 4.7 mobile renderer, vsync at 60 Hz (a frame is 16.7 ms or a
+multiple of it). Everything below is measured on it. The Mac is only good
+for draw and triangle counts and for looks — its GPU time reads zero.
+
+
+1. THE LIMITS (data/perf_budget.json; tools/perf_ledger.gd enforces them)
+-------------------------------------------------------------------------
+The baseline is the cage's league heat with the opponent window open. A new
+area must sit under baseline × headroom in every mode (trial, heat with the
+PiP open, heat minimized):
+
+    frame p50        ≤ 22.7 ms   (baseline 19.7 × 1.15)
+    frame p95        ≤ 35.6 ms
+    frame p99        ≤ 42.4 ms
+    spikes           ≤ 6 / 60 s  (a frame one refresh period over the run's p50)
+    draw calls       ≤ 435       (visible + shadow, main view + PiP)
+    script p95       ≤ 11.5 ms
+    see-through      ≤ 1.5 screens of alpha-blended surface
+    triangles        logged, not enforced (see §2: they are not the cost)
+
+What that means in GPU time, which is the number that actually decides it:
+
+    main-view GPU in a trial   ≤ 15.5 ms   (the cage reads 14.9; every area now 15.1–15.4)
+    main-view GPU in a heat    ≤ 16.0 ms   (the cage 14.1; park 14.6, city 16.1 — the edge)
+
+The phone is pixel-bound, not geometry-bound. An empty-looking cage with 14k
+triangles and 145 draws costs 14.9 ms; the city with 75k triangles and 131
+draws costs 15.4 ms. The GPU time is the full-screen cost of lighting,
+fog and the sky over 1.15 million pixels — so the rules below are about
+what happens PER PIXEL, not about polygon counts.
+
+Where the areas stand today (trial, main-view GPU / visible draws / shadow
+draws / triangles):
+
+    cage   14.9 ms   143 / 0    14k
+    beach  15.1 ms    48 / 39   22k
+    park   15.3 ms    70 / 46   70k
+    city   15.4 ms    75 / 56   75k
+
+
+2. WHAT COSTS WHAT (measured, the A/B sweep in docs/PERFORMANCE.md §3)
+-----------------------------------------------------------------------
+    a second DirectionalLight3D (a "fill")    4–7 ms     ← the biggest single cost we found
+    a procedural sky shader (noise per pixel) 2–6 ms
+    the sun's shadow pass, with trees/props   1–5 ms     (park 5, beach 2, city <1)
+    scenery casting shadows (ground, walls…)  ~1 ms      (fixed by the caster rules)
+    render scale 0.85                         4–9 ms     (blurs pixel art — last resort)
+    fog                                       ~0         (noise level)
+    omni / spot lights (a few)                0–1.6 ms   (noise level)
+    1024 vs 2048 shadow atlas                 ~0
+    75k triangles vs 14k                      ~0.5 ms
+    area fx scripts (birds, pigeons, snow…)   script 1–2 ms a frame in a trial — fine
+
+
+3. THE RULES FOR A NEW AREA'S ASSETS
+-------------------------------------
+LIGHTING
+  - ONE sun. Set sun_rotation_deg / sun_energy / sun_color in the ArenaSet.
+    Never add a second DirectionalLight3D anywhere in the area. The "fill"
+    fields (fill_color, fill_energy) still exist and are folded into the
+    ambient by the court (ambient colour halfway to the fill's, energy +0.6 ×
+    the fill's) — use them as the ambient's second tone, not as a light.
+  - Omni/spot lights: a handful is fine (the city's lamps, the cage's
+    ceiling). Keep them few, small-radius, no shadows.
+  - sun_shadows = true only if the area needs ground shadows. If it does:
+    shadow_distance 20 m, shadow_size 1024 (the park/city setting). Only the
+    ball, hoop, net and NEAR props should cast — see CASTERS.
+
+CASTERS (what may cast a shadow)
+  - CourtGeometry turns cast_shadow OFF at build time for any mesh named in
+    CourtGeometry.NO_CAST_SCENERY (Ocean, Shore, Sky, Sand, Court, Towel,
+    Lawn, FarSnow, SnowLying, TreelineRing, Road, Path, ParkingLot, BayStripes,
+    Building, Ground, Sidewalk, Kerb, LaneDash, LampGlow, ParkGlow, HallFloor,
+    HallCeiling, HallRug, HallBack, HallSide, MeshTop) and for any mesh that
+    is a ground plane (under 15 cm tall and over 4 m wide).
+  - NAME YOUR MESHES so the rules catch them: ground/water/sky/backdrop
+    meshes get one of those names (or a new big backdrop gets added to the
+    list). A far building named "Tower" will cast until it is listed.
+  - Instanced dressing (trees, poles, umbrellas): near ones cast, far ones
+    don't. The park does this with ParkFx.SHADOW_R = 16 m from the hoop.
+    Anything beyond ~16 m never casts.
+  - Check with:  godot --headless --path . -s tools/arena_meshes.gd -- --area=<id>
+    It lists every mesh with its triangles, cast on/off, size and distance
+    from the hoop. Aim for ≤ 50 shadow draws.
+
+SKY
+  - No per-pixel procedural sky. The park/city sky is a gradient + sun glow +
+    clouds fetched from a baked tiling texture (game/court/sky_clouds.png,
+    built by tools/bake_sky_clouds.gd). A new area with a sky reuses
+    park_sky.gdshader with its own sky_top / sky_mid / sky_horizon /
+    sky_sun_dir in the ArenaSet. A new cloud look = a new bake, not noise in
+    the shader. A sky that reads TIME keeps its radiance map rebuilding; keep
+    radiance at 64 (AreaSky does).
+  - If the glb has a painted sky dome, name it "Sky" (hidden under the shader
+    sky, never casts). The cage has no sky at all — the cheapest option.
+
+GEOMETRY AND DRAWS
+  - Triangles are nearly free up to ~75k; draws matter more. Aim for ≤ 80
+    visible draws in the main view.
+  - Repeated things are ONE MultiMesh (trees, palms, chain links, fence posts,
+    birds, cars, lamps). Per-instance variation goes in INSTANCE_CUSTOM.
+  - One material per mesh where you can; a 20-material building is 20 draws.
+  - Far detail that is small on screen: drop it, or give it a visibility
+    range (visibility_range_end) — unused so far, available.
+
+SURFACES AND MATERIALS (the per-pixel cost)
+  - Opaque or alpha-scissor over alpha-blend, especially on anything big
+    (ground, water, a shoreline band, fog cards, haze planes). The probe's
+    "coverage" number counts screens-worth of alpha-blended surface; keep it
+    under 1.5. Every blended layer re-lights its pixels.
+  - Unshaded where it can be (emissive_nodes in the ArenaSet: marquees,
+    neon, screens, the sky dome) — an unshaded pixel skips the lighting.
+  - No per-frame set_shader_parameter from GDScript. Animate with TIME in the
+    shader; a shared value is a global shader uniform written once.
+  - Textures: ≤ 1024² per material, VRAM-compressed on import (the 3D
+    default); one atlas per prop family beats one texture per prop.
+
+EFFECTS (ambient life: birds, snow, traffic, smoke…)
+  - One manager node per area (BeachFx / ParkFx / CityFx are the pattern)
+    with a freeze() that writes static uniforms and stops processing — the
+    opponent window (CourtGeometry.Profile.PIP) builds the area and freezes
+    it, with no shadows and no fx motion. A new area's fx script MUST
+    implement freeze() the same way.
+  - A few dozen moving things is fine; keep them a MultiMesh or a points
+    mesh (the park's snow is 300 points in one draw).
+  - Rim fire / ice / magnet and the net are shared and already cheap.
+
+FOG AND SCALE
+  - Fog is free; use it for depth.
+  - render_scale stays 1.0. 0.85 is the documented last resort (never under
+    0.85; 0.7 was rejected as blurry).
+
+
+4. THE CHECK BEFORE AN AREA SHIPS
+----------------------------------
+  1. Inventory:   godot --headless --path . -s tools/arena_meshes.gd -- --area=<id>
+     → no scenery casting, ≤ 50 shadow draws, ≤ 80 visible draws.
+  2. Looks:       godot --path . --resolution 360x640 -- --qa-<id>
+     (add a --qa-<id> pass to tools/qa_driver.gd like --qa-park) → snaps in
+     ~/Library/Application Support/Godot/app_userdata/Hoop Shoot/qa/.
+  3. The phone:   unlock it (it re-locks ~7 min after the screen sleeps),
+                  ANDROID_SERIAL=<serial> bash tools/android_deploy.sh
+                  bash tools/android_qa.sh --qa-perf=<id>
+                  godot --headless --path . -s tools/perf_ledger.gd -- --in=build/qa/moto_g_-_2025/perf.json
+     → every row inside the limits. Let the phone cool between sweeps: its
+     temperature moves every number by ±2 ms, so compare only sweeps taken
+     the same way, and compare a lever against a base row from the same
+     minutes.
+  4. If a number is over, find the cost with the levers before changing
+     assets:  bash tools/android_qa.sh --qa-perf=<id> --qa-perf-mode=trial
+              --qa-perf-ab=no_shadows,casters,no_sky,no_fill,no_omni,no_fog,scale85
+     Each lever's GPU delta against the base row says what to fix.
+  5. Add the area to PERF_AREAS in tools/qa_driver.gd so the full sweep
+     covers it from then on.
+
+
+5. OPTIONS HELD IN RESERVE (measured, not shipped — if an area ever needs them)
+--------------------------------------------------------------------------------
+  - Baked ground shadows + a blob under the ball, sun_shadows = false:
+    worth ~5 ms on the park (its trees), 2 on the beach, <1 on the city.
+    Shots in build/qa/shadows/. A Blender bake pass into the ground/court
+    textures; the ArenaSet change is Ross's.
+  - render_scale 0.85: 4–9 ms on park/city. Blurs the pixel art.
+  - Visibility ranges on far props: unmeasured, expected small.
+  - Shader warm-up on the pre-match page: debut spikes (first fire, first
+    ice) are 1–2 frames a match — not worth it today.
+  - A shared world for the opponent window (one world, two cameras, cull
+    masks): only worth revisiting if an area ships without sun shadows.
