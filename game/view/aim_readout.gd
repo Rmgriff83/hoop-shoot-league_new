@@ -56,6 +56,8 @@ var _rise := 0.0
 var _anchor := Vector3.ZERO
 var _have_aim := false
 var _hold := 0.0
+## The last power shown, as a percentage of the carry to the rim (the tutorial's short / long).
+var _last_pct := 100.0
 
 
 func setup(cam: Camera3D) -> void:
@@ -135,10 +137,36 @@ func clear() -> void:
 func _show_power(speed_sh: float, tuning: FlickTuning) -> void:
 	var speed := FlickMap.anchored_speed(_dist, _rise, speed_sh, tuning)
 	var pct := reach_pct(_angle, speed, _dist, _rise)
+	_last_pct = pct
 	_power.text = "%d%%" % roundi(pct)
 	_power.add_theme_color_override("font_color", _power_color(pct))
 	_power.visible = true
 	_arc.add_theme_color_override("font_color", _arc_color(_angle))
+
+
+func last_power_pct() -> float:
+	return _last_pct
+
+
+## The tutorial's READ YOUR SHOT step: an arc and a carry shown from a resting
+## ball in the same verdict colours a real throw would get, held until cleared.
+func demo(anchor: Vector3, angle_deg: float, pct: float, origin: Vector3, geo: SimGeometry) -> void:
+	var dx := geo.hoop_x - origin.x
+	var dz := geo.hoop_z - origin.z
+	_dist = sqrt(dx * dx + dz * dz)
+	_rise = geo.hoop_y - origin.y
+	_angle = angle_deg
+	_anchor = anchor
+	_have_aim = _dist > 1e-6
+	_hold = 0.0
+	_last_pct = pct
+	modulate.a = 1.0
+	_arc.text = "%d°" % roundi(angle_deg)
+	_arc.add_theme_color_override("font_color", _arc_color(angle_deg))
+	_arc.visible = true
+	_power.text = "%d%%" % roundi(pct)
+	_power.add_theme_color_override("font_color", _power_color(pct))
+	_power.visible = true
 
 
 ## How far the shot carries, as a percentage of the distance to the rim.

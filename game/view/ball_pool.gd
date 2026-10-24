@@ -187,14 +187,21 @@ func set_held_position(p: Vector3) -> void:
 
 
 ## Call every frame with the rules object's in-flight balls.
+## The first-shot tutorial shows the ball at rest between shots (the game
+## otherwise draws the hand ball only while it is held).
+var rest_visible := false
+var _was_holding := false
+
+
 func update_balls(balls: Array[BallState], holding: bool, dt: float) -> void:
 	# Fresh pickup → the hand ball shows a new random grab orientation.
-	if holding and not _held.visible:
+	if holding and not _was_holding:
 		_grab_base = _random_grab()
 		_held.basis = _grab_base
 	# Ball left the hand → park the visual back at the rest pose.
-	if not holding and _held.visible:
+	if not holding and _was_holding:
 		_held.position = rest_pos
+	_was_holding = holding
 	for i in _pool.size():
 		var mi := _pool[i]
 		if i < balls.size():
@@ -243,7 +250,7 @@ func update_balls(balls: Array[BallState], holding: bool, dt: float) -> void:
 			_squash[i].set_to(0.0)
 			_ball_in_slot[i] = null
 			_squash_n[i] = Vector3.UP
-	_held.visible = holding
+	_held.visible = holding or (rest_visible and balls.is_empty())   # at rest only while nothing is in the air
 	# Drop rotation state for balls that left the sim.
 	if _base_by_ball.size() > balls.size():
 		for key in _base_by_ball.keys():

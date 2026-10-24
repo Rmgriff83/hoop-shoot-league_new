@@ -648,6 +648,24 @@ func mark_walkthrough_seen(id: String) -> void:
 	SaveService.put_settings(st)
 
 
+## The first-shot tutorial (design 38a, docs/HOME.md → Shot tutorial): once,
+## before the first offline match; SKIP counts. settings.shotTutorialSeen.
+func shot_tutorial_seen() -> bool:
+	return bool(SaveService.get_settings().get("shotTutorialSeen", false))
+
+
+func mark_shot_tutorial_seen() -> void:
+	var st := SaveService.get_settings()
+	if bool(st.get("shotTutorialSeen", false)):
+		return
+	st["shotTutorialSeen"] = true
+	SaveService.put_settings(st)
+
+
+## QA passes that enter a match skip the tutorial unless they ask for it (--qa-tutorial).
+var qa_skip_tutorial := false
+
+
 ## Has the player seen an area's unlock page? (settings.unlocksSeen)
 func unlock_seen(area: String) -> bool:
 	return Array(SaveService.get_settings().get("unlocksSeen", [])).has(area)

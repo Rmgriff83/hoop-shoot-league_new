@@ -231,6 +231,12 @@ func start_period(p_seconds: float, with_countdown := false) -> void:
 	_events.push_back({"kind": "go"})
 
 
+## Drop every ball in flight (the first-shot tutorial's step changes: a demo
+## ball must not land as the player's shot).
+func clear_balls() -> void:
+	_flights.clear()
+
+
 ## In-flight ball states, oldest first (renderer maps these onto a view pool).
 func balls() -> Array[BallState]:
 	var out: Array[BallState] = []

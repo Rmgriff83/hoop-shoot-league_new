@@ -41,7 +41,9 @@ func _ready() -> void:
 	# --qa-hud-side: the HUD pass with HUD SIDE: RIGHT (the toasts and the note mirrored), then back.
 	if args.has("--qa-hud-side"):
 		App.set_hud_side("right")
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi")):
+	# The first-shot tutorial (design 38a) would sit over every match a pass enters: only --qa-tutorial wants it.
+	App.qa_skip_tutorial = not args.has("--qa-tutorial")
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# The splash is the main scene now: every other pass starts from the title.
@@ -64,6 +66,8 @@ func _ready() -> void:
 		_run_hud_side.call_deferred()
 	elif args.has("--qa-best"):
 		_run_best.call_deferred()
+	elif args.has("--qa-tutorial"):
+		_run_tutorial.call_deferred()
 	elif args.has("--qa-hud"):
 		_run_hud.call_deferred()
 	elif args.has("--qa-heat"):
@@ -467,6 +471,56 @@ func _run_net_in(prefix: String, city: bool) -> void:
 		var extra := " %d links" % body.link_count() if body is ChainNet else ""
 		print("QA %s: %s %d bones, %d surfaces, %d tris%s" % [prefix, body.name, body.bone_count(), body.surface_count(), body.tri_count(), extra])
 	print("QA %s: done" % prefix)
+	get_tree().quit(0)
+
+
+## The first-shot tutorial (design 38a) over a cage time trial: every step
+## mid-demo (tutorial_00..04), a live flick and its verdict (tutorial_result),
+## LET'S PLAY and the countdown that follows (tutorial_countdown); the seen
+## flag is put back as it was.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-tutorial
+func _run_tutorial() -> void:
+	var was_settings: Dictionary = SaveService.get_settings()
+	var st := was_settings.duplicate(true)
+	st["shotTutorialSeen"] = false
+	SaveService.put_settings(st)
+	await _sleep(1.2)
+	for attempt in 3:
+		await _close_archive()
+		await _click_button_named("TIME TRIAL")
+		await _sleep(0.5)
+		var sc := get_tree().current_scene
+		if sc != null and "trial" in sc:
+			break
+		await _sleep(0.8)
+	await _sleep(1.0)
+	await _snap("tutorial_00")
+	var waits := [1.3, 1.95, 0.6, 1.2]   # mid-pull, the demo shot in the air, the legend, the ghost
+	for i in 4:
+		await _click_button_named("NEXT" if i < 3 else "NEXT")
+		await _sleep(waits[i])
+		await _snap("tutorial_%02d" % (i + 1))
+	var tut: ShotTutorial = get_tree().root.find_child("ShotTutorial", true, false)
+	print("QA tutorial: step %d live %s" % [tut.step_index() if tut != null else -1, str(tut != null and tut.live())])
+	_hook_trial()
+	await _flick_windup(0.28, 4.9)
+	await _sleep(2.2)
+	await _snap("tutorial_result")
+	print("QA tutorial: verdict '%s' made %s" % [tut.result() if tut != null else "?", str(tut != null and tut.made())])
+	if tut != null and not tut.made():
+		# A miss: shoot again, a touch harder each time, until it drops.
+		for k in 4:
+			await _flick_windup(0.28, 4.6 + 0.3 * k)
+			await _sleep(2.2)
+			print("QA tutorial: retry %d verdict '%s'" % [k + 1, tut.result()])
+			if tut.made():
+				break
+	await _click_button_named("LET'S PLAY")
+	await _sleep(0.7)
+	await _snap("tutorial_countdown")
+	print("QA tutorial: seen after = %s" % str(App.shot_tutorial_seen()))
+	SaveService.put_settings(was_settings)
+	print("QA tutorial: done")
 	get_tree().quit(0)
 
 
@@ -1927,6 +1981,31 @@ func _mouse_move(pos: Vector2, rel: Vector2) -> void:
 ## One flick gesture in window coords: press low-center, drag up over several
 ## motion events at real-time cadence, release. speed_sh sets the drag rate;
 ## travel_frac the total length; tilt_step adds lateral px per motion step.
+## A real shot: press in the grab zone, pull down `pull_frac` of the window
+## (the arc), then flick up at `speed_sh` screen-heights/s and let go.
+func _flick_windup(pull_frac: float, speed_sh: float) -> void:
+	var start := Vector2(WIN.x / 2.0, WIN.y * 0.58)
+	_mouse_button(start, true)
+	await _sleep(0.12)
+	var pos := start
+	var steps := 8
+	for i in steps:
+		var next := start + Vector2(0.0, pull_frac * WIN.y * float(i + 1) / float(steps))
+		_mouse_move(next, next - pos)
+		pos = next
+		await _sleep(0.05)
+	# One move per frame: the distance per move sets the speed the input sees.
+	var travel := 0.30 * WIN.y
+	var per_frame := speed_sh * WIN.y / 60.0
+	var moves := maxi(2, roundi(travel / per_frame))
+	for k in moves:
+		await get_tree().process_frame
+		var next := pos + Vector2(0.0, -travel / float(moves))
+		_mouse_move(next, next - pos)
+		pos = next
+	_mouse_button(pos, false)
+
+
 func _flick(speed_sh: float, travel_frac: float, tilt_step: float) -> void:
 	var start := Vector2(WIN.x / 2.0, WIN.y * 0.88)
 	var travel := travel_frac * WIN.y

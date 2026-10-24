@@ -564,6 +564,30 @@ dashed empty box in every slot without a card (a played card leaves one
 behind; the full stack stays centred, `tray_layout`), and the opponent's
 loadout row under the PiP shows dashed 40 px chips for their empty slots.
 
+**Shot tutorial** (design "Shot Tutorial" 38a, 2026-10-24; `game/ui/shot_tutorial.gd`
+`ShotTutorial`, copy and clock in `core/ui/shot_tutorial_copy.gd`, `tests/test_shot_tutorial.gd`):
+a five-step card at the top of the screen (36, 24, 642 wide: gold title, `n / 5`, the body,
+`<` / SKIP / NEXT) before the player's very first offline match — practice, time trial or
+league heat (after the pre-match page), never online — played once
+(`settings.shotTutorialSeen`; SKIP sets it too). The hosting screen
+(`time_trial_screen._start_tutorial`) hides every other HUD layer but the readout's, holds
+the real rules (never ticked) and lends the tutorial a throwaway endless `TimeTrial` as
+`trial`, so the demo's and the player's shots run the real pickup / drag / flick / sim / net
+path with no clock, score, pop or LED line; shot help reads FULL for the lesson. HOW TO
+SHOOT: a drawn pixel finger (`ShotTutorial.Finger`, 78 × 108 at 3×, the tip at (27, 3))
+bobs on the ball with a ripple. PULL DOWN TO AIM / FLICK UP TO SHOOT: the finger presses
+the REAL ball, pulls it down (the preview dots and the arc number appear), and in step 3
+flicks and lets go — `demo_shoot` builds a synthetic flick sample at the pulled arc whose
+speed carries exactly to the rim (`FlickMap.pull_for_angle`, `speed_sh_for_reach`) through
+`FlickMap.map_windup`, so the ball swishes at 100 % in green. READ YOUR SHOT: the legend
+(IN / CLOSE / MISS) and the readout cycling `52° 100%`, `52° 112%`, `44° 78%` in its own
+verdict colours (`AimReadout.demo`). YOUR TURN: the finger's ghost until the first grab,
+then live — the verdict (`ShotTutorialCopy.verdict`: swish, bank, off the rim, short or
+long by the readout's power) rewrites the card in green or amber; a make unlocks LET'S
+PLAY and drops SKIP; a miss waits for the next shot (`TAKE A SHOT` / `…`). Closing puts
+the chrome back, restores the match's rules and the countdown toast slides in. QA passes
+skip it (`App.qa_skip_tutorial`) except `--qa-tutorial`.
+
 ## QA and tests
 
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-heat` →
@@ -575,6 +599,9 @@ loadout row under the PiP shows dashed 40 px chips for their empty slots.
   `user://qa/hud_countdown.png`, `hud_live.png`, `hud_pause.png`,
   `locker_slide.png` (mid-move), `locker_balls.png`, `locker_nets.png`,
   `locker_nets_chain.png`, `hud_practice.png`, `hud_practice30.png`.
+- `godot --path hoop_shoot --resolution 360x640 -- --qa-tutorial` → the first-shot
+  tutorial over a cage trial: `tutorial_00..04.png` (each step mid-demo), `tutorial_result.png`
+  (a live flick's verdict), `tutorial_countdown.png` (LET'S PLAY, then the count).
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-hud-side` → the cage
   trial with HUD SIDE: RIGHT — `hud_right_countdown.png`, `hud_right_live.png`,
   `hud_right_toast.png` (the toasts off the right edge, the note at the

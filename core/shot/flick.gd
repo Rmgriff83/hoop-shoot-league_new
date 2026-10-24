@@ -52,6 +52,36 @@ static func windup_angle(pull_px: float, viewport_h: float, tuning: FlickTuning)
 	return lerpf(tuning.angle_low, tuning.angle_high, pull)
 
 
+## The wind-up that gives an arc (windup_angle's inverse; the tutorial's demo).
+static func pull_for_angle(angle_deg: float, viewport_h: float, tuning: FlickTuning) -> float:
+	var span := tuning.angle_high - tuning.angle_low
+	var u := clampf((angle_deg - tuning.angle_low) / span, 0.0, 1.0) if absf(span) > 1e-9 else 0.0
+	return u * tuning.pull_full_frac * viewport_h
+
+
+## The flick speed (screen-heights/s) whose anchored speed carries a shot at
+## `angle_deg` exactly to the rim — the demo's perfect throw. Bisects the
+## power curve (monotonic) for the band position; clamped into the band.
+static func speed_sh_for_reach(angle_deg: float, dist: float, rise: float, tuning: FlickTuning) -> float:
+	var ideal := Ballistics.speed_for_angle(angle_deg, dist, rise)
+	var anchor := Ballistics.speed_for_angle(ANCHOR_ANGLE_DEG, dist, rise)
+	if is_nan(ideal) or is_nan(anchor) or anchor <= 0.0:
+		return tuning.flick_min_sh
+	var v_min := V_MIN_FRAC * anchor
+	var v_max := V_MAX_FRAC * anchor
+	var want := clampf((ideal - v_min) / (v_max - v_min), 0.0, 1.0) if v_max > v_min else 0.0
+	var lo := 0.0
+	var hi := 1.0
+	for i in 40:
+		var mid := (lo + hi) * 0.5
+		if power_curve(mid) < want:
+			lo = mid
+		else:
+			hi = mid
+	var u := (lo + hi) * 0.5
+	return tuning.flick_min_sh + u * (tuning.flick_max_sh - tuning.flick_min_sh)
+
+
 ## The make-band anchor speed for a geometry: the ideal dead-center speed at
 ## the anchor angle. Exposed for tests and the tuning overlay.
 static func v_ideal(geo: SimGeometry) -> float:

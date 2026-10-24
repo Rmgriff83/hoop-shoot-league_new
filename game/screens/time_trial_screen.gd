@@ -155,6 +155,212 @@ func _ready() -> void:
 	input.flick_charging.connect(_on_charging)
 	input.flick_released.connect(_on_flick)
 	_after_ready()
+	# The first-shot tutorial (design 38a): once, before the first offline match's countdown.
+	if ShotTutorial.due(App.shot_tutorial_seen(), online(), App.qa_skip_tutorial):
+		_start_tutorial()
+
+
+## An online heat? The base screen never is (the heat screen answers for its room).
+func online() -> bool:
+	return false
+
+
+# ---- the first-shot tutorial (design "Shot Tutorial" 38a) ---------------------------
+# The overlay (game/ui/shot_tutorial.gd) borrows this court: the real rules are
+# held (never ticked) while a throwaway endless TimeTrial takes `trial`, so the
+# demo's and the player's shots run through the real pickup / drag / flick /
+# sim / net path without a clock, a score, a pop or an LED line; every other
+# HUD layer hides; shot help reads FULL for the lesson. Closing puts it all back
+# and the match's countdown starts from 3.
+
+
+var _tutorial: ShotTutorial
+var _match_rules: TimeTrial
+var _tutorial_help := false
+var _tutorial_grabs := 0
+var _hidden_layers := {}
+var _pool_rest_was := Vector3.ZERO
+## Where the lesson's ball rests on screen (design px): high enough in the grab
+## zone that a pull to the bottom edge reaches a makeable arc (the hand's park
+## pose sits a hand's width above the edge — a real shot is pressed higher too).
+const LESSON_REST_Y := 880.0
+
+
+func _start_tutorial() -> void:
+	_match_rules = trial
+	var lesson := TimeTrial.new(base_geo)
+	lesson.endless = true
+	trial = lesson
+	_tutorial_help = true
+	_tutorial_grabs = 0
+	_set_chrome_visible(false)
+	# The ball shows at rest for the lesson, where the finger will press it.
+	_pool_rest_was = _pool.rest_pos
+	var hit = _screen_to_plane(Vector2(360.0, LESSON_REST_Y))
+	if hit != null:
+		var p: Vector3 = hit
+		_pool.rest_pos = _spot + Vector3(0.0, clampf(p.y, HAND_Y_RANGE.x, HAND_Y_RANGE.y), 0.0)
+	_pool.set_held_position(_pool.rest_pos)
+	_pool.rest_visible = true
+	_tutorial = ShotTutorial.new()
+	_tutorial.closed.connect(_on_tutorial_closed)
+	add_child(_tutorial)
+	_tutorial.start(self)
+
+
+func _on_tutorial_closed(_completed: bool) -> void:
+	_tutorial = null
+	_preview.hide_preview()
+	if _readout != null:
+		_readout.clear()
+	_pool.rest_visible = false
+	_pool.rest_pos = _pool_rest_was
+	_pool.update_balls([], false, 0.0)
+	_pool.set_held_position(_pool.rest_pos)
+	_holding_visual = false
+	trial = _match_rules
+	_match_rules = null
+	_tutorial_help = false
+	_set_chrome_visible(true)
+
+
+## Every HUD layer but the readout's (it is part of the lesson) and the tutorial's.
+func _set_chrome_visible(on: bool) -> void:
+	if on:
+		for layer in _hidden_layers:
+			if is_instance_valid(layer):
+				(layer as CanvasLayer).visible = bool(_hidden_layers[layer])
+		_hidden_layers = {}
+		return
+	for c in get_children():
+		if c is CanvasLayer and c != _tutorial and c.name != "ShotHelpUi" and c.name != "ShotTutorial":
+			_hidden_layers[c] = (c as CanvasLayer).visible
+			(c as CanvasLayer).visible = false
+
+
+func tutorial_running() -> bool:
+	return _tutorial != null
+
+
+## Shot help as the screen draws it: FULL during the lesson, the setting otherwise.
+func _help_full() -> bool:
+	return _tutorial_help or App.tuning_mode or App.shot_help == App.SHOT_HELP_FULL
+
+
+func _help_on() -> bool:
+	return _tutorial_help or App.shot_help != App.SHOT_HELP_OFF
+
+
+## The lesson's shots: the throwaway rules tick, contacts keep their sounds and
+## net kicks, a finished shot goes to the tutorial's verdict, nothing else lands.
+func _step_tutorial(dt: float) -> void:
+	trial.tick(dt)
+	for ev in trial.drain_events():
+		match ev["kind"]:
+			"contact":
+				_handle_event(ev)
+			"outcome":
+				if _tutorial != null:
+					_tutorial.on_outcome(ev["outcome"], _readout.last_power_pct() if _readout != null else 0.0)
+
+
+## Where the resting ball sits on screen (design px), for the finger.
+func ball_rest_point() -> Vector2:
+	var p: Vector3 = _pool.to_global(_pool.rest_pos)
+	if _cam == null or _cam.is_position_behind(p):
+		return Vector2(360, 1050)
+	return _cam.unproject_position(p)
+
+
+func demo_press() -> bool:
+	if not trial.pickup():
+		return false
+	_holding_visual = true
+	_anchor_pending = true
+	return true
+
+
+func demo_drag(pos: Vector2) -> void:
+	_on_drag(pos)
+
+
+func demo_windup(pull_px: float) -> void:
+	_on_windup(pull_px)
+	_refresh_preview()
+
+
+## The demo's shot: a flick at the pulled arc whose speed carries exactly to the
+## rim, through the real mapping — a synthetic sample whose speed is bisected so
+## that the readout would call it 100 %.
+func demo_shoot(_angle_deg: float) -> void:
+	if not trial.holding:
+		return
+	var vh := get_viewport().get_visible_rect().size.y
+	# The arc is the one the pull showed (the dots' arc), the speed its ideal.
+	var pull := _pull_px
+	var angle_deg := FlickMap.windup_angle(pull, vh, tuning)
+	var dx := trial.geo.hoop_x - _hand_pos.x
+	var dz := trial.geo.hoop_z - _hand_pos.z
+	var dist := sqrt(dx * dx + dz * dz)
+	var rise := trial.geo.hoop_y - _hand_pos.y
+	var sh := FlickMap.speed_sh_for_reach(angle_deg, dist, rise, tuning)
+	var sample := {"vel_x": 0.0, "vel_y": -sh * vh, "curl": 0.0, "pull_px": pull, "duration_s": 0.2, "viewport_h": vh,
+		"travel_x": 0.0, "travel_y": -(pull + 100.0)}   # past the dead zone: the pull and the flick
+	_pull_px = pull
+	_preview.hide_preview()
+	var origin := {"rx": float(_hand_pos.x), "ry": float(_hand_pos.y), "rz": float(_hand_pos.z)}
+	var launch := FlickMap.map_windup(sample, tuning, trial.geo, origin)
+	if launch.is_empty():
+		demo_drop()
+		return
+	if _readout != null:
+		_readout.freeze(sh, tuning)
+	trial.release(launch)
+	_holding_visual = false
+
+
+func demo_drop() -> void:
+	if trial.holding:
+		trial.drop()
+	_holding_visual = false
+	_preview.hide_preview()
+	if _readout != null:
+		_readout.clear()
+	_pool.set_held_position(_pool.rest_pos)
+
+
+## A step change: the demo's ball (in the air or bouncing) goes, so it can never
+## land as the player's shot.
+func demo_reset() -> void:
+	demo_drop()
+	trial.clear_balls()
+	_pool.update_balls([], false, 0.0)
+
+
+## Step 4's readout: an arc and a power read from the resting ball, in the
+## readout's own verdict colours, with the dots at that arc.
+func demo_readout(arc_deg: float, pct: float) -> void:
+	var origin: Vector3 = _pool.to_global(_pool.rest_pos)
+	var lat := (origin - _spot).dot(_right) - HELP_SIDE
+	var anchor := _spot + _right * lat + Vector3(0.0, origin.y, 0.0)
+	if _readout != null:
+		_readout.demo(anchor, arc_deg, pct, origin, trial.geo)
+	_preview.show_preview(origin, arc_deg, trial.geo, HELP_ARC_FRAC)
+
+
+func demo_readout_clear() -> void:
+	if _readout != null:
+		_readout.clear()
+	if not trial.holding:
+		_preview.hide_preview()
+
+
+func tutorial_grabbed() -> bool:
+	return _tutorial_grabs > 0
+
+
+func tutorial_ball_flying() -> bool:
+	return not trial.balls().is_empty()
 
 
 ## The rules object this screen drives. The heat screen overrides it to run a
@@ -285,7 +491,7 @@ func toggle_music() -> void:
 
 
 func pause_game() -> void:
-	if _pause_layer == null or _finished_handed_off:
+	if _pause_layer == null or _finished_handed_off or _tutorial != null:
 		return
 	_pause_layer.open()
 	get_tree().paused = true
@@ -333,9 +539,13 @@ func _exit_tree() -> void:
 
 
 func _on_grab() -> void:
+	if _tutorial != null and not _tutorial.live():
+		return   # the demo owns the ball until the live step
 	if trial.pickup():
 		_holding_visual = true
 		_anchor_pending = true  # pinned on the first drag of this grab
+		if _tutorial != null:
+			_tutorial_grabs += 1
 
 
 ## Taps on the area's props (the beach radio) come first: a press that lands
@@ -346,7 +556,7 @@ var _prop_icons: PropIcons
 
 
 func _input(event: InputEvent) -> void:
-	if _court == null or _cam == null or is_paused():
+	if _court == null or _cam == null or is_paused() or (_tutorial != null and not _tutorial.live()):
 		return
 	var pressed := false
 	var released := false
@@ -773,7 +983,7 @@ const HELP_SIDE := 0.18
 
 
 func _refresh_preview() -> void:
-	if not trial.holding or not (App.tuning_mode or App.shot_help == App.SHOT_HELP_FULL):
+	if not trial.holding or not _help_full():
 		_preview.hide_preview()
 		return
 	var viewport_h := get_viewport().get_visible_rect().size.y
@@ -787,7 +997,7 @@ func _refresh_preview() -> void:
 func _refresh_readout() -> void:
 	if _readout == null:
 		return
-	if not trial.holding or App.shot_help == App.SHOT_HELP_OFF or _anchor_pending:
+	if not trial.holding or not _help_on() or _anchor_pending:
 		_readout.clear()
 		return
 	var viewport_h := get_viewport().get_visible_rect().size.y
@@ -803,7 +1013,7 @@ func _refresh_readout() -> void:
 
 ## Live throw strength, for the power number. Only meaningful once latched.
 func _on_charging(speed_sh: float, latched: bool) -> void:
-	if _readout != null and App.shot_help != App.SHOT_HELP_OFF and trial.holding:
+	if _readout != null and _help_on() and trial.holding:
 		_readout.power(speed_sh, latched, tuning)
 
 
@@ -843,7 +1053,7 @@ func _on_flick(sample: Dictionary) -> void:
 	if launch.is_empty():
 		_refresh_readout()  # cancelled gesture: ball stays in hand, so do the numbers
 		return
-	if _readout != null and App.shot_help != App.SHOT_HELP_OFF:
+	if _readout != null and _help_on():
 		# The release sample is the honest speed; the live value was still
 		# climbing. Freeze on that and hold it into the flight.
 		var vh: float = float(sample["viewport_h"])
@@ -862,7 +1072,10 @@ const MAX_FRAME_DT := 0.05
 
 
 func _process(dt: float) -> void:
-	_step_rules(minf(dt, MAX_FRAME_DT))
+	if _tutorial != null:
+		_step_tutorial(minf(dt, MAX_FRAME_DT))   # the real rules wait for the lesson
+	else:
+		_step_rules(minf(dt, MAX_FRAME_DT))
 	_process_shuffle(dt)
 	_follow_music_setting()
 
