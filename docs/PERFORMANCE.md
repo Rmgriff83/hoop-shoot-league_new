@@ -311,30 +311,44 @@ on the cage over its 20 minutes; it is kept for the record, not read.
   the row carries the threshold as `spike_ms`.
 
 **The heat sweep after Stage 3** (`build/qa/moto_g_-_2025/perf_stage3.json`,
-2026-10-24 01:01, straight after the 20-minute A/B sweep — a warm phone —
-and with the plain sweep still running the levers' reference, i.e. the
-caster rules off; the clean re-measure waits for the phone to be unlocked):
+2026-10-24 06:20, a cool phone — battery 19 °C — straight from the lock
+screen; the caster rules on, as shipped; the ledger's baseline re-set from
+this sweep's cage heat_pip row so the spike limit carries the new definition —
+cage p50 19.7 against Stage 1's 19.4, the budget itself did not move):
 
-    area  mode      | frame p50 Stage 2 → 3 | p95        | main GPU | script p50 / p95 | sim p50 / p95
-    cage  heat_pip  |  19.4 → 20.0 | 29.2 → 27.6 | 14.2 |  4.9 /  9.4 | 1.5 / 3.0
-    cage  heat_min  |  20.8 → 20.0 | 29.0 → 30.1 | 14.4 |  5.1 /  9.1 | 1.5 / 3.3
-    beach heat_pip  |  20.8 → 20.8 | 29.3 → 31.4 | 16.4 |  4.1 /  7.5 | 1.2 / 2.5
-    beach heat_min  |  22.2 → 24.8 | 29.2 → 31.6 | 17.9 |  5.4 /  9.3 | 1.4 / 2.8
-    park  heat_pip  |  33.3 → 27.8 | 41.4 → 33.2 | 24.2 |  5.7 / 10.5 | 1.6 / 3.6
-    park  heat_min  |  28.3 → 28.0 | 33.3 → 33.3 | 24.2 |  6.2 / 11.1 | 1.7 / 3.5
-    city  heat_pip  |  27.8 → 28.8 | 33.3 → 33.6 | 24.9 |  6.3 / 11.8 | 1.9 / 4.0
-    city  heat_min  |  28.3 → 25.2 | 33.3 → 32.2 | 21.9 |  6.0 / 11.0 | 1.7 / 3.7
-    park  trial     |  (S1 22.2) → 22.7 | 27.3 | 20.9 | 1.2 / 1.8 | 0.1
-    city  trial     |  (S1 24.2) → 24.2 | 30.9 | 22.6 | 1.6 / 2.3 | 0.1
+    area  mode      | frame p50 Stage 2 → 3 | p95        | main GPU | shadow draws | script p50 / p95 | sim p50 / p95 | spikes/60 s
+    cage  heat_pip  |  19.4 → 19.7 | 29.2 → 28.5 | 13.7 |  0      |  4.8 /  8.8 | 1.5 / 3.1 | 0.0
+    cage  heat_min  |  20.8 → 20.4 | 29.0 → 28.0 | 14.4 |  0      |  5.0 /  9.0 | 1.5 / 3.2 | 0.0
+    beach heat_pip  |  20.8 → 23.3 | 29.3 → 31.8 | 16.7 | 50 → 41 |  5.3 /  9.4 | 1.3 / 2.9 | 4.7
+    beach heat_min  |  22.2 → 22.9 | 29.2 → 28.0 | 17.1 | 50 → 41 |  5.1 /  9.0 | 1.3 / 2.8 | 0.0
+    park  heat_pip  |  33.3 → 28.0 | 41.4 → 33.3 | 24.2 | 57 → 48 |  6.2 / 10.8 | 1.7 / 3.6 | 0.0
+    park  heat_min  |  28.3 → 27.8 | 33.3 → 33.0 | 23.9 | 57 → 48 |  5.9 / 10.7 | 1.6 / 3.7 | 2.3
+    city  heat_pip  |  27.8 → 25.0 | 33.3 → 26.0 | 20.6 | 58      |  5.7 / 10.6 | 1.6 / 3.4 | 0.0   (the drift row; see below)
+    city  heat_min  |  28.3 → 25.5 | 33.3 → 30.4 | 22.1 | 58      |  5.9 / 10.8 | 1.6 / 3.6 | 2.3
+    beach trial     |  (S1 19.1) → 19.1 | 24.1 | 15.7 | 48 → 39 | 1.7 / 2.4 | 0.1 | 4.7
+    park  trial     |  (S1 22.2) → 24.8 | 30.3 | 21.9 | 55 → 46 | 1.6 / 2.6 | 0.1 | 4.6
+    city  trial     |  (S1 24.2) → 25.0 | 29.6 | 22.7 | 56      | 1.6 / 2.5 | 0.1 | 0.0
 
-The ledger's verdict is unchanged from Stage 2 — the park and city heats and
-trials over the p50 limit (22.4), their script p95 a hair over 9.9 (the cage's
-own reads 9.4 warm) — and the ±2 ms between the two sweeps is the phone's
-temperature, not the code: the heat is GPU-bound at 22–25 ms of main-view
-GPU on the park and the city, and the A/B table above says where that goes.
-What the caster rules buy (~1 ms) is below that noise; what would bring the
-park and the city under the limit is the fill (−4 to −7 ms) and the sky (−4
-to −6), then the park's shadows (−5) — the three proposals.
+- The first city heat_pip row of the sweep (33.3 p50, script 10.7 / 20.4,
+  sim 3.4 — every number double its drift row's and every other heat's) ran
+  while Android was still tearing down the apps it had killed to relaunch
+  ours; the drift row (`heat_pip*`: 25.0 / 26.0, script 5.7, sim 1.6) is the
+  city heat, and the table reads it. The ledger still prints the outlier.
+- **Spikes now read 0–4.7 / 60 s everywhere** (one or two frames a minute
+  over the run's p50 by a refresh period) against Stage 2's 0–163 — the
+  phone's stutter is small; its problem is the rate.
+- **The ledger's verdict**: the park and city heats and trials over the p50
+  limit (22.7) by 2–5 ms, the beach heats on the edge (22.9–23.3 — ±2 ms
+  of temperature either way), the cage inside. Script p95 is inside the
+  limit in every honest row (the city outlier aside). The caster rules took
+  the beach's shadow draws 50 → 41 and the park's 57 → 48 (about 1 ms); what
+  would bring the park and the city under the limit is the fill (−4 to −7 ms)
+  and the sky (−4 to −6), then the park's shadows (−5) — the three proposals.
+- Sweeps from here compare against this cool-phone dump, not Stage 2's: the
+  phone's temperature moves every row by ±2 ms, so a comparison needs two
+  sweeps taken the same way (cool, from the lock screen, 7 minutes apart at
+  most — `tools/android_qa.sh` refuses a credential-locked phone and relaunches
+  once when the first start loses its surface).
 
 ## 4. Rules for effects (Stage 3; apply to every new effect)
 

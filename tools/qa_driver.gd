@@ -1939,7 +1939,7 @@ func _run_perf(args: PackedStringArray) -> void:
 					runs.push_back(row)
 					print("PERF " + PerfBudget.row_text(row))
 		if modes.size() * variants.size() > 1:
-			CourtGeometry.ab = {"casters": false}
+			CourtGeometry.ab = {"casters": false} if variants.size() > 1 else {}
 			var again := await _perf_run(str(area), str(modes[0]), seconds)
 			if not again.is_empty():
 				again["mode"] = str(modes[0]) + "*"
