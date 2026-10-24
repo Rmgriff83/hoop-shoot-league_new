@@ -84,6 +84,7 @@ static func state(heat: Dictionary) -> Dictionary:
 		"score_you": int(heat.get("player_score", 0)), "score_opp": int(heat.get("ai_score", 0)),
 		"opp_first": opp_first,
 		"tickets": "+%d" % int(heat.get("tickets", 0)),
+		"ticket_count": int(heat.get("tickets", 0)),
 		"drop": str(heat.get("card_drop", "")),
 		"year": year,
 	}

@@ -422,19 +422,28 @@ landscape crop), lets it settle 1.4 s and saves the PNG into the project.
 changes**, and commit the PNGs. The areas' page order is
 `AreaArchiveCopy.AREAS` (the title's `CARDS` is the same list).
 
-## Results (design "Time Trial Results", 2026-09-26)
+## Results (design "Time Trial Results" 7a, 2026-10-24)
 
-`game/screens/results_screen.gd` (a `Node3D`): the finished time trial's
-numbers over the LIVE court you just played on (the area's home pan under a
-0.5 scrim), in the same style. `★ ARCADE CAGE · TIME TRIAL`; a **NEW BEST**
-gold chip or the gap to your best (`BEST 31 · 7 SHORT`); the score at 96 px
-with the dithered shadow (gold when best); the stat tiles MAKES · SWISHES ·
-STREAK · BONUS (+ ICED when it happened); the top-ten board on a see-through
-panel, this run's row in orange with `THIS RUN`; **RUN IT BACK** (`60 S ·
-SAME CAGE`, `App.start_mode(App.next_mode)`) beside the gold tickets card
-(`+30` / `TICKETS · BEST BONUS IN`, only when tickets were earned); **HOME**
-(`App.to_title`). Copy is `game/ui/results_copy.gd` (`ResultsCopy`, pure,
-`tests/test_results.gd`); the run is `App.last_run` (+ `last_run_was_best`).
+`game/screens/results_screen.gd` over the live court you just played on (the
+area's home-page pan under a half scrim); copy in `game/ui/results_copy.gd`
+(`ResultsCopy`), `tests/test_results.gd`. The area name is the page title
+top-left (`★ TIME TRIAL` kicker, the name at 36 px with the dithered shadow);
+the score sits on the left at 96 px (gold when best) under a **NEW BEST** gold
+chip or the gap line (`BEST 31 · 7 SHORT`, `· LEVEL` on a tie), and the gold
+**tickets box** beside it on the same row (`game/ui/ticket_box.gd` `TicketBox`:
+the ticket icon in a 64 px slot, `+30` at 32 px, `TICKETS` / `TICKETS · BEST
+BONUS IN` / `· +N SHOOT AROUND`; `+0` dimmed when nothing was earned). On
+arrival a **stream of tickets** arcs from the score into the box
+(`game/ui/ticket_stream.gd` `TicketStream`: one flyer per two tickets, fifteen
+at most, 0.75 s each 0.09 s apart from 0.45 s, the design's keyframes drawn on
+a clock) and the count ticks up as each lands, the icon bumping — a bigger
+haul is a longer stream. The stat row sits plain under the score (MAKES ·
+SWISHES · STREAK · BONUS, ICED when it happened); the **TOP 5** board
+(`ResultsCopy.board_rows`) marks this run's row in orange with THIS RUN and,
+when the run is lower, adds it as a sixth row under a dashed break with its
+real rank; RUN IT BACK (`60 S · SAME CAGE`) and HOME share one 120 px row.
+QA: `--qa-results` → `results_best.png` (mid-stream), `results_best_done.png`,
+`results_iced.png`, `results_home.png`.
 
 **League match end** (`game/ui/match_end_overlay.gd`, design "League Match
 End" 15a, 2026-10-01; copy `game/ui/match_end_copy.gd`,
@@ -453,8 +462,7 @@ dims and is struck through, they move on, `SEASON 2 OVER · 3RD PLACE`),
 **runner-up** (SO CLOSE) and **champions** (the trophy pops and bobs,
 TITLES with a cup per title and `X2`, `SEASON 2 TITLE`, the most confetti).
 A tag pill (`DAY 4 · FINAL` / `PLAYOFFS · SEMIFINAL` / `ARCADE LEAGUE ·
-FINAL`), the score with YOU and their first name, the tickets pill and the
-NEW CARD tile (tilted animated face) are on every state; after 3 s TAP TO
+FINAL`), the score with YOU and their first name, the gold tickets box (`TicketBox`, design 15a update 2026-10-24: the icon, `+N` at 26 px over TICKETS) pops in with the NEW CARD tile (tilted animated face) on every state at 2.5 s, then a **stream of tickets** arcs from the score into the box from 2.75 s (`TicketStream`, one per two tickets, fifteen at most, stepped by the page's own clock) while the count ticks up from +0; after 3 s TAP TO
 CONTINUE blinks and a tap goes to the post-match page
 (`App.to_heat_result`). Sounds: `peggy_win` on a win, `peggy_jackpot` on
 advance/champions, `match_loss` otherwise. Confetti is

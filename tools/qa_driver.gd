@@ -178,7 +178,9 @@ func _run_results() -> void:
 	App.last_run_was_best = true
 	get_tree().change_scene_to_file(App.RESULTS_SCENE)
 	await _sleep(1.2)
-	await _snap("results_best")
+	await _snap("results_best")   # mid-stream: the tickets arcing into the box
+	await _sleep(2.0)
+	await _snap("results_best_done")   # the stream landed, the count full
 	var mid: Dictionary = top[mini(3, top.size() - 1)].duplicate()
 	mid["iced"] = 2
 	mid["tickets"] = 0
@@ -1564,7 +1566,10 @@ func _run_match_end() -> void:
 		await _sleep(0.75)
 		await _snap("match_end_%s_a" % c[0])
 		await _sleep(2.6)
-		await _snap("match_end_%s_b" % c[0])
+		await _snap("match_end_%s_b" % c[0])   # the box popped, the stream under way
+		await _sleep(2.0)
+		await _snap("match_end_%s_c" % c[0])   # the count full
+		print("QA match end %s: tickets read %s" % [c[0], o.tickets_text()])
 		o.queue_free()
 		await _sleep(0.2)
 	print("QA match end: done")

@@ -52,6 +52,7 @@ func _copy(t) -> void:
 	t.eq(win["record"]["place"], "2ND PLACE · UP 1", "the place chip")
 	t.eq(win["record"]["label"], "SEASON 2 RECORD", "the record label")
 	t.eq(win["tickets"], "+36", "the tickets")
+	t.eq(win["ticket_count"], 36, "…and the count the stream builds up to")
 	t.eq(win["opp_first"], "MO", "the opponent's first name")
 	t.eq(win["head_size"], 64, "a short headline at 64")
 	var loss := MatchEndCopy.state(_heat(false, {}))

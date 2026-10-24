@@ -87,7 +87,7 @@ func build(v: Dictionary) -> Control:
 		sub.name = "Sub"
 		_centre(sub, sub_y)
 		_anim(sub, "rise", 2.1, 0.4)
-	_rewards(str(v.get("tickets", "+0")), str(v.get("drop", "")))
+	_rewards(int(v.get("ticket_count", 0)), str(v.get("drop", "")))
 	_continue = _label("TAP TO CONTINUE", 16, CREAM, true)
 	_continue.name = "Continue"
 	_centre(_continue, 1150.0)
@@ -456,36 +456,37 @@ func _trophy_block(titles: int) -> void:
 	_anim(row, "rise", 1.8, 0.4)
 
 
-func _rewards(tickets: String, drop: String) -> void:
+## The tickets box (design 15a, 2026-10-24: the gold box with the ticket icon,
+## `+N` over TICKETS) pops in with the card drop; then the stream arcs from
+## the score into it — one flyer per two tickets, fifteen at most — and the
+## count ticks up from +0 as each lands (TicketStream, stepped by this clock).
+const STREAM_START := 2.75
+const STREAM_FROM := Vector2(360, 470)
+
+var _ticket_box: TicketBox
+var _stream: TicketStream
+var _stream_aimed := false
+
+
+func _rewards(tickets: int, drop: String) -> void:
 	var row := Control.new()
 	row.name = "Rewards"
-	row.position = Vector2(0, 920)
-	row.size = Vector2(W, 64)
-	row.pivot_offset = Vector2(W * 0.5, 32)
+	row.position = Vector2(0, 910)
+	row.size = Vector2(W, 84)
+	row.pivot_offset = Vector2(W * 0.5, 42)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var h := HBoxContainer.new()
 	h.set_anchors_preset(Control.PRESET_FULL_RECT)
 	h.alignment = BoxContainer.ALIGNMENT_CENTER
-	h.add_theme_constant_override("separation", 20)
+	h.add_theme_constant_override("separation", 24)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(h)
-	var pill := PanelContainer.new()
-	pill.name = "Tickets"
-	pill.custom_minimum_size = Vector2(0, 64)
-	pill.add_theme_stylebox_override("panel", _box(GOLD, Color(GOLD, 0.25), true, Color(GOLD, 0.5)))
-	pill.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var ph := HBoxContainer.new()
-	ph.alignment = BoxContainer.ALIGNMENT_CENTER
-	ph.add_theme_constant_override("separation", 14)
-	ph.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	pill.add_child(ph)
-	var ticket := PixelIcon.new("icon_ticket", Vector2(28, 18))
-	ticket.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	ph.add_child(ticket)
-	var amount := _label(tickets, 24, CREAM, true)
+	_ticket_box = TicketBox.new(84.0 - ShadowStyle.OFFSET, 52.0, 26, 14, 18.0, 14.0, 52.0, float(str(tickets).length() + 1) * 26.0)
+	_ticket_box.set_count(0 if tickets > 0 else 0)
+	_ticket_box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(_ticket_box)
+	var amount: Label = _ticket_box.find_child("TicketsBig", true, false)
 	amount.name = "TicketsText"
-	ph.add_child(amount)
-	h.add_child(pill)
 	if drop != "":
 		var card := CardDefs.get_card(drop)
 		var kind := str(Dictionary(card.get("effect", {})).get("kind", ""))
@@ -493,6 +494,7 @@ func _rewards(tickets: String, drop: String) -> void:
 		var tile := Control.new()
 		tile.name = "Drop"
 		tile.custom_minimum_size = Vector2(300, 64)
+		tile.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var bg := Panel.new()
 		bg.name = "DropBg"
@@ -525,6 +527,23 @@ func _rewards(tickets: String, drop: String) -> void:
 		h.add_child(tile)
 	_root.add_child(row)
 	_anim(row, "pop", 2.5, 0.4)
+	# The stream: aimed at the box's icon once the row has laid out (the first step past the pop).
+	_stream = TicketStream.new()
+	_stream.name = "Stream"
+	_stream.manual = true
+	_stream.spread = Vector2(160, 50)
+	_stream.lift = 90.0
+	_stream.wobble = 30.0
+	_stream.count_changed.connect(func(n: int) -> void:
+		_ticket_box.set_count(n)
+		_ticket_box.bump()
+	)
+	_root.add_child(_stream)
+	_stream.play(STREAM_FROM, STREAM_FROM, tickets, STREAM_START)
+
+
+func tickets_text() -> String:
+	return _ticket_box.count_text() if _ticket_box != null else ""
 
 
 # ---- the clock ------------------------------------------------------------------
@@ -553,6 +572,11 @@ func step(dt: float) -> void:
 	if not _sound_done and _t >= 0.35:
 		_sound_done = true
 		_play_sound()
+	if _stream != null:
+		if not _stream_aimed and _t >= 2.5 and _ticket_box != null and _ticket_box.is_inside_tree():
+			_stream.to = _ticket_box.icon_center()
+			_stream_aimed = true
+		_stream.step(dt)
 	for a in _anims:
 		var node: CanvasItem = a["node"]
 		if not is_instance_valid(node):

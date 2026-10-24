@@ -17,8 +17,9 @@ func run(t) -> void:
 
 func _copy(t) -> void:
 	var best := {"score": 31, "makes": 17, "attempts": 26, "swishes": 7, "bestStreak": 8, "bonus": 9, "iced": 0, "location": "cage", "id": "r1", "tickets": 30}
-	t.eq(ResultsCopy.title(best), "ARCADE CAGE · TIME TRIAL", "the header names the area")
-	t.eq(ResultsCopy.title({"location": "beach"}), "BEACH · TIME TRIAL", "the beach too")
+	t.eq(ResultsCopy.title(best), "ARCADE CAGE", "the title is the area's name (design 7a: under the TIME TRIAL kicker)")
+	t.eq(ResultsCopy.title({"location": "beach"}), "BEACH", "the beach too")
+	t.eq(ResultsCopy.KICKER, "TIME TRIAL", "the kicker")
 	t.eq(ResultsCopy.board_name("cage"), "ARCADE", "the board's short name")
 	t.eq(ResultsCopy.board_name("beach"), "BEACH", "and the beach's")
 	t.eq(ResultsCopy.run_sub("cage"), "60 S · SAME CAGE", "RUN IT BACK's sub-line")
@@ -36,9 +37,9 @@ func _copy(t) -> void:
 	var tiles5 := ResultsCopy.tiles(iced)
 	t.eq(tiles5.size(), 5, "an iced run adds a tile")
 	t.eq(tiles5[4], {"v": "2", "l": "ICED"}, "ICED last")
-	t.eq(ResultsCopy.tickets(best, true), {"big": "+30", "sub": "TICKETS · BEST BONUS IN"}, "the tickets card on a best")
-	t.eq(ResultsCopy.tickets(best, false), {"big": "+30", "sub": "TICKETS"}, "and on a plain run")
-	t.eq(ResultsCopy.tickets({"tickets": 0}, false), {}, "no card without tickets")
+	t.eq(ResultsCopy.tickets(best, true), {"n": 30, "big": "+30", "sub": "TICKETS · BEST BONUS IN", "none": false}, "the tickets box on a best")
+	t.eq(ResultsCopy.tickets(best, false)["sub"], "TICKETS", "and on a plain run")
+	t.eq(ResultsCopy.tickets({"tickets": 0}, false), {"n": 0, "big": "+0", "sub": "TICKETS", "none": true}, "nothing earned: +0, dimmed, no stream")
 	var top := [{"score": 31, "swishes": 7, "bestStreak": 8, "id": "r1"}, {"score": 27, "swishes": 5, "bestStreak": 6, "id": "r0"}, {"score": 26}]
 	var rows := ResultsCopy.board(top, "r1")
 	t.eq(rows.size(), 3, "every row")
@@ -48,7 +49,24 @@ func _copy(t) -> void:
 	var big := []
 	for i in 14:
 		big.push_back({"score": 40 - i})
-	t.eq(ResultsCopy.board(big, "").size(), ResultsCopy.BOARD_SIZE, "the board is capped at ten")
+	t.eq(ResultsCopy.board(big, "").size(), ResultsCopy.BOARD_SIZE, "the board is capped at five")
+	big[7]["id"] = "me"
+	var rows7 := ResultsCopy.board_rows(big, "me")
+	t.eq(Array(rows7["top"]).size(), 5, "the top five")
+	t.eq(Array(rows7["out"]).size(), 1, "…and this run as a sixth row when it is lower")
+	t.eq(rows7["out"][0]["n"], "8", "…with its real rank")
+	t.ok(Array(ResultsCopy.board_rows(top, "r1")["out"]).is_empty(), "no sixth row when this run is in the top five")
+	# The stream: one flyer per two tickets, fifteen at most, the count in step with the landings.
+	t.eq([TicketStream.count(0), TicketStream.count(1), TicketStream.count(30), TicketStream.count(100)], [0, 1, 15, 15], "flyers per haul")
+	var stream := TicketStream.new()
+	stream.manual = true
+	stream.play(Vector2(150, 320), Vector2(490, 274), 30, 0.45)
+	t.eq(stream.shown_at(0.0), 0, "nothing landed at the start")
+	t.eq(stream.landed_at(0.45 + 0.75 + 0.01), 1, "the first flyer lands after its flight")
+	t.eq(stream.shown_at(0.45 + 0.75 + 14 * 0.09 + 0.01), 30, "the last landing shows the whole haul")
+	t.ok(stream.flyer_at(0, 0.2).is_empty() and not stream.flyer_at(0, 0.5).is_empty(), "a flyer is up only during its flight")
+	t.ok(float(stream.flyer_at(0, 0.46)["scale"]) > 1.4 and float(stream.flyer_at(0, 0.46)["alpha"]) < 0.5, "…in big and faint")
+	stream.free()
 	# Every glyph in the copy exists in the faces (no system fallback).
 	var display := UiFont.display()
 	var bold := UiFont.body_bold()
@@ -68,11 +86,13 @@ func _chrome(t) -> void:
 	t.ok(c.find_child("BestLine", true, false) == null, "and not the gap line")
 	t.eq((c.find_child("Score", true, false) as Label).text, "31", "the score")
 	t.ok((c.find_child("Score", true, false) as Label).material is ShaderMaterial, "with the dithered shadow")
-	t.ok(c.find_child("Tile_BONUS", true, false) != null and c.find_child("Tile_ICED", true, false) == null, "four tiles, no ICED")
-	t.ok(c.find_child("Tickets", true, false) != null, "the tickets card")
-	t.eq((c.find_child("TicketsBig", true, false) as Label).text, "+30", "with the amount")
+	t.ok(c.find_child("Stat_BONUS", true, false) != null and c.find_child("Stat_ICED", true, false) == null, "four stats, no ICED")
+	t.ok(c.find_child("Tickets", true, false) is TicketBox, "the tickets box")
+	t.eq((c.find_child("TicketsBig", true, false) as Label).text, "+30", "with the amount (off-tree: no stream, the full count)")
+	t.ok((c.find_child("Kicker", true, false) as Label).text == "TIME TRIAL" and (c.find_child("Title", true, false) as Label).text == "ARCADE CAGE", "the TIME TRIAL kicker over the area name")
 	t.ok(c.find_child("RunItBack", true, false) is ShadowCard and c.find_child("Home", true, false) is ShadowCard, "RUN IT BACK and HOME are shadow cards")
-	t.ok(c.find_child("Board", true, false) is ShadowPanel, "the board is a see-through panel")
+	t.ok((c.find_child("Home", true, false) as Control).get_parent() == (c.find_child("RunItBack", true, false) as Control).get_parent(), "…on one row")
+	t.ok(c.find_child("Board", true, false) is ShadowPanel and c.find_child("Stream", true, false) is TicketStream, "the board is a see-through panel; the stream sits over the page")
 	c.free()
 	var iced := best.duplicate()
 	iced["iced"] = 2
@@ -80,7 +100,8 @@ func _chrome(t) -> void:
 	c = screen.build_chrome(iced, false)
 	t.ok(c.find_child("NewBest", true, false) == null, "not a best: no chip")
 	t.ok(c.find_child("BestLine", true, false) != null, "the gap line instead")
-	t.ok(c.find_child("Tile_ICED", true, false) != null, "the ICED tile")
-	t.ok(c.find_child("Tickets", true, false) == null, "no tickets card without tickets")
+	t.ok(c.find_child("Stat_ICED", true, false) != null, "the ICED stat")
+	t.ok(c.find_child("Tickets", true, false) != null and (c.find_child("TicketsBig", true, false) as Label).text == "+0", "the box reads +0 without tickets")
+	t.ok(absf((c.find_child("Tickets", true, false) as Control).modulate.a - 0.5) < 0.01, "…dimmed")
 	c.free()
 	screen.free()

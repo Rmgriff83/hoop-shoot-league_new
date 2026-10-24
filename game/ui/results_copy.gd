@@ -7,12 +7,15 @@ extends RefCounted
 ## Reads App.last_run's shape ({score, makes, attempts, swishes, bestStreak,
 ## bonus, iced, location, id, tickets}) and SaveService.top_scores rows.
 
-const BOARD_SIZE := 10
+## The board shows the top five (design 7a, 2026-10-24); a lower run joins as a sixth row.
+const BOARD_SIZE := 5
+## The kicker over the area name.
+const KICKER := "TIME TRIAL"
 
 
-## `ARCADE CAGE · TIME TRIAL` — the arena's display name over the location.
+## The page title: the arena's display name (`ARCADE CAGE`) under the TIME TRIAL kicker.
 static func title(run: Dictionary) -> String:
-	return "%s · TIME TRIAL" % area_name(str(run.get("location", "cage")))
+	return area_name(str(run.get("location", "cage")))
 
 
 static func area_name(location: String) -> String:
@@ -67,21 +70,37 @@ static func tiles(run: Dictionary) -> Array:
 	return out
 
 
-## The top rows as [{n, pts, sw, st, mine}] with this run (by id) marked.
+static func _row(d: Dictionary, i: int, run_id: String) -> Dictionary:
+	return {"n": str(i + 1), "pts": str(int(d.get("score", 0))), "sw": str(int(d.get("swishes", 0))),
+		"st": str(int(d.get("bestStreak", 0))), "mine": run_id != "" and str(d.get("id", "")) == run_id}
+
+
+## The top rows as [{n, pts, sw, st, mine}] with this run (by id) marked, capped at BOARD_SIZE.
 static func board(top: Array, run_id: String) -> Array:
 	var out := []
 	for i in mini(top.size(), BOARD_SIZE):
-		var d: Dictionary = top[i]
-		out.push_back({"n": str(i + 1), "pts": str(int(d.get("score", 0))), "sw": str(int(d.get("swishes", 0))),
-			"st": str(int(d.get("bestStreak", 0))), "mine": run_id != "" and str(d.get("id", "")) == run_id})
+		out.push_back(_row(top[i], i, run_id))
 	return out
 
 
-## The tickets card: {big: "+30", sub: "TICKETS · BEST BONUS IN"}, or {} when nothing was earned.
+## The board as the page draws it: {top: the first BOARD_SIZE rows, out: [this
+## run's row with its real rank] when it sits below them (a sixth row after a
+## break), else []}. `top` is the area's whole list, best first.
+static func board_rows(top: Array, run_id: String) -> Dictionary:
+	var out := {"top": board(top, run_id), "out": []}
+	for i in range(BOARD_SIZE, top.size()):
+		if run_id != "" and str(Dictionary(top[i]).get("id", "")) == run_id:
+			out["out"] = [_row(top[i], i, run_id)]
+			break
+	return out
+
+
+## The tickets box: {n, big: "+30", sub: "TICKETS · BEST BONUS IN"}; with nothing
+## earned it still reads (`+0`, dimmed on the page — `none`), no stream.
 static func tickets(run: Dictionary, is_best: bool) -> Dictionary:
 	var n := int(run.get("tickets", 0))
 	if n <= 0:
-		return {}
+		return {"n": 0, "big": "+0", "sub": "TICKETS", "none": true}
 	if int(run.get("shoot_bonus", 0)) > 0:
-		return {"big": "+%d" % n, "sub": "TICKETS · +%d SHOOT AROUND" % int(run["shoot_bonus"])}
-	return {"big": "+%d" % n, "sub": "TICKETS · BEST BONUS IN" if is_best else "TICKETS"}
+		return {"n": n, "big": "+%d" % n, "sub": "TICKETS · +%d SHOOT AROUND" % int(run["shoot_bonus"]), "none": false}
+	return {"n": n, "big": "+%d" % n, "sub": "TICKETS · BEST BONUS IN" if is_best else "TICKETS", "none": false}
