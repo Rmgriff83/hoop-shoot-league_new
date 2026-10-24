@@ -44,6 +44,9 @@ var home_open_league := ""
 var pending_welcome := {}
 ## QA: pretend there is no player yet (the splash shows NEW GAME, the form).
 var qa_fresh := false
+## QA only (tools/qa_driver.gd --qa-perf): a bot shoots on OUR side of a
+## league heat, so both sides play like a real match while the probe measures.
+var qa_player_bot: AiRatings = null
 ## A walkthrough the next screen should run (its id, design 36a), set by
 ## create_player ("home"); the title consumes it once the home shows.
 var pending_walkthrough := ""
@@ -1409,6 +1412,7 @@ func league_heat_config(doc: Dictionary, cfg: Dictionary) -> Dictionary:
 		# The opponent's season hand (its fixed allowance, less what it has
 		# already played on you), not a fresh authored list every meeting.
 		"ai_cards": Season.card_hand(season, opp_id),
+		"player_bot": qa_player_bot,
 	}
 
 

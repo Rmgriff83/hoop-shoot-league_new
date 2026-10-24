@@ -13,7 +13,7 @@ var _outcomes: Array[String] = []
 
 
 func _ready() -> void:
-	var args := OS.get_cmdline_user_args()
+	var args := _args()
 	# `--net=<id>` hangs that net everywhere for the run (any net on any hoop):
 	# --qa-park-chain is --qa-park with the jack chain.
 	for a in args:
@@ -21,6 +21,11 @@ func _ready() -> void:
 			App.net_override = CosmeticLibrary.get_net(str(a).trim_prefix("--net="))
 	if args.has("--qa-park-chain") and App.net_override == null:
 		App.net_override = CosmeticLibrary.get_net("jack")
+	if args.has("--qa-perf") or _has_prefixed(args, "--qa-perf="):
+		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
+		App.to_title.call_deferred()
+		_run_perf.call_deferred(args)
+		return
 	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
@@ -1818,3 +1823,370 @@ func _flick(speed_sh: float, travel_frac: float, tilt_step: float) -> void:
 		_mouse_move(next, next - pos)
 		pos = next
 	_mouse_button(pos, false)
+
+
+
+# ---- the args (the command line, or user://qa_args.txt once on a phone) --------------------
+
+## The command line's user args — or, with none, the one-shot file a phone
+## run leaves behind (tools/android_qa.sh writes user://qa_args.txt; it is
+## deleted here so a QA mode never sticks to the install).
+func _args() -> PackedStringArray:
+	var args := OS.get_cmdline_user_args()
+	if not args.is_empty():
+		return args
+	var path := "user://qa_args.txt"
+	if not FileAccess.file_exists(path):
+		return args
+	var text := FileAccess.open(path, FileAccess.READ).get_as_text().strip_edges()
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	var out := PackedStringArray()
+	for a in text.split(" ", false):
+		out.push_back(a.strip_edges())
+	print("QA: args from user://qa_args.txt: %s" % " ".join(out))
+	return out
+
+
+func _has_prefixed(args: PackedStringArray, prefix: String) -> bool:
+	for a in args:
+		if str(a).begins_with(prefix):
+			return true
+	return false
+
+
+func _arg_value(args: PackedStringArray, prefix: String, fallback: String) -> String:
+	for a in args:
+		if str(a).begins_with(prefix):
+			return str(a).trim_prefix(prefix)
+	return fallback
+
+
+# ---- --qa-perf (docs/PERFORMANCE.md): frame time, render time, draws, script time ---------
+
+## Every area × mode (league heat with the PiP open, with it minimized, the
+## time trial) for PERF_SECONDS after a warm-up, a bot shooting on our side,
+## the probe sampling every frame; one table row per run and
+## user://qa/perf.json for tools/perf_ledger.gd. Filters: --qa-perf=beach,city
+## --qa-perf-mode=heat_pip,trial --qa-perf-seconds=24.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-perf
+##   tools/android_qa.sh --qa-perf                       (on the phone)
+const PERF_AREAS := ["cage", "beach", "park", "city"]
+const PERF_MODES := ["heat_pip", "heat_min", "trial"]
+const PERF_WARMUP_S := 3.0
+const PERF_SECONDS := 24.0
+
+func _run_perf(args: PackedStringArray) -> void:
+	var areas: Array = Array(_arg_value(args, "--qa-perf=", ",".join(PERF_AREAS)).split(",", false))
+	var modes: Array = Array(_arg_value(args, "--qa-perf-mode=", ",".join(PERF_MODES)).split(",", false))
+	var seconds := float(_arg_value(args, "--qa-perf-seconds=", str(PERF_SECONDS)))
+	Net.enabled = false
+	await _sleep(1.0)
+	# The dev save comes back exactly as it was: a QA heat must not advance a season.
+	var save: Node = get_tree().root.get_node("SaveService")
+	var kept := {"campaign": {}, "cosmetics": save.get_cosmetics(), "progress": save.get_progress(), "cards": save.get_cards()}
+	for a in PERF_AREAS:
+		kept["campaign"][a] = save.league_doc(a)
+	var was_gating: bool = App.league_gating
+	App.league_gating = false   # every court measured whatever this save has opened
+	var runs := []
+	for area in areas:
+		for mode in modes:
+			var row := await _perf_run(str(area), str(mode), seconds)
+			if not row.is_empty():
+				runs.push_back(row)
+				print("PERF " + PerfBudget.row_text(row))
+	# The drift check: the first scenario again at the end (a warm phone runs slower).
+	if areas.size() * modes.size() > 1:
+		var again := await _perf_run(str(areas[0]), str(modes[0]), seconds)
+		if not again.is_empty():
+			again["mode"] = str(modes[0]) + "*"
+			runs.push_back(again)
+			print("PERF " + PerfBudget.row_text(again))
+	App.league_gating = was_gating
+	for a in PERF_AREAS:
+		if kept["campaign"][a] is Dictionary and not Dictionary(kept["campaign"][a]).is_empty():
+			save.put_league_doc(a, kept["campaign"][a])
+	save.put_cosmetics(kept["cosmetics"])
+	save.put_progress(kept["progress"])
+	save.put_cards(kept["cards"])
+	App.qa_player_bot = null
+	var dump := {
+		"device": {"model": OS.get_model_name(), "os": OS.get_name(), "renderer": str(ProjectSettings.get_setting("rendering/renderer/rendering_method", "")),
+			"adapter": RenderingServer.get_video_adapter_name(), "window": str(DisplayServer.window_get_size())},
+		"when": Time.get_datetime_string_from_system(), "warmup_s": PERF_WARMUP_S, "seconds": seconds, "runs": runs,
+	}
+	var f := FileAccess.open("user://qa/perf.json", FileAccess.WRITE)
+	f.store_string(JSON.stringify(dump, "  "))
+	f.close()
+	print("PERF TABLE (%s · %s · %s)" % [dump["device"]["model"], dump["device"]["renderer"], dump["device"]["adapter"]])
+	print(PerfBudget.header_text())
+	for r in runs:
+		print(PerfBudget.row_text(r))
+	print("QA perf: wrote user://qa/perf.json (%d runs)" % runs.size())
+	get_tree().quit(0)
+
+
+## One scenario: start it, wait the warm-up, measure `seconds`, back to the title.
+func _perf_run(area: String, mode: String, seconds: float) -> Dictionary:
+	var is_heat := mode.begins_with("heat")
+	if is_heat:
+		# A fresh season, day 1, the same seed every run: the heat always exists and the runs compare.
+		var cfg := LeagueData.league(area)
+		if cfg.is_empty():
+			print("QA perf: no league for %s" % area)
+			return {}
+		App.save_league_doc(Campaign.new_doc(cfg, 4242, int(Time.get_unix_time_from_system() * 1000.0)), area)
+		if not App.enter_league(area):
+			print("QA perf: could not enter the %s league" % area)
+			return {}
+		App.qa_player_bot = AiRatings.make(0.6, 0.5)
+		App.play_league_heat()
+	else:
+		App.start_area("trial", area)
+	await _sleep(1.0)
+	var screen := get_tree().current_scene
+	if screen == null or not ("trial" in screen):
+		print("QA perf: %s %s did not start" % [area, mode])
+		App.to_title()
+		await _sleep(1.0)
+		return {}
+	# Through the countdown (TimeTrial.COUNTDOWN_SECONDS) and into play.
+	await _sleep(TimeTrial.COUNTDOWN_SECONDS + 0.5)
+	if mode == "heat_min":
+		await _click_named("PipMin")
+	var pip_vp: SubViewport = screen.get("_pip_vp") if is_heat else null
+	var probe := PerfProbe.new()
+	probe.name = "PerfProbe"
+	probe.setup(get_viewport(), pip_vp, screen)
+	add_child(probe)
+	var flicker := 0.0
+	var t := 0.0
+	while t < PERF_WARMUP_S + seconds:
+		var dt := 0.2
+		await _sleep(dt)
+		t += dt
+		if t >= PERF_WARMUP_S and not probe.measuring:
+			probe.begin()
+		if not is_heat:
+			flicker += dt
+			if flicker >= 1.6:
+				flicker = 0.0
+				_flick(1.9, 0.30, randf_range(-1.0, 1.0))
+	var row := probe.finish()
+	row["area"] = area
+	row["mode"] = mode
+	probe.queue_free()
+	App.qa_player_bot = null
+	await _snap("perf_%s_%s" % [area, mode])
+	App.to_title()
+	await _sleep(1.2)
+	return row
+
+
+## The per-frame probe (docs/PERFORMANCE.md): frame time, each viewport's
+## measured render time (CPU, and GPU where the driver has timestamps — none
+## on Metal), visible + shadow draws / primitives / objects per viewport, the
+## script time, and the see-through coverage (alpha-blended surfaces' screen
+## area, in screens) every 10th frame.
+class PerfProbe extends Node:
+	const HITCH_MS := 20.0
+	var measuring := false
+	var _main: Viewport
+	var _pip: SubViewport
+	var _screen: Node
+	var _frames: PackedFloat64Array = []
+	var _script: PackedFloat64Array = []
+	var _setup: PackedFloat64Array = []
+	var _cov: PackedFloat64Array = []
+	var _cov_tick := 0
+	var _vp_sum := {}   # "main"/"pip" → {cpu, gpu, n, draws_v, draws_s, prims_v, prims_s, objs_v, objs_s}
+	var _hitches: Array = []
+	var _t := 0.0
+	var _alpha_cache := {}   # shader RID → bool
+	## Script time: a sentinel that runs FIRST in the frame stamps the clock; the
+	## probe runs LAST and takes the span — every _process in between, nothing else.
+	var _first: Node
+	var _span: PackedFloat64Array = []
+	var _frame_start_usec := 0
+
+	func setup(main: Viewport, pip: SubViewport, screen: Node) -> void:
+		_main = main
+		_pip = pip
+		_screen = screen
+		process_priority = 1000
+		_first = Node.new()
+		_first.name = "PerfFirst"
+		_first.process_priority = -1000
+		_first.set_script(FirstSentinel)
+		add_child(_first)
+		RenderingServer.viewport_set_measure_render_time(_main.get_viewport_rid(), true)
+		if _pip != null:
+			RenderingServer.viewport_set_measure_render_time(_pip.get_viewport_rid(), true)
+		for k in ["main", "pip"]:
+			_vp_sum[k] = {"cpu": 0.0, "gpu": 0.0, "n": 0, "draws_v": 0.0, "draws_s": 0.0, "prims_v": 0.0, "prims_s": 0.0, "objs_v": 0.0, "objs_s": 0.0}
+
+	func begin() -> void:
+		measuring = true
+		_t = 0.0
+
+	func _process(dt: float) -> void:
+		if not measuring:
+			return
+		_t += dt
+		var ms := dt * 1000.0
+		_frames.push_back(ms)
+		if ms > HITCH_MS:
+			_hitches.push_back({"t": snappedf(_t, 0.01), "ms": snappedf(ms, 0.1)})
+		_script.push_back((Performance.get_monitor(Performance.TIME_PROCESS) + Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS)) * 1000.0)
+		var start: int = _first.get("stamp") if _first != null else 0
+		if start > 0:
+			_span.push_back((Time.get_ticks_usec() - start) / 1000.0)
+		_setup.push_back(RenderingServer.get_frame_setup_time_cpu())
+		_sample_vp("main", _main)
+		if _pip != null and is_instance_valid(_pip):
+			_sample_vp("pip", _pip)
+		_cov_tick += 1
+		if _cov_tick % 10 == 0:
+			_cov.push_back(_coverage())
+
+	func _sample_vp(key: String, vp: Viewport) -> void:
+		var rid := vp.get_viewport_rid()
+		var s: Dictionary = _vp_sum[key]
+		s["cpu"] += RenderingServer.viewport_get_measured_render_time_cpu(rid)
+		s["gpu"] += RenderingServer.viewport_get_measured_render_time_gpu(rid)
+		s["draws_v"] += vp.get_render_info(Viewport.RENDER_INFO_TYPE_VISIBLE, Viewport.RENDER_INFO_DRAW_CALLS_IN_FRAME)
+		s["draws_s"] += vp.get_render_info(Viewport.RENDER_INFO_TYPE_SHADOW, Viewport.RENDER_INFO_DRAW_CALLS_IN_FRAME)
+		s["prims_v"] += vp.get_render_info(Viewport.RENDER_INFO_TYPE_VISIBLE, Viewport.RENDER_INFO_PRIMITIVES_IN_FRAME)
+		s["prims_s"] += vp.get_render_info(Viewport.RENDER_INFO_TYPE_SHADOW, Viewport.RENDER_INFO_PRIMITIVES_IN_FRAME)
+		s["objs_v"] += vp.get_render_info(Viewport.RENDER_INFO_TYPE_VISIBLE, Viewport.RENDER_INFO_OBJECTS_IN_FRAME)
+		s["objs_s"] += vp.get_render_info(Viewport.RENDER_INFO_TYPE_SHADOW, Viewport.RENDER_INFO_OBJECTS_IN_FRAME)
+		s["n"] += 1
+
+	## Alpha-blended surfaces in the main view: the sum of their projected
+	## bounding rects as a fraction of the screen (overdraw's upper bound).
+	func _coverage() -> float:
+		var cam := _main.get_camera_3d()
+		if cam == null or _screen == null or not is_instance_valid(_screen):
+			return 0.0
+		var vp_size := Vector2(_main.get_visible_rect().size)
+		var total := 0.0
+		for gi in _screen.find_children("*", "GeometryInstance3D", true, false):
+			var g := gi as GeometryInstance3D
+			if g == null or not g.is_visible_in_tree() or g.get_viewport() != _main or not _is_blended(g):
+				continue
+			var aabb := g.global_transform * g.get_aabb()
+			var lo := Vector2(INF, INF)
+			var hi := Vector2(-INF, -INF)
+			var any_front := false
+			for i in 8:
+				var corner := aabb.get_endpoint(i)
+				if cam.is_position_behind(corner):
+					continue
+				any_front = true
+				var p := cam.unproject_position(corner)
+				lo = lo.min(p)
+				hi = hi.max(p)
+			if not any_front:
+				continue
+			lo = lo.clamp(Vector2.ZERO, vp_size)
+			hi = hi.clamp(Vector2.ZERO, vp_size)
+			total += maxf(hi.x - lo.x, 0.0) * maxf(hi.y - lo.y, 0.0) / (vp_size.x * vp_size.y)
+		return total
+
+	func _is_blended(g: GeometryInstance3D) -> bool:
+		var mats: Array = []
+		if g.material_override != null:
+			mats.push_back(g.material_override)
+		elif g is MeshInstance3D and (g as MeshInstance3D).mesh != null:
+			var mi := g as MeshInstance3D
+			for i in mi.mesh.get_surface_count():
+				var m: Material = mi.get_surface_override_material(i)
+				if m == null:
+					m = mi.mesh.surface_get_material(i)
+				if m != null:
+					mats.push_back(m)
+		elif g is MultiMeshInstance3D and (g as MultiMeshInstance3D).multimesh != null and (g as MultiMeshInstance3D).multimesh.mesh != null:
+			var mm := (g as MultiMeshInstance3D).multimesh.mesh
+			for i in mm.get_surface_count():
+				var m: Material = mm.surface_get_material(i)
+				if m != null:
+					mats.push_back(m)
+		for m in mats:
+			if m is BaseMaterial3D and (m as BaseMaterial3D).transparency == BaseMaterial3D.TRANSPARENCY_ALPHA:
+				return true
+			if m is ShaderMaterial:
+				var sm := m as ShaderMaterial
+				if sm.shader == null:
+					continue
+				var key := sm.shader.get_rid()
+				if not _alpha_cache.has(key):
+					var code := sm.shader.code
+					var re := RegEx.new()
+					re.compile("\\bALPHA\\s*[*+\\-]?=")
+					_alpha_cache[key] = re.search(code) != null and not code.contains("alpha_to_coverage") and not code.contains("ALPHA_SCISSOR_THRESHOLD")
+				if bool(_alpha_cache[key]):
+					return true
+		return false
+
+	static func _pct(sorted: PackedFloat64Array, q: float) -> float:
+		if sorted.is_empty():
+			return 0.0
+		var i := clampi(int(floor(q * (sorted.size() - 1))), 0, sorted.size() - 1)
+		return sorted[i]
+
+	func finish() -> Dictionary:
+		measuring = false
+		var fr := _frames.duplicate()
+		fr.sort()
+		var sc := _script.duplicate()
+		sc.sort()
+		var sp := _span.duplicate()
+		sp.sort()
+		var p50 := _pct(fr, 0.5)
+		var spikes := 0
+		for v in _frames:
+			if v > 1.5 * p50:
+				spikes += 1
+		var row := {
+			"frames": _frames.size(), "seconds": snappedf(_t, 0.01),
+			"frame_p50": snappedf(_pct(fr, 0.5), 0.01), "frame_p95": snappedf(_pct(fr, 0.95), 0.01), "frame_p99": snappedf(_pct(fr, 0.99), 0.01),
+			"frame_max": snappedf(fr[fr.size() - 1] if not fr.is_empty() else 0.0, 0.01),
+			"fps": snappedf(_frames.size() / maxf(_t, 0.001), 0.1),
+			"hitches": _hitches.size(), "hitches_per_60s": snappedf(_hitches.size() * 60.0 / maxf(_t, 0.001), 0.1), "hitch_log": _hitches.slice(0, 20),
+			"spikes": spikes, "spikes_per_60s": snappedf(spikes * 60.0 / maxf(_t, 0.001), 0.1),
+			"loop_p50": snappedf(_pct(sc, 0.5), 0.01), "loop_p95": snappedf(_pct(sc, 0.95), 0.01),
+			"script_p50": snappedf(_pct(sp, 0.5), 0.01), "script_p95": snappedf(_pct(sp, 0.95), 0.01),
+			"setup_cpu_mean": snappedf(_mean(_setup), 0.01),
+			"coverage_mean": snappedf(_mean(_cov), 0.001), "coverage_max": snappedf(_max(_cov), 0.001),
+		}
+		for k in ["main", "pip"]:
+			var s: Dictionary = _vp_sum[k]
+			var n := maxf(float(s["n"]), 1.0)
+			if int(s["n"]) == 0:
+				continue
+			row[k] = {"cpu": snappedf(s["cpu"] / n, 0.01), "gpu": snappedf(s["gpu"] / n, 0.01),
+				"draws_v": roundi(s["draws_v"] / n), "draws_s": roundi(s["draws_s"] / n),
+				"prims_v": roundi(s["prims_v"] / n), "prims_s": roundi(s["prims_s"] / n),
+				"objs_v": roundi(s["objs_v"] / n), "objs_s": roundi(s["objs_s"] / n)}
+		return row
+
+	static func _mean(a: PackedFloat64Array) -> float:
+		if a.is_empty():
+			return 0.0
+		var s := 0.0
+		for v in a:
+			s += v
+		return s / a.size()
+
+	static func _max(a: PackedFloat64Array) -> float:
+		var m := 0.0
+		for v in a:
+			m = maxf(m, v)
+		return m
+
+
+## The first node to process each frame: it stamps the clock the probe reads last.
+class FirstSentinel extends Node:
+	var stamp := 0
+	func _process(_dt: float) -> void:
+		stamp = Time.get_ticks_usec()

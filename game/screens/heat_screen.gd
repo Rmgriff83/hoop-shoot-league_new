@@ -63,6 +63,7 @@ func _make_rules() -> void:
 		"ai_cards": Array(_heat_cfg.get("ai_cards", [])),
 		"board_motion": bool(_mode.get("board_motion", false)),
 		"remote": bool(_heat_cfg.get("remote", false)),
+		"player_bot": _heat_cfg.get("player_bot", null),   # QA only (--qa-perf): a bot on our side
 	})
 	trial = heat.player
 	if heat.remote:
