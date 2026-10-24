@@ -504,6 +504,27 @@ func _widgets(t) -> void:
 	var panel := SettingsPanel.new()
 	panel._ready()
 	t.ok(panel.has_dark_mode(), "settings has the dark-mode row")
+	# The rows scroll (2026-10-24) and a touch that starts on a row scrolls the
+	# list: a ShadowCard under a ScrollContainer passes its press up once in the tree.
+	var sp: ScrollContainer = panel.find_child("Scroll", true, false)
+	t.ok(sp != null and sp.find_child("Rows", true, false) != null, "settings rows sit in a ScrollContainer")
+	# (The runner works off-tree — the root joins the tree after _initialize —
+	# so the hook is called by hand, as the panels' _ready is.)
+	var probe := ScrollContainer.new()
+	var probe_col := VBoxContainer.new()
+	probe.add_child(probe_col)
+	var probe_row := HomePage.button("ROW", Color.WHITE, 16, 40.0)
+	probe_col.add_child(probe_row)
+	probe_row._enter_tree()
+	t.eq(probe_row.mouse_filter, Control.MOUSE_FILTER_PASS, "a button in a scroll list passes its press to the scroller")
+	probe.free()
+	var loose_box := VBoxContainer.new()
+	var loose := HomePage.button("LOOSE", Color.WHITE, 16, 40.0)
+	loose_box.add_child(loose)
+	loose._enter_tree()
+	t.eq(loose.mouse_filter, Control.MOUSE_FILTER_STOP, "…a button outside one keeps the press")
+	loose_box.free()
+	t.eq(int(ProjectSettings.get_setting("gui/common/default_scroll_deadzone", 0)), 18, "a tap wobbles 18 px before the list scrolls")
 	t.ok(panel.find_child("ShotHelp", true, false) != null, "settings has shot help")
 	# AI DIFFICULTY (2026-10-19): right under shot help, cycling NORMAL → HARD → EASY.
 	var was_diff: String = _app().ai_difficulty

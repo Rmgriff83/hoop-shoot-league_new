@@ -35,6 +35,20 @@ func _init(p_color := Color.WHITE) -> void:
 	mouse_exited.connect(queue_redraw)
 
 
+## Inside a ScrollContainer the press passes up to it, so a drag that starts
+## on a row scrolls the list instead of sticking to the button (the scroll's
+## SCROLL_BEGIN then cancels the press; the deadzone is the project's
+## gui/common/default_scroll_deadzone). Ross's settings / archive bug, 2026-10-24.
+## On entering the tree (synchronous: the parents are set, ready may wait).
+func _enter_tree() -> void:
+	var p := get_parent()
+	while p != null:
+		if p is ScrollContainer:
+			mouse_filter = Control.MOUSE_FILTER_PASS
+			return
+		p = p.get_parent()
+
+
 ## A solid face (the active tab): `face` opaque, `p_dot` its texture, `p_shadow` the strip.
 static func solid(face: Color, p_dot: Color, p_shadow: Color) -> ShadowCard:
 	var b := ShadowCard.new(face)

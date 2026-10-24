@@ -34,6 +34,10 @@ window/handheld/orientation=1
 
 project/assembly_name="Hoop Shoot"
 
+[gui]
+
+common/default_scroll_deadzone=18
+
 [input_devices]
 
 pointing/emulate_touch_from_mouse=true

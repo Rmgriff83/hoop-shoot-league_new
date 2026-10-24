@@ -72,6 +72,11 @@ static func _load_list(paths: PackedStringArray) -> Array:
 
 var _net_kind := "nylon"
 var _hoop_net_kind := "nylon"
+## The make clips of the HUNG net's kind when it is not the hoop's own (a
+## chain on the park's nylon rim swishes like the chain hoop; cotton on the
+## city's steel swishes like cotton). Empty while the net is the hoop's kind,
+## so make() plays the hoop's own clips.
+var _net_make: Array = []
 
 
 ## Load a hoop set's sounds (replacing the previous hoop's).
@@ -80,6 +85,8 @@ func load_hoop_set(set: HoopSet) -> void:
 	_hoop_id = ""
 	_net_kind = "nylon"
 	_hoop_net_kind = "nylon"
+	_net_make = []
+	_last.erase("net:make")
 	if set == null:
 		return
 	_net_kind = set.net_kind
@@ -128,6 +135,28 @@ func hang_net(ns: NetSet) -> void:
 		_net_kind = _hoop_net_kind
 	else:
 		_net_kind = "chain" if ns.kind == "chain" else "nylon"
+	_net_make = []
+	_last.erase("net:make")
+	if _net_kind != _hoop_net_kind:
+		var ref := _reference_hoop(_net_kind)
+		if ref != null:
+			_net_make = _load_list(ref.make_clips)
+
+
+## The hoop whose make clips a hung net of `kind` ("nylon" | "chain") borrows:
+## the first hoop of that native kind in the library (the chain hoop for a
+## chain, the classic for cotton).
+static func _reference_hoop(kind: String) -> HoopSet:
+	for h in CosmeticLibrary.hoops():
+		if h.net_kind == kind:
+			return h
+	return null
+
+
+## Which kind the make clip sounds like right now: the hung net's kind when
+## its reference hoop had clips to lend, else the hoop's own.
+func make_kind() -> String:
+	return _net_kind if not _net_make.is_empty() else _hoop_net_kind
 
 
 func ball_id() -> String:
@@ -565,6 +594,9 @@ func contact(kind: String, speed: float) -> void:
 
 ## A made shot: the hoop's make clip (falls back to the synthetic swish).
 func make() -> void:
+	# The swish is the NET's sound: a hung net of another kind lends its own.
+	if not _net_make.is_empty() and _play_from({"make": _net_make}, "net", "make", MAKE_GAIN_DB):
+		return
 	if not _play_from(_hoop, "hoop", "make", MAKE_GAIN_DB):
 		_play("swish")
 

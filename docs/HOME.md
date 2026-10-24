@@ -184,7 +184,14 @@ chevron (the footer says START INSIDE).
   has its own `Prev` / `Next` chevrons). `--qa-splash` snaps
   `walkthrough_00..06`; `tests/test_walkthroughs.gd`.
 - **Settings** (`game/ui/settings_panel.gd`, a `HomePage` since 2026-10-15,
-  design "Settings"): the menu button slides it in like the locker. Every
+  design "Settings"): the menu button slides it in like the locker. The rows
+  scroll (a `ScrollContainer` since 2026-10-24: the player block and the dev
+  rows outgrow the frame), and a touch that starts on a row scrolls the list —
+  every `ShadowCard` under a `ScrollContainer` passes its press up
+  (`MOUSE_FILTER_PASS`, set in its `_enter_tree`) and the scroll's SCROLL_BEGIN
+  cancels the press past the project's 18 px deadzone
+  (`gui/common/default_scroll_deadzone`); the same fix reaches the area
+  archive, the locker, ranks, rewards and the card sheet. Every
   row is a dotted face — cream, gold when a toggle is on, orange for SAVE /
   CLAIM: SHOT HELP, AI DIFFICULTY (`AI DIFFICULTY: EASY / NORMAL / HARD`, taps cycle;
   gold off NORMAL; one strength for every AI the player faces on every court,

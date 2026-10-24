@@ -104,10 +104,18 @@ func run(t) -> void:
 	if sfx != null:
 		sfx.load_hoop_set(CosmeticLibrary.get_hoop("park"))
 		t.eq(sfx.net_kind(), "nylon", "the park hoop sounds nylon")
+		t.eq(sfx.make_kind(), "nylon", "…and its swish is the cotton make clip")
 		sfx.hang_net(CosmeticLibrary.get_net("jack"))
 		t.eq(sfx.net_kind(), "chain", "…a hung chain rattles")
+		t.eq(sfx.make_kind(), "chain", "…and swishes like the chain hoop (Ross's park bug, 2026-10-24)")
+		sfx.hang_net(CosmeticLibrary.get_net("cotton"))
+		t.eq(sfx.make_kind(), "nylon", "…cotton hung again: the cotton swish")
 		sfx.hang_net(null)
 		t.eq(sfx.net_kind(), "nylon", "…no net set: the hoop's own again")
+		t.eq(sfx.make_kind(), "nylon", "…and the hoop's own make clips")
+		sfx.load_hoop_set(CosmeticLibrary.get_hoop("chain"))
+		sfx.hang_net(CosmeticLibrary.get_net("cotton"))
+		t.eq(sfx.make_kind(), "nylon", "cotton on the city's steel swishes like cotton")
 		sfx.load_hoop_set(CosmeticLibrary.starter_hoop())
 	# A tinted cotton: the cotton body with the set's colour on its cords.
 	var cage := CourtGeometry.new()

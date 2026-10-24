@@ -46,7 +46,9 @@ cotton on the city's steel. What follows the choice is what you see and
 hear — the body `NetBodies` builds, swung by `NetSim` on the **knobs of
 that kind's reference hoop** (`CourtGeometry._knobs_hoop`: the chain hoop's
 for a chain, the hoop's own for its native kind), the chain rattle / cotton
-rustle (`Sfx.hang_net`), the thumbnail. What stays the area's: the hoop
+rustle AND the make clip — a hung net of the other kind borrows its reference
+hoop's swish (`Sfx.hang_net`; fixed 2026-10-24, the park's chain used to
+swish like cotton), the thumbnail. What stays the area's: the hoop
 itself and the ball's physics (`SimGeometry` net drag / wall restitution,
 the AI calibration, the golden grid). `App.net_kind_for_area` still names a
 hoop's native kind, which is the stock fallback when nothing owned is hung.

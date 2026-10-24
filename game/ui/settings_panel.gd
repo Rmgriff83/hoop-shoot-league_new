@@ -41,12 +41,19 @@ const DELETE_ARM_S := 8.0
 
 func _build() -> void:
 	head("SETTINGS", false)
+	# The rows scroll (2026-10-24): the player block and the dev rows outgrow
+	# the frame; CLOSE stays at the foot.
+	var scroll := ScrollContainer.new()
+	scroll.name = "Scroll"
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	body.add_child(scroll)
 	_list = VBoxContainer.new()
 	_list.name = "Rows"
-	_list.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	_list.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_list.add_theme_constant_override("separation", 16)
 	_list.mouse_filter = Control.MOUSE_FILTER_PASS
-	body.add_child(_list)
+	scroll.add_child(_list)
 
 	_shot_help = _row("ShotHelp", _shot_help_label(), App.shot_help > 0)
 	_shot_help.pressed.connect(func() -> void:

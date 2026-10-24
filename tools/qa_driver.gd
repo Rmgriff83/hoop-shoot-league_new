@@ -41,8 +41,11 @@ func _ready() -> void:
 	# --qa-hud-side: the HUD pass with HUD SIDE: RIGHT (the toasts and the note mirrored), then back.
 	if args.has("--qa-hud-side"):
 		App.set_hud_side("right")
-	# The first-shot tutorial (design 38a) would sit over every match a pass enters: only --qa-tutorial wants it.
-	App.qa_skip_tutorial = not args.has("--qa-tutorial")
+	# The first-shot tutorial (design 38a) would sit over every match a QA pass
+	# enters: only --qa-tutorial wants it. A normal launch (no --qa flag at all)
+	# keeps it — this autoload runs in every build, so the skip must not be the
+	# default (Ross's phone never saw the tutorial, 2026-10-24).
+	App.qa_skip_tutorial = skips_tutorial(args)
 	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
@@ -2049,7 +2052,13 @@ func _args() -> PackedStringArray:
 	return out
 
 
-func _has_prefixed(args: PackedStringArray, prefix: String) -> bool:
+## Whether a launch with `args` skips the first-shot tutorial: only a QA pass
+## that did not ask for it. A plain launch never skips (tested).
+static func skips_tutorial(args: PackedStringArray) -> bool:
+	return _has_prefixed(args, "--qa") and not args.has("--qa-tutorial")
+
+
+static func _has_prefixed(args: PackedStringArray, prefix: String) -> bool:
 	for a in args:
 		if str(a).begins_with(prefix):
 			return true

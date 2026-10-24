@@ -152,8 +152,10 @@ const ARCADE_RIM_LOG_IMPACT := 0.2
 ## kicks bricks out further and drops fewer rattles. Everything you see and
 ## hear follows from this one number — see rim_rigidity().
 const BEACH_RIM_E := ARCADE_RIM_E * 1.33
-## The city park ring is bouncier still: 15 % over the beach's (Ross, 2026-10-05).
-const CITY_RIM_E := BEACH_RIM_E * 1.15
+## The city park ring is bouncier still: 8 % over the beach's (15 % from
+## 2026-10-05 until Ross softened both the city's and the park's iron a bit,
+## 2026-10-24).
+const CITY_RIM_E := BEACH_RIM_E * 1.08
 ## Beach practice hoop distance: 17.5 % farther than the arcade base pose.
 const BEACH_DIST := 2.9 * 1.175
 ## Chain net (the city court): steel links weigh ~10x nylon and neither drape
@@ -177,7 +179,8 @@ const CITY_DIST := 2.9 * 1.25
 ## restitution for every wall, so it sits between the wood (0.35) and the
 ## snow (0.20).
 const PARK_DIST := 3.70
-const PARK_RIM_E := 0.60
+## 0.60 until 2026-10-24 (Ross: a bit less rigid); still the liveliest ring.
+const PARK_RIM_E := 0.56
 const PARK_BOARD_HALF_W := 0.70
 const PARK_POLE_R := 0.07
 const PARK_POLE_OFF := 0.17

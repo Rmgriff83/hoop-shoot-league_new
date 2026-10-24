@@ -78,6 +78,12 @@ func run(t) -> void:
 	t.ok(not ShotTutorial.due(true, false, false), "never once seen")
 	t.ok(not ShotTutorial.due(false, true, false), "never online")
 	t.ok(not ShotTutorial.due(false, false, true), "never under a QA pass that did not ask")
+	var qa := load("res://tools/qa_driver.gd")
+	t.ok(not qa.skips_tutorial(PackedStringArray()), "a plain launch keeps the tutorial (the phone, 2026-10-24)")
+	t.ok(not qa.skips_tutorial(PackedStringArray(["--rendering-driver", "vulkan"])), "…engine flags are not a QA pass")
+	t.ok(qa.skips_tutorial(PackedStringArray(["--qa-heat"])), "a QA pass skips it")
+	t.ok(qa.skips_tutorial(PackedStringArray(["--qa-perf=cage"])), "…a valued QA flag too")
+	t.ok(not qa.skips_tutorial(PackedStringArray(["--qa-tutorial"])), "…unless it is the tutorial pass")
 	t.ok(save.default_settings().has("shotTutorialSeen") and not bool(save.default_settings()["shotTutorialSeen"]), "shotTutorialSeen defaults off")
 	# The flick mapping's inverses (the demo's perfect throw).
 	var tuning := FlickTuning.new()
