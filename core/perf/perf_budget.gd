@@ -105,8 +105,8 @@ static func compare(row: Dictionary, base: Dictionary, hr: Dictionary) -> Packed
 
 
 static func header_text() -> String:
-	return "  %-6s %-9s %6s %6s %6s %5s %5s | %6s %6s %6s %6s | %5s %5s | %6s %5s %6s | %7s" % [
-		"area", "mode", "p50", "p95", "p99", "hit60", "spk60", "mainC", "mainG", "pipC", "pipG", "drwV", "drwS", "script", "cov", "pipDrw", "tris"]
+	return "  %-6s %-16s %6s %6s %6s %5s %5s | %6s %6s %6s %6s | %5s %5s | %6s %5s %5s %6s | %7s" % [
+		"area", "mode", "p50", "p95", "p99", "hit60", "spk60", "mainC", "mainG", "pipC", "pipG", "drwV", "drwS", "script", "sim", "cov", "pipDrw", "tris"]
 
 
 static func row_text(row: Dictionary) -> String:
@@ -114,8 +114,8 @@ static func row_text(row: Dictionary) -> String:
 	var p: Dictionary = row.get("pip", {}) if row.get("pip") is Dictionary else {}
 	var gpu := func(v: Dictionary) -> String:
 		return "n/a" if float(v.get("gpu", 0.0)) <= 0.0 else "%.1f" % float(v.get("gpu", 0.0))
-	return "  %-6s %-9s %6.1f %6.1f %6.1f %5.0f %5.1f | %6.1f %6s %6s %6s | %5d %5d | %6.1f %5.2f %6s | %7d" % [
+	return "  %-6s %-16s %6.1f %6.1f %6.1f %5.0f %5.1f | %6.1f %6s %6s %6s | %5d %5d | %6.1f %5.1f %5.2f %6s | %7d" % [
 		row.get("area", "?"), row.get("mode", "?"), float(row.get("frame_p50", 0)), float(row.get("frame_p95", 0)), float(row.get("frame_p99", 0)), float(row.get("hitches_per_60s", 0)), float(row.get("spikes_per_60s", 0)),
 		float(m.get("cpu", 0)), gpu.call(m), ("%.1f" % float(p.get("cpu", 0))) if not p.is_empty() else "-", gpu.call(p) if not p.is_empty() else "-",
-		int(m.get("draws_v", 0)), int(m.get("draws_s", 0)), float(row.get("script_p95", 0)), float(row.get("coverage_max", 0)),
+		int(m.get("draws_v", 0)), int(m.get("draws_s", 0)), float(row.get("script_p95", 0)), float(row.get("sim_p95", 0)), float(row.get("coverage_max", 0)),
 		("%d+%d" % [int(p.get("draws_v", 0)), int(p.get("draws_s", 0))]) if not p.is_empty() else "-", prims_total(row)]

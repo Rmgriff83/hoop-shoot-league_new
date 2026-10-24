@@ -954,7 +954,9 @@ func pip_minimized() -> bool:
 
 
 func _step_rules(dt: float) -> void:
+	var t0 := Time.get_ticks_usec()
 	heat.tick(dt)
+	last_sim_ms = (Time.get_ticks_usec() - t0) / 1000.0
 	for ev in heat.drain_events():
 		if ev.get("side", "") == Heat.AI:
 			_handle_ai_event(ev)

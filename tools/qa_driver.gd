@@ -1899,6 +1899,9 @@ func _run_perf(args: PackedStringArray) -> void:
 	var areas: Array = Array(_arg_value(args, "--qa-perf=", ",".join(PERF_AREAS)).split(",", false))
 	var modes: Array = Array(_arg_value(args, "--qa-perf-mode=", ",".join(PERF_MODES)).split(",", false))
 	var seconds := float(_arg_value(args, "--qa-perf-seconds=", str(PERF_SECONDS)))
+	# A/B variants (CourtGeometry.ab): "base" then each named lever, every area × mode per variant.
+	var variants: Array = Array(_arg_value(args, "--qa-perf-ab=", "").split(",", false))
+	variants.push_front("base")
 	Net.enabled = false
 	await _sleep(1.0)
 	# The dev save comes back exactly as it was: a QA heat must not advance a season.
@@ -1909,19 +1912,30 @@ func _run_perf(args: PackedStringArray) -> void:
 	var was_gating: bool = App.league_gating
 	App.league_gating = false   # every court measured whatever this save has opened
 	var runs := []
-	for area in areas:
-		for mode in modes:
-			var row := await _perf_run(str(area), str(mode), seconds)
-			if not row.is_empty():
-				runs.push_back(row)
-				print("PERF " + PerfBudget.row_text(row))
-	# The drift check: the first scenario again at the end (a warm phone runs slower).
-	if areas.size() * modes.size() > 1:
+	for variant in variants:
+		# Every lever is measured against the same reference: the scenery caster rules OFF
+		# (the game's default has them on); "casters" alone turns them on.
+		CourtGeometry.ab = {"casters": str(variant) == "casters"}
+		if str(variant) not in ["base", "casters"]:
+			CourtGeometry.ab[str(variant)] = true
+		for area in areas:
+			for mode in modes:
+				var row := await _perf_run(str(area), str(mode), seconds)
+				if not row.is_empty():
+					if str(variant) != "base":
+						row["variant"] = str(variant)
+						row["mode"] = str(mode) + "@" + str(variant)
+					runs.push_back(row)
+					print("PERF " + PerfBudget.row_text(row))
+	# The drift check: the first scenario again at the end, as the reference ran (a warm phone runs slower).
+	if areas.size() * modes.size() * variants.size() > 1:
+		CourtGeometry.ab = {"casters": false}
 		var again := await _perf_run(str(areas[0]), str(modes[0]), seconds)
 		if not again.is_empty():
 			again["mode"] = str(modes[0]) + "*"
 			runs.push_back(again)
 			print("PERF " + PerfBudget.row_text(again))
+	CourtGeometry.ab = {}
 	App.league_gating = was_gating
 	for a in PERF_AREAS:
 		if kept["campaign"][a] is Dictionary and not Dictionary(kept["campaign"][a]).is_empty():
@@ -2016,11 +2030,18 @@ class PerfProbe extends Node:
 	var _screen: Node
 	var _frames: PackedFloat64Array = []
 	var _script: PackedFloat64Array = []
+	var _sim: PackedFloat64Array = []   # the rules tick alone (TimeTrialScreen.last_sim_ms)
 	var _setup: PackedFloat64Array = []
 	var _cov: PackedFloat64Array = []
 	var _cov_tick := 0
 	var _vp_sum := {}   # "main"/"pip" → {cpu, gpu, n, draws_v, draws_s, prims_v, prims_s, objs_v, objs_s}
 	var _hitches: Array = []
+	## Spikes (frames over 1.5× the run's running p50, after the first 60) with
+	## what was on screen — the shader-stutter check (docs/PERFORMANCE.md rule 8):
+	## a spike that lines up with a first appearance is a pipeline compile.
+	var _spike_log: Array = []
+	var _spike_p50 := 0.0
+	var _seen := {}   # tag → true once it has appeared (so "first:<tag>" marks the debut)
 	var _t := 0.0
 	var _alpha_cache := {}   # shader RID → bool
 	## Script time: a sentinel that runs FIRST in the frame stamps the clock; the
@@ -2057,10 +2078,21 @@ class PerfProbe extends Node:
 		_frames.push_back(ms)
 		if ms > HITCH_MS:
 			_hitches.push_back({"t": snappedf(_t, 0.01), "ms": snappedf(ms, 0.1)})
+		var tags := _tags()
+		if _frames.size() % 60 == 0:
+			var fr := _frames.duplicate()
+			fr.sort()
+			_spike_p50 = _pct(fr, 0.5)
+		if _spike_p50 > 0.0 and ms > 1.5 * _spike_p50 and _spike_log.size() < 60:
+			_spike_log.push_back({"t": snappedf(_t, 0.01), "ms": snappedf(ms, 0.1), "tags": tags})
+		for tg in tags:
+			_seen[str(tg).trim_prefix("first:")] = true
 		_script.push_back((Performance.get_monitor(Performance.TIME_PROCESS) + Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS)) * 1000.0)
 		var start: int = _first.get("stamp") if _first != null else 0
 		if start > 0:
 			_span.push_back((Time.get_ticks_usec() - start) / 1000.0)
+		if _screen != null and _screen.get("last_sim_ms") != null:
+			_sim.push_back(float(_screen.get("last_sim_ms")))
 		_setup.push_back(RenderingServer.get_frame_setup_time_cpu())
 		_sample_vp("main", _main)
 		if _pip != null and is_instance_valid(_pip):
@@ -2068,6 +2100,38 @@ class PerfProbe extends Node:
 		_cov_tick += 1
 		if _cov_tick % 10 == 0:
 			_cov.push_back(_coverage())
+
+	## What is on screen this frame: card fx, pops, balls in flight, the PiP — a
+	## tag reads "first:x" the frame it debuts.
+	func _tags() -> Array:
+		var out := []
+		if _screen == null or not is_instance_valid(_screen):
+			return out
+		var court: Node = _screen.get("_court")
+		if court != null:
+			var fire: Node = court.get("_fire")
+			var ice: Node = court.get("_ice")
+			var mag: Node = court.get("_magnet")
+			if fire != null and fire.is_lit():
+				out.push_back("fire")
+			if ice != null and ice.is_iced():
+				out.push_back("ice")
+			if mag != null and mag.is_up():
+				out.push_back("magnet")
+			if court.pop_count() > 0:
+				out.push_back("pop")
+		var trial: Variant = _screen.get("trial")
+		if trial != null and trial.balls().size() > 0:
+			out.push_back("flight")
+		if _pip != null and is_instance_valid(_pip):
+			out.push_back("pip")
+		var heat: Variant = _screen.get("heat")
+		if heat != null and heat.ai.fire_left() > 0.0:
+			out.push_back("opp_fire")
+		for i in out.size():
+			if not _seen.has(str(out[i])):
+				out[i] = "first:" + str(out[i])
+		return out
 
 	func _sample_vp(key: String, vp: Viewport) -> void:
 		var rid := vp.get_viewport_rid()
@@ -2162,6 +2226,8 @@ class PerfProbe extends Node:
 		sc.sort()
 		var sp := _span.duplicate()
 		sp.sort()
+		var sm := _sim.duplicate()
+		sm.sort()
 		var p50 := _pct(fr, 0.5)
 		var spikes := 0
 		for v in _frames:
@@ -2174,8 +2240,11 @@ class PerfProbe extends Node:
 			"fps": snappedf(_frames.size() / maxf(_t, 0.001), 0.1),
 			"hitches": _hitches.size(), "hitches_per_60s": snappedf(_hitches.size() * 60.0 / maxf(_t, 0.001), 0.1), "hitch_log": _hitches.slice(0, 20),
 			"spikes": spikes, "spikes_per_60s": snappedf(spikes * 60.0 / maxf(_t, 0.001), 0.1),
+			"spike_log": _spike_log, "spike_tags": _spike_tag_counts(),
 			"loop_p50": snappedf(_pct(sc, 0.5), 0.01), "loop_p95": snappedf(_pct(sc, 0.95), 0.01),
 			"script_p50": snappedf(_pct(sp, 0.5), 0.01), "script_p95": snappedf(_pct(sp, 0.95), 0.01),
+			"sim_p50": snappedf(_pct(sm, 0.5), 0.01), "sim_p95": snappedf(_pct(sm, 0.95), 0.01),
+			"casters": _screen.get("_court").caster_count() if _screen != null and _screen.get("_court") != null else 0,
 			"setup_cpu_mean": snappedf(_mean(_setup), 0.01),
 			"coverage_mean": snappedf(_mean(_cov), 0.001), "coverage_max": snappedf(_max(_cov), 0.001),
 		}
@@ -2189,6 +2258,17 @@ class PerfProbe extends Node:
 				"prims_v": roundi(s["prims_v"] / n), "prims_s": roundi(s["prims_s"] / n),
 				"objs_v": roundi(s["objs_v"] / n), "objs_s": roundi(s["objs_s"] / n)}
 		return row
+
+	## How many logged spikes carried each tag, and how many carried none.
+	func _spike_tag_counts() -> Dictionary:
+		var out := {"none": 0}
+		for s in _spike_log:
+			var tags: Array = s["tags"]
+			if tags.is_empty():
+				out["none"] += 1
+			for tg in tags:
+				out[str(tg)] = int(out.get(str(tg), 0)) + 1
+		return out
 
 	static func _mean(a: PackedFloat64Array) -> float:
 		if a.is_empty():

@@ -26,6 +26,43 @@ func run(t) -> void:
 		t.ok(pip.find_child("Sun", true, false) != null and pip.find_child("Env", true, false) != null, "%s PIP keeps its sun, fog and ambient" % area)
 		full.free()
 		pip.free()
+	# The scenery caster rules (Stage 3): ground, water, sky and far dressing never cast; props and the hoop do.
+	var beach := CourtGeometry.new()
+	beach.geo = SimGeometry.beach()
+	beach.arena_set = CosmeticLibrary.get_arena("beach")
+	beach.hoop_set = CosmeticLibrary.starter_hoop()
+	beach._ready()
+	for off_name in ["Ocean", "Sand", "Court", "Sky", "Shore"]:
+		var mi := beach.find_child(off_name, true, false) as MeshInstance3D
+		t.ok(mi != null and mi.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "beach: %s casts no shadow" % off_name)
+	for on_name in ["Wall0", "UmbMesh0", "PolePost"]:
+		var mi := beach.find_child(on_name, true, false) as MeshInstance3D
+		t.ok(mi != null and mi.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "beach: %s still casts" % on_name)
+	t.ok(beach.caster_count() > 0, "beach: casters remain (%d)" % beach.caster_count())
+	beach.free()
+	var park := CourtGeometry.new()
+	park.geo = SimGeometry.park()
+	park.arena_set = CosmeticLibrary.get_arena("park")
+	park.hoop_set = CosmeticLibrary.get_hoop("park") if CosmeticLibrary.get_hoop("park") != null else CosmeticLibrary.starter_hoop()
+	park._ready()
+	for off_name in ["Lawn", "SnowLying", "FarSnow", "Sky", "Road", "Building0"]:
+		var mi := park.find_child(off_name, true, false) as MeshInstance3D
+		t.ok(mi != null and mi.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "park: %s casts no shadow" % off_name)
+	for on_name in ["Snowman", "SplitRailFence", "Bollard0"]:
+		var mi := park.find_child(on_name, true, false) as MeshInstance3D
+		t.ok(mi != null and mi.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "park: %s still casts" % on_name)
+	park.free()
+	CourtGeometry.ab = {"casters": false}
+	var raw := CourtGeometry.new()
+	raw.geo = SimGeometry.beach()
+	raw.arena_set = CosmeticLibrary.get_arena("beach")
+	raw.hoop_set = CosmeticLibrary.starter_hoop()
+	raw._ready()
+	var ocean := raw.find_child("Ocean", true, false) as MeshInstance3D
+	t.ok(ocean != null and ocean.cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF, "ab casters=false: the rules are off for the A/B reference")
+	raw.free()
+	CourtGeometry.ab = {}
+
 	var cage := CourtGeometry.new()
 	cage.profile = CourtGeometry.Profile.PIP
 	cage.geo = SimGeometry.arcade(2.9)

@@ -20,6 +20,28 @@ extends Node3D
 enum Profile { FULL, PIP }
 var profile := Profile.FULL
 
+## QA only (--qa-perf-ab): render levers switched for one measured run so each
+## cost is known before anything ships — "no_shadows" (the sun casts none: the
+## baked-shadows upper bound), "casters" (the scenery caster rules, off while
+## they are measured), "no_fill" (no fill light), "no_omni" (every omni / spot
+## light hidden), "no_sky" (a flat background instead of the shader sky),
+## "no_fog", "scale85" (render scale 0.85), "shadow1024" (a 1024 atlas).
+## Empty in the game.
+static var ab: Dictionary = {}
+
+## The scenery that never casts a shadow (docs/PERFORMANCE.md → Stage 3):
+## ground planes and anything that only ever RECEIVES — the sand, the court,
+## the roads, the lawn — plus the sky domes, the water and far dressing. A
+## mesh flatter than 15 cm with a footprint over 4 m is a ground plane
+## whatever its name. The ball, hoop, net, walls, props and people keep
+## casting. (CityFx has its own list for the pack's buildings; ParkFx and
+## BeachFx set their trees' and palms' near / far casting themselves.)
+const NO_CAST_SCENERY: Array[String] = [
+	"Ocean", "Shore", "Sky", "Sand", "Court", "Towel", "Lawn", "FarSnow", "SnowLying", "TreelineRing",
+	"Road", "Path", "ParkingLot", "BayStripes", "Building", "Ground", "Sidewalk", "Kerb", "LaneDash",
+	"LampGlow", "ParkGlow", "HallFloor", "HallCeiling", "HallRug", "HallBack", "HallSide", "MeshTop",
+]
+
 ## The active hoop bundle (model, net feel, LED skin, flourish anims). Set
 ## before add_child; defaults to the starter set. Model contract: root at the
 ## rim centre; RimPivot required; LedFace/BoardBand/Backboard/Net optional.
@@ -109,7 +131,7 @@ var _arena_anim: AnimationPlayer  # the arena glb's clips (one per NLA track), n
 ## title, the trial, the heat's PiP SubViewport, the results all follow the
 ## area they show); full resolution again when it leaves.
 func _enter_tree() -> void:
-	_apply_render_scale(arena_set.render_scale if arena_set != null else 1.0)
+	_apply_render_scale((0.85 if bool(ab.get("scale85", false)) else arena_set.render_scale) if arena_set != null else 1.0)
 
 
 func _exit_tree() -> void:
@@ -209,6 +231,8 @@ func _build_arena_model() -> bool:
 	_arena = inst
 	_arena.name = "Arena"
 	add_child(_arena)
+	if not ab.has("casters") or bool(ab.get("casters", false)):
+		apply_caster_rules(_arena)
 	_crossbar = _arena.find_child("Crossbar", true, false) as Node3D
 	_trolley = _arena.find_child("Trolley", true, false) as Node3D
 	_arena_pole = _arena.find_child("Pole", true, false) as Node3D
@@ -303,7 +327,42 @@ func _build_arena_model() -> bool:
 		for fx in [_beach_fx, _arcade_fx, _city_fx, _park_fx]:
 			if fx != null:
 				fx.freeze()
+	if bool(ab.get("no_omni", false)):
+		for l in find_children("*", "Light3D", true, false):
+			if l is OmniLight3D or l is SpotLight3D:
+				(l as Light3D).visible = false
 	return true
+
+
+## The scenery caster rules (NO_CAST_SCENERY + the ground-plane rule) over
+## a built arena; returns how many meshes were turned off (tests).
+static func apply_caster_rules(arena: Node) -> int:
+	var n := 0
+	for node in arena.find_children("*", "MeshInstance3D", true, false):
+		var mi := node as MeshInstance3D
+		if mi.cast_shadow == GeometryInstance3D.SHADOW_CASTING_SETTING_OFF:
+			continue
+		var off := false
+		for prefix in NO_CAST_SCENERY:
+			if mi.name.begins_with(prefix):
+				off = true
+				break
+		if not off and mi.mesh != null:
+			var s := mi.get_aabb().size
+			off = s.y < 0.15 and maxf(s.x, s.z) > 4.0
+		if off:
+			mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+			n += 1
+	return n
+
+
+## Meshes under this court that cast (tests, the QA driver).
+func caster_count() -> int:
+	var n := 0
+	for node in find_children("*", "MeshInstance3D", true, false):
+		if (node as MeshInstance3D).cast_shadow != GeometryInstance3D.SHADOW_CASTING_SETTING_OFF:
+			n += 1
+	return n
 
 
 ## The area fx this court built that still animate (tests, the QA driver).
@@ -1022,24 +1081,24 @@ func _build_lights() -> void:
 		sun.rotation = arena_set.sun_rotation_deg * (PI / 180.0)
 		sun.light_energy = arena_set.sun_energy
 		sun.light_color = arena_set.sun_color
-		if arena_set.sun_shadows and profile == Profile.FULL:
+		if arena_set.sun_shadows and profile == Profile.FULL and not bool(ab.get("no_shadows", false)):
 			sun.shadow_enabled = true
 			sun.directional_shadow_mode = DirectionalLight3D.SHADOW_ORTHOGONAL
 			sun.directional_shadow_max_distance = arena_set.shadow_distance
 			# One court is live at a time (the heat's PiP draws no shadows), so
 			# every area sets the atlas it wants and the park's 1024 never leaks.
-			RenderingServer.directional_shadow_atlas_set_size(arena_set.shadow_size, true)
+			RenderingServer.directional_shadow_atlas_set_size(1024 if bool(ab.get("shadow1024", false)) else arena_set.shadow_size, true)
 		env.background_color = arena_set.background_color
 		env.ambient_light_color = arena_set.ambient_color
 		env.ambient_light_energy = arena_set.ambient_energy
-		if arena_set.fill_energy > 0.0:
+		if arena_set.fill_energy > 0.0 and not bool(ab.get("no_fill", false)):
 			var fill := DirectionalLight3D.new()
 			fill.name = "Fill"
 			fill.rotation = arena_set.fill_rotation_deg * (PI / 180.0)
 			fill.light_energy = arena_set.fill_energy
 			fill.light_color = arena_set.fill_color
 			add_child(fill)
-		if arena_set.fog_enabled:
+		if arena_set.fog_enabled and not bool(ab.get("no_fog", false)):
 			env.fog_enabled = true
 			env.fog_light_color = arena_set.fog_color
 			env.fog_density = arena_set.fog_density
@@ -1048,7 +1107,7 @@ func _build_lights() -> void:
 		# Environment draws it, with the tonemap left linear so the concept's
 		# colours survive.
 		var sky := _area_sky()
-		if sky != null:
+		if sky != null and not bool(ab.get("no_sky", false)):
 			env.background_mode = Environment.BG_SKY
 			env.sky = sky
 			env.tonemap_mode = Environment.TONE_MAPPER_LINEAR

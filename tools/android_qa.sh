@@ -22,13 +22,15 @@ OUT="$PROJ/build/qa/${MODEL:-phone}"
 mkdir -p "$OUT"
 echo "▶ $MODEL: $ARGS"
 "$ADB" -s "$DEV" shell am force-stop "$PKG"
+# A dozing phone cannot open a Vulkan surface ("Failed to create vulkan window"): wake it and swipe the lock away first.
+"$ADB" -s "$DEV" shell "input keyevent KEYCODE_WAKEUP; sleep 1; input swipe 360 1400 360 500 200" >/dev/null
 RASH "mkdir -p files/qa; rm -f files/qa/perf.json; echo '$ARGS' > files/qa_args.txt"
 "$ADB" -s "$DEV" shell monkey -p "$PKG" -c android.intent.category.LAUNCHER 1 >/dev/null
 echo "▶ running… (logcat: $ADB -s '$DEV' logcat -s godot)"
 WAITED=0
 until RA test -f files/qa/perf.json 2>/dev/null; do
   sleep 5; WAITED=$((WAITED+5))
-  if (( WAITED > 1200 )); then echo "✗ no perf.json after 20 min"; exit 1; fi
+  if (( WAITED > 2700 )); then echo "✗ no perf.json after 45 min"; exit 1; fi
   if (( WAITED > 30 )) && [[ -z "$("$ADB" -s "$DEV" shell "ps -A | grep $PKG" | tr -d '\r')" ]]; then
     # the QA mode quits the app once it has written the dump: look once more before calling it a crash
     sleep 2; RA test -f files/qa/perf.json 2>/dev/null && break

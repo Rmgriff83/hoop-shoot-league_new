@@ -9,6 +9,8 @@ extends Node3D
 ## mapping and the preview solve against trial.geo (led by flight time).
 var base_geo: SimGeometry
 var trial: TimeTrial
+## The last frame's rules tick in ms (the perf probe reads it: sim time apart from the rest of the script).
+var last_sim_ms := 0.0
 var tuning := FlickTuning.new()
 ## The mode's row from App.MODES, and the fixtures it resolved to.
 var _mode: Dictionary
@@ -879,7 +881,9 @@ func _process(dt: float) -> void:
 ## Advance the rules and dispatch their events (the heat screen overrides this
 ## to tick both sides and route the opponent's events to its own court).
 func _step_rules(dt: float) -> void:
+	var t0 := Time.get_ticks_usec()
 	trial.tick(dt)
+	last_sim_ms = (Time.get_ticks_usec() - t0) / 1000.0
 	for ev in trial.drain_events():
 		_handle_event(ev)
 
