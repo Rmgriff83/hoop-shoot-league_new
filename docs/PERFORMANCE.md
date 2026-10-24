@@ -217,7 +217,7 @@ mesh name plus the ground-plane rule — any mesh thinner than 15 cm and wider
 than 4 m — applied in `_build_arena_model`; `apply_caster_rules()` returns the
 count, `caster_count()` what still casts), the **A/B levers**
 (`CourtGeometry.ab`, QA only: `--qa-perf-ab=casters,no_shadows,shadow1024,
-no_fill,fill_ambient,no_omni,no_sky,no_fog,scale85`, and `--qa-ab=<levers>` on
+no_fill,fill_light,no_omni,no_sky,no_fog,scale85`, and `--qa-ab=<levers>` on
 any snap pass for the look check), the **sim column** (`sim` = the rules tick
 alone), the **spike tags** (what was on screen in a spiking frame, `first:x` on
 a debut) and `tools/arena_meshes.gd` (an arena's casters, tris and distances).
@@ -267,11 +267,13 @@ on the cage over its 20 minutes; it is kept for the record, not read.
   costs the park 6 ms and the city 3.6. The shadow pass is 5 ms on the park
   (its trees), 2 on the beach, under 1 on the city (its buildings never cast).
   The caster rules buy ~1 ms where the scenery cast.
-- **Folding the fill into the ambient looks the same** (`fill_ambient`: the
-  ambient colour halfway to the fill's, energy + 0.6 × the fill's — a Mac
-  frame differs by 1–3 / 255 on average, `build/qa/levers/<area>_03_fill_ambient.png`
-  against `_base.png`) and is worth the whole fill. That is Ross's call: it
-  is a lighting change to three `arena_set.tres` (fill_energy → 0, ambient up).
+- **Folding the fill into the ambient looks the same** (the ambient colour
+  halfway to the fill's, energy + 0.6 × the fill's — a Mac frame differs by
+  1–3 / 255 on average, `build/qa/levers/<area>_03_fill_ambient.png` against
+  `_base.png`) and is worth the whole fill. Ross looked at the side-by-sides
+  and the live game and took it (below, Stage 3b): the court folds every
+  arena's fill (`CourtGeometry.FILL_TONE` / `FILL_LIFT`), the arena files
+  keep their fill fields, and the old second light is the `fill_light` lever.
 - **The sky**: a shader that reads `TIME` keeps the radiance map dirty every
   frame (`renderer_rd/environment/sky.cpp`, `uses_time`), so at 64 it is
   rebuilt one layer per frame — small; the cost is the full-screen cloud
@@ -350,6 +352,56 @@ cage p50 19.7 against Stage 1's 19.4, the budget itself did not move):
   most — `tools/android_qa.sh` refuses a credential-locked phone and relaunches
   once when the first start loses its surface).
 
+### Stage 3b — the fill folded into the ambient (2026-10-24, Ross's call)
+
+`CourtGeometry._build_lights` no longer hangs the arena's fill as a second
+`DirectionalLight3D`: the ambient colour moves halfway to the fill's colour
+and the ambient energy gains 0.6 × the fill's energy (`FILL_TONE`,
+`FILL_LIFT`). The three `arena_set.tres` are untouched — their `fill_*`
+fields now describe the ambient's second tone — and `--qa-ab=fill_light`
+brings the light back for a comparison. Ross compared the side-by-sides
+(`build/qa/levers/fill_compare_<area>.png`) and the live game and could not
+tell them apart; the Mac snaps of the three areas both ways are in
+`build/qa/fill/`.
+
+**The A/B on Ross's phone** (`perf_ab3.json`, trials, the fold as the base
+and the old light as the lever, each area back to back):
+
+    area   | main GPU ms  fold → light | frame p50 | 
+    beach  | 14.5 → 15.4  (−0.9)       | 16.7 → 17.2
+    park   | 16.3 → 22.0  (−5.7)       | 16.9 → 23.3
+    city   | 16.4 → 22.1  (−5.7)       | 18.1 → 23.3
+
+**The heat sweep with the fold** (`perf_stage3_fold.json`, 06:58, the phone
+at 22 °C — the same session as the A/B, 10 minutes on; the ledger against
+the Stage 3 baseline):
+
+    area  mode      | frame p50 Stage 3 → 3b | p95        | main GPU   | script p50 / p95 | spikes/60 s
+    cage  heat_pip  |  19.7 → 18.3 | 28.5 → 26.8 | 13.7 → 14.3 |  4.5 /  7.8 | 4.7
+    cage  heat_min  |  20.4 → 18.5 | 28.0 → 29.4 | 14.4 → 14.2 |  4.7 /  8.3 | 0.0
+    beach heat_pip  |  23.3 → 19.1 | 31.8 → 27.4 | 16.7 → 14.3 |  4.5 /  8.4 | 2.4
+    beach heat_min  |  22.9 → 18.5 | 28.0 → 26.4 | 17.1 → 14.5 |  4.4 /  7.8 | 0.0
+    park  heat_pip  |  28.0 → 25.0 | 33.3 → 30.6 | 24.2 → 18.3 |  5.6 /  9.4 | 0.0
+    park  heat_min  |  27.8 → 24.6 | 33.0 → 26.6 | 23.9 → 18.4 |  5.2 /  8.7 | 0.0
+    city  heat_pip  |  25.0 → 25.0 | 26.0 → 31.4 | 20.6 → 18.5 |  5.5 / 10.0 | 4.7
+    city  heat_min  |  25.5 → 23.9 | 30.4 → 27.4 | 22.1 → 16.9 |  5.4 /  9.4 | 0.0
+    beach trial     |  19.1 → 16.7 | 24.1 → 18.1 | 15.7 → 15.1 |  1.3 /  1.8 | 0.0
+    park  trial     |  24.8 → 17.0 | 30.3 → 24.9 | 21.9 → 16.2 |  0.9 /  1.4 | 0.0
+    city  trial     |  25.0 → 18.1 | 29.6 → 24.1 | 22.7 → 16.4 |  1.2 /  1.6 | 0.0
+
+- **The beach heats and every trial are inside the budget**; the beach heat
+  runs at the cage's rate now. The park and city trials dropped 7–8 ms of
+  p50 and sit at a near-locked 60.
+- **The park and city heats remain over on p50** (23.9–25.0 vs 22.7) with
+  16.9–18.5 ms of main-view GPU: a frame just over one refresh period, so
+  the phone alternates 16.7 and 33.3 ms frames and the median lands between.
+  One or two more milliseconds of GPU puts them under the period and the
+  rate locks — the sky bake (−4 to −6 ms) is that step; the park's shadow
+  bake (−5) the one after. Both remain proposals.
+- Script time fell ~1 ms everywhere with the phone no longer waiting on
+  the GPU (a `set_shader_parameter` or a viewport query blocks behind a
+  busy queue); the rules tick reads 1.1–1.5 ms.
+
 ## 4. Rules for effects (Stage 3; apply to every new effect)
 
 1. **Animate in the shader with `TIME`.** Never set a shader parameter from
@@ -373,9 +425,10 @@ cage p50 19.7 against Stage 1's 19.4, the budget itself did not move):
    proposed with before/after shots, never shipped without Ross's OK
    (`arena_set.tres` is his).
 6b. **One sun.** A second `DirectionalLight3D` lights every fragment twice:
-   on the phone the fill costs more than the shadow pass (Stage 3). New areas
-   get their fill from the ambient colour and energy, not a light; the three
-   arenas that have one are a proposal for Ross (`fill_ambient` lever).
+   on the phone the fill cost more than the shadow pass (Stage 3). The court
+   folds every arena's `fill_*` into the ambient (`CourtGeometry.FILL_TONE`,
+   `FILL_LIFT`, Stage 3b) — an arena's fill fields are the ambient's second
+   tone, never a light; `--qa-ab=fill_light` is the old look for a comparison.
 6c. **The sky is one fetch per pixel.** A procedural cloud shader runs for
    every sky pixel every frame (4–6 ms on the phone); bake the noise fields
    to a tiling texture and scroll the lookup. A sky shader that reads `TIME`

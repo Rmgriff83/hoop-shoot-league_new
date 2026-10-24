@@ -26,9 +26,16 @@ var profile := Profile.FULL
 ## they are measured), "no_fill" (no fill light), "no_omni" (every omni / spot
 ## light hidden), "no_sky" (a flat background instead of the shader sky),
 ## "no_fog", "scale85" (render scale 0.85), "shadow1024" (a 1024 atlas),
-## "fill_ambient" (the fill light folded into the ambient: the same lift from
-## every side, the proposal's look check). Empty in the game.
+## "fill_light" (the arena's fill as a second DirectionalLight3D, the way it
+## shipped before 2026-10-24 — the before shot and the A/B base). Empty in
+## the game.
 static var ab: Dictionary = {}
+
+## How the arena's fill folds into the ambient: the ambient colour moves this
+## far toward the fill's, the energy gains this share of the fill's (matched by
+## eye and by the frame diff against the second light, Stage 3).
+const FILL_TONE := 0.5
+const FILL_LIFT := 0.6
 
 ## The scenery that never casts a shadow (docs/PERFORMANCE.md → Stage 3):
 ## ground planes and anything that only ever RECEIVES — the sand, the court,
@@ -1092,11 +1099,15 @@ func _build_lights() -> void:
 		env.background_color = arena_set.background_color
 		env.ambient_light_color = arena_set.ambient_color
 		env.ambient_light_energy = arena_set.ambient_energy
-		if arena_set.fill_energy > 0.0 and bool(ab.get("fill_ambient", false)):
-			# The proposal's look check: the fill's light as an all-round lift instead of a second sun.
-			env.ambient_light_color = arena_set.ambient_color.lerp(arena_set.fill_color, 0.5)
-			env.ambient_light_energy = arena_set.ambient_energy + arena_set.fill_energy * 0.6
-		if arena_set.fill_energy > 0.0 and not bool(ab.get("no_fill", false)) and not bool(ab.get("fill_ambient", false)):
+		# The arena's fill is folded into the ambient — the same lift from every
+		# side — rather than hung as a second sun: the phone lights every fragment
+		# once per directional light, and the fill cost the park 7 ms and the city
+		# 4 of GPU time for a frame that differs by 1–3 / 255 (docs/PERFORMANCE.md
+		# → Stage 3, rule 6b; Ross's call 2026-10-24).
+		if arena_set.fill_energy > 0.0 and not bool(ab.get("no_fill", false)) and not bool(ab.get("fill_light", false)):
+			env.ambient_light_color = arena_set.ambient_color.lerp(arena_set.fill_color, FILL_TONE)
+			env.ambient_light_energy = arena_set.ambient_energy + arena_set.fill_energy * FILL_LIFT
+		if arena_set.fill_energy > 0.0 and bool(ab.get("fill_light", false)):
 			var fill := DirectionalLight3D.new()
 			fill.name = "Fill"
 			fill.rotation = arena_set.fill_rotation_deg * (PI / 180.0)
