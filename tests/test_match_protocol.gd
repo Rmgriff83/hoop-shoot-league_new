@@ -80,6 +80,10 @@ func run(t) -> void:
 	t.eq(MatchProtocol.parse('{"t":"matched","peer":{}}'), {}, "a matched without a cap → {}")
 	t.eq(MatchProtocol.parse('{"t":"matched","cap":2}'), {}, "…or without a peer")
 	t.eq(MatchProtocol.loadout(["ice", null, "fire7"], false), {"t": "loadout", "slots": ["ice", "", "fire7"], "ready": false}, "a loadout message, blanks as empty strings")
+	# The other phone's pick as the room relays it (design "Pre Match" 37a).
+	t.eq(MatchProtocol.parse('{"t":"peer_loadout","slots":["ice","",""],"ready":false,"from":"b"}')["slots"], ["ice", "", ""], "peer_loadout carries the slots")
+	t.eq(MatchProtocol.parse('{"t":"peer_loadout","slots":"ice","ready":true}'), {}, "…refused with slots not a list")
+	t.eq(MatchProtocol.parse('{"t":"peer_loadout","slots":[],"ready":1}'), {}, "…or ready not a bool")
 	t.eq(MatchProtocol.loadout([], true)["slots"], ["", "", ""], "three slots always")
 	var rated := MatchProtocol.parse('{"t":"settled","won":true,"reason":"played","ranked":true,"rating":{"before":1500,"after":1518,"delta":18},"rank":{"tier":"pro","division":2},"events":["promoted"]}')
 	t.eq(rated["rank"]["tier"], "pro", "a rated settle carries the rank")

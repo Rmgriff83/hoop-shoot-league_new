@@ -33,7 +33,7 @@ export const QUEUE = {
     below: Number(ranked.queue.lean.below),
   },
 };
-export const PREMATCH = { seconds: Number(ranked.prematch.seconds), grace_s: Number(ranked.prematch.grace_s) };
+export const PREMATCH = { seconds: Number(ranked.prematch.seconds), grace_s: Number(ranked.prematch.grace_s), countdown_s: Number((ranked.prematch as any).countdown_s ?? 10) };
 export const LEVEL_TRUST = {
   max_levels_per_hour: Number(ranked.level_trust.max_levels_per_hour),
   grace_levels: Number(ranked.level_trust.grace_levels),

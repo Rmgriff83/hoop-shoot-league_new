@@ -261,6 +261,96 @@ static func rematch_active(state: String) -> bool:
 const REMATCH_STATES := ["", "offered", "wanted", "both", "gone"]
 
 
+# ---- the pre-match page (design "Pre Match" 37a, 2026-10-23) -------------------------------------
+
+static func prematch_tab_opp() -> String:
+	return "OPPONENT"
+
+
+static func prematch_tab_you() -> String:
+	return "YOU"
+
+
+static func their_loadout() -> String:
+	return "THEIR\nLOADOUT"
+
+
+static func your_loadout() -> String:
+	return "YOUR\nLOADOUT"
+
+
+static func load_count(n: int) -> String:
+	return "%d OF %d" % [n, CardDefs.SLOTS]
+
+
+static func your_cards_hint() -> String:
+	return "YOUR CARDS · HOLD + DRAG TO A SLOT"
+
+
+## Their side's state while they pick: `PICKING CARDS...` while slots are still filling, else `DECIDING...`.
+static func opp_status(picking: bool) -> String:
+	return "PICKING CARDS..." if picking else "DECIDING..."
+
+
+static func starts_in() -> String:
+	return "MATCH STARTS IN"
+
+
+static func go_word() -> String:
+	return "GO"
+
+
+static func arm_word() -> String:
+	return "ARM"
+
+
+## `1,480`.
+static func thousands(n: int) -> String:
+	var s := str(absi(n))
+	var out := ""
+	var k := 0
+	for i in range(s.length() - 1, -1, -1):
+		out = s[i] + out
+		k += 1
+		if k % 3 == 0 and i > 0:
+			out = "," + out
+	return ("-" if n < 0 else "") + out
+
+
+## An online card's three stats from the room's `matched` stats + tier: RANK (the world
+## position, or the badge, or NEW), RATING (the shown rating), RECORD.
+static func online_stats(st: Dictionary, tier: Dictionary) -> Array:
+	var games := int(st.get("games", 0))
+	var rank := "NEW"
+	if games > 0:
+		rank = "#%d" % int(st["position"]) if int(st.get("position", 0)) > 0 else RankedRules.badge_text({"tier": str(tier.get("tier", "rookie")), "division": int(tier.get("division", 3)), "games": games})
+	var rating := thousands(int(st.get("cons", 0))) if games > 0 else "-"
+	return [[rank, "RANK"], [rating, "RATING"], ["%d-%d" % [int(st.get("wins", 0)), int(st.get("losses", 0))], "RECORD"]]
+
+
+## A league card's three stats from a standings row: RECORD · SEED · AVG PTS.
+static func league_stats(row: Dictionary) -> Array:
+	var w := int(row.get("w", 0))
+	var l := int(row.get("l", 0))
+	var seed := int(row.get("seed", 0))
+	var avg := "-"
+	if w + l > 0:
+		avg = str(roundi(float(row.get("pointsFor", 0)) / float(w + l)))
+	return [["%d-%d" % [w, l], "RECORD"], ["#%d" % seed if seed > 0 else "-", "SEED"], [avg, "AVG PTS"]]
+
+
+## The READY button by state: {top, sub, mark, gold}. `pick` (orange: READY · n OF 3
+## CARDS SET · LOCKS YOUR LOADOUT · >), `ready` (gold: WAITING FOR NAME · TAP TO
+## UNLOCK), `count` (STARTING IN n · BOTH PLAYERS READY · LOADOUTS LOCKED), `go`
+## (TIP-OFF · LOADING THE MATCH...).
+static func ready_button(state: String, n: int, opp_name: String, left: int) -> Dictionary:
+	match state:
+		"go": return {"top": "TIP-OFF", "sub": "LOADING THE MATCH...", "mark": "", "gold": true}
+		"count": return {"top": "STARTING IN %d" % left, "sub": "BOTH PLAYERS READY · LOADOUTS LOCKED", "mark": "", "gold": true}
+		"ready": return {"top": "READY", "sub": "WAITING FOR %s · TAP TO UNLOCK" % opp_name.split(" #")[0], "mark": "", "gold": true}
+	return {"top": "READY", "sub": "%d OF %d CARDS SET · LOCKS YOUR LOADOUT" % [n, CardDefs.SLOTS], "mark": ">", "gold": false}
+
+
 # ---- the post-match payout (docs/BACKEND.md → Ranked → Stage B) ----------------------------
 
 ## Card ids → `DEEP FREEZE, HEAT CHECK`.
@@ -397,6 +487,10 @@ static func strings() -> Array:
 		rank_delta_line({"ranked": true}),
 		court_note(1), court_note(3), loadout_line(2), spares_caption(true), spares_caption(false), slot_empty(2), "LOADOUT", "YOUR CARDS", "COURT",
 		header({"location": "beach"}), header({"location": "city", "reason": "forfeit"}), header({"location": "cage", "reason": "void"}),
+		prematch_tab_opp(), prematch_tab_you(), their_loadout().replace("\n", " "), your_loadout().replace("\n", " "), load_count(2), your_cards_hint(), opp_status(true), opp_status(false), "×2",
+		starts_in(), go_word(), arm_word(), thousands(1480), "RANK", "RATING", "RECORD", "SEED", "AVG PTS", "NEW", "#142",
+		ready_button("pick", 2, "JUNIE SAP", 0)["sub"], ready_button("ready", 2, "JUNIE SAP #4471", 0)["sub"], ready_button("count", 3, "X", 7)["top"],
+		ready_button("count", 3, "X", 7)["sub"], ready_button("go", 3, "X", 0)["top"], ready_button("go", 3, "X", 0)["sub"],
 		spoils_panel({"ranked": true, "granted": [{"why": "meter", "card": "ice"}]})["caption"],
 		spoils_panel({"ranked": true, "granted": [{"why": "loss_streak", "card": "ice"}]})["caption"],
 		spoils_panel({"ranked": true, "spoils": {"captured": ["ice", "fire7"], "lost": [], "insured": null}})["caption"],

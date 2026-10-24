@@ -55,7 +55,9 @@ func send(msg: Dictionary) -> void:
 		MatchProtocol.CARD:
 			message.emit.call_deferred({"t": MatchProtocol.CARD_OK, "id": str(msg["id"])})
 		MatchProtocol.LOADOUT:
-			pass   # the real room validates and starts on both READY; the driver stages `start` itself
+			# The real room validates, tells the other phone, and starts on both READY; the staged
+			# peer answers as if it had picked an ice and readied the moment we did.
+			message.emit.call_deferred({"t": MatchProtocol.PEER_LOADOUT, "slots": ["ice", "", ""], "ready": bool(msg.get("ready", false)), "from": "b"})
 		MatchProtocol.REMATCH:
 			# The fake always wants another go; a real room would then send rematch_go.
 			message.emit.call_deferred({"t": MatchProtocol.REMATCH, "from": "b"})
@@ -115,7 +117,8 @@ func settle_message(won: bool) -> Dictionary:
 func matched_message() -> Dictionary:
 	return {"t": MatchProtocol.MATCHED, "peer": peer, "levels": {"a": 1, "b": 4},
 		"tiers": {"a": {"tier": "rookie", "division": 3, "games": 0}, "b": {"tier": "pro", "division": 2, "games": 21, "wins": 12, "losses": 9}},
-		"cap": 1, "seconds": 20.0}
+		"stats": {"a": {"cons": 800, "games": 0, "wins": 0, "losses": 0, "position": 0}, "b": {"cons": 1480, "games": 21, "wins": 12, "losses": 9, "position": 142}},
+		"cap": 1, "seconds": 20.0, "countdown_s": 10.0}
 
 
 ## Their side asks first (the QA driver stages the wanted state).

@@ -438,6 +438,12 @@ app.get("/v1/match/room/:id", async (c) => {
   headers.set("x-player-town", cleanTown(c.req.query("town")));
   headers.set("x-player-tier", band.tier);
   headers.set("x-player-division", String(band.division));
+  // The pre-match card's stats (design "Pre Match" 37a): the rating shown, the record, the world position.
+  headers.set("x-player-cons", String(Math.round(band.cons)));
+  headers.set("x-player-games", String(band.games));
+  headers.set("x-player-wins", String(band.wins));
+  headers.set("x-player-losses", String(band.losses));
+  headers.set("x-player-position", String(rating ? await db.rankedPosition(c.env.DB, rating.cons, rating.updated_at) : 0));
   headers.set("x-ranked", ranked ? "1" : "0");
   headers.set("x-area", area);
   headers.set("x-room", id);

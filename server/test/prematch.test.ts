@@ -83,11 +83,13 @@ describe("the pre-match step", () => {
     const B = await join(b, room, "park");
     const ma = await A.until((m) => m.t === "matched");
     const mb = await B.until((m) => m.t === "matched");
-    expect(ma).toEqual({
-      t: "matched", area: "park", cap: 3, seconds: PREMATCH.seconds, ranked: false, levels: { a: 7, b: 3 },
+    expect(ma).toMatchObject({
+      t: "matched", area: "park", cap: 3, seconds: PREMATCH.seconds, countdown_s: PREMATCH.countdown_s, ranked: false, levels: { a: 7, b: 3 },
       tiers: { a: { tier: "rookie", division: 2 }, b: { tier: "rookie", division: 2 } },
-      peer: { id: b.playerId, name: b.name, tag: b.tag, level: 3, town: "", tier: "rookie", division: 2 },
+      stats: { a: { games: 0, wins: 0, losses: 0, position: 0 }, b: { games: 0, wins: 0, losses: 0, position: 0 } },
+      peer: { id: b.playerId, name: b.name, tag: b.tag, level: 3, town: "", tier: "rookie", division: 2, cons: Math.round(ma.peer.cons), games: 0, wins: 0, losses: 0, position: 0 },
     });
+    expect(ma.stats.a.cons).toBeGreaterThan(0); // a fresh rating's conservative value, rounded
     expect(mb.peer.id).toBe(a.playerId);
     expect(mb.cap).toBe(3);
     await A.settle();
@@ -107,6 +109,9 @@ describe("the pre-match step", () => {
     await A.until((m) => m.t === "matched");
     A.loadout(["ice", "ice", "magnet6"], false); // one ice owned; magnet6 (level 5) is over the cap of 3
     expect(await A.until((m) => m.t === "loadout_ok")).toEqual({ t: "loadout_ok", hand: ["ice", "", ""], ready: false });
+    await B.until((m) => m.t === "matched");
+    // The other phone sees the validated pick as it stands (design "Pre Match" 37a).
+    expect(await B.until((m) => m.t === "peer_loadout")).toEqual({ t: "peer_loadout", slots: ["ice", "", ""], ready: false, from: "a" });
     A.loadout(["fire7", "nope", "fire7"], true); // the last word counts
     await A.until((m) => m.t === "loadout_ok" && m.ready);
     await B.until((m) => m.t === "matched");
@@ -114,7 +119,8 @@ describe("the pre-match step", () => {
     const sa = await A.until((m) => m.t === "start");
     const sb = await B.until((m) => m.t === "start");
     expect(sa.hands).toEqual({ a: ["fire7", "", "fire7"], b: ["", "fire7", "ice"] });
-    expect(sa).toMatchObject({ cap: 3, levels: { a: 7, b: 3 }, ranked: false, tiers: { a: { tier: "rookie", division: 2 } } });
+    expect(sa).toMatchObject({ cap: 3, levels: { a: 7, b: 3 }, ranked: false, tiers: { a: { tier: "rookie", division: 2 } }, countdown_s: PREMATCH.countdown_s });
+    expect(A.inbox.filter((m) => m.t === "peer_loadout").length).toBe(1); // b's one pick
     expect(sb.seed).toBe(sa.seed);
     expect(sb.hands).toEqual(sa.hands);
   });

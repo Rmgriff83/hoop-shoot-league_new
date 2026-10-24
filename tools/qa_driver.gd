@@ -1272,9 +1272,10 @@ func _run_multi() -> void:
 	await _snap("multi_prematch")
 	if pre != null:
 		pre.press_ready()
-		await _sleep(0.2)
+		pre.set_peer_loadout(["ice", "", ""], true)   # the room's peer_loadout: they picked an ice and readied
+		await _sleep(0.4)
 		await _snap("multi_prematch_ready")
-		print("QA multi: prematch cap=%s opp=%s / %s ready=%s" % [pre.cap_text(), pre.opp_name(), pre.opp_online_text(), pre.is_ready()])
+		print("QA multi: prematch cap=%s opp=%s / %s %s %s ready=%s top=%s" % [pre.cap_text(), pre.opp_name(), pre.opp_stat(0), pre.opp_stat(1), pre.opp_stat(2), pre.is_ready(), pre.ready_top()])
 	title_screen.call("_close_pre_match")
 	await _sleep(0.3)
 	lobby.close()

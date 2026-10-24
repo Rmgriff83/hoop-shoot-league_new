@@ -852,12 +852,20 @@ func _open_room(room_id: String, area: String, on_state: Callable) -> bool:
 				pre_match = msg.duplicate(true)
 				pre_match["side"] = client.side
 				on_state.call("matched", pre_match)
+			MatchProtocol.PEER_LOADOUT:
+				on_state.call("peer_loadout", msg)
 			MatchProtocol.START:
-				pre_match = {}
-				if match_how in ["ranked", "quick", "create", "join"] and not bool(msg.get("resumed", false)):
+				if not pre_match.is_empty() and not bool(msg.get("resumed", false)):
+					# The pre-match page runs the count (design "Pre Match" 37a), then tip_off_now().
+					pending_start = msg.duplicate(true)
+					on_state.call("court", str(msg.get("area", match_area)))
+					on_state.call("start", pending_start)
+				elif match_how in ["ranked", "quick", "create", "join"] and not bool(msg.get("resumed", false)):
+					pre_match = {}
 					on_state.call("court", str(msg.get("area", match_area)))
 					_hold_tip_off(client, msg)
 				else:
+					pre_match = {}
 					_tip_off(client, msg)
 			MatchProtocol.SETTLED:
 				settled_online(msg)
@@ -937,7 +945,21 @@ func _rematch_go(room_id: String, area: String, on_state: Callable) -> void:
 
 ## Both phones are in: the heat on the room's seed, the other phone in the
 ## opponent slot. The screen takes the client from `room`.
+## The room's `start`, held while the pre-match page counts down; the page's
+## `go` calls tip_off_now (the room already started: both phones count the
+## same seconds, latency apart, as they already do for the tip-off itself).
+var pending_start: Dictionary = {}
+
+func tip_off_now() -> void:
+	if pending_start.is_empty() or not (room is MatchClient):
+		return
+	var start := pending_start
+	pending_start = {}
+	_tip_off(room as MatchClient, start)
+
+
 func _tip_off(client: MatchClient, start: Dictionary) -> void:
+	pending_start = {}
 	if match_how == "quick":
 		Net.request_json("match", HTTPClient.METHOD_POST, "/v1/match/leave", {"area": match_area})
 	pre_match = {}
@@ -1390,6 +1412,19 @@ func league_heat_config(doc: Dictionary, cfg: Dictionary) -> Dictionary:
 	}
 
 
+## The opponent's season hand for the pre-match page's THEIR LOADOUT (the
+## same hand league_heat_config deals; the season remembers it).
+func _ai_hand_for(season: Dictionary, cfg: Dictionary, opp_id: String) -> Array:
+	if season.is_empty():
+		return []
+	Season.ensure_card_hands(season, cfg)
+	var out := []
+	for id in Season.card_hand(season, opp_id):
+		if str(id) != "":
+			out.push_back(str(id))
+	return out
+
+
 ## PLAY HEAT from the dashboard: the pre-match pick first (docs/CARDS.md §
 ## Drops, 2026-10-19 — the same page as online: this league's cards, only
 ## those at or under your level, a short clock falling back to the last
@@ -1417,12 +1452,25 @@ func league_pre_match_info(doc: Dictionary, cfg: Dictionary) -> Dictionary:
 	var row: Dictionary = rows.get(opp_id, {"w": 0, "l": 0})
 	var rec := [int(row.get("w", 0)), int(row.get("l", 0))]
 	var mine: Dictionary = rows.get(LeagueData.PLAYER_ID, {"w": 0, "l": 0})
+	# The stats on the cards (design "Pre Match" 37a: RECORD · SEED · AVG PTS) from the table.
+	var table := Standings.table(LeagueData.team_ids(cfg), season.get("schedule", []) if season.get("schedule") is Array else [], int(season.get("seed", 0)))
+	var opp_row := {}
+	var my_row := {}
+	for r in table:
+		if str(r.get("teamId", "")) == opp_id:
+			opp_row = r
+		elif str(r.get("teamId", "")) == LeagueData.PLAYER_ID:
+			my_row = r
 	return {
 		"peer": {"id": opp_id, "name": str(shooter.get("name", "THEM")), "tag": "%02d" % int(shooter.get("number", 0)),
+			"town": str(shooter.get("hometown", shooter.get("town", ""))).to_upper(),
 			"place_text": "%s · %s" % [str(cfg.get("name", "LEAGUE")).to_upper(), str(shooter.get("nickname", "")).to_upper()],
 			"online_text": "%d-%d THIS SEASON" % [int(rec[0]), int(rec[1])]},
 		"you": {"online_text": "%d-%d THIS SEASON" % [int(mine.get("w", 0)), int(mine.get("l", 0))]},
+		"league_stats": {"opp": MatchCopy.league_stats(opp_row), "you": MatchCopy.league_stats(my_row)},
 		"cap": level(), "seconds": float(CardDefs.prematch_seconds("league")), "bucket": str(cfg["id"]),
+		"countdown_s": float(RankedRules.prematch_cfg().get("countdown_s", 10)),
+		"ai_hand": _ai_hand_for(season, cfg, opp_id),
 		"side": "a", "league": true,
 	}
 

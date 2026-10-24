@@ -15,8 +15,9 @@ const PING := "ping"
 ## Messages the room sends.
 const JOINED := "joined"       # {t, side, room, area, peer|null}
 const PEER := "peer"           # {t, peer}                 the other phone arrived
-const MATCHED := "matched"     # {t, peer, levels: {a, b}, tiers: {a, b}, cap, seconds}  both seated: pick a loadout
-const START := "start"         # {t, seed, area, seconds, ot_seconds, ball_return_s, hands: {a, b}, levels: {a, b}, ranked, cap, tiers}
+const MATCHED := "matched"     # {t, peer, levels: {a, b}, tiers: {a, b}, stats: {a, b}, cap, seconds, countdown_s}  both seated: pick a loadout
+const PEER_LOADOUT := "peer_loadout"  # {t, slots: [id|"" ×3], ready, from}  the other phone's validated pick as it stands
+const START := "start"         # {t, seed, area, seconds, ot_seconds, ball_return_s, hands: {a, b}, levels: {a, b}, ranked, cap, tiers, countdown_s}
 const CARD_OK := "card_ok"     # {t, id}                   the room took our card
 const LOADOUT_OK := "loadout_ok"  # {t, hand: [id|"" ×3], ready}  the validated pick (what the cap blanked)
 const SETTLED := "settled"     # {t, won, reason, ranked, rating?, rank?, events?, peak?}  the decision
@@ -103,6 +104,9 @@ static func parse(text: String) -> Dictionary:
 				return {}
 		MATCHED:
 			if not (m.get("peer") is Dictionary) or not _num(m.get("cap")):
+				return {}
+		PEER_LOADOUT:
+			if not (m.get("slots") is Array) or not (m.get("ready") is bool):
 				return {}
 		CARD, CARD_OK:
 			if not (m.get("id") is String) or CardDefs.get_card(str(m["id"])).is_empty():

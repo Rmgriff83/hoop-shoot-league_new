@@ -185,10 +185,13 @@ build at any server.
   `period_end {period, score, totals}` at the buzzer, `loadout {slots,
   ready}` in the pre-match pick (→ Ranked), `card {id}`, `rematch`, `ping`;
   room → phone `joined {side, area, peer, status, ranked}`, `peer`, `matched
-  {peer, levels, tiers, cap, seconds}` once both are seated, `loadout_ok`,
-  `start {seed, area, seconds, ot_seconds, ball_return_s, hands, levels,
-  ranked, cap, tiers}` once both are ready or the pick timer runs out (no
-  clocks to agree on: each phone starts on receipt, latency apart), relayed
+  {peer, levels, tiers, stats, cap, seconds, countdown_s}` once both are
+  seated, `loadout_ok`, `peer_loadout {slots, ready, from}` (the other
+  phone's validated pick as it stands — design "Pre Match" 37a), `start
+  {seed, area, seconds, ot_seconds, ball_return_s, hands, levels, ranked,
+  cap, tiers, countdown_s}` once both are ready or the pick timer runs out
+  (no clocks to agree on: each phone starts on receipt — then counts
+  `countdown_s` on the pre-match page before its tip-off, latency apart), relayed
   messages tagged `from`, `card_ok`, `settled`, `rematch_go`, `peer_left`,
   `expired`, `pong`. A shot is ~250 bytes; a match is ~60 messages a side.
 - **Sync model — each side owns its own shots.** `Heat` with `remote: true`
@@ -371,14 +374,21 @@ both sides to the same tier bands).
   Ross's call; `match_room.ts`, `cards.ts` `validHand(slots, inv, cap,
   tier)`): the `?slots=` query is gone. Once both phones are seated the room
   sets `cap = min(levels)`, reads both inventories, sends `matched {peer:
-  {id, name, tag, level, town, tier, division}, levels, tiers, cap, seconds:
-  20}` and arms a 23 s alarm. Each phone sends `loadout {slots, ready}` as its
-  pick changes (provisional) and on READY; the room keeps the latest,
-  validated against the ledger, the player's level, the cap and the tier
-  floor (a blanked slot comes back in `loadout_ok {hand, ready}`), and starts
-  when both are ready or the alarm fires (a side that never picked starts
-  empty). So a level-7 card never meets a level-2 player. A disconnect during
-  the pick ends the room like a pre-start leave: no row, no rating.
+  {id, name, tag, level, town, tier, division, cons, games, wins, losses,
+  position}, levels, tiers, stats: {a, b}, cap, seconds: 20, countdown_s:
+  10}` (the stats — the rating shown, the record, the world position — come
+  from the Worker's `x-player-*` headers at the upgrade, for the pre-match
+  card's RANK · RATING · RECORD) and arms a 23 s alarm. Each phone sends
+  `loadout {slots, ready}` as its pick changes (provisional) and on READY
+  (and `ready: false` to unlock while the other side is still deciding); the
+  room keeps the latest, validated against the ledger, the player's level,
+  the cap and the tier floor (a blanked slot comes back in `loadout_ok {hand,
+  ready}` and goes to the other phone as `peer_loadout {slots, ready}` so
+  THEIR LOADOUT fills live), and starts when both are ready or the alarm
+  fires (a side that never picked starts empty). `start.countdown_s` is the
+  count each phone then runs on the page before tipping off. So a level-7
+  card never meets a level-2 player. A disconnect during the pick ends the
+  room like a pre-start leave: no row, no rating.
 - **The decision** (`record()`): the `matches` row gains `ranked, winner
   (a | b | NULL), a_level, b_level, cap, a_mu_before/after, b_mu_before/after`;
   for a ranked room both `ratings` rows are updated in the same batch and

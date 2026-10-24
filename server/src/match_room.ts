@@ -34,7 +34,11 @@ export const OT_SECONDS = 20;
 export const BALL_RETURN_S = 1.0;
 
 type Side = "a" | "b";
-interface Player { id: string; name: string; tag: string; level: number; town?: string; tier: string; division: number }
+interface Player {
+  id: string; name: string; tag: string; level: number; town?: string; tier: string; division: number;
+  /** The pre-match card's stats (design "Pre Match" 37a): the rating shown, the record, the world position (0 = unrated). */
+  cons: number; games: number; wins: number; losses: number; position: number;
+}
 interface Meta {
   area: string;
   created: number;
@@ -102,15 +106,25 @@ export class MatchRoom extends DurableObject<Env> {
     return { a: bandOfPlayer(m.a), b: bandOfPlayer(m.b) };
   }
 
-  /** The pre-match card: who you face, both levels and tiers, the cap, the clock. */
+  /** Each side's pre-match stats: rating shown, record, world position. */
+  private stats(m: Meta) {
+    const of = (p: Player | null) => ({ cons: p?.cons ?? 0, games: p?.games ?? 0, wins: p?.wins ?? 0, losses: p?.losses ?? 0, position: p?.position ?? 0 });
+    return { a: of(m.a), b: of(m.b) };
+  }
+
+  /** The pre-match card: who you face, both levels, tiers and stats, the cap, the clock, the count after both READY. */
   private matched(m: Meta, side: Side) {
-    return { t: "matched", peer: m[other(side)], area: m.area, levels: this.levels(m), tiers: this.tiers(m), cap: m.cap, seconds: PREMATCH.seconds, ranked: m.ranked };
+    return {
+      t: "matched", peer: m[other(side)], area: m.area, levels: this.levels(m), tiers: this.tiers(m), stats: this.stats(m), cap: m.cap,
+      seconds: PREMATCH.seconds, countdown_s: PREMATCH.countdown_s, ranked: m.ranked,
+    };
   }
 
   private start(m: Meta, resumed = false) {
     return {
       t: "start", seed: m.seed, area: m.area, seconds: HEAT_SECONDS, ot_seconds: OT_SECONDS, ball_return_s: BALL_RETURN_S,
-      hands: m.hands, levels: this.levels(m), ranked: m.ranked, cap: m.cap, tiers: this.tiers(m), ...(resumed ? { resumed: true } : {}),
+      hands: m.hands, levels: this.levels(m), ranked: m.ranked, cap: m.cap, tiers: this.tiers(m), countdown_s: PREMATCH.countdown_s,
+      ...(resumed ? { resumed: true } : {}),
     };
   }
 
@@ -125,6 +139,11 @@ export class MatchRoom extends DurableObject<Env> {
       town: request.headers.get("x-player-town") ?? "",
       tier: request.headers.get("x-player-tier") ?? TIERS[0].id,
       division: Number.parseInt(request.headers.get("x-player-division") ?? String(DIVISIONS), 10) || DIVISIONS,
+      cons: Number.parseInt(request.headers.get("x-player-cons") ?? "0", 10) || 0,
+      games: Number.parseInt(request.headers.get("x-player-games") ?? "0", 10) || 0,
+      wins: Number.parseInt(request.headers.get("x-player-wins") ?? "0", 10) || 0,
+      losses: Number.parseInt(request.headers.get("x-player-losses") ?? "0", 10) || 0,
+      position: Number.parseInt(request.headers.get("x-player-position") ?? "0", 10) || 0,
     };
     if (!TIERS.some((t) => t.id === player.tier)) player.tier = TIERS[0].id;
     const ranked = request.headers.get("x-ranked") === "1";
@@ -246,6 +265,8 @@ export class MatchRoom extends DurableObject<Env> {
       m.ready[att.side] = msg.ready;
       m.last = now;
       this.send(ws, { t: "loadout_ok", hand: m.hands[att.side], ready: m.ready[att.side] });
+      // The other phone watches the pick fill in (design "Pre Match" 37a: THEIR LOADOUT, their READY chip).
+      this.sendSide(other(att.side), { t: "peer_loadout", slots: m.hands[att.side], ready: m.ready[att.side], from: att.side });
       if (m.ready.a && m.ready.b) await this.startMatch(m, now);
       await this.put(m);
       return;

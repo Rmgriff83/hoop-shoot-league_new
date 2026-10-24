@@ -1,20 +1,78 @@
 {
-  "glicko": {"mu0": 1500, "rd0": 350, "vol0": 0.06, "tau": 0.5, "rd_max": 350, "period_days": 1},
-  "conservative": {"rd_k": 2},
+  "glicko": {
+    "mu0": 1500,
+    "rd0": 350,
+    "vol0": 0.06,
+    "tau": 0.5,
+    "rd_max": 350,
+    "period_days": 1
+  },
+  "conservative": {
+    "rd_k": 2
+  },
   "tiers": [
-    {"id": "rookie", "name": "ROOKIE", "from": 700},
-    {"id": "starter", "name": "STARTER", "from": 1000},
-    {"id": "pro", "name": "PRO", "from": 1150},
-    {"id": "allstar", "name": "ALL-STAR", "from": 1300},
-    {"id": "mvp", "name": "MVP", "from": 1450},
-    {"id": "legend", "name": "LEGEND", "from": 1600}
+    {
+      "id": "rookie",
+      "name": "ROOKIE",
+      "from": 700
+    },
+    {
+      "id": "starter",
+      "name": "STARTER",
+      "from": 1000
+    },
+    {
+      "id": "pro",
+      "name": "PRO",
+      "from": 1150
+    },
+    {
+      "id": "allstar",
+      "name": "ALL-STAR",
+      "from": 1300
+    },
+    {
+      "id": "mvp",
+      "name": "MVP",
+      "from": 1450
+    },
+    {
+      "id": "legend",
+      "name": "LEGEND",
+      "from": 1600
+    }
   ],
   "divisions": 3,
   "shield_matches": 3,
-  "queue": {"window0": 100, "step": 50, "step_s": 4, "cap_s": 30, "poll_s": 4, "ttl_s": 60,
-            "lean": {"losses": 3, "away_days": 7, "below": 100}},
-  "prematch": {"seconds": 20, "grace_s": 3},
-  "level_trust": {"max_levels_per_hour": 2, "grace_levels": 1, "max_level": 99},
-  "board": {"top": 50, "cache_s": 30},
-  "tickets": {"win": 30, "loss": 14}
+  "queue": {
+    "window0": 100,
+    "step": 50,
+    "step_s": 4,
+    "cap_s": 30,
+    "poll_s": 4,
+    "ttl_s": 60,
+    "lean": {
+      "losses": 3,
+      "away_days": 7,
+      "below": 100
+    }
+  },
+  "prematch": {
+    "seconds": 20,
+    "grace_s": 3,
+    "countdown_s": 10
+  },
+  "level_trust": {
+    "max_levels_per_hour": 2,
+    "grace_levels": 1,
+    "max_level": 99
+  },
+  "board": {
+    "top": 50,
+    "cache_s": 30
+  },
+  "tickets": {
+    "win": 30,
+    "loss": 14
+  }
 }

@@ -1232,6 +1232,15 @@ func _open_lobby() -> void:
 				_lobby.show_failed(str(a))
 			"court": _lobby.set_found_court(str(a))
 			"matched": _open_pre_match(Dictionary(a) if a is Dictionary else {})
+			"peer_loadout":
+				if _pre_match != null and a is Dictionary:
+					_pre_match.set_peer_loadout(Array(Dictionary(a).get("slots", [])), bool(Dictionary(a).get("ready", false)))
+			"start":
+				# The room started: the page counts down, then App.tip_off_now().
+				if _pre_match != null:
+					_pre_match.start_countdown(float(Dictionary(a).get("countdown_s", 10)) if a is Dictionary else 10.0)
+				else:
+					App.tip_off_now()
 	_lobby.ranked.connect(func() -> void: App.start_online("any", "ranked", "", on_state))
 	_lobby.rewards.connect(_open_rewards)
 	_lobby.quick.connect(func(area: String) -> void: App.start_online(area, "quick", "", on_state))
@@ -1265,7 +1274,9 @@ func _open_pre_match(info: Dictionary) -> void:
 	_pre_match.name = "PreMatch"
 	_pre_match.build(info, Net.ONLINE_BUCKET)
 	_pre_match.readied.connect(func(slots: Array) -> void: App.send_loadout(slots, true))
+	_pre_match.unreadied.connect(func(slots: Array) -> void: App.send_loadout(slots, false))
 	_pre_match.picked.connect(func(slots: Array) -> void: App.send_loadout(slots, false))
+	_pre_match.go.connect(func() -> void: App.tip_off_now())
 	_pre_match.cancelled.connect(func() -> void:
 		_close_pre_match()
 		App.cancel_online()
@@ -1352,7 +1363,7 @@ func open_league_pre_match(info: Dictionary) -> void:
 	_pre_match = PreMatchPage.new()
 	_pre_match.name = "PreMatch"
 	_pre_match.build(info, str(info.get("bucket", "cage")))
-	_pre_match.readied.connect(func(_slots: Array) -> void:
+	_pre_match.go.connect(func() -> void:
 		App.play_league_heat())
 	_pre_match.cancelled.connect(func() -> void:
 		_close_pre_match())
