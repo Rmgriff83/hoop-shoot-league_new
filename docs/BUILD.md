@@ -77,9 +77,14 @@ upload `build/hoop_shoot.aab`. The package is `com.rossgriffus.hoopshoot`.
 ### iOS: Xcode signs, Ross archives
 
 The preset carries the team (`U8XP33P732`) and the bundle id
-(`com.rossgriffus.hoopshootleague`), with automatic signing
-(no identities or profiles in the preset; Xcode manages them from the
-signed-in Apple account). The export writes the Xcode project only
+(`com.rossgriffus.hoopshootleague`), with automatic signing: no profiles in
+the preset, and `code_sign_identity_release="Apple Development"` — Xcode's
+automatic signing builds the archive with the development identity and
+swaps in Apple Distribution at upload; an empty field makes Godot write
+"Apple Distribution" and the archive fails with "conflicting provisioning
+settings" (2026-10-24). The Apple ID that owns the team must be signed in
+under Xcode → Settings → Accounts, or the archive stops at "No Account for
+Team". The export writes the Xcode project only
 (`application/export_project_only`), because Ross archives and uploads by
 hand:
 
