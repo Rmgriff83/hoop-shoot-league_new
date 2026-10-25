@@ -76,7 +76,7 @@ upload `build/hoop_shoot.aab`. The package is `com.rossgriffus.hoopshoot`.
 
 ### iOS: Xcode signs, Ross archives
 
-The preset carries the team (`U8XP33P732`) and the bundle id
+The preset carries the team (`J3X6PY2KB4`) and the bundle id
 (`com.rossgriffus.hoopshootleague`), with automatic signing: no profiles in
 the preset, and `code_sign_identity_release="Apple Development"` — Xcode's
 automatic signing builds the archive with the development identity and
@@ -135,4 +135,4 @@ AAB flags, the empty keystore fields and the shared build number.
 - *Android build template mismatch* — a Godot upgrade; the script
   reinstalls, or `rm -rf android`.
 - Signing errors in Xcode — check the account under Xcode → Settings →
-  Accounts and that the bundle id is registered to team U8XP33P732.
+  Accounts and that the bundle id is registered to team J3X6PY2KB4.

@@ -6,7 +6,7 @@
 const BUNDLE_ID := "com.rossgriffus.hoopshoot"
 ## The iOS id carries the full name (Ross, 2026-10-24: registered with Apple as this).
 const IOS_BUNDLE_ID := "com.rossgriffus.hoopshootleague"
-const TEAM_ID := "U8XP33P732"
+const TEAM_ID := "J3X6PY2KB4"
 
 
 func run(t) -> void:
