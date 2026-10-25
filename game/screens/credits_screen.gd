@@ -34,11 +34,11 @@ func _ready() -> void:
 	Sfx.start_music(App.TITLE_MUSIC["id"], App.TITLE_MUSIC["clip"], App.TITLE_MUSIC["gain_db"])
 	var bg := ColorRect.new()
 	bg.color = Color(0.15, 0.17, 0.26)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(bg)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(bg)
 	var scroll := ScrollContainer.new()
-	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(scroll)
 	scroll.offset_left = 24.0
 	scroll.offset_right = -24.0
 	scroll.offset_top = 24.0

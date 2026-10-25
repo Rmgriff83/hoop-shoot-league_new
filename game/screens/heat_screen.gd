@@ -595,7 +595,7 @@ class DealCard extends Control:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		face = CardFace.new({}, Vector2.ZERO)
 		face.name = "Art"
-		face.set_anchors_preset(Control.PRESET_FULL_RECT)
+		UiLayout.full_rect(face)
 		add_child(face)
 
 	func _draw() -> void:
@@ -633,7 +633,7 @@ func _hoop_point() -> Vector2:
 	var cam := get_viewport().get_camera_3d()
 	if cam == null or _court == null or not _court.rim_pivot.is_inside_tree():
 		return Vector2(360, 560)
-	return cam.unproject_position(_court.rim_pivot.global_position)
+	return UiLayout.from_screen(cam.unproject_position(_court.rim_pivot.global_position))
 
 
 ## Screen point of the opponent's window (the PiP, or its chip when minimized).
@@ -786,7 +786,7 @@ func _build_pip() -> void:
 	_pip_chip.visible = false
 	_pip_chip.pressed.connect(_set_pip_minimized.bind(false))
 	var cm := MarginContainer.new()
-	cm.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(cm)
 	cm.add_theme_constant_override("margin_left", 14)
 	cm.add_theme_constant_override("margin_right", 14 + int(ShadowStyle.OFFSET))
 	cm.add_theme_constant_override("margin_bottom", int(ShadowStyle.OFFSET))

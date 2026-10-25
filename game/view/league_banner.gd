@@ -106,7 +106,7 @@ func _redraw() -> void:
 func _cloth(bg: Color, hem: Color) -> void:
 	var back := ColorRect.new()
 	back.color = hem
-	back.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(back)
 	_root.add_child(back)
 	var face := ColorRect.new()
 	face.color = bg
@@ -141,7 +141,7 @@ func _chalkboard() -> void:
 	back.texture = load(str(_pal("tex")))
 	back.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	back.stretch_mode = TextureRect.STRETCH_SCALE
-	back.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(back)
 	_root.add_child(back)
 	if _chalk_font == null:
 		_chalk_font = load(CHALK_FONT)

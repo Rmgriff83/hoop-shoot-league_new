@@ -107,7 +107,7 @@ func net_kind() -> String:
 func _scroll() -> VBoxContainer:
 	var scroll := ScrollContainer.new()
 	scroll.name = _tab.capitalize() + "Tab"
-	scroll.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(scroll)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_content.add_child(scroll)
 	_list = VBoxContainer.new()
@@ -136,7 +136,7 @@ func _tile(name_: String, height: float, in_use: bool) -> Array:
 	tile.custom_minimum_size = Vector2(TILE_W, height + ShadowStyle.OFFSET)
 	tile.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	var vb := VBoxContainer.new()
-	vb.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(vb)
 	vb.offset_right = -ShadowStyle.OFFSET
 	vb.offset_bottom = -ShadowStyle.OFFSET
 	vb.alignment = BoxContainer.ALIGNMENT_CENTER

@@ -38,7 +38,7 @@ func _ready() -> void:
 	var dim := ColorRect.new()
 	dim.name = "Dim"
 	dim.color = DIM
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(dim)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP   # no flicks through the menu
 	add_child(dim)
 	var col := VBoxContainer.new()
@@ -225,7 +225,7 @@ func _text(text: String, size_ := 16, color := CREAM, display := false) -> Label
 
 func _margin(v: int, h: int) -> MarginContainer:
 	var m := MarginContainer.new()
-	m.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(m)
 	m.add_theme_constant_override("margin_left", h)
 	m.add_theme_constant_override("margin_right", h + int(ShadowStyle.OFFSET))
 	m.add_theme_constant_override("margin_top", v)

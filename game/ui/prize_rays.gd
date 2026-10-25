@@ -18,9 +18,7 @@ func _init(p_color := Color("#E8703A")) -> void:
 	name = "PrizeRays"
 	color = p_color
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	set_anchors_preset(Control.PRESET_FULL_RECT)
-
-
+	UiLayout.full_rect(self)
 func _process(delta: float) -> void:
 	_angle += deg_to_rad(speed_deg) * delta
 	queue_redraw()

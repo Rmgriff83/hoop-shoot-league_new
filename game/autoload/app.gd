@@ -174,6 +174,8 @@ func hoop_for_mode(id: String) -> HoopSet:
 
 
 func _ready() -> void:
+	# The designed 720×1280 band centred on whatever the screen is (docs/HOME.md → Screen vs. design).
+	UiLayout.install(get_tree().root)
 	var saved := SaveService.get_tuning()
 	tuning_mode = bool(saved.get("tuningMode", false))
 	if OS.is_debug_build():

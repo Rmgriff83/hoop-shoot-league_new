@@ -101,7 +101,7 @@ func _build_court(location: String) -> void:
 	add_child(_court)
 	_court.led.set_text("HOOP SHOOT", _court.led.accent_color)
 	_spec = TitlePan.spec_of(arena)
-	_cam.fov = float(_spec["fov"])
+	UiLayout.frame_camera(_cam, float(_spec["fov"]))
 	var p := TitlePan.pose(_spec, 0.0)
 	_cam.position = p["pos"]
 	_cam.look_at(p["look"])
@@ -114,12 +114,12 @@ func _build_court(location: String) -> void:
 func build_chrome(run: Dictionary, is_best: bool) -> Control:
 	var chrome := Control.new()
 	chrome.name = "Chrome"
-	chrome.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(chrome)
 	chrome.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var scrim := ColorRect.new()
 	scrim.name = "Scrim"
 	scrim.color = Color(RetroTheme.SCENE_OUTLINE, SCRIM_ALPHA)
-	scrim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(scrim)
 	scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chrome.add_child(scrim)
 	var location := str(run.get("location", "cage"))
@@ -349,7 +349,7 @@ func _hbox(gap: int) -> HBoxContainer:
 
 func _margin(v: int, h: int) -> MarginContainer:
 	var m := MarginContainer.new()
-	m.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(m)
 	m.add_theme_constant_override("margin_left", h)
 	m.add_theme_constant_override("margin_right", h + int(ShadowStyle.OFFSET))
 	m.add_theme_constant_override("margin_top", v)

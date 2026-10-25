@@ -62,7 +62,7 @@ var _last_pct := 100.0
 
 func setup(cam: Camera3D) -> void:
 	_cam = cam
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(self)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE  # never eat a flick
 	_arc = _make_label()
 	_power = _make_label()
@@ -231,6 +231,6 @@ func _process(dt: float) -> void:
 		_arc.visible = false
 		_power.visible = false
 		return
-	var p := _cam.unproject_position(_anchor) + OFFSET
+	var p := UiLayout.from_screen(_cam.unproject_position(_anchor)) + OFFSET
 	_arc.position = p
 	_power.position = p + Vector2(0.0, LINE_GAP)

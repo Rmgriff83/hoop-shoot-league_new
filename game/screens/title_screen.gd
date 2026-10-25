@@ -107,7 +107,7 @@ func _ready() -> void:
 	_cover = ColorRect.new()
 	_cover.name = "Cover"
 	_cover.color = Color(RetroTheme.c("ink"), 0.0)
-	_cover.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(_cover)
 	_cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	# CONTINUE SEASON (and start_league) land here with a league to open.
 	var deep := App.home_open_league
@@ -291,7 +291,7 @@ func _build_court(i: int) -> void:
 	_court.led.set_text("HOOP SHOOT", _court.led.accent_color)
 	App.mark_area_visited(str(card["area"]))
 	_spec = TitlePan.spec_of(arena)
-	_cam.fov = float(_spec["fov"])
+	UiLayout.frame_camera(_cam, float(_spec["fov"]))
 	_t = 0.0
 	var p := TitlePan.pose(_spec, 0.0)
 	_cam.position = p["pos"]
@@ -307,7 +307,7 @@ func rebuild_chrome() -> void:
 		_chrome.queue_free()
 	_chrome = Control.new()
 	_chrome.name = "Chrome"
-	_chrome.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(_chrome)
 	_chrome.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ui.add_child(_chrome)
 	_ui.move_child(_chrome, 0)
@@ -318,7 +318,7 @@ func rebuild_chrome() -> void:
 	var scrim := ColorRect.new()
 	scrim.name = "Scrim"
 	scrim.color = Color(RetroTheme.LIGHT["ink"], SCRIM_ALPHA)
-	scrim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(scrim)
 	scrim.mouse_filter = Control.MOUSE_FILTER_STOP
 	_chrome.add_child(scrim)
 
@@ -519,7 +519,7 @@ func rebuild_chrome() -> void:
 	# The floating layer over the court, above the area (the open tab's data).
 	_float = Control.new()
 	_float.name = "Float"
-	_float.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(_float)
 	_float.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_chrome.add_child(_float)
 	# The league panel is built in the palette too: rebuild it on a flip,
@@ -671,7 +671,7 @@ func _chevron(text: String, dir: int) -> Button:
 		b.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	var glyph := _float_text(text, 72, RetroTheme.SCENE_TEXT, true)
 	glyph.name = "Glyph"
-	glyph.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(glyph)
 	glyph.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	glyph.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	RetroTheme.dithered(glyph)
@@ -867,7 +867,7 @@ func _float_strip() -> void:
 	b.pressed.connect(func() -> void: _league.go_loadout())
 	_float.add_child(b)
 	var row := HBoxContainer.new()
-	row.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(row)
 	row.add_theme_constant_override("separation", 12)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	b.add_child(row)

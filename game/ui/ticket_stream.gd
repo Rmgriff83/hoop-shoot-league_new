@@ -35,7 +35,7 @@ var _shown := 0
 
 
 func _init() -> void:
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(self)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 

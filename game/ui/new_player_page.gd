@@ -57,7 +57,7 @@ func _build() -> void:
 	# A plain host inside the panel (a container would stretch its children).
 	var lay := Control.new()
 	lay.name = "Layout"
-	lay.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(lay)
 	lay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(lay)
 	var jersey := PixelIcon.new("icon_jersey", Vector2(96, 96), 4.0)
@@ -138,7 +138,7 @@ func _field_box(name_: String, top: float) -> HBoxContainer:
 	sb.border_color = CREAM
 	sb.set_border_width_all(2)
 	bg.add_theme_stylebox_override("panel", sb)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(bg)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bg.show_behind_parent = true
 	box.add_child(bg)
@@ -189,7 +189,7 @@ static func big_button(text: String, icon: String) -> ShadowCard:
 	var row := HBoxContainer.new()
 	row.name = "Row"
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(row)
 	row.offset_left = 32.0
 	row.offset_right = -(32.0 + ShadowCard.OFFSET)
 	row.offset_bottom = -ShadowCard.OFFSET

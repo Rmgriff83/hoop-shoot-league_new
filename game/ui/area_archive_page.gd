@@ -41,18 +41,18 @@ func build(rows: Array, open_text: String, can_close := true) -> Control:
 		_root.queue_free()
 	_root = Control.new()
 	_root.name = "ArchivePage"
-	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(_root)
 	_root.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_root)
 	_sheet = Control.new()
 	_sheet.name = "Sheet"
-	_sheet.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(_sheet)
 	_sheet.mouse_filter = Control.MOUSE_FILTER_PASS
 	_root.add_child(_sheet)
 	var bg := ColorRect.new()
 	bg.name = "Bg"
 	bg.color = RetroTheme.c("bg")
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(bg)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sheet.add_child(bg)
 	# The header: < AREAS n/3 OPEN.
@@ -107,7 +107,7 @@ func build(rows: Array, open_text: String, can_close := true) -> Control:
 	_cover = ColorRect.new()
 	_cover.name = "Cover"
 	_cover.color = Color(RetroTheme.c("ink"), 0.0)
-	_cover.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(_cover)
 	_cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_cover)
 	return _root
@@ -142,7 +142,7 @@ func _card(r: Dictionary) -> Button:
 	var path := "res://assets/ui/areas/area_%s.png" % id
 	if ResourceLoader.exists(path):
 		snap.texture = load(path)
-	snap.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(snap)
 	snap.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	snap.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	snap.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
@@ -161,7 +161,7 @@ func _card(r: Dictionary) -> Button:
 	gt.width = 4
 	gt.height = 64
 	grad.texture = gt
-	grad.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(grad)
 	grad.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	grad.stretch_mode = TextureRect.STRETCH_SCALE
 	grad.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -170,7 +170,7 @@ func _card(r: Dictionary) -> Button:
 		var lock := ColorRect.new()
 		lock.name = "Lock"
 		lock.color = Color(20.0 / 255.0, 16.0 / 255.0, 14.0 / 255.0, LOCK_ALPHA)
-		lock.set_anchors_preset(Control.PRESET_FULL_RECT)
+		UiLayout.full_rect(lock)
 		lock.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		face.add_child(lock)
 		var col := VBoxContainer.new()

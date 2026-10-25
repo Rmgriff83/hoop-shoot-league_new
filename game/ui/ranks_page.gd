@@ -46,13 +46,13 @@ func build(tabs: Array, handle: String) -> Control:
 		_root.queue_free()
 	_root = Control.new()
 	_root.name = "RanksRoot"
-	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(_root)
 	_root.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_root)
 	var bg := ColorRect.new()
 	bg.name = "Bg"
 	bg.color = RetroTheme.c("bg")
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(bg)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(bg)
 	# < RANKS                                    BRICK BARON 42

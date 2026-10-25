@@ -29,12 +29,12 @@ func build(p_info: Dictionary) -> void:
 		c.queue_free()
 	var root := Control.new()
 	root.name = "Root"
-	root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(root)
 	add_child(root)
 	var dim := ColorRect.new()
 	dim.name = "Dim"
 	dim.color = DIM
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(dim)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	root.add_child(dim)
 	var card := ShadowPanel.new(CREAM, 24.0)
@@ -45,7 +45,7 @@ func build(p_info: Dictionary) -> void:
 	root.add_child(card)
 	var col := VBoxContainer.new()
 	col.name = "Col"
-	col.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(col)
 	col.offset_left = 24
 	col.offset_top = 24
 	col.offset_right = -24 - ShadowStyle.OFFSET

@@ -15,7 +15,7 @@ func run(t) -> void:
 	re.compile("^\\d+\\.\\d+\\.\\d+$")
 	t.ok(re.search(version) != null, "project version is X.Y.Z (got %s)" % version)
 	t.eq(str(ProjectSettings.get_setting("application/config/name", "")), "Hoop Shoot League", "the app is Hoop Shoot League (Ross, 2026-10-24)")
-	t.eq(str(ProjectSettings.get_setting("application/config/custom_user_dir_name", "")), "Hoop Shoot", "…while the Mac's user:// folder keeps its old name")
+	t.ok(not bool(ProjectSettings.get_setting("application/config/use_custom_user_dir", false)), "…the stock user:// folder (app_userdata/Hoop Shoot League on the Mac)")
 	var icon := str(ProjectSettings.get_setting("application/config/icon", ""))
 	t.ok(icon != "" and FileAccess.file_exists(icon), "the app icon exists (%s)" % icon)
 	for f in ["icon_1024.png", "android_192.png", "adaptive_fg_432.png", "adaptive_bg_432.png"]:

@@ -15,7 +15,7 @@ var _t := 0.0
 func _init(n := 0, palette: Array = [], seed_value := 7) -> void:
 	name = "Confetti"
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(self)
 	seed_pieces(n, palette, seed_value)
 
 

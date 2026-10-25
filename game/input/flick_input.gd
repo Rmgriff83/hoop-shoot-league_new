@@ -68,7 +68,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _begin(pos: Vector2) -> void:
-	var view_h := get_viewport().get_visible_rect().size.y
+	var view_h := UiLayout.DESIGN.y   # the design height: the feel is the same on every screen
 	if pos.y < view_h * GRAB_ZONE_TOP_FRAC:
 		return
 	_tracking = true
@@ -108,7 +108,7 @@ func _move(pos: Vector2) -> void:
 	# motion counts: pull down → charge, ease up → discharge, sideways → nothing.
 	# Once the upward speed crosses the latch threshold the throw has begun and
 	# the charge freezes; slowing down again (aborted throw) resumes tracking.
-	var view_h := get_viewport().get_visible_rect().size.y
+	var view_h := UiLayout.DESIGN.y   # the design height: the feel is the same on every screen
 	var up_sh := -_vel.y / view_h
 	if up_sh >= FLICK_LATCH_SH:
 		_latched = true
@@ -146,6 +146,6 @@ func _end() -> void:
 		"pull_px": _charge,     # wind-up charge at the start of the throw — arc
 		"path_px": _path_len,   # total travel — dead zone
 		"duration_s": (now - _press_usec) / 1_000_000.0,
-		"viewport_h": get_viewport().get_visible_rect().size.y,
+		"viewport_h": UiLayout.DESIGN.y,   # the design height (the canvas may be taller)
 	}
 	flick_released.emit(sample)

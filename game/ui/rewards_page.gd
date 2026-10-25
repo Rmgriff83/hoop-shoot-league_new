@@ -89,7 +89,7 @@ func _build_meter(col: VBoxContainer) -> void:
 	bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var track := ColorRect.new()
 	track.color = Color(RetroTheme.SCENE_OUTLINE, 0.55)
-	track.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(track)
 	bar.add_child(track)
 	var fill := ColorRect.new()
 	fill.name = "MeterFill"
@@ -129,7 +129,7 @@ func _build_pending(col: VBoxContainer) -> void:
 		row.custom_minimum_size = Vector2(0, ROW_H + ShadowStyle.OFFSET)
 		var h := HBoxContainer.new()
 		h.add_theme_constant_override("separation", 16)
-		h.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		UiLayout.full_rect(h)
 		h.offset_right = -ShadowStyle.OFFSET
 		h.offset_bottom = -ShadowStyle.OFFSET
 		row.add_child(h)

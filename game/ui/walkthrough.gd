@@ -55,12 +55,12 @@ func start(p_tour: String, p_resolve: Callable) -> bool:
 		return false
 	_root = Control.new()
 	_root.name = "Root"
-	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(_root)
 	_root.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_root)
 	_dim = Control.new()
 	_dim.name = "Dim"
-	_dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(_dim)
 	_dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_dim.draw.connect(_draw_dim)
 	_root.add_child(_dim)
@@ -261,7 +261,7 @@ func _build_card(st: Dictionary, kind: String) -> void:
 	var nrow := HBoxContainer.new()
 	nrow.name = "Row"
 	nrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	nrow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(nrow)
 	nrow.offset_left = 22.0
 	nrow.offset_right = -(22.0 + ShadowStyle.OFFSET)
 	nrow.offset_bottom = -ShadowStyle.OFFSET

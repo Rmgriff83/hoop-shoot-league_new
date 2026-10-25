@@ -272,7 +272,7 @@ func _rebuild(big: bool) -> void:
 		_box.add_theme_constant_override("separation", 18 if big else 14)
 	if big:
 		(_box as VBoxContainer).alignment = BoxContainer.ALIGNMENT_CENTER
-	_box.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(_box)
 	if mode == Mode.SIDE:
 		_box.offset_left = SIDE_PAD_X
 		_box.offset_right = -SIDE_PAD_X - ShadowStyle.OFFSET

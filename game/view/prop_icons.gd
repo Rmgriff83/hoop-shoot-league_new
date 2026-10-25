@@ -23,7 +23,7 @@ var _hits: Array[Dictionary] = []   # {it, id, center, r} from the last draw
 func setup(court: Node, cam: Camera3D) -> void:
 	_court = court
 	_cam = cam
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(self)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 
@@ -68,7 +68,7 @@ func _draw() -> void:
 		var world: Vector3 = it.anchor()
 		if _cam.is_position_behind(world):
 			continue
-		var p := _cam.unproject_position(world)
+		var p := UiLayout.from_screen(_cam.unproject_position(world))
 		var icons: Array = it.icons()
 		for h in layout(p, icons):
 			h["it"] = it

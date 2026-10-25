@@ -1970,15 +1970,21 @@ func _mouse_button(pos: Vector2, pressed: bool) -> void:
 	var ev := InputEventMouseButton.new()
 	ev.button_index = MOUSE_BUTTON_LEFT
 	ev.pressed = pressed
-	ev.position = pos
-	ev.global_position = pos
+	ev.position = _window_pos(pos)
+	ev.global_position = ev.position
 	Input.parse_input_event(ev)
+
+
+## A window position computed as design × scale → the real window position:
+## on a screen taller than 9:16 the designed band sits UiLayout.offset() lower.
+func _window_pos(pos: Vector2) -> Vector2:
+	return pos + UiLayout.offset() * get_viewport().get_final_transform().get_scale()
 
 
 func _mouse_move(pos: Vector2, rel: Vector2) -> void:
 	var ev := InputEventMouseMotion.new()
-	ev.position = pos
-	ev.global_position = pos
+	ev.position = _window_pos(pos)
+	ev.global_position = ev.position
 	ev.relative = rel
 	# Touch emulation only synthesizes ScreenDrag from motion that reports a
 	# held button — real drags set this automatically, injected ones must too.

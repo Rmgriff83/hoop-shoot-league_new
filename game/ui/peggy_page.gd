@@ -211,12 +211,12 @@ func _show_card(prize: Dictionary) -> void:
 	var big := rarity == "epic" or rarity == "legend"
 	_card = Control.new()
 	_card.name = "PrizeCard"
-	_card.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(_card)
 	_card.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_card)
 	var shade := ColorRect.new()
 	shade.color = Color(0.02, 0.02, 0.05, 0.6 if not big else 0.82)
-	shade.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(shade)
 	shade.mouse_filter = Control.MOUSE_FILTER_STOP
 	_card.add_child(shade)
 	if big:

@@ -5,8 +5,8 @@ is the iOS display name and the Android presets' `package/name` the launcher
 label; the Android package stays `com.rossgriffus.hoopshoot` (installed on the
 phone), the iOS bundle id is `com.rossgriffus.hoopshootleague` (registered with
 Apple under that name), and the Mac's `user://` folder
-keeps the old name through `config/custom_user_dir_name` so saves and QA snaps
-stay where they are.
+followed the name: `~/Library/Application Support/Godot/app_userdata/Hoop Shoot League/`
+(the old `Hoop Shoot` folder was copied over once, 2026-10-24; QA snaps land in its `qa/`).
 
 One command, both platforms (set up 2026-10-24, modelled on the bball sim's
 `npm run release` — no web build here):

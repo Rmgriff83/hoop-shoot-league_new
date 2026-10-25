@@ -65,14 +65,14 @@ func build(v: Dictionary) -> Control:
 		_root.queue_free()
 	_root = Control.new()
 	_root.name = "AreaUnlockPage"
-	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(_root)
 	_root.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_root)
 	# The real area behind everything (the tall render, else the card's), darkened.
 	var bg := TextureRect.new()
 	bg.name = "Bg"
 	bg.texture = _snap(str(v.get("snap_tall", "")), str(v.get("snap", "")))
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(bg)
 	bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	bg.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
@@ -81,7 +81,7 @@ func build(v: Dictionary) -> Control:
 	var dim := ColorRect.new()
 	dim.name = "Dim"
 	dim.color = Color(DARK, 0.8)
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(dim)
 	dim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(dim)
 	# Rays in the area's colour, behind the frame, from the reveal on.
@@ -126,7 +126,7 @@ func build(v: Dictionary) -> Control:
 	var snap := TextureRect.new()
 	snap.name = "Snap"
 	snap.texture = _snap(str(v.get("snap", "")), str(v.get("snap_tall", "")))
-	snap.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(snap)
 	snap.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	snap.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	snap.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
@@ -137,13 +137,13 @@ func build(v: Dictionary) -> Control:
 	veil.texture = ShadowStyle.dot_tex()
 	veil.stretch_mode = TextureRect.STRETCH_TILE
 	veil.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	veil.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(veil)
 	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	veil.self_modulate = Color(CREAM, 0.3)
 	var veil_fill := ColorRect.new()
 	veil_fill.name = "VeilFill"
 	veil_fill.color = Color(DARK, 0.9)
-	veil_fill.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(veil_fill)
 	veil_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	face.add_child(veil_fill)
 	face.add_child(veil)
@@ -153,7 +153,7 @@ func build(v: Dictionary) -> Control:
 	frame_flash.name = "FrameFlash"
 	frame_flash.color = FLASH
 	frame_flash.modulate.a = 0.0
-	frame_flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(frame_flash)
 	frame_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	face.add_child(frame_flash)
 	_anim(frame_flash, "flash", T_OPEN, 0.5, 1.0)
@@ -247,7 +247,7 @@ func build(v: Dictionary) -> Control:
 	go.size = Vector2(W - 36 - 42 - 26 - LATER_W, BUTTON_H) + Vector2.ONE * ShadowStyle.OFFSET
 	var row := HBoxContainer.new()
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(row)
 	row.offset_left = 26
 	row.offset_right = -(26 + ShadowStyle.OFFSET)
 	row.offset_bottom = -ShadowStyle.OFFSET
@@ -291,7 +291,7 @@ func build(v: Dictionary) -> Control:
 	flash.name = "Flash"
 	flash.color = FLASH
 	flash.modulate.a = 0.0
-	flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(flash)
 	flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(flash)
 	_anim(flash, "flash", T_OPEN, 0.3, 0.35)

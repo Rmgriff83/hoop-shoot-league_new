@@ -39,7 +39,7 @@ func build(p_bucket: String, p_title: String, sub := "LOADOUT") -> void:
 	var dim := ColorRect.new()
 	dim.name = "Dim"
 	dim.color = DIM
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(dim)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	dim.gui_input.connect(func(ev: InputEvent) -> void:
 		if (ev is InputEventMouseButton or ev is InputEventScreenTouch) and not ev.pressed:

@@ -192,7 +192,7 @@ func _panel(name_: String, colour: Color, y: float, h: float, tint: float) -> VB
 	panel.size = Vector2(PANEL_W + ShadowStyle.OFFSET, h + ShadowStyle.OFFSET)
 	root.add_child(panel)
 	var m := MarginContainer.new()
-	m.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(m)
 	m.add_theme_constant_override("margin_left", 22)
 	m.add_theme_constant_override("margin_right", 22 + int(ShadowStyle.OFFSET))
 	m.add_theme_constant_override("margin_top", 36)
@@ -351,7 +351,7 @@ func _build_vs() -> void:
 	block.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(block)
 	var row := HBoxContainer.new()
-	row.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(row)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 24)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -449,7 +449,7 @@ func _build_you() -> void:
 	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var line := ColorRect.new()
 	line.color = Color(CREAM, 0.6)
-	line.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(line)
 	rule.add_child(line)
 	_owned_block.add_child(rule)
 	_owned_row = HBoxContainer.new()
@@ -469,7 +469,7 @@ func _build_ready() -> void:
 	_ready_btn.size = Vector2(PANEL_W + ShadowStyle.OFFSET, READY_H + ShadowStyle.OFFSET)
 	root.add_child(_ready_btn)
 	var m := MarginContainer.new()
-	m.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(m)
 	m.add_theme_constant_override("margin_left", 30)
 	m.add_theme_constant_override("margin_right", 30 + int(ShadowStyle.OFFSET))
 	m.add_theme_constant_override("margin_bottom", int(ShadowStyle.OFFSET))

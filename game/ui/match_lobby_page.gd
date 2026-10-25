@@ -281,7 +281,7 @@ func _build_courts() -> void:
 		inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		inner.alignment = BoxContainer.ALIGNMENT_CENTER
 		inner.add_theme_constant_override("separation", 8)
-		inner.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		UiLayout.full_rect(inner)
 		inner.offset_right = -ShadowStyle.OFFSET
 		inner.offset_bottom = -ShadowStyle.OFFSET
 		b.add_child(inner)
@@ -336,7 +336,7 @@ func _big_button(name_: String, text: String, sub: String, fill: Color, on_press
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.add_theme_constant_override("separation", 14)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(col)
 	col.offset_right = -ShadowStyle.OFFSET
 	col.offset_bottom = -ShadowStyle.OFFSET
 	b.add_child(col)

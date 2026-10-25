@@ -50,7 +50,7 @@ func build(v: Dictionary) -> Control:
 		_root.queue_free()
 	_root = Control.new()
 	_root.name = "MatchEndPage"
-	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(_root)
 	_root.mouse_filter = Control.MOUSE_FILTER_STOP
 	_root.gui_input.connect(_on_input)
 	add_child(_root)
@@ -97,7 +97,7 @@ func build(v: Dictionary) -> Control:
 		_flash = ColorRect.new()
 		_flash.name = "Flash"
 		_flash.color = Color("#FFF3D0")
-		_flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+		UiLayout.full_rect(_flash)
 		_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_flash.modulate.a = 0.0
 		_root.add_child(_flash)
@@ -110,7 +110,7 @@ func _backdrop(scrim: float) -> void:
 	var base := ColorRect.new()
 	base.name = "Base"
 	base.color = Color("#171311")
-	base.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(base)
 	base.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(base)
 	for spec in [["Hall", "cage_hall.png", 330.0, 180.0, Vector2(720, 180)], ["Carpet", "cage_carpet.png", 510.0, H - 510.0, Vector2(192, 192)]]:
@@ -129,7 +129,7 @@ func _backdrop(scrim: float) -> void:
 	var sc := ColorRect.new()
 	sc.name = "Scrim"
 	sc.color = Color(DARK, scrim)
-	sc.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(sc)
 	sc.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(sc)
 
@@ -202,7 +202,7 @@ func _head(text: String, size_: int, color: Color, win: bool) -> void:
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var l := _label(text, size_, color, true)
 	l.name = "Head"
-	l.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(l)
 	RetroTheme.dithered(l, Vector2(8, 8))
 	box.add_child(l)
 	_root.add_child(box)
@@ -220,7 +220,7 @@ func _score(v: Dictionary) -> void:
 	row.size = Vector2(W, 110)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var h := HBoxContainer.new()
-	h.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(h)
 	h.alignment = BoxContainer.ALIGNMENT_CENTER
 	h.add_theme_constant_override("separation", 22)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -476,7 +476,7 @@ func _rewards(tickets: int, drop: String) -> void:
 	row.pivot_offset = Vector2(W * 0.5, 42)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var h := HBoxContainer.new()
-	h.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(h)
 	h.alignment = BoxContainer.ALIGNMENT_CENTER
 	h.add_theme_constant_override("separation", 24)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -499,7 +499,7 @@ func _rewards(tickets: int, drop: String) -> void:
 		var bg := Panel.new()
 		bg.name = "DropBg"
 		bg.add_theme_stylebox_override("panel", _box(col, Color(col, 0.25)))
-		bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+		UiLayout.full_rect(bg)
 		bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		tile.add_child(bg)
 		var tv := VBoxContainer.new()

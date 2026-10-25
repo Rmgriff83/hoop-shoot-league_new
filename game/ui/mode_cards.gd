@@ -290,7 +290,7 @@ static func art(card: Dictionary, size_: Vector2, shadow := 6.0, button := false
 static func empty_slot(size_: Vector2, font := 16, border := 2.0, shadow := 0.0) -> Control:
 	var d := Dashed.new(size_, border, shadow)
 	var plus := _label("+", font, CREAM, true)
-	plus.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(plus)
 	plus.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	plus.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	d.add_child(plus)
@@ -320,7 +320,7 @@ static func chip_row(slots: Array, with_empty := true) -> HBoxContainer:
 
 static func _margin(v: int, h: int) -> MarginContainer:
 	var m := MarginContainer.new()
-	m.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(m)
 	m.add_theme_constant_override("margin_left", h)
 	m.add_theme_constant_override("margin_right", h + int(ShadowCard.OFFSET))
 	m.add_theme_constant_override("margin_top", v)

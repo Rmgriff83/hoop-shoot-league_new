@@ -98,7 +98,7 @@ func _build_ui() -> void:
 	var bg := ColorRect.new()
 	bg.name = "Bg"
 	bg.color = Color.BLACK
-	bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(bg)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ui.add_child(bg)
 	var view := TextureRect.new()
@@ -154,7 +154,7 @@ func _button(text: String, icon: String, top: float) -> ShadowCard:
 	var row := HBoxContainer.new()
 	row.name = "Row"
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(row)
 	row.offset_left = 32.0
 	row.offset_right = -(32.0 + ShadowCard.OFFSET)
 	row.offset_bottom = -ShadowCard.OFFSET

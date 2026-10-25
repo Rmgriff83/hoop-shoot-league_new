@@ -51,11 +51,11 @@ func setup(id: String, p_tab := "HEAT", p_sub := "YOUR CARDS") -> void:
 	_card_sub = p_sub
 	cfg = App.league_cfg(id)
 	doc = App.league_doc(id)
-	set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(self)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_clip = Control.new()
 	_clip.name = "Panes"
-	_clip.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(_clip)
 	_clip.offset_top = TAB_H + 16
 	_clip.clip_contents = true
 	_clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -152,7 +152,7 @@ func _tab_button(text: String, active: bool, size_: int, height := 52.0) -> Butt
 		# The solid face is drawn over the button's own text, so the label is a child.
 		var l := UiFont.label(text, size_, RetroTheme.c("text"))
 		l.name = "Label"
-		l.set_anchors_preset(Control.PRESET_FULL_RECT)
+		UiLayout.full_rect(l)
 		l.offset_right = -ShadowStyle.OFFSET
 		l.offset_bottom = -ShadowStyle.OFFSET
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -170,7 +170,7 @@ func _tab_button(text: String, active: bool, size_: int, height := 52.0) -> Butt
 
 func _make_pane() -> ScrollContainer:
 	var sc := ScrollContainer.new()
-	sc.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(sc)
 	sc.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	var vb := VBoxContainer.new()
 	vb.name = "List"
@@ -445,7 +445,7 @@ func _shooter_card(sh: Dictionary, line: String) -> Control:
 	play.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	play.pressed.connect(func() -> void: App.start_league_heat())
 	var pm := MarginContainer.new()
-	pm.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(pm)
 	pm.add_theme_constant_override("margin_left", 18)
 	pm.add_theme_constant_override("margin_right", 18 + int(ShadowStyle.OFFSET))
 	pm.add_theme_constant_override("margin_bottom", int(ShadowStyle.OFFSET))
@@ -857,7 +857,7 @@ func _fill_shop(vb: VBoxContainer) -> void:
 		buy.custom_minimum_size = Vector2(136 + ShadowStyle.OFFSET, 50 + ShadowStyle.OFFSET)
 		buy.disabled = App.tickets() < int(card.get("price", 0)) or not usable   # bought at level, too
 		var bm := MarginContainer.new()
-		bm.set_anchors_preset(Control.PRESET_FULL_RECT)
+		UiLayout.full_rect(bm)
 		bm.add_theme_constant_override("margin_right", int(ShadowStyle.OFFSET))
 		bm.add_theme_constant_override("margin_bottom", int(ShadowStyle.OFFSET))
 		bm.mouse_filter = Control.MOUSE_FILTER_IGNORE

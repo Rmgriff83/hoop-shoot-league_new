@@ -40,7 +40,7 @@ func _ready() -> void:
 	wash = ColorRect.new()
 	wash.name = "Wash"
 	wash.color = WASH
-	wash.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(wash)
 	wash.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(wash)
 	root = Control.new()

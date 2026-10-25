@@ -38,12 +38,12 @@ func build(id: String) -> bool:
 	_rows = {}
 	_root = Control.new()
 	_root.name = "Root"
-	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(_root)
 	add_child(_root)
 	var dim := ColorRect.new()
 	dim.name = "Dim"
 	dim.color = DIM
-	dim.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(dim)
 	dim.mouse_filter = Control.MOUSE_FILTER_STOP
 	dim.gui_input.connect(func(ev: InputEvent) -> void:
 		if (ev is InputEventMouseButton or ev is InputEventScreenTouch) and not ev.pressed:
@@ -58,7 +58,7 @@ func build(id: String) -> bool:
 	_root.add_child(card)
 	var col := VBoxContainer.new()
 	col.name = "Col"
-	col.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(col)
 	col.offset_left = 24
 	col.offset_top = 24
 	col.offset_right = -24 - ShadowStyle.OFFSET
@@ -97,7 +97,7 @@ func _row(area: String) -> ShadowCard:
 	card.name = "Area_" + area
 	card.custom_minimum_size = Vector2(0, ROW_H + ShadowStyle.OFFSET)
 	var row := HBoxContainer.new()
-	row.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(row)
 	row.offset_left = 18
 	row.offset_right = -18 - ShadowStyle.OFFSET
 	row.offset_bottom = -ShadowStyle.OFFSET

@@ -11,8 +11,6 @@ config_version=5
 [application]
 
 config/name="Hoop Shoot League"
-config/use_custom_user_dir=true
-config/custom_user_dir_name="Hoop Shoot"
 config/version="1.0.0"
 run/main_scene="res://game/screens/splash_screen.tscn"
 config/features=PackedStringArray("4.7")
@@ -32,6 +30,7 @@ QaDriver="*res://tools/qa_driver.gd"
 window/size/viewport_width=720
 window/size/viewport_height=1280
 window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
 window/handheld/orientation=1
 
 [dotnet]

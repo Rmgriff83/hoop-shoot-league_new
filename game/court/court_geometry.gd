@@ -833,6 +833,7 @@ func _build_interactables(arena_set: ArenaSet) -> void:
 func pick_interactable(cam: Camera3D, screen_pos: Vector2) -> Interactable:
 	if cam == null or _interactables.is_empty():
 		return null
+	# A design-space tap goes in as is: project_ray_* apply the canvas transform themselves.
 	var origin := cam.project_ray_origin(screen_pos)
 	var dir := cam.project_ray_normal(screen_pos)
 	var best: Interactable = null

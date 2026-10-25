@@ -644,3 +644,24 @@ skip it (`App.qa_skip_tutorial`) except `--qa-tutorial`.
 - `tests/test_home_ui.gd` (palettes, faces, dark mode persistence, league
   lines, ticker copy + glyph coverage, widgets), `tests/test_title_cards.gd`
   (the pan, poses, routing).
+
+## Screen vs. design (full screen, 2026-10-24)
+
+The game is laid out at 720×1280; the window stretches to the phone's width
+and the canvas EXPANDS to its height (`window/stretch/aspect=expand`), so a
+20:9 phone gets a 720×1604 canvas instead of black letterbox bars (the
+iPhone's are ~140 px, the moto's 162). `UiLayout` (`game/ui/ui_layout.gd`,
+installed by `App._ready`) shifts every 2D layer down by half the excess
+through the root's global canvas transform, so every page, HUD and toast
+lands where it was designed, centred; the 3D court fills the rest —
+`UiLayout.frame_camera` keeps each main camera's 720×1280 framing
+(KEEP_WIDTH with the equivalent horizontal fov) and shows more floor and
+sky. Rules: input events arrive in the shifted design space, and
+`Camera3D.project_ray_*` take that space as is (the engine applies the
+canvas transform itself) — but `unproject_position` returns the raw
+viewport point: wrap it in `UiLayout.from_screen` before any 2D use (the
+readout, the prop icons, the tutorial's finger); the flick reads `UiLayout.DESIGN.y`, never the canvas height, so
+the on-device feel is identical everywhere; anchor full-screen controls with
+`UiLayout.full_rect(c)` (a layer-rooted wash stretches over the bleed; a
+child of a Control just fills it). The QA driver's clicks go through
+`_window_pos`, so `--resolution 360x802` exercises the moto's ratio.

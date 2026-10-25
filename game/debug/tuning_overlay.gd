@@ -122,12 +122,12 @@ func _build_panel() -> void:
 
 	var bg := ColorRect.new()
 	bg.color = Color(0.15, 0.17, 0.26, 0.6)
-	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(bg)
 	bg.mouse_filter = Control.MOUSE_FILTER_STOP
 	_panel.add_child(bg)
 
 	var vb := VBoxContainer.new()
-	vb.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(vb)
 	vb.offset_left = 12
 	vb.offset_right = -12
 	vb.offset_top = 10

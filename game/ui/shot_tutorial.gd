@@ -111,7 +111,7 @@ func start(screen: Object) -> void:
 	_screen = screen
 	_root = Control.new()
 	_root.name = "Root"
-	_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(_root)
 	add_child(_root)
 	_finger = Finger.new()
 	_finger.name = "Finger"
@@ -340,7 +340,7 @@ func _build_card() -> void:
 		var nrow := HBoxContainer.new()
 		nrow.name = "Row"
 		nrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		nrow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		UiLayout.full_rect(nrow)
 		nrow.offset_left = 22.0
 		nrow.offset_right = -(22.0 + ShadowStyle.OFFSET)
 		nrow.offset_bottom = -ShadowStyle.OFFSET
@@ -363,7 +363,7 @@ func _build_card() -> void:
 		wait.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		_hint = _words(ShotTutorialCopy.HINT_WAITING, 16)
 		_hint.name = "Hint"
-		_hint.set_anchors_preset(Control.PRESET_FULL_RECT)
+		UiLayout.full_rect(_hint)
 		_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		_hint.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		wait.add_child(_hint)
@@ -442,7 +442,7 @@ class Finger extends Control:
 	var ripple: Dictionary = {}
 
 	func _init() -> void:
-		set_anchors_preset(Control.PRESET_FULL_RECT)
+		UiLayout.full_rect(self)
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	func _draw() -> void:

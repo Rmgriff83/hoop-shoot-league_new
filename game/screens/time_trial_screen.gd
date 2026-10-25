@@ -75,7 +75,7 @@ func _ready() -> void:
 	# Camera: placed behind whichever shooting spot is active (_set_spot).
 	_cam = Camera3D.new()
 	_cam.name = "Camera"
-	_cam.fov = _arena_set.camera_fov if _arena_set != null else 60.0
+	UiLayout.frame_camera(_cam, _arena_set.camera_fov if _arena_set != null else 60.0)
 	add_child(_cam)
 
 	_pool = BallPool.new()
@@ -269,7 +269,7 @@ func ball_rest_point() -> Vector2:
 	var p: Vector3 = _pool.to_global(_pool.rest_pos)
 	if _cam == null or _cam.is_position_behind(p):
 		return Vector2(360, 1050)
-	return _cam.unproject_position(p)
+	return UiLayout.from_screen(_cam.unproject_position(p))
 
 
 func demo_press() -> bool:
@@ -295,7 +295,7 @@ func demo_windup(pull_px: float) -> void:
 func demo_shoot(_angle_deg: float) -> void:
 	if not trial.holding:
 		return
-	var vh := get_viewport().get_visible_rect().size.y
+	var vh := UiLayout.DESIGN.y
 	# The arc is the one the pull showed (the dots' arc), the speed its ideal.
 	var pull := _pull_px
 	var angle_deg := FlickMap.windup_angle(pull, vh, tuning)
@@ -798,7 +798,7 @@ func _add_thirty_button() -> void:
 	_thirty_btn.position = Vector2(36, y)
 	_thirty_btn.size = Vector2(284 + ShadowStyle.OFFSET, 60 + ShadowStyle.OFFSET)
 	var m := MarginContainer.new()
-	m.set_anchors_preset(Control.PRESET_FULL_RECT)
+	UiLayout.full_rect(m)
 	m.add_theme_constant_override("margin_left", 16)
 	m.add_theme_constant_override("margin_right", 16 + int(ShadowStyle.OFFSET))
 	m.add_theme_constant_override("margin_bottom", int(ShadowStyle.OFFSET))
@@ -942,6 +942,8 @@ func _screen_to_plane(pos: Vector2) -> Variant:
 	if _cam == null:
 		return null
 	var plane := Plane(_fwd, _spot)
+	# project_ray_* take the design-space point as is: the engine applies the
+	# canvas transform itself (Viewport.get_camera_coords); only unproject is raw.
 	return plane.intersects_ray(_cam.project_ray_origin(pos), _cam.project_ray_normal(pos))
 
 
@@ -986,7 +988,7 @@ func _refresh_preview() -> void:
 	if not trial.holding or not _help_full():
 		_preview.hide_preview()
 		return
-	var viewport_h := get_viewport().get_visible_rect().size.y
+	var viewport_h := UiLayout.DESIGN.y
 	var angle := FlickMap.windup_angle(_pull_px, viewport_h, tuning)
 	var frac := 1.0 if App.tuning_mode else HELP_ARC_FRAC
 	_preview.show_preview(_hand_pos, angle, _lead_geo(angle, NAN), frac)
@@ -1000,7 +1002,7 @@ func _refresh_readout() -> void:
 	if not trial.holding or not _help_on() or _anchor_pending:
 		_readout.clear()
 		return
-	var viewport_h := get_viewport().get_visible_rect().size.y
+	var viewport_h := UiLayout.DESIGN.y
 	var angle := FlickMap.windup_angle(_pull_px, viewport_h, tuning)
 	# Pinned in HEIGHT to where the wind-up started, but tracking the ball
 	# sideways: the ball sinks as you pull (so a readout that follows it
