@@ -34,6 +34,7 @@ var _slide: Tween
 
 func _init() -> void:
 	layer = 30
+	UiLayout.anchor_layer(self)   # the frame runs the full screen height (_layout_frame)
 
 
 func _ready() -> void:
@@ -45,18 +46,44 @@ func _ready() -> void:
 	add_child(wash)
 	root = Control.new()
 	root.name = "Frame"
-	root.position = FRAME_POS
-	root.size = FRAME_SIZE
 	root.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(root)
 	body = VBoxContainer.new()
 	body.name = "Body"
 	body.position = Vector2(PAD, PAD)
-	body.size = FRAME_SIZE - Vector2(2.0 * PAD, 2.0 * PAD)
+	_layout_frame()
+	if is_inside_tree():
+		get_tree().root.size_changed.connect(_layout_frame)
 	body.add_theme_constant_override("separation", _row_gap())
 	body.mouse_filter = Control.MOUSE_FILTER_PASS
 	root.add_child(body)
 	_build()
+
+
+## The frame on this screen (design "Store and Locker", 2026-10-24): 20 px
+## under the screen's top edge to 26 px above its bottom, 654 wide, so the
+## page runs the full height and CLOSE sits at the foot. A page that lays its
+## block out in absolute 1234-tall coordinates (`_anchored()` false) keeps
+## the centred band frame instead.
+func _layout_frame() -> void:
+	if root == null:
+		return
+	if _anchored():
+		root.position = Vector2(FRAME_POS.x, UiLayout.screen_top() + FRAME_POS.y)
+		root.size = Vector2(FRAME_SIZE.x, UiLayout.screen_height() - (FRAME_POS.y + 26.0))
+	else:
+		root.position = FRAME_POS
+		root.size = FRAME_SIZE
+	body.size = root.size - Vector2(2.0 * PAD, 2.0 * PAD)
+
+
+## Whether the frame follows the screen's edges (most pages) or stays the 1234-tall band.
+func _anchored() -> bool:
+	return true
+
+
+func frame_height() -> float:
+	return root.size.y if root != null else FRAME_SIZE.y
 
 
 ## The space between the rows (the locker 28, PEGGY 24).

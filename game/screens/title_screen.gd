@@ -30,16 +30,12 @@ const FADE_S := 0.2
 ## top bar, the ALL AREAS line under the name; the chevrons at mid-height
 ## between the zone and the card area — `<` to the area before, `>` to the
 ## next only when it is open, with a NEW badge until it has been visited.
-const ZONE_Y := 180.0
 const NAME_W := 430.0
 const CHEVRON_SIZE := Vector2(112, 176)
-const CHEVRON_Y := 520.0 - (CHEVRON_SIZE.y - 72.0) / 2.0
 ## The card area: a fixed box above the ticker that holds the home block
 ## (LEAGUE + the pair) or the league in context. Cards carry their shadow in
 ## their size, so the gaps are the design's less the 6 px strip.
 const AREA_W := 654.0
-const AREA_TOP := 781.0
-const AREA_BOTTOM := 1280.0 - HomeTicker.HEIGHT - 26.0
 const CARD_GAP := 20.0 - ShadowStyle.OFFSET
 const LEAGUE_H := ModeCards.LEAGUE_H + ShadowStyle.OFFSET
 const PAIR_H := ModeCards.PAIR_H + ShadowStyle.OFFSET
@@ -50,14 +46,15 @@ const OPEN_S := 0.3
 ## the court's floor.
 const WASH_COLOR := Color("#1B1815")
 const WASH_ALPHA := 0.72
-## The floating layer's rows: the compact loadout strip on MATCH, the full
-## loadout on CARDS a little higher, the rest.
-const FLOAT_Y := 612.0
-const LOADOUT_Y := 584.0
-const STRIP_Y := 700.0
 ## The season chip under the area name while the league is open.
-const CHIP_POS := Vector2(36, 362)
+const CHIP_X := 36.0
 const CHIP_H := 46.0
+## The rows on this screen (HomeLayout.compute, design "Store and Locker"
+## 32a, 2026-10-24): the top row and the ticker on the screen's edges, the
+## card block 74 px above the bottom, the middle in the design's proportions.
+## Screen coordinates: the Chrome root covers the real screen (UiLayout.screen_fill).
+var _lay: Dictionary = HomeLayout.compute(UiLayout.DESIGN.y)
+var _chrome_x0 := 0.0
 
 var _index := 0
 var _t := 0.0
@@ -103,12 +100,14 @@ func _ready() -> void:
 	_ui = CanvasLayer.new()
 	_ui.name = "Ui"
 	_ui.layer = 10
+	UiLayout.anchor_layer(_ui)   # the chrome lays out against the real screen (HomeLayout)
 	add_child(_ui)
 	_cover = ColorRect.new()
 	_cover.name = "Cover"
 	_cover.color = Color(RetroTheme.c("ink"), 0.0)
 	UiLayout.full_rect(_cover)
 	_cover.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	get_tree().root.size_changed.connect(_on_screen_resized)
 	# CONTINUE SEASON (and start_league) land here with a league to open.
 	var deep := App.home_open_league
 	if deep != "":
@@ -143,7 +142,6 @@ func _ready() -> void:
 
 ## The home board (BoardPreview): the design's (140, 440), 440 wide.
 const BOARD_X := 140.0
-const BOARD_Y := 440.0
 var _board: BoardPreview
 
 
@@ -244,12 +242,12 @@ func _welcome() -> void:
 	var w: Dictionary = App.pending_welcome
 	App.pending_welcome = {}
 	# Two chips, one under the other: the row shape would run past the screen.
-	var toast := Toast.new(RetroTheme.SCENE_TEXT, WELCOME_TOP)
+	var toast := Toast.new(RetroTheme.SCENE_TEXT, UiLayout.screen_top() + WELCOME_TOP)
 	toast.name = "Welcome"
 	toast.set_small(str(w.get("name", "")), "", "icon_jersey", "WELCOME,")   # a long name still fits the width
 	_ui.add_child(toast)
 	toast.show_once.call_deferred(WELCOME_S)
-	var stop := Toast.new(RetroTheme.LIGHT["gold"], WELCOME_TOP + Toast.SMALL_H + 12.0)
+	var stop := Toast.new(RetroTheme.LIGHT["gold"], UiLayout.screen_top() + WELCOME_TOP + Toast.SMALL_H + 12.0)
 	stop.name = "WelcomeStop"
 	stop.set_small("%s · FIRST STOP" % str(w.get("town", "")))
 	_ui.add_child(stop)
@@ -305,14 +303,16 @@ func _build_court(i: int) -> void:
 func rebuild_chrome() -> void:
 	if _chrome != null:
 		_chrome.queue_free()
+	_lay = HomeLayout.compute(UiLayout.screen_height())
 	_chrome = Control.new()
 	_chrome.name = "Chrome"
-	UiLayout.full_rect(_chrome)
+	UiLayout.screen_fill(_chrome)   # the real screen: the rows below are screen coordinates
+	_chrome_x0 = _chrome.position.x
 	_chrome.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ui.add_child(_chrome)
 	_ui.move_child(_chrome, 0)
 	if _locker != null or _peggy != null or _settings != null:
-		_chrome.position.x = -HomePage.SLIDE   # a page is open: the home UI stays out
+		_chrome.position.x = _chrome_x0 - HomePage.SLIDE   # a page is open: the home UI stays out
 
 	# The scrim over the court.
 	var scrim := ColorRect.new()
@@ -351,7 +351,7 @@ func rebuild_chrome() -> void:
 	# ranks and multiplayer icons to its right, chevrons at the screen edges.
 	var zone := VBoxContainer.new()
 	zone.name = "Zone"
-	zone.position = Vector2(MARGIN, ZONE_Y)
+	zone.position = Vector2(MARGIN, float(_lay["zone_y"]))
 	zone.size = Vector2(COLUMN_W, 0)
 	zone.add_theme_constant_override("separation", 14)
 	zone.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -449,15 +449,15 @@ func rebuild_chrome() -> void:
 	_all_areas.pressed.connect(func() -> void: _open_archive())
 	zone.add_child(_all_areas)
 	_prev = _chevron("<", -1)
-	_prev.position = Vector2(8, CHEVRON_Y)
+	_prev.position = Vector2(8, float(_lay["chevron_y"]))
 	_chrome.add_child(_prev)
 	_next = _chevron(">", 1)
-	_next.position = Vector2(720 - 8 - CHEVRON_SIZE.x, CHEVRON_Y)
+	_next.position = Vector2(720 - 8 - CHEVRON_SIZE.x, float(_lay["chevron_y"]))
 	_chrome.add_child(_next)
 	# The season chip: `SEASON 2 - 2-1`, slid in from the left while the league is open.
 	_season_chip = ShadowPanel.new(RetroTheme.c("orange"), 0.0, 0.30, 16.0)
 	_season_chip.name = "SeasonChip"
-	_season_chip.position = CHIP_POS
+	_season_chip.position = Vector2(CHIP_X, float(_lay["chip_y"]))
 	_season_chip.custom_minimum_size = Vector2(0, CHIP_H + ShadowStyle.OFFSET)
 	_season_chip.visible = false
 	var chip_row := HBoxContainer.new()
@@ -489,16 +489,16 @@ func rebuild_chrome() -> void:
 	gt.fill_to = Vector2(0, 1)
 	wash.texture = gt
 	wash.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	wash.position = Vector2(0, AREA_TOP)
-	wash.size = Vector2(720, 1280 - HomeTicker.HEIGHT - AREA_TOP)
+	wash.position = Vector2(0, float(_lay["wash_y"]))
+	wash.size = Vector2(720, float(_lay["wash_h"]))
 	wash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_chrome.add_child(wash)
 
 	# The card area: the home cards, and the league in context when open.
 	_area = Control.new()
 	_area.name = "Area"
-	_area.position = Vector2(MARGIN, AREA_TOP)
-	_area.size = Vector2(AREA_W, AREA_BOTTOM - AREA_TOP)
+	_area.position = Vector2(MARGIN, float(_lay["area_top"]))
+	_area.size = Vector2(AREA_W, float(_lay["area_bottom"]) - float(_lay["area_top"]))
 	_area.clip_contents = true
 	_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_chrome.add_child(_area)
@@ -512,7 +512,7 @@ func rebuild_chrome() -> void:
 	# The leaderboard mid-court (design 3a): the area's top five and YOU; a
 	# tap opens the full board. Slides off left while the league is open.
 	_board = BoardPreview.new()
-	_board.position = Vector2(BOARD_X, BOARD_Y)
+	_board.position = Vector2(BOARD_X, float(_lay["board_y"]))
 	_board.pressed.connect(_open_ranks)
 	_chrome.add_child(_board)
 	_refresh_board()
@@ -537,7 +537,7 @@ func rebuild_chrome() -> void:
 	# The ticker sits at the very bottom (no bottom nav: the safe area would
 	# push one up on the phone).
 	_ticker = HomeTicker.new()
-	_ticker.position = Vector2(-RetroTheme.BORDER, 1280 - HomeTicker.HEIGHT + RetroTheme.BORDER)
+	_ticker.position = Vector2(-RetroTheme.BORDER, float(_lay["ticker_y"]) + RetroTheme.BORDER)
 	_ticker.size = Vector2(720 + 2 * RetroTheme.BORDER, HomeTicker.HEIGHT)
 	_chrome.add_child(_ticker)
 	_refresh_ticker()
@@ -597,7 +597,7 @@ func _apply_area(f: float) -> void:
 		_float.visible = not home
 	if _season_chip != null:
 		_season_chip.visible = f > 0.0 and _chip_a.text != ""
-		_season_chip.position = Vector2(lerpf(-1.3 * maxf(_season_chip.size.x, 1.0), CHIP_POS.x, f), CHIP_POS.y)
+		_season_chip.position = Vector2(lerpf(-1.3 * maxf(_season_chip.size.x, 1.0), CHIP_X, f), float(_lay["chip_y"]))
 		_season_chip.modulate.a = f
 	if _board != null:
 		# The board slides off left and fades as the league opens (design 3a).
@@ -861,7 +861,7 @@ func _float_strip() -> void:
 	b.name = "LoadoutStrip"
 	b.flat = true
 	b.focus_mode = Control.FOCUS_NONE
-	b.position = Vector2(MARGIN, STRIP_Y)
+	b.position = Vector2(MARGIN, float(_lay["strip_y"]))
 	b.size = Vector2(720 - 2 * MARGIN, 60)
 	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
 	b.pressed.connect(func() -> void: _league.go_loadout())
@@ -898,7 +898,7 @@ func _float_strip() -> void:
 ## happens on the pre-match page before each heat (docs/CARDS.md § Drops).
 func _float_loadout() -> void:
 	var slots: Array = App.loadout_slots(_league.league_id)
-	var box := _float_box(LOADOUT_Y, 14)
+	var box := _float_box(float(_lay["loadout_y"]), 14)
 	box.name = "Loadout"
 	var set_n := 0
 	for id in slots:
@@ -937,7 +937,7 @@ func _float_loadout() -> void:
 ## TABLE: YOUR SPOT — the big ordinal, the record and games back, the line.
 func _float_spot(doc: Dictionary) -> void:
 	var sp := LeagueSummary.spot(doc, _league.cfg)
-	var box := _float_box(FLOAT_Y, 14)
+	var box := _float_box(float(_lay["float_y"]), 14)
 	box.name = "Spot"
 	box.add_child(_float_text(str(sp["cap"])))
 	var row := HBoxContainer.new()
@@ -959,7 +959,7 @@ func _float_spot(doc: Dictionary) -> void:
 
 ## SCHED: COMING UP — the next three games as cards, today's in gold.
 func _float_upcoming(doc: Dictionary) -> void:
-	var box := _float_box(FLOAT_Y, 14, 42)
+	var box := _float_box(float(_lay["float_y"]), 14, 42)
 	box.name = "Upcoming"
 	box.add_child(_float_text("COMING UP"))
 	var row := HBoxContainer.new()
@@ -989,7 +989,7 @@ func _float_upcoming(doc: Dictionary) -> void:
 
 ## STATS: THIS SEASON — record, high points, streak.
 func _float_season(doc: Dictionary) -> void:
-	var box := _float_box(FLOAT_Y, 18)
+	var box := _float_box(float(_lay["float_y"]), 18)
 	box.name = "Season"
 	box.add_child(_float_text("THIS SEASON"))
 	var row := HBoxContainer.new()
@@ -1091,12 +1091,18 @@ func _open_peggy() -> void:
 
 ## The whole home UI (the chrome: top bar, zone, chevrons, cards, ticker)
 ## out to the left for a page, or back.
+## The window changed (the desktop): the rows follow the new screen.
+func _on_screen_resized() -> void:
+	if _chrome != null and is_inside_tree():
+		rebuild_chrome()
+
+
 func _slide_home(out: bool) -> void:
 	if _chrome == null:
 		return
 	if _home_slide != null and _home_slide.is_valid():
 		_home_slide.kill()
-	var x := -HomePage.SLIDE if out else 0.0
+	var x := _chrome_x0 - HomePage.SLIDE if out else _chrome_x0
 	if not is_inside_tree():
 		_chrome.position.x = x
 		return

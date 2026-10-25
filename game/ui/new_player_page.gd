@@ -32,6 +32,12 @@ var _dice: Array[DieGlyph] = []
 var _leaving := false
 
 
+
+## Laid out in absolute 1234-tall coordinates: keeps the centred band frame
+## until its full-height design arrives (2026-10-24).
+func _anchored() -> bool:
+	return false
+
 func _build() -> void:
 	body.visible = false   # everything sits at the design's absolute spots
 	# Head: < and NEW PLAYER.

@@ -122,7 +122,7 @@ func _layout_play() -> void:
 	_play.custom_minimum_size = Vector2(w + ShadowStyle.OFFSET, hgt + ShadowStyle.OFFSET)
 	_play.size = _play.custom_minimum_size
 	col.size = Vector2(w - 56.0, hgt - 36.0)
-	_play.position = Vector2((FRAME_SIZE.x - w) * 0.5, FRAME_SIZE.y * PLAY_Y)
+	_play.position = Vector2((FRAME_SIZE.x - w) * 0.5, frame_height() * PLAY_Y)
 
 
 func set_view_active(on: bool) -> void:
@@ -211,7 +211,7 @@ func _show_card(prize: Dictionary) -> void:
 	var big := rarity == "epic" or rarity == "legend"
 	_card = Control.new()
 	_card.name = "PrizeCard"
-	UiLayout.full_rect(_card)
+	UiLayout.screen_fill(_card)   # the shade and the rays cover the real screen
 	_card.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_card)
 	var shade := ColorRect.new()
@@ -225,7 +225,7 @@ func _show_card(prize: Dictionary) -> void:
 	var panel := ShadowPanel.new(CREAM, 24.0)
 	panel.name = "Card"
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
-	panel.position = Vector2(90, 390)
+	panel.position = Vector2(90, roundf((UiLayout.screen_height() - 500.0) * 0.5))   # centred on the screen (1280 → 390, 1560 → 530)
 	panel.size = Vector2(540, 500)
 	_card.add_child(panel)
 	var col := VBoxContainer.new()

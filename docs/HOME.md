@@ -651,17 +651,44 @@ The game is laid out at 720×1280; the window stretches to the phone's width
 and the canvas EXPANDS to its height (`window/stretch/aspect=expand`), so a
 20:9 phone gets a 720×1604 canvas instead of black letterbox bars (the
 iPhone's are ~140 px, the moto's 162). `UiLayout` (`game/ui/ui_layout.gd`,
-installed by `App._ready`) shifts every 2D layer down by half the excess
-through the root's global canvas transform, so every page, HUD and toast
-lands where it was designed, centred; the 3D court fills the rest —
-`UiLayout.frame_camera` keeps each main camera's 720×1280 framing
-(KEEP_WIDTH with the equivalent horizontal fov) and shows more floor and
-sky. Rules: input events arrive in the shifted design space, and
-`Camera3D.project_ray_*` take that space as is (the engine applies the
-canvas transform itself) — but `unproject_position` returns the raw
-viewport point: wrap it in `UiLayout.from_screen` before any 2D use (the
-readout, the prop icons, the tutorial's finger); the flick reads `UiLayout.DESIGN.y`, never the canvas height, so
-the on-device feel is identical everywhere; anchor full-screen controls with
-`UiLayout.full_rect(c)` (a layer-rooted wash stretches over the bleed; a
-child of a Control just fills it). The QA driver's clicks go through
-`_window_pos`, so `--resolution 360x802` exercises the moto's ratio.
+installed by `App._ready`) keeps two kinds of 2D layer on it. CENTRED layers
+(the default: the match HUD, toasts, results, match end, the tutorial…) get
+`CanvasLayer.offset` = half the excess as they enter the tree (the viewport's
+own canvas the same through `canvas_transform`), so every page lands where it
+was designed, centred, and the 3D court fills the rest — `UiLayout.frame_camera`
+keeps each main camera's 720×1280 framing (KEEP_WIDTH with the equivalent
+horizontal fov) and shows more floor and sky. Not the viewport's global
+canvas transform: the engine only picks controls inside the design rect, so a
+globally shifted top row drew above the band but took no taps. Rules: an
+input event in `_input` and a `Camera3D` projection are screen coordinates;
+a centred layer crosses with `UiLayout.from_screen` (the flick's touches,
+`unproject_position` → the readout, the prop icons, the tutorial's finger)
+and `UiLayout.to_screen` (a band point → `project_ray_*`); the flick reads
+`UiLayout.DESIGN.y`, never the canvas height, so the on-device feel is
+identical everywhere; anchor full-screen controls with `UiLayout.full_rect(c)`
+(in a centred layer a layer-rooted wash stretches over the bleed; a child of a
+Control just fills it). The QA driver's clicks go through `_win_of` (any
+layer) and `_window_pos` (band-relative gestures), so `--resolution 360x802`
+exercises the moto's ratio and `360x780` the iPhone's.
+
+**Anchored chrome (design "Store and Locker" 30a–32b, 2026-10-24).** Ross
+redrew the base HUD at 720×1560: the top row 32 px under the screen's top
+edge, the XP ticker on its bottom edge, the card block 74 px above it, and
+the page frames running the full height. So the home chrome and every
+`HomePage` frame (and the ranks / archive pages and the walkthrough) are
+ANCHORED layers — `UiLayout.anchor_layer(layer)` in their `_init`: no
+centring offset, so they lay out in screen coordinates (0 = the top edge,
+`UiLayout.screen_height()` = the bottom), and `UiLayout.screen_fill(root)`
+is a plain full rect over the canvas, which there is the screen. The home rows come from the pure
+`HomeLayout.compute(h)` (`core/ui/home_layout.gd`): the top row and the
+ticker on the edges, the cards 74 px up, and the middle (the area zone, the
+chevrons, the hoop board, the card area's wash) in the 1560 design's
+proportions — exact on an iPhone, near enough on the moto (zone 205,
+chevrons 685, area 957), proportional on 9:16. The `HomePage` frame is
+654 × (H − 46) at (30, 20 from the top) (`_layout_frame`; a page laid out
+in absolute 1234-tall coordinates — the pre-match page, the new-player page
+— returns `_anchored()` false and keeps the band frame); the locker, settings,
+rewards and the lobby fill it through their EXPAND rows, PEGGY's PLAY sits at
+34 % of the frame and its prize card is centred on the screen, the ranks
+and archive pages size their lists from `screen_height()`. The match HUD,
+results and match end stay on the centred band until their redesigns land.

@@ -311,7 +311,7 @@ func _click_named(node_name: String) -> void:
 	if b == null or not b.is_visible_in_tree():
 		print("QA: no visible button named '%s'" % node_name)
 		return
-	var c := (b.global_position + b.size / 2.0) * 0.5
+	var c := _win_of(b)
 	_mouse_button(c, true)
 	await _sleep(0.08)
 	_mouse_button(c, false)
@@ -675,7 +675,7 @@ func _run_hud() -> void:
 		await _sleep(0.2)
 	var pause: Button = get_tree().root.find_child("PauseButton", true, false)
 	if pause != null:
-		var c := (pause.global_position + pause.size / 2.0) * 0.5
+		var c := _win_of(pause)
 		_mouse_button(c, true)
 		await _sleep(0.08)
 		_mouse_button(c, false)
@@ -689,7 +689,7 @@ func _run_hud() -> void:
 	App.grant_cosmetic("net", "wool")
 	var locker_btn: Button = get_tree().root.find_child("Locker", true, false)
 	if locker_btn != null:
-		var lc := (locker_btn.global_position + locker_btn.size / 2.0) * 0.5
+		var lc := _win_of(locker_btn)
 		_mouse_button(lc, true)
 		await _sleep(0.08)
 		_mouse_button(lc, false)
@@ -722,7 +722,7 @@ func _run_hud() -> void:
 	await _snap("hud_practice")
 	var thirty: Button = get_tree().root.find_child("ThirtyButton", true, false)
 	if thirty != null:
-		var c2 := (thirty.global_position + thirty.size / 2.0) * 0.5
+		var c2 := _win_of(thirty)
 		_mouse_button(c2, true)
 		await _sleep(0.08)
 		_mouse_button(c2, false)
@@ -971,7 +971,7 @@ func _run_spots() -> void:
 	await _snap("spots_00")
 	var second: Button = get_tree().root.find_child("Spot1", true, false)
 	if second != null:
-		var c := (second.global_position + second.size / 2.0) * 0.5
+		var c := _win_of(second)
 		_mouse_button(c, true)
 		await _sleep(0.08)
 		_mouse_button(c, false)
@@ -979,7 +979,7 @@ func _run_spots() -> void:
 		await _snap("spots_01")
 	var chev: Button = get_tree().root.find_child("SpotChevron", true, false)
 	if chev != null:
-		var c2 := (chev.global_position + chev.size / 2.0) * 0.5
+		var c2 := _win_of(chev)
 		_mouse_button(c2, true)
 		await _sleep(0.08)
 		_mouse_button(c2, false)
@@ -1099,7 +1099,7 @@ func _run_peggy() -> void:
 	if locker == null:
 		print("QA: no Locker button")
 		return
-	var lc := (locker.global_position + locker.size / 2.0) * 0.5
+	var lc := _win_of(locker)
 	_mouse_button(lc, true)
 	await _sleep(0.08)
 	_mouse_button(lc, false)
@@ -1217,7 +1217,7 @@ func _run_peggy() -> void:
 	# `<`: back to the locker, then CLOSE: home with the badge.
 	var back: Button = panel.find_child("Back", true, false)
 	if back != null:
-		var bc := (back.global_position + back.size / 2.0) * 0.5
+		var bc := _win_of(back)
 		_mouse_button(bc, true)
 		await _sleep(0.08)
 		_mouse_button(bc, false)
@@ -1243,7 +1243,7 @@ func _run_peggy() -> void:
 	await _sleep(0.6)
 	locker = get_tree().root.find_child("Locker", true, false)
 	if locker != null:
-		lc = (locker.global_position + locker.size / 2.0) * 0.5
+		lc = _win_of(locker)
 		_mouse_button(lc, true)
 		await _sleep(0.08)
 		_mouse_button(lc, false)
@@ -1730,7 +1730,7 @@ func _run_title() -> void:
 	# The locker (an IconButton has no text: click it by name).
 	var locker: Button = get_tree().root.find_child("Locker", true, false)
 	if locker != null:
-		var lc := (locker.global_position + locker.size / 2.0) * 0.5
+		var lc := _win_of(locker)
 		_mouse_button(lc, true)
 		await _sleep(0.08)
 		_mouse_button(lc, false)
@@ -1741,7 +1741,7 @@ func _run_title() -> void:
 	# The menu (a HamburgerButton has no text: click it by name).
 	var menu: Button = get_tree().root.find_child("Menu", true, false)
 	if menu != null:
-		var c := (menu.global_position + menu.size / 2.0) * 0.5
+		var c := _win_of(menu)
 		_mouse_button(c, true)
 		await _sleep(0.08)
 		_mouse_button(c, false)
@@ -1936,7 +1936,7 @@ func _click_first_button() -> void:
 		print("QA: no button found!")
 		return
 	var b: Button = buttons[0]
-	var center := (b.global_position + b.size / 2.0) * 0.5  # viewport → window coords
+	var center := _win_of(b)  # viewport → window coords
 	_mouse_button(center, true)
 	await _sleep(0.08)
 	_mouse_button(center, false)
@@ -1959,7 +1959,7 @@ func _click_button_named(want: String) -> void:
 		words = words.replace("\n", " ")
 		seen.append(words.strip_edges())
 		if words.to_upper().contains(want.to_upper()):
-			var center := (b.global_position + b.size / 2.0) * 0.5  # viewport → window
+			var center := _win_of(b)  # viewport → window
 			_mouse_button(center, true)
 			await _sleep(0.08)
 			_mouse_button(center, false)
@@ -1977,10 +1977,18 @@ func _mouse_button(pos: Vector2, pressed: bool) -> void:
 	Input.parse_input_event(ev)
 
 
-## A window position computed as design × scale → the real window position:
-## on a screen taller than 9:16 the designed band sits UiLayout.offset() lower.
+## A window position computed as band × scale → the real window position:
+## on a screen taller than 9:16 the centred band sits UiLayout.offset() lower.
 func _window_pos(pos: Vector2) -> Vector2:
 	return pos + UiLayout.offset() * get_viewport().get_final_transform().get_scale()
+
+
+## A control's centre as a band-relative window position for _mouse_button
+## (which adds the band's offset back): right in a centred layer and in an
+## anchored one — the canvas transform carries the layer's offset.
+func _win_of(b: Control) -> Vector2:
+	var ft := get_viewport().get_final_transform()
+	return ft * (b.get_global_transform_with_canvas() * (b.size / 2.0)) - UiLayout.offset() * ft.get_scale()
 
 
 func _mouse_move(pos: Vector2, rel: Vector2) -> void:

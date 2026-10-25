@@ -60,11 +60,11 @@ var _path_len := 0.0
 func _unhandled_input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		if event.pressed:
-			_begin(event.position)
+			_begin(UiLayout.from_screen(event.position))   # screen → the band (the HUD's space)
 		else:
 			_end()
 	elif event is InputEventScreenDrag and _tracking:
-		_move(event.position)
+		_move(UiLayout.from_screen(event.position))
 
 
 func _begin(pos: Vector2) -> void:

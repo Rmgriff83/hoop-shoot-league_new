@@ -33,6 +33,7 @@ var _back: Button
 
 func _init() -> void:
 	layer = 30
+	UiLayout.anchor_layer(self)   # screen coordinates: the Bg covers the real screen
 
 
 func build(rows: Array, open_text: String, can_close := true) -> Control:
@@ -41,7 +42,7 @@ func build(rows: Array, open_text: String, can_close := true) -> Control:
 		_root.queue_free()
 	_root = Control.new()
 	_root.name = "ArchivePage"
-	UiLayout.full_rect(_root)
+	UiLayout.screen_fill(_root)   # the real screen (the Bg covers the bleed)
 	_root.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_root)
 	_sheet = Control.new()
@@ -88,7 +89,7 @@ func build(rows: Array, open_text: String, can_close := true) -> Control:
 	var scroll := ScrollContainer.new()
 	scroll.name = "Scroll"
 	scroll.position = Vector2(PAD.x, PAD.y + 56 + 20)
-	scroll.size = Vector2(720 - PAD.x * 2, 1280 - PAD.y - 56 - 20 - PAD.x)
+	scroll.size = Vector2(720 - PAD.x * 2, UiLayout.screen_height() - PAD.y - 56 - 20 - PAD.x)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_sheet.add_child(scroll)
 	var list := VBoxContainer.new()

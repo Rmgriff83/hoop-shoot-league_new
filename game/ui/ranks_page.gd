@@ -37,6 +37,7 @@ var _rows := 0
 
 func _init() -> void:
 	layer = 30
+	UiLayout.anchor_layer(self)   # screen coordinates: the Bg covers the real screen
 
 
 func build(tabs: Array, handle: String) -> Control:
@@ -46,7 +47,7 @@ func build(tabs: Array, handle: String) -> Control:
 		_root.queue_free()
 	_root = Control.new()
 	_root.name = "RanksRoot"
-	UiLayout.full_rect(_root)
+	UiLayout.screen_fill(_root)   # the real screen (the Bg covers the bleed)
 	_root.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_root)
 	var bg := ColorRect.new()
@@ -127,7 +128,7 @@ func build(tabs: Array, handle: String) -> Control:
 	var scroll := ScrollContainer.new()
 	scroll.name = "Scroll"
 	scroll.position = Vector2(PAD.x, _status.position.y + 24 + 14)
-	scroll.size = Vector2(720 - PAD.x * 2, 1280 - scroll.position.y - ME_H - PAD.x - 20)
+	scroll.size = Vector2(720 - PAD.x * 2, UiLayout.screen_height() - scroll.position.y - ME_H - PAD.x - 20)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_root.add_child(scroll)
 	_list = VBoxContainer.new()
@@ -138,7 +139,7 @@ func build(tabs: Array, handle: String) -> Control:
 	# YOU · #12 · 31, pinned.
 	var me_box := PanelContainer.new()
 	me_box.name = "MeBox"
-	me_box.position = Vector2(PAD.x, 1280 - PAD.x - ME_H)
+	me_box.position = Vector2(PAD.x, UiLayout.screen_height() - PAD.x - ME_H)
 	me_box.size = Vector2(720 - PAD.x * 2, ME_H)
 	me_box.add_theme_stylebox_override("panel", RetroTheme.flat(RetroTheme.c("ink"), RetroTheme.RADIUS, 16.0))
 	_root.add_child(me_box)
@@ -233,7 +234,7 @@ func close() -> void:
 func slide_in() -> void:
 	if _root == null:
 		return
-	_root.position.x = 720.0
+	_root.position.x = UiLayout.screen_rect().position.x + 720.0
 	var tw := create_tween()
 	tw.set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_CUBIC)
 	tw.tween_property(_root, "position:x", 0.0, SLIDE_S)

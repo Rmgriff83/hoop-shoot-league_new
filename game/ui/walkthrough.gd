@@ -45,6 +45,7 @@ var _done := false
 
 func _init() -> void:
 	layer = 50
+	UiLayout.anchor_layer(self)   # the dim covers the real screen; spots come from the (anchored) home
 
 
 func start(p_tour: String, p_resolve: Callable) -> bool:
@@ -55,7 +56,7 @@ func start(p_tour: String, p_resolve: Callable) -> bool:
 		return false
 	_root = Control.new()
 	_root.name = "Root"
-	UiLayout.full_rect(_root)
+	UiLayout.screen_fill(_root)   # the real screen: the dim and the stop cover the bleed too
 	_root.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_root)
 	_dim = Control.new()
@@ -86,7 +87,7 @@ func _draw_dim() -> void:
 	if not _has_spot or _spot.size == Vector2.ZERO:
 		_dim.draw_rect(full, DIM)
 		return
-	var s := _spot.intersection(full)
+	var s := _spot.intersection(full)   # the spot is screen space too (the home is anchored)
 	_dim.draw_rect(Rect2(0, 0, full.size.x, s.position.y), DIM)
 	_dim.draw_rect(Rect2(0, s.end.y, full.size.x, full.size.y - s.end.y), DIM)
 	_dim.draw_rect(Rect2(0, s.position.y, s.position.x, s.size.y), DIM)
@@ -136,7 +137,7 @@ func has_spot() -> bool:
 
 ## The card sits below a spot in the upper half, above one in the lower half.
 func card_above() -> bool:
-	return _has_spot and _target.get_center().y >= 640.0
+	return _has_spot and _target.get_center().y >= UiLayout.screen_top() + UiLayout.screen_height() * 0.5
 
 
 func next() -> void:
@@ -282,10 +283,11 @@ func _build_card(st: Dictionary, kind: String) -> void:
 	_card.size = Vector2(CARD_W, 0)
 	_card.reset_size()
 	var h := _card_height()
+	# Screen coordinates (an anchored layer): the target is one too.
 	var top := BOOKEND_TOP
 	if _has_spot:
 		top = (_target.end.y + GAP) if not card_above() else (_target.position.y - GAP - h)
-	top = clampf(top, 20.0, 1280.0 - h - 20.0)
+	top = clampf(top, 20.0, UiLayout.screen_height() - h - 20.0)
 	_card.position = Vector2(CARD_X, top + 16.0)
 	_card.modulate.a = 0.0
 	if _card_tween != null and _card_tween.is_valid():

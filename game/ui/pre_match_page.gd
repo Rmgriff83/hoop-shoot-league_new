@@ -132,6 +132,12 @@ func is_league() -> bool:
 
 # ---- the build ---------------------------------------------------------------------------
 
+
+## Laid out in absolute 1234-tall coordinates: keeps the centred band frame
+## until its full-height design arrives (2026-10-24).
+func _anchored() -> bool:
+	return false
+
 func _build() -> void:
 	for c in root.get_children():
 		if c != body:

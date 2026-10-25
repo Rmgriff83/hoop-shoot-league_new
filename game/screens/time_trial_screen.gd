@@ -942,9 +942,9 @@ func _screen_to_plane(pos: Vector2) -> Variant:
 	if _cam == null:
 		return null
 	var plane := Plane(_fwd, _spot)
-	# project_ray_* take the design-space point as is: the engine applies the
-	# canvas transform itself (Viewport.get_camera_coords); only unproject is raw.
-	return plane.intersects_ray(_cam.project_ray_origin(pos), _cam.project_ray_normal(pos))
+	# `pos` is band space (the HUD's, the flick's); the camera ray wants the screen.
+	var sp := UiLayout.to_screen(pos)
+	return plane.intersects_ray(_cam.project_ray_origin(sp), _cam.project_ray_normal(sp))
 
 
 func _on_drag(pos: Vector2) -> void:
