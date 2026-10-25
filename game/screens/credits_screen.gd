@@ -50,7 +50,7 @@ func _ready() -> void:
 	vbox.add_theme_constant_override("separation", 14)
 	scroll.add_child(vbox)
 	vbox.add_child(_label("CREDITS", 48, Color(1.0, 0.81, 0.54)))
-	vbox.add_child(_label("Hoop Shoot is built with Godot, Blender and Aseprite.", 20, Color(0.62, 0.68, 0.85)))
+	vbox.add_child(_label("Hoop Shoot League is built with Godot, Blender and Aseprite.", 20, Color(0.62, 0.68, 0.85)))
 	vbox.add_child(_spacer(12))
 	vbox.add_child(_label("— SOUNDS —", 24, Color(0.62, 0.68, 0.85)))
 	for c in load_credits().get("sounds", []):

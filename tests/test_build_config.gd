@@ -12,6 +12,8 @@ func run(t) -> void:
 	var re := RegEx.new()
 	re.compile("^\\d+\\.\\d+\\.\\d+$")
 	t.ok(re.search(version) != null, "project version is X.Y.Z (got %s)" % version)
+	t.eq(str(ProjectSettings.get_setting("application/config/name", "")), "Hoop Shoot League", "the app is Hoop Shoot League (Ross, 2026-10-24)")
+	t.eq(str(ProjectSettings.get_setting("application/config/custom_user_dir_name", "")), "Hoop Shoot", "…while the Mac's user:// folder keeps its old name")
 	var icon := str(ProjectSettings.get_setting("application/config/icon", ""))
 	t.ok(icon != "" and FileAccess.file_exists(icon), "the app icon exists (%s)" % icon)
 	for f in ["icon_1024.png", "android_192.png", "adaptive_fg_432.png", "adaptive_bg_432.png"]:
@@ -36,6 +38,8 @@ func run(t) -> void:
 	t.eq(str(cfg.get_value(by_name["iOS"], "platform")), "iOS", "iOS preset is iOS")
 	t.eq(str(cfg.get_value(android, "package/unique_name")), BUNDLE_ID, "Android package id")
 	t.eq(str(cfg.get_value(play, "package/unique_name")), BUNDLE_ID, "Play package id")
+	t.eq(str(cfg.get_value(android, "package/name")), "Hoop Shoot League", "Android launcher label")
+	t.eq(str(cfg.get_value(play, "package/name")), "Hoop Shoot League", "Play launcher label")
 	t.eq(str(cfg.get_value(ios, "application/bundle_identifier")), BUNDLE_ID, "iOS bundle id = the Android package")
 	t.eq(str(cfg.get_value(ios, "application/app_store_team_id")), TEAM_ID, "iOS signs under Ross's team")
 	t.ok(bool(cfg.get_value(play, "gradle_build/use_gradle_build", false)), "the Play preset builds with gradle")

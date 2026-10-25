@@ -62,7 +62,7 @@ fi
 
 # The build number into every preset: version/code (Android) and application/version (iOS).
 sed -i '' -E "s|^version/code=.*|version/code=$BUILD|; s|^application/version=.*|application/version=\"$BUILD\"|" export_presets.cfg
-echo "Hoop Shoot $VERSION build $BUILD ($MODE)"
+echo "Hoop Shoot League $VERSION build $BUILD ($MODE)"
 
 godot_export() {  # preset path
   local flag="--export-$MODE"

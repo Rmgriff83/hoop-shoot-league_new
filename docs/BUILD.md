@@ -1,5 +1,11 @@
 # Building for the stores
 
+The app is **Hoop Shoot League** (Ross, 2026-10-24): `application/config/name`
+is the iOS display name and the Android presets' `package/name` the launcher
+label; the ids stay `com.rossgriffus.hoopshoot`, and the Mac's `user://` folder
+keeps the old name through `config/custom_user_dir_name` so saves and QA snaps
+stay where they are.
+
 One command, both platforms (set up 2026-10-24, modelled on the bball sim's
 `npm run release` — no web build here):
 
