@@ -11,8 +11,10 @@ config_version=5
 [application]
 
 config/name="Hoop Shoot"
+config/version="1.0.0"
 run/main_scene="res://game/screens/splash_screen.tscn"
 config/features=PackedStringArray("4.7")
+config/icon="res://assets/icon/icon_1024.png"
 
 [autoload]
 
