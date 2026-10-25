@@ -510,14 +510,16 @@ func _run_tutorial() -> void:
 	var tut: ShotTutorial = get_tree().root.find_child("ShotTutorial", true, false)
 	print("QA tutorial: step %d live %s" % [tut.step_index() if tut != null else -1, str(tut != null and tut.live())])
 	_hook_trial()
-	await _flick_windup(0.28, 4.9)
+	# The flick reads honestly now (2026-10-25): shoot at the ideal for the pull's arc.
+	var ideal := _ideal_sh(0.28)
+	await _flick_windup(0.28, ideal)
 	await _sleep(2.2)
 	await _snap("tutorial_result")
-	print("QA tutorial: verdict '%s' made %s" % [tut.result() if tut != null else "?", str(tut != null and tut.made())])
+	print("QA tutorial: verdict '%s' made %s (flick %.2f sh)" % [tut.result() if tut != null else "?", str(tut != null and tut.made()), ideal])
 	if tut != null and not tut.made():
-		# A miss: shoot again, a touch harder each time, until it drops.
+		# A miss: shoot again, a little either side of the ideal, until it drops.
 		for k in 4:
-			await _flick_windup(0.28, 4.6 + 0.3 * k)
+			await _flick_windup(0.28, ideal * [0.95, 1.05, 0.9, 1.1][k])
 			await _sleep(2.2)
 			print("QA tutorial: retry %d verdict '%s'" % [k + 1, tut.result()])
 			if tut.made():
@@ -2007,6 +2009,19 @@ func _mouse_move(pos: Vector2, rel: Vector2) -> void:
 ## travel_frac the total length; tilt_step adds lateral px per motion step.
 ## A real shot: press in the grab zone, pull down `pull_frac` of the window
 ## (the arc), then flick up at `speed_sh` screen-heights/s and let go.
+## The release speed (sh) that carries a pull of `pull_frac` × the window
+## height to the live hoop at its own arc — the ideal for the current trial.
+func _ideal_sh(pull_frac: float) -> float:
+	var screen := get_tree().current_scene
+	if screen == null or not ("trial" in screen) or screen.trial == null:
+		return 4.9
+	var geo: SimGeometry = screen.trial.geo
+	var pull_px := pull_frac * WIN.y * 2.0   # window → design px
+	var angle := FlickMap.windup_angle(pull_px, UiLayout.DESIGN.y, App.tuning)
+	var sh := FlickMap.speed_sh_for_reach(angle, geo.hoop_x, geo.rise, App.tuning)
+	return sh if is_finite(sh) and sh > 0.0 else 4.9
+
+
 func _flick_windup(pull_frac: float, speed_sh: float) -> void:
 	var start := Vector2(WIN.x / 2.0, WIN.y * 0.58)
 	_mouse_button(start, true)

@@ -363,8 +363,10 @@ func _log() -> void:
 
 func record_flick(sample: Dictionary, launch: Dictionary) -> void:
 	var speed_sh: float = Vector2(sample["vel_x"], sample["vel_y"]).length() / sample["viewport_h"]
+	_trace_flick(sample, launch)
 	if launch.is_empty():
 		_last_flick = "flick %.2f sh/s → CANCELLED" % speed_sh
+		print("FLICK sh=%.3f ema=%.3f peak=%.3f held=%.3f CANCELLED" % [speed_sh, float(sample.get("ema_sh", 0.0)), float(sample.get("peak_sh", 0.0)), float(sample.get("held_s", 0.0))])
 	else:
 		# The make band at this angle: the speed that centers the rim for the
 		# real triangle (side/high releases carry dist/rise in the launch).
@@ -387,10 +389,37 @@ func record_flick(sample: Dictionary, launch: Dictionary) -> void:
 		]
 		# Machine-readable line for on-device calibration (adb logcat -s godot).
 		var tilt_deg := rad_to_deg(atan2(sample["vel_x"], -sample["vel_y"]))
-		print("FLICK sh=%.3f angle=%.1f speed=%.3f ideal_delta=%+.3f pull=%.2f tilt=%+.1f origin=(%.2f,%.2f) dist=%.2f rise=%.2f" % [
-			speed_sh, launch["angle_deg"], launch["speed"], delta, launch.get("pull", 0.0), tilt_deg,
+		print("FLICK sh=%.3f ema=%.3f peak=%.3f held=%.3f angle=%.1f speed=%.3f ideal_delta=%+.3f pull=%.2f tilt=%+.1f origin=(%.2f,%.2f) dist=%.2f rise=%.2f" % [
+			speed_sh, float(sample.get("ema_sh", 0.0)), float(sample.get("peak_sh", 0.0)), float(sample.get("held_s", 0.0)),
+			launch["angle_deg"], launch["speed"], delta, launch.get("pull", 0.0), tilt_deg,
 			launch.get("ry", 0.0), launch.get("rz", 0.0), launch.get("dist", 0.0), launch.get("rise", 0.0)])
 	_render()
+
+
+## The calibration trace (docs/HOME.md → The flick): while tuning mode is on,
+## every release appends its gesture to user://qa/flick_trace.json — one JSON
+## line per flick — for tools/flick_trace.gd to replay through the estimators.
+##   adb shell run-as com.rossgriffus.hoopshoot cat files/qa/flick_trace.json > build/qa/flick_trace.json
+func _trace_flick(sample: Dictionary, launch: Dictionary) -> void:
+	if not App.tuning_mode or not sample.has("trace"):
+		return
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
+	var f := FileAccess.open("user://qa/flick_trace.json", FileAccess.READ_WRITE)
+	if f == null:
+		f = FileAccess.open("user://qa/flick_trace.json", FileAccess.WRITE)
+	if f == null:
+		return
+	f.seek_end()
+	var row := {
+		"trace": sample["trace"], "lift_usec": sample.get("lift_usec", 0),
+		"speed_sh": sample.get("speed_sh", 0.0), "ema_sh": sample.get("ema_sh", 0.0),
+		"peak_sh": sample.get("peak_sh", 0.0), "held_s": sample.get("held_s", 0.0),
+		"pull_px": sample.get("pull_px", 0.0), "cancelled": launch.is_empty(),
+		"angle": launch.get("angle_deg", 0.0), "speed": launch.get("speed", 0.0),
+		"made": null,
+	}
+	f.store_line(JSON.stringify(row))
+	f.close()
 
 
 func record_outcome(outcome: Dictionary) -> void:

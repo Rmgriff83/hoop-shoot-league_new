@@ -692,3 +692,38 @@ rewards and the lobby fill it through their EXPAND rows, PEGGY's PLAY sits at
 34 % of the frame and its prize card is centred on the screen, the ranks
 and archive pages size their lists from `screen_height()`. The match HUD,
 results and match end stay on the centred band until their redesigns land.
+
+## The flick (2026-10-25)
+
+`FlickInput` (`game/input/flick_input.gd`) turns the touch into the release
+sample `FlickMap.map_windup` throws from. There is no decision delay: the
+throw registers on touch-up, and the wind-up latch only freezes the pull.
+What made power land unevenly was the estimator — a 40 ms EMA read once at
+lift-off (it ramped from the pull-down's momentum and never caught a 3–5
+frame flick) and a decay for the random delivery gap before the touch-up
+(0–34 % of the power, gesture by gesture), plus a rest at the bottom that
+collapsed the first upward frame. Now the release speed MEASURES the flick:
+the finger's travel over the last `WINDOW_S` (50 ms) before the latest drag,
+the FASTEST such window of the final `PEAK_HOLD_S` (80 ms — a finger slows
+as it leaves the glass); a gap over `REST_S` (50 ms) between drags is a rest
+(the window restarts, the first move after it neither latches nor
+discharges), and a rest over `HOLD_S` (80 ms) right before lift-off is a
+deliberate soft hold (decayed from the hold's start). The latch decides on
+that same speed with hysteresis (`FLICK_LATCH_SH` 0.5 on, `FLICK_UNLATCH_SH`
+0.25 or a downward move off) and, on latching, restores `_charge_at_turn` —
+the charge when the finger last moved down — so the throw's first frames no
+longer drain the arc; a slow ease-up still repositions and discharges. The
+sample carries `speed_sh` (honest), `peak_sh`, `held_s`, `ema_sh` (the old
+reading) and `trace` (the gesture). Tests: `tests/test_flick_input.gd`
+(injected microseconds through `_begin_at` / `_move_at` / `_end_at`).
+
+**Calibration.** The 2.6–5.4 sh/s band was tuned against the EMA's low
+readings; with tuning mode on, every release appends its gesture to
+`user://qa/flick_trace.json` and the logcat `FLICK` line carries `sh`, `ema`,
+`peak`, `held`. Pull the file and replay it:
+
+    adb shell run-as com.rossgriffus.hoopshoot cat files/qa/flick_trace.json > build/qa/flick_trace.json
+    godot --headless --path . -s tools/flick_trace.gd -- build/qa/flick_trace.json
+
+It prints each flick's old and new reading, the ratio (what to scale the
+band by) and the spread of each — the inconsistency before and after.
