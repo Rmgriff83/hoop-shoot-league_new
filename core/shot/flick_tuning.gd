@@ -28,12 +28,16 @@ const FIELDS: Array[String] = [
 ## Pull-back distance (fraction of viewport height) that reaches angle_high.
 ## (Defaults = Ross's phone set, baked 2026-10-14 evening — the "easier green"
 ## pass: a wider flick-speed window and a longer pull; the afternoon set
-## before was 0.44 / 2.85 / 4.5 / 2.0 / 0.5.)
+## before was 0.44 / 2.85 / 4.5 / 2.0 / 0.5. The flick band was re-fitted
+## 2026-10-25 when FlickInput started measuring the flick honestly: 29 of
+## Ross's phone flicks replayed through the old EMA and the new window read
+## new/old = 1.15 at the median (0.87–1.40 flick by flick — the old
+## inconsistency), so 2.6–5.4 became 3.0–6.2 and the tuned feel carried over.)
 @export var pull_full_frac := 0.52
 ## Flick speed (screen-heights/sec) that maps to u=0 on the power curve.
-@export var flick_min_sh := 2.6
+@export var flick_min_sh := 3.0
 ## Flick speed (screen-heights/sec) that maps to u=1 (V_MAX).
-@export var flick_max_sh := 5.4
+@export var flick_max_sh := 6.2
 ## Sideways forgiveness: the release tilt off vertical is reduced — tilts within
 ## side_dead_deg are ignored as thumb wobble; beyond that, side_gain of the
 ## remainder carries (1.0 = full physical carry, which QA found unforgiving).
