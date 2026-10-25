@@ -2,7 +2,9 @@
 
 The app is **Hoop Shoot League** (Ross, 2026-10-24): `application/config/name`
 is the iOS display name and the Android presets' `package/name` the launcher
-label; the ids stay `com.rossgriffus.hoopshoot`, and the Mac's `user://` folder
+label; the Android package stays `com.rossgriffus.hoopshoot` (installed on the
+phone), the iOS bundle id is `com.rossgriffus.hoopshootleague` (registered with
+Apple under that name), and the Mac's `user://` folder
 keeps the old name through `config/custom_user_dir_name` so saves and QA snaps
 stay where they are.
 
@@ -75,7 +77,7 @@ upload `build/hoop_shoot.aab`. The package is `com.rossgriffus.hoopshoot`.
 ### iOS: Xcode signs, Ross archives
 
 The preset carries the team (`U8XP33P732`) and the bundle id
-(`com.rossgriffus.hoopshoot`, the Android package), with automatic signing
+(`com.rossgriffus.hoopshootleague`), with automatic signing
 (no identities or profiles in the preset; Xcode manages them from the
 signed-in Apple account). The export writes the Xcode project only
 (`application/export_project_only`), because Ross archives and uploads by

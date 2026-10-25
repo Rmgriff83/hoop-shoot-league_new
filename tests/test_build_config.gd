@@ -4,6 +4,8 @@
 ## writes — the same on every preset (a half-applied rewrite shows here).
 
 const BUNDLE_ID := "com.rossgriffus.hoopshoot"
+## The iOS id carries the full name (Ross, 2026-10-24: registered with Apple as this).
+const IOS_BUNDLE_ID := "com.rossgriffus.hoopshootleague"
 const TEAM_ID := "U8XP33P732"
 
 
@@ -40,7 +42,7 @@ func run(t) -> void:
 	t.eq(str(cfg.get_value(play, "package/unique_name")), BUNDLE_ID, "Play package id")
 	t.eq(str(cfg.get_value(android, "package/name")), "Hoop Shoot League", "Android launcher label")
 	t.eq(str(cfg.get_value(play, "package/name")), "Hoop Shoot League", "Play launcher label")
-	t.eq(str(cfg.get_value(ios, "application/bundle_identifier")), BUNDLE_ID, "iOS bundle id = the Android package")
+	t.eq(str(cfg.get_value(ios, "application/bundle_identifier")), IOS_BUNDLE_ID, "iOS bundle id is the league one")
 	t.eq(str(cfg.get_value(ios, "application/app_store_team_id")), TEAM_ID, "iOS signs under Ross's team")
 	t.ok(bool(cfg.get_value(play, "gradle_build/use_gradle_build", false)), "the Play preset builds with gradle")
 	t.eq(int(cfg.get_value(play, "gradle_build/export_format", 0)), 1, "…as an AAB")
