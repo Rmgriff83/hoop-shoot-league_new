@@ -1353,6 +1353,41 @@ band — via `CottonNet._diag_color` / `_knot_color` / `_tail_color`; ~10 mm
 cord (r 5.2 mm, knots r 9.5 mm). The neons (`NetSet.tint`) are the plain
 cotton body painted one colour with a faint glow.
 
+## 32. The tattered net (2026-10-24)
+
+Ross's design "Tattered Net Model" (26d): the cotton net from §28, aged into
+a worn-out park net. `TatteredNet` (`game/view/tattered_net.gd`, a
+`CottonNet`) starts from `NetSim.cotton_layout` and wears it in its static
+`layout()`, seeded so every build is the same net:
+
+- **Three hooks have torn off the rim** — 3 and 4 side by side, 9 opposite
+  (`BROKEN_HOOKS`). Their loop springs and loop tubes are gone; the hook
+  particles stay (pinned, bare) so every index keeps its meaning. The knots
+  around a torn hook sag and pull inward — depth 9 cm × a Gaussian in cord
+  steps (spread 1.6; hook 9 at 0.55 strength), radius × (1 − 0.2 × the
+  same), both fading 40 % toward the bottom — so that flank hangs the way a
+  net with no hook there does, before the sim even settles it.
+- **Twelve cord pieces have snapped** (`BROKEN`, `"<cord><L|R><ring>"`): no
+  spring, no tube, a hole in the lattice. `CottonNet.build` skips any piece
+  a layout marks in `broken` and the loops of `broken_hooks`; plain cotton,
+  wool and rwb set neither.
+- **Loose strands** on free `Tail_n` particles (27 of them, each a spring of
+  its length to its knot or hook, in `bottom` so they hang heavy): a snapped
+  end under the upper knot of every broken piece (4–11 cm), four long
+  strands left on the rim where the hooks gave way (hook 3 twice, 4, 9: 15–
+  26 cm), and a ragged bottom — most bottom knots trail a 2–6 cm tail, a few
+  10–15 cm, some nothing. `_build_tails` draws one thin tube per strand,
+  bowed a little, skinned knot → tail so it swings.
+- Rings 1+ are jittered ± 5 mm / ± 6 mm like the hand-tied wool; the cord
+  and knot sizes are the cotton's; the cord is a grimy grey-cream twist
+  (`#CFC6B0` over `#8A8070` / `#E6DFCC`, knots `#B8AE98`), no tint, no glow.
+
+Budget: 3 surfaces, ~8.2 k tris, 124 bones (NetRoot + 12 hooks + 84 knots +
+27 strands), 168 springs. It hangs on any nylon hoop with the classic cotton
+feel (`_knobs_hoop`); a PEGGY prize like every non-stock net (docs/LOCKER.md
+→ NETS). QA: `--qa-tattered` (the cage, the strip, a drop through the rim),
+the thumbnail from `--qa-net-thumbs`. Test: `tests/test_tattered_net.gd`.
+
 
 ## 30. The cage's production pass: the deck funnel and the ball gate, hardwood, the skins (2026-10-16)
 

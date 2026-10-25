@@ -71,6 +71,7 @@ const NETS: Array[String] = [
 	"res://assets/nets/neon_yellow/net_set.tres",
 	"res://assets/nets/neon_orange/net_set.tres",
 	"res://assets/nets/rwb/net_set.tres",
+	"res://assets/nets/tattered/net_set.tres",
 ]
 const ARENAS: Array[String] = [
 	"res://assets/arena/cage/arena_set.tres",

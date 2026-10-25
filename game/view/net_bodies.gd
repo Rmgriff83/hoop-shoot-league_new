@@ -1,11 +1,11 @@
 class_name NetBodies
 extends RefCounted
-## The net styles a hoop can hang (docs/BLENDER_101.md §28–30): the body
+## The net styles a hoop can hang (docs/BLENDER_101.md §28–32): the body
 ## class and the rest layout per style id. A NetSet's `style` names one;
 ## the stock styles are the kinds themselves ("cotton", "chain").
 
-const STYLES := ["cotton", "chain", "jack", "ladder", "wool", "rwb"]
-const KIND_OF := {"cotton": "cotton", "chain": "chain", "jack": "chain", "ladder": "chain", "wool": "cotton", "rwb": "cotton"}
+const STYLES := ["cotton", "chain", "jack", "ladder", "wool", "rwb", "tattered"]
+const KIND_OF := {"cotton": "cotton", "chain": "chain", "jack": "chain", "ladder": "chain", "wool": "cotton", "rwb": "cotton", "tattered": "cotton"}
 
 
 static func has_style(style: String) -> bool:
@@ -42,6 +42,8 @@ static func for_style(style: String) -> NetRig:
 			return WoolNet.new()
 		"rwb":
 			return RwbNet.new()
+		"tattered":
+			return TatteredNet.new()
 		_:
 			return CottonNet.new()
 
@@ -58,5 +60,7 @@ static func layout(style: String, rim_r := SimConstants.R_RIM, tube_r := SimCons
 			return WoolNet.layout(rim_r, tube_r)
 		"rwb":
 			return RwbNet.layout(rim_r, tube_r)
+		"tattered":
+			return TatteredNet.layout(rim_r, tube_r)
 		_:
 			return NetSim.cotton_layout(rim_r, tube_r)

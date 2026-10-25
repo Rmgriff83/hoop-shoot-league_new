@@ -114,9 +114,9 @@ Rate band 6–14/min. With one wallet the heats carry it and a trial pays a
 bit less than a heat a minute (Ross's call; trials dropped ~15 % from 6 +
 0.45/pt). Tiers in minutes of trials: entry 15–40, mid 40–70, premium
 70–115, grail 115–170. At the ~10.7/min grind rate a PEGGY drop (300
-tickets) is an entry purchase (~28 min), the 54 winnable prizes cost
-~15,600 tickets (~24 h, no drop wasted), the hoops (300 / 400) sit at 28 /
-37 min, and the whole catalog is ~25.5 hours — something new every few
+tickets) is an entry purchase (~28 min), the 53 winnable prizes cost
+~15,900 tickets (~25 h, no drop wasted; 2026-10-24, the tattered net in), the hoops (300 / 400) sit at 28 /
+37 min, and the whole catalog is ~26 hours — something new every few
 sessions, the legends behind level 5. Nets were priced 400–1000 on a counter
 until 2026-10-15; now they are prizes.
 

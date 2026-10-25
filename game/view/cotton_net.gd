@@ -8,8 +8,9 @@ extends NetRig
 ## octahedron rigid on its bone) and the frayed tails under the bottom ring.
 ## Nothing is rebuilt per frame: sync() moves the bones.
 ##
-## Also the base of the other cord styles (§31 wool): a subclass supplies
-## its layout(), cord and knot sizes, materials, colours and tails.
+## Also the base of the other cord styles (§31 wool, §32 tattered): a
+## subclass supplies its layout(), cord and knot sizes, materials, colours
+## and tails; a layout may mark pieces snapped and hooks torn off.
 
 const CORD_R := 0.004
 const KNOT_R := 0.0085
@@ -40,7 +41,11 @@ func build(lay: Dictionary) -> void:
 	var cord_mat: Material = mats[0]
 	var knot_mat: Material = mats[1]
 
-	# Net_Cords: per cord the diagonals + the two loop halves.
+	# Net_Cords: per cord the diagonals + the two loop halves — minus the
+	# pieces a worn layout marks snapped (`broken`: "<cord><L|R><ring>") and
+	# the loops of hooks that tore off (`broken_hooks`; §32 tattered).
+	var broken: Dictionary = lay.get("broken", {})
+	var broken_hooks: Array = lay.get("broken_hooks", [])
 	var cords := _MeshBuilder.new()
 	var ci := 0
 	for c in lay["cords"]:
@@ -48,10 +53,13 @@ func build(lay: Dictionary) -> void:
 		var right: Array = c["right"]
 		var color := _cord_color(ci)
 		for k in rows:
-			_diagonal(cords, int(left[k]), int(left[k + 1]), _diag_color(ci, k))
-			_diagonal(cords, int(right[k]), int(right[k + 1]), _diag_color(ci, k))
-		_loop_half(cords, int(c["k0"]), int(c["hook"]), -1.0, color)
-		_loop_half(cords, int(c["k0"]), int(c["hook"]), 1.0, color)
+			if not broken.has("%dL%d" % [ci, k]):
+				_diagonal(cords, int(left[k]), int(left[k + 1]), _diag_color(ci, k))
+			if not broken.has("%dR%d" % [ci, k]):
+				_diagonal(cords, int(right[k]), int(right[k + 1]), _diag_color(ci, k))
+		if not broken_hooks.has(ci):
+			_loop_half(cords, int(c["k0"]), int(c["hook"]), -1.0, color)
+			_loop_half(cords, int(c["k0"]), int(c["hook"]), 1.0, color)
 		ci += 1
 	_add_surface("Net_Cords", cords, cord_mat)
 

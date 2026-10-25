@@ -29,16 +29,18 @@ machine "Plinko" anywhere in the game — it is PEGGY.
 A net is a **look for the hoop's kind of net** (`game/cosmetics/net_set.gd`,
 `NetSet`): `kind` is `cotton` (the nylon hoops: cage, beach) or `chain` (the
 city's steel rim), `style` names the body `NetBodies` builds
-(docs/BLENDER_101.md §28–30), `price_coins` is tickets. The feel — the nine
+(docs/BLENDER_101.md §28–32), `price_coins` is tickets. The feel — the nine
 `net_*` knobs and the make sounds — stays on the court's `HoopSet`; a style
-only changes what hangs. Eight nets ship (`assets/nets/<id>/net_set.tres`,
+only changes what hangs. Nine nets ship (`assets/nets/<id>/net_set.tres`,
 `CosmeticLibrary.NETS`): **Cotton** and **Chain** (the stock pair, free,
 owned by every save), **Jack** (a jack chain, valued 600 — a *mid* tier),
 **Ladder** (straight drops tied by hoop chains, 1000 — *premium*), **Wool**
 (a hand-knitted net in twelve yarn colours, 700 — *mid*, for the nylon
 courts), the **Neon Yellow** / **Neon Orange** cottons (the cotton body with
-a `NetSet.tint`, 400 each — *entry*) and **Red White Blue** (the heavy-duty
-polyester net in colour bands, 500 — *mid*). Every net but the stock pair is
+a `NetSet.tint`, 400 each — *entry*), **Red White Blue** (the heavy-duty
+polyester net in colour bands, 500 — *mid*) and **Tattered** (the worn park
+net, 2026-10-24: three hooks torn off, snapped pieces, loose strands, a
+grimy grey-cream — valued 500, *mid*; §32). Every net but the stock pair is
 a PEGGY prize (since 2026-10-15 nothing is bought outright; the value is the
 economy ledger's tier). **Any
 net hangs on any hoop** (Ross, 2026-10-16): a chain on the park's nylon rim,
@@ -181,14 +183,14 @@ lvl 1 rare 13 / 27 %; lvl 3 epic 13 / 27 %, rare 19 / 28 %; lvl 5 legend
 ## The economy
 
 Balls and nets are priced 0 (`NetSet.stock` marks the free pair);
-`EconomyBudget.peggy_roster()` is the 47 balls plus the 8 nets,
+`EconomyBudget.peggy_roster()` is the 47 balls plus the 9 nets,
 `peggy_tickets()` the expected cost of winning everything from a fresh save
 (`PeggyPrizes.expected_tickets_to_complete`, 60 seeded collection runs at
 the centre aim) and `catalog_hours()` is the priced hoops plus that.
-Shipped: 52 prizes to win (46 balls, 6 nets), 15,600 tickets expected
-(300 a prize — no drop is wasted), 21.3 h; with the hoops ~22 h, inside
-the 15–35 h band. At level 1 the 26 reachable prizes take 7,800 tickets; at
-level 3, 42 prizes 12,600. Rules in `EconomyBudget.problems()`: a drop is
+Shipped (2026-10-24, the tattered net in): 53 prizes to win (46 balls, 7
+nets), 15,900 tickets expected (300 a prize — no drop is wasted), 24.8 h;
+with the hoops 25.9 h, inside the 15–35 h band. At level 1 the 27 reachable
+prizes take 8,100 tickets; at level 3, 43 prizes 12,900. Rules in `EconomyBudget.problems()`: a drop is
 an entry purchase, the roster is payable, a prize costs at most 1.35 drops,
 every ball is rated and unpriced, every net is unpriced with one stock net
 per kind.
