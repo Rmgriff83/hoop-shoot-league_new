@@ -287,7 +287,7 @@ func _build_card(st: Dictionary, kind: String) -> void:
 	var top := BOOKEND_TOP
 	if _has_spot:
 		top = (_target.end.y + GAP) if not card_above() else (_target.position.y - GAP - h)
-	top = clampf(top, 20.0, UiLayout.screen_height() - h - 20.0)
+	top = clampf(top, UiLayout.header_top(20.0), UiLayout.screen_height() - h - 20.0)
 	_card.position = Vector2(CARD_X, top + 16.0)
 	_card.modulate.a = 0.0
 	if _card_tween != null and _card_tween.is_valid():

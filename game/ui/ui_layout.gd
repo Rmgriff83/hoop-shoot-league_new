@@ -35,6 +35,11 @@ const ANCHORED_META := "ui_anchored"
 static var _offset := Vector2.ZERO
 static var _canvas := DESIGN
 static var _root: Window
+## The top safe-area inset in design px (a notch, the Dynamic Island, a
+## camera cutout): what DisplayServer.get_display_safe_area reports, or
+## `safe_override` when set (QA: --qa-safe-top=118 plays an iPhone).
+static var _safe_top := 0.0
+static var safe_override := -1.0
 
 
 ## App._ready: follow the window from now on, and every layer that enters the tree.
@@ -52,6 +57,7 @@ static func _apply() -> void:
 		return
 	_canvas = _root.get_visible_rect().size
 	_offset = offset_for(_canvas)
+	_safe_top = _measure_safe_top()
 	_root.global_canvas_transform = Transform2D.IDENTITY
 	_root.canvas_transform = Transform2D(0.0, _offset)
 	for layer in _root.find_children("*", "CanvasLayer", true, false):
@@ -65,6 +71,39 @@ static func _on_node_added(node: Node) -> void:
 
 static func _place_layer(layer: CanvasLayer) -> void:
 	layer.offset = Vector2.ZERO if layer.has_meta(ANCHORED_META) else _offset
+
+
+## The display's top inset, in design px: the safe area's top edge over the
+## window's physical height, scaled to the canvas.
+static func _measure_safe_top() -> float:
+	if safe_override >= 0.0:
+		return safe_override
+	var win := Vector2(DisplayServer.window_get_size())
+	if win.y <= 0.0:
+		return 0.0
+	var safe := DisplayServer.get_display_safe_area()
+	var inset := float(safe.position.y) - float(DisplayServer.window_get_position().y)
+	return maxf(0.0, roundf(inset * _canvas.y / win.y))
+
+
+static func safe_top() -> float:
+	return _safe_top
+
+
+## QA / tests: pretend the display has this top inset (design px); < 0 = measure.
+static func set_safe_override(v: float) -> void:
+	safe_override = v
+	if _root != null:
+		_apply()
+	else:
+		_safe_top = maxf(v, 0.0)
+
+
+## Where a header row goes (design "Home League Context v2", 2026-10-25): its
+## usual `base` from the top, or `gap` under the top safe area when that is
+## lower — the row clears the notch, the wash behind it still runs to the edge.
+static func header_top(base: float, gap := 0.0) -> float:
+	return maxf(base, _safe_top + gap)
 
 
 ## Half the canvas's excess over the design, whole pixels, never negative.

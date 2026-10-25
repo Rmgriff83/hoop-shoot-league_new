@@ -16,6 +16,8 @@ signal picked(id: String)
 const CARD_H := 320.0
 const CARD_W := 664.0
 const PAD := Vector2(28, 44)
+## The head's y: PAD.y, or under the top safe area (UiLayout.header_top).
+var _top := PAD.y
 const GAP := 22.0
 const INK := Color("#221C18")
 const CREAM := Color("#F1E8D0")
@@ -42,6 +44,7 @@ func build(rows: Array, open_text: String, can_close := true) -> Control:
 		_root.queue_free()
 	_root = Control.new()
 	_root.name = "ArchivePage"
+	_top = UiLayout.header_top(PAD.y)   # the head under the top safe area
 	UiLayout.screen_fill(_root)   # the real screen (the Bg covers the bleed)
 	_root.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_root)
@@ -59,7 +62,7 @@ func build(rows: Array, open_text: String, can_close := true) -> Control:
 	# The header: < AREAS n/3 OPEN.
 	var head := HBoxContainer.new()
 	head.name = "Head"
-	head.position = PAD
+	head.position = Vector2(PAD.x, _top)
 	head.size = Vector2(720 - PAD.x * 2, 56)
 	head.add_theme_constant_override("separation", 20)
 	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -88,8 +91,8 @@ func build(rows: Array, open_text: String, can_close := true) -> Control:
 	# The cards.
 	var scroll := ScrollContainer.new()
 	scroll.name = "Scroll"
-	scroll.position = Vector2(PAD.x, PAD.y + 56 + 20)
-	scroll.size = Vector2(720 - PAD.x * 2, UiLayout.screen_height() - PAD.y - 56 - 20 - PAD.x)
+	scroll.position = Vector2(PAD.x, _top + 56 + 20)
+	scroll.size = Vector2(720 - PAD.x * 2, UiLayout.screen_height() - _top - 56 - 20 - PAD.x)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	_sheet.add_child(scroll)
 	var list := VBoxContainer.new()

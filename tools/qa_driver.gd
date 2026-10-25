@@ -41,6 +41,10 @@ func _ready() -> void:
 	# --qa-hud-side: the HUD pass with HUD SIDE: RIGHT (the toasts and the note mirrored), then back.
 	if args.has("--qa-hud-side"):
 		App.set_hud_side("right")
+	# `--qa-safe-top=118` plays a phone with a notch: every header drops under it.
+	var safe := _arg_value(args, "--qa-safe-top=", "")
+	if safe != "":
+		UiLayout.set_safe_override(float(safe))
 	# The first-shot tutorial (design 38a) would sit over every match a QA pass
 	# enters: only --qa-tutorial wants it. A normal launch (no --qa flag at all)
 	# keeps it — this autoload runs in every build, so the skip must not be the

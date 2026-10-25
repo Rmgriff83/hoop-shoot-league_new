@@ -303,7 +303,7 @@ func _build_court(i: int) -> void:
 func rebuild_chrome() -> void:
 	if _chrome != null:
 		_chrome.queue_free()
-	_lay = HomeLayout.compute(UiLayout.screen_height())
+	_lay = HomeLayout.compute(UiLayout.screen_height(), UiLayout.header_top(HomeLayout.TOP_Y))
 	_chrome = Control.new()
 	_chrome.name = "Chrome"
 	UiLayout.screen_fill(_chrome)   # the real screen: the rows below are screen coordinates
@@ -324,18 +324,18 @@ func rebuild_chrome() -> void:
 
 	# Top bar.
 	_badge = LevelBadge.new()
-	_badge.position = Vector2(MARGIN, 32)
+	_badge.position = Vector2(MARGIN, float(_lay["top_y"]))
 	_badge.set_level(App.level(), Progression.frac_for(App.xp()))
 	_chrome.add_child(_badge)
 	var locker := IconButton.new("locker")
 	locker.name = "Locker"
-	locker.position = Vector2(230, 32)
+	locker.position = Vector2(230, float(_lay["top_y"]))
 	locker.badge = not App.unseen_prizes().is_empty()
 	locker.pressed.connect(_open_locker)
 	_chrome.add_child(locker)
 	var menu := HamburgerButton.new()
 	menu.name = "Menu"
-	menu.position = Vector2(720 - MARGIN - HamburgerButton.SIZE, 32)
+	menu.position = Vector2(720 - MARGIN - HamburgerButton.SIZE, float(_lay["top_y"]))
 	menu.pressed.connect(_open_settings)
 	_chrome.add_child(menu)
 	var wallet := CoinsPill.new()   # the pill keeps its old class name; it shows tickets
@@ -344,7 +344,7 @@ func rebuild_chrome() -> void:
 	if wallet_icon != null:
 		wallet_icon.icon_name = "icon_ticket"
 		wallet_icon.custom_minimum_size = Vector2(22, 14)
-	wallet.position = Vector2(720 - MARGIN - HamburgerButton.SIZE - 16 - 170, 32)
+	wallet.position = Vector2(720 - MARGIN - HamburgerButton.SIZE - 16 - 170, float(_lay["top_y"]))
 	_chrome.add_child(wallet)
 
 	# The area zone: the stars on top, the name big under them with the
@@ -788,7 +788,7 @@ func _update_top_wash(arena: ArenaSet) -> void:
 	var alpha := float(arena.top_wash) if arena != null else 0.0
 	if alpha <= 0.0:
 		return
-	var wash := ShadowStyle.top_wash(alpha)
+	var wash := ShadowStyle.top_wash(alpha, maxf(ShadowStyle.TOP_WASH_H, float(_lay.get("wash_top_h", 0.0))))
 	_chrome.add_child(wash)
 	var scrim: Node = _chrome.get_node_or_null("Scrim")
 	_chrome.move_child(wash, scrim.get_index() + 1 if scrim != null else 0)

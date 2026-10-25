@@ -679,7 +679,16 @@ the page frames running the full height. So the home chrome and every
 ANCHORED layers — `UiLayout.anchor_layer(layer)` in their `_init`: no
 centring offset, so they lay out in screen coordinates (0 = the top edge,
 `UiLayout.screen_height()` = the bottom), and `UiLayout.screen_fill(root)`
-is a plain full rect over the canvas, which there is the screen. The home rows come from the pure
+is a plain full rect over the canvas, which there is the screen. **The top
+safe area** (design "Home League Context v2", 2026-10-25): every header row
+sits at `UiLayout.header_top(base)` = its usual offset or the display's top
+inset (a notch, the Dynamic Island, a camera cutout — `DisplayServer.
+get_display_safe_area` in design px, `UiLayout.safe_top()`), whichever is
+lower, while the washes behind it still run to the edge: the home's top row
+(`HomeLayout.compute(h, top_y)` — 118 on an iPhone puts the zone at 277, the
+chevrons at 697, the area at 936, the rest in proportion; the top wash runs
+under the row), the `HomePage` frame's top, the ranks / archive heads, the
+walkthrough card. QA: `--qa-safe-top=118` plays a notch on the Mac. The home rows come from the pure
 `HomeLayout.compute(h)` (`core/ui/home_layout.gd`): the top row and the
 ticker on the edges, the cards 74 px up, and the middle (the area zone, the
 chevrons, the hoop board, the card area's wash) in the 1560 design's

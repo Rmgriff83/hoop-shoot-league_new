@@ -69,8 +69,9 @@ func _layout_frame() -> void:
 	if root == null:
 		return
 	if _anchored():
-		root.position = Vector2(FRAME_POS.x, UiLayout.screen_top() + FRAME_POS.y)
-		root.size = Vector2(FRAME_SIZE.x, UiLayout.screen_height() - (FRAME_POS.y + 26.0))
+		var top := UiLayout.header_top(FRAME_POS.y)   # under the top safe area (the notch)
+		root.position = Vector2(FRAME_POS.x, top)
+		root.size = Vector2(FRAME_SIZE.x, UiLayout.screen_height() - top - 26.0)
 	else:
 		root.position = FRAME_POS
 		root.size = FRAME_SIZE

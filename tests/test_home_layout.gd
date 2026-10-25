@@ -32,6 +32,14 @@ func run(t) -> void:
 	t.eq(float(b["cards_top"]), 817.0, "1280: the league card where it was")
 	t.eq(float(b["ticker_y"]), 1232.0, "1280: the ticker where it was")
 	t.eq(float(b["zone_y"]), 170.0, "1280: the zone a touch higher than before (180)")
+	# A notch (design "Home League Context v2": the top row at 118 on an iPhone).
+	var n: Dictionary = HomeLayout.compute(1560.0, 118.0)
+	t.eq(float(n["top_y"]), 118.0, "notch: the top row at the safe line")
+	t.eq(float(n["zone_y"]), 277.0, "notch: the zone at 277 (design)")
+	t.eq(float(n["chevron_y"]), 697.0, "notch: the chevrons at 697 (design)")
+	t.eq(float(n["area_top"]), 936.0, "notch: the area from 936 (design)")
+	t.eq(float(n["ticker_y"]), 1512.0, "notch: the ticker stays on the bottom edge")
+	t.eq(float(n["wash_top_h"]), 118.0 + 60.0 + 24.0, "notch: the top wash runs under the row")
 	# The moto.
 	var m: Dictionary = at[1604]
 	t.eq(float(m["zone_y"]), 205.0, "1604: zone 205")

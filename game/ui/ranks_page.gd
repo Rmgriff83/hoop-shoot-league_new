@@ -15,6 +15,8 @@ signal closed
 signal request(area: String, period: String)
 
 const PAD := Vector2(28, 44)
+## The head's y: PAD.y, or under the top safe area (UiLayout.header_top).
+var _top := PAD.y
 const TAB_SIZE := Vector2(156, 56)   # four tabs and three 12 px gaps filled the 664 px row; five share it (TAB_W)
 const TAB_GAP := 12.0
 const CHIP_SIZE := Vector2(176, 44)
@@ -47,6 +49,7 @@ func build(tabs: Array, handle: String) -> Control:
 		_root.queue_free()
 	_root = Control.new()
 	_root.name = "RanksRoot"
+	_top = UiLayout.header_top(PAD.y)   # the head under the top safe area
 	UiLayout.screen_fill(_root)   # the real screen (the Bg covers the bleed)
 	_root.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(_root)
@@ -59,7 +62,7 @@ func build(tabs: Array, handle: String) -> Control:
 	# < RANKS                                    BRICK BARON 42
 	var head := HBoxContainer.new()
 	head.name = "Head"
-	head.position = PAD
+	head.position = Vector2(PAD.x, _top)
 	head.size = Vector2(720 - PAD.x * 2, 56)
 	head.add_theme_constant_override("separation", 20)
 	_root.add_child(head)
@@ -86,7 +89,7 @@ func build(tabs: Array, handle: String) -> Control:
 	# The area tabs.
 	var tab_row := HBoxContainer.new()
 	tab_row.name = "Tabs"
-	tab_row.position = Vector2(PAD.x, PAD.y + 56 + 24)
+	tab_row.position = Vector2(PAD.x, _top + 56 + 24)
 	tab_row.size = Vector2(720 - PAD.x * 2, TAB_SIZE.y + ShadowStyle.OFFSET)
 	tab_row.add_theme_constant_override("separation", int(TAB_GAP))
 	_root.add_child(tab_row)

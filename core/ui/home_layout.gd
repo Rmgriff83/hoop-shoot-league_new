@@ -12,7 +12,8 @@ extends RefCounted
 ## All y's are screen coordinates (0 = the screen's top), whole pixels.
 
 const TOP_Y := 32.0           # the top row (LVL, the locker ball, the tickets, the menu)
-const BAND_TOP := 92.0        # the top row's bottom: where the middle starts
+const ROW_H := 60.0           # the top row's height: the middle starts under it
+const WASH_UNDER := 24.0      # the top wash runs this far under the row
 const TICKER_H := 48.0        # HomeTicker.HEIGHT
 const BOTTOM := 74.0          # the card block ends this far above the screen's bottom
 const CARDS_H := 389.0        # league 270 + 5 + gap 15 + pair 94 + 5 (shadows in)
@@ -32,20 +33,26 @@ const FLOAT_UP := 169.0
 const LOADOUT_UP := 197.0
 
 
-## The rows for a screen `h` px tall: {top_y, zone_y, chip_y, chevron_y,
+## The rows for a screen `h` px tall with the top row at `top_y` (TOP_Y, or
+## the top safe area when that is lower — design "Home League Context v2",
+## 2026-10-25: 118 on an iPhone puts the zone at 277, the chevrons at 697,
+## the area at 936): {top_y, wash_top_h, zone_y, chip_y, chevron_y,
 ## board_y, area_top, area_bottom, cards_top, cards_bottom, wash_y, wash_h,
 ## strip_y, float_y, loadout_y, ticker_y}.
-static func compute(h: float) -> Dictionary:
+static func compute(h: float, top_y := TOP_Y) -> Dictionary:
+	var band_top := top_y + ROW_H
+	var design_band := TOP_Y + ROW_H
 	var ticker_y := h - TICKER_H
 	var cards_bottom := h - BOTTOM
 	var cards_top := cards_bottom - CARDS_H
-	var mid := cards_top - BAND_TOP
-	var zone_y := roundf(BAND_TOP + mid * (ZONE_1560 - BAND_TOP) / MID_1560)
-	var chevron_y := roundf(BAND_TOP + mid * (CHEVRON_1560 - BAND_TOP) / MID_1560)
-	var area_top := roundf(BAND_TOP + mid * (AREA_1560 - BAND_TOP) / MID_1560)
-	var board_y := roundf(BAND_TOP + mid * (BOARD_1280 - BAND_TOP) / MID_1280)
+	var mid := cards_top - band_top
+	var zone_y := roundf(band_top + mid * (ZONE_1560 - design_band) / MID_1560)
+	var chevron_y := roundf(band_top + mid * (CHEVRON_1560 - design_band) / MID_1560)
+	var area_top := roundf(band_top + mid * (AREA_1560 - design_band) / MID_1560)
+	var board_y := roundf(band_top + mid * (BOARD_1280 - design_band) / MID_1280)
 	return {
-		"top_y": TOP_Y,
+		"top_y": top_y,
+		"wash_top_h": band_top + WASH_UNDER,
 		"zone_y": zone_y,
 		"chip_y": zone_y + CHIP_DROP,
 		"chevron_y": chevron_y,

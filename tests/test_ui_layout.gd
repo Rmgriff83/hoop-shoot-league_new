@@ -75,6 +75,14 @@ func run(t) -> void:
 	t.ok(UiLayout.is_anchored(fill), "a child of an anchored layer is anchored")
 	t.eq(fill.offset_top, 0.0, "…and a fill in it never bleeds (the canvas is the screen)")
 	anchored.free()
+	# The top safe area: a header drops under it, never above its usual place.
+	t.eq(UiLayout.header_top(32.0), 32.0, "no inset: a header at its usual place")
+	UiLayout.set_safe_override(118.0)
+	t.eq(UiLayout.safe_top(), 118.0, "a pretend notch")
+	t.eq(UiLayout.header_top(32.0), 118.0, "…a header drops under it")
+	t.eq(UiLayout.header_top(20.0, 10.0), 128.0, "…with a gap when asked")
+	UiLayout.set_safe_override(-1.0)
+	t.eq(UiLayout.header_top(32.0), 32.0, "…and comes back when it is gone")
 	# Round trips.
 	t.eq(UiLayout.from_screen(UiLayout.to_screen(Vector2(10, 20))), Vector2(10, 20), "to_screen / from_screen invert")
 	# No raw full-rect preset left in game/: every one goes through the helper.
