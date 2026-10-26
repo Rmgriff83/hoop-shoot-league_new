@@ -99,3 +99,14 @@ func run(t) -> void:
 	t.ok(load("res://assets/audio/fx/fire_out.wav") is AudioStream, "fire out clip imports")
 	if sfx != null:
 		t.ok(sfx.has_method("fire_out"), "Sfx exposes fire_out()")
+	# The page (design "Credits" 40a): one card per credit, licences as chips.
+	var sounds := CreditsScreen.rows(credits, "sounds")
+	t.eq(sounds.size(), (credits["sounds"] as Array).size(), "a card for every sound")
+	var moog: Dictionary = sounds[0]
+	t.eq([moog["used"], moog["title"], moog["author"], moog["licence"], moog["url"]],
+		["TITLE MUSIC AND THE LEVEL PLAYLIST", "Moog_SEM 110bpm", "BY FONOSKOP", "ATTRIBUTION 4.0", "https://freesound.org/s/856449/"],
+		"used for and BY in capitals, the title and the link as written")
+	t.ok(bool(moog["open"]), "an open licence wears the teal chip")
+	t.ok(not CreditsScreen.licence_open("see the source page") and not CreditsScreen.licence_open("see the itch.io page"), "…\"see the source page\" the cream one")
+	t.ok(CreditsScreen.licence_open("SIL Open Font License 1.1"), "the OFL is open")
+	t.eq(CreditsScreen.rows(credits, "models").size(), (credits["models"] as Array).size(), "the models tab")

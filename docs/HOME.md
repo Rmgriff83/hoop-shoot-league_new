@@ -798,3 +798,16 @@ apart. The ranks status line still reads LOADING... over it. PEGGY's cabinet
 slot keeps its size and face with a `PixelSpinner` in the middle, PLAY waits
 (`is_busy`), and `model_loaded` brings it back. The locker and the net
 thumbnails are PNGs, so they need no spinner.
+
+## Credits (design "Credits" 40a, 2026-10-25)
+
+Settings → CREDITS moves to `game/screens/credits_screen.gd`, a full page on
+an anchored layer over the arcade cage's tall art under a 62 % scrim. The
+head is the `<` back (to home) and the dithered CREDITS, under the top safe
+area. BUILT WITH carries GODOT / BLENDER / ASEPRITE as gold chips. SOUNDS /
+FONTS / MODELS are tabs with their counts; the active one is gold. Each
+credit in `data/credits.json` is its own see-through card: what it is used
+for in gold, the title as written, BY the author, the licence as a chip
+(teal for an open licence, cream for "see the … page"), and the source
+link. The list scrolls without a bar, and a fade at its foot hides once the
+end is in view. `--qa-credits` snaps each tab.
