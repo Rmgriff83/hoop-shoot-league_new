@@ -119,6 +119,35 @@ static func badge_text(rank: Dictionary) -> String:
 	return "%s %s" % [tier_name(tier), division_numeral(int(rank.get("division", 3)))]
 
 
+## Progress through your division (design "Online Lobby" 37a, 2026-10-25:
+## `16 / 50 TO MVP I`): {have, need, next_tier, next_division} in
+## conservative rating points, from the rank's tier and division (the badge
+## you wear, shield and floors included) and its `cons` (or mu − k·rd).
+## Empty at the top tier, before a rated game, or without a rating.
+static func division_progress(rank: Dictionary) -> Dictionary:
+	if rank.is_empty() or int(rank.get("games", 0)) <= 0:
+		return {}
+	var cons := 0.0
+	if rank.has("cons"):
+		cons = float(rank["cons"])
+	elif rank.has("mu") and rank.has("rd"):
+		cons = conservative(float(rank["mu"]), float(rank["rd"]))
+	else:
+		return {}
+	var ts := tiers()
+	var n := divisions()
+	var i := tier_index(str(rank.get("tier", "")))
+	if ts.is_empty() or i >= ts.size() - 1:
+		return {}
+	var division := clampi(int(rank.get("division", n)), 1, n)
+	var width := (float(ts[i + 1].get("from", 0)) - float(ts[i].get("from", 0))) / float(n)
+	var lo := float(ts[i].get("from", 0)) + float(n - division) * width
+	var next_tier := str(ts[i].get("id", "")) if division > 1 else str(ts[i + 1].get("id", ""))
+	var next_division := division - 1 if division > 1 else n
+	return {"have": clampi(int(floor(cons - lo)), 0, int(round(width))), "need": int(round(width)),
+		"next_tier": next_tier, "next_division": next_division}
+
+
 ## True when b outranks a.
 static func outranks(a: Dictionary, b: Dictionary) -> bool:
 	var ta := tier_index(str(a.get("tier", ""))) 

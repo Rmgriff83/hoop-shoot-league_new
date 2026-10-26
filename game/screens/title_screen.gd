@@ -1303,9 +1303,13 @@ func archive() -> AreaArchivePage:
 ## The global boards, opened on this area's tab and ALL TIME (the home board's list). The page asks
 ## for data through `request`; Net answers with a board or a failure, and a
 ## failure shows the device's own board for the area.
-func _open_ranks() -> void:
+## The ranks page: from the home's board (the area's tab), or from the
+## lobby's ALL RANKS > (`tab` RANKED, over the lobby, which slides out left
+## under it and comes back on close).
+func _open_ranks(tab := "") -> void:
 	if _ranks != null or _archive != null or _locker != null or _settings != null or _peggy != null or _switching:
 		return
+	var over_lobby := _lobby != null
 	_ranks = RanksPage.new()
 	_ranks.name = "RanksPage"
 	_ranks.build(RanksCopy.tabs(App.level(), App.league_gating), FaceOffPage.you_record())
@@ -1336,12 +1340,23 @@ func _open_ranks() -> void:
 		Net.ranked_board_loaded.disconnect(on_ladder)
 		Net.ranked_board_failed.disconnect(on_ladder_fail)
 		_ranks = null
-		_slide_home(false)
+		if over_lobby and _lobby != null:
+			_lobby.slide_in(true)
+		elif not over_lobby:
+			_slide_home(false)
 	)
 	add_child(_ranks)
-	_slide_home(true)   # the home slides out left as the page slides in (design 41a)
+	if over_lobby:
+		_lobby.slide_out(true, false)
+	else:
+		_slide_home(true)   # the home slides out left as the page slides in (design 41a)
 	_ranks.slide_in()
-	_ranks.select(str(CARDS[_index]["area"]), BOARD_PERIOD)   # the tab the home board shows
+	_ranks.select(tab if tab != "" else str(CARDS[_index]["area"]), BOARD_PERIOD)   # the tab the home board shows
+
+
+func _close_ranks() -> void:
+	if _ranks != null and is_instance_valid(_ranks):
+		_ranks.close()   # emits closed: the Net hookups come off
 
 
 func ranks() -> RanksPage:
@@ -1381,6 +1396,23 @@ func _open_lobby() -> void:
 					App.tip_off_now()
 	_lobby.ranked.connect(func() -> void: App.start_online("any", "ranked", "", on_state))
 	_lobby.rewards.connect(_open_rewards)
+	_lobby.all_ranks.connect(func() -> void: _open_ranks(RanksCopy.RANKED))
+	# The menu's card and leaderboard (design 37a): your rank, the ladder's top three.
+	var on_top := func(d: Dictionary) -> void:
+		if _lobby != null:
+			_lobby.set_top(d)
+	var on_top_fail := func() -> void:
+		if _lobby != null:
+			_lobby.set_top_offline()
+	var on_rank := func(r: Dictionary) -> void:
+		if _lobby != null:
+			_lobby.set_rank(r)
+	Net.ranked_board_loaded.connect(on_top)
+	Net.ranked_board_failed.connect(on_top_fail)
+	Net.rank_changed.connect(on_rank)
+	var cached := Net.cached_ranked_board()
+	if not cached.is_empty():
+		_lobby.set_top(cached)
 	_lobby.quick.connect(func(area: String) -> void: App.start_online(area, "quick", "", on_state))
 	_lobby.create.connect(func(area: String) -> void: App.start_online(area, "create", "", on_state))
 	_lobby.join.connect(func(area: String, code: String) -> void: App.start_online(area, "join", code, on_state))
@@ -1388,9 +1420,13 @@ func _open_lobby() -> void:
 		_close_pre_match()
 		App.cancel_online())
 	_lobby.closed.connect(func() -> void:
+		Net.ranked_board_loaded.disconnect(on_top)
+		Net.ranked_board_failed.disconnect(on_top_fail)
+		Net.rank_changed.disconnect(on_rank)
 		_close_pre_match()
 		_close_rewards()
 		_lobby = null
+		_close_ranks()   # after: its closed handler must not bring the lobby back
 		_slide_home(false)
 	)
 	add_child(_lobby)
@@ -1398,6 +1434,7 @@ func _open_lobby() -> void:
 	_lobby.slide_in()
 	Net.refresh_cards()   # the ledger's word on the online cards
 	Net.fetch_me()        # …and on the rank
+	Net.load_ranked_board()   # the leaderboard's top three (cached 60 s)
 
 
 func lobby() -> MatchLobbyPage:

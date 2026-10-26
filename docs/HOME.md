@@ -289,7 +289,15 @@ chevron (the footer says START INSIDE).
   (unlocked gold with `+`, the rest dim). QA: `--qa-multi` (`multi_menu`,
   `multi_code`, `multi_found`, `multi_failed`, `multi_finding`,
   `multi_rewards`, `multi_prematch`, `multi_prematch_ready`, `online_result`),
-  `--qa-heat-result` (`online_result_win`, `online_result_loss`).
+  `--qa-heat-result` (`online_result_win`, `online_result_loss`). Since 2026-10-25 (37a's latest pass) the menu opens with your gold
+  player card (the jersey, handle and `#tag`, `TOWN · LVL 07`; your badge and
+  `#18 · 32-16` on the right; a bar through your division, `16 / 50 TO MVP
+  I`, from `RankedRules.division_progress`, hidden at the top tier and
+  before a rated game) and ends with GLOBAL LEADERBOARD · TOP 3 · RATED 1V1:
+  the ladder's top three in a see-through panel and ALL RANKS >, which opens
+  the ranks page on RANKED over the lobby. The title feeds both from `Net`
+  (`me_rank`, the cached ranked board); the leaderboard shows only on a
+  frame of 1400 px or more (a 9:16 screen has no room for it).
 - **Pre-match page** (`game/ui/pre_match_page.gd` `PreMatchPage`, design "Pre
   Match" 37a, 2026-10-23; `FaceOffPage` keeps the shared pieces): full screen
   before EVERY match — a league heat (`App.start_league_heat` →

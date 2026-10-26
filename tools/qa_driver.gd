@@ -1555,6 +1555,11 @@ func _run_multi() -> void:
 		print("QA multi: no lobby")
 		get_tree().quit()
 		return
+	# The menu's card and leaderboard (design 37a) from the fixtures.
+	lobby.set_rank({"tier": "allstar", "division": 1, "games": 48, "position": 18, "wins": 32, "losses": 16, "cons": 1416.0})
+	var ladder: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/ranked_board.json"))
+	lobby.set_top(ladder if ladder is Dictionary else {})
+	await _sleep(0.2)
 	await _snap("multi_menu")
 	lobby.show_waiting("create", "ABCDE")
 	await _sleep(0.2)

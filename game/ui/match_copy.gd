@@ -122,6 +122,57 @@ static func card_online(rec: Dictionary) -> String:
 	return line
 
 
+# ---- the menu's player card and leaderboard (design 37a, 2026-10-25) ------------------
+
+
+## The card's badge: `MVP II`, `LEGEND #3`, or UNRANKED before a rated game.
+static func you_badge(rank: Dictionary) -> String:
+	if rank.is_empty() or int(rank.get("games", 0)) <= 0:
+		return "UNRANKED"
+	return RankedRules.badge_text(rank)
+
+
+## Under the badge: `#18 · 32-16` (your ladder position and record).
+static func you_record_line(rank: Dictionary) -> String:
+	if rank.is_empty() or int(rank.get("games", 0)) <= 0:
+		return "PLAY A RATED GAME"
+	var bits := []
+	if int(rank.get("position", 0)) > 0:
+		bits.push_back("#" + RetroTheme.thousands(int(rank["position"])))
+	bits.push_back("%d-%d" % [int(rank.get("wins", 0)), int(rank.get("losses", 0))])
+	return " · ".join(bits)
+
+
+## The bar's words: `16 / 50 TO MVP I`.
+static func progress_line(p: Dictionary) -> String:
+	var next := {"tier": str(p.get("next_tier", "")), "division": int(p.get("next_division", 3)), "games": 1}
+	return "%d / %d TO %s" % [int(p.get("have", 0)), int(p.get("need", 0)), RankedRules.badge_text(next)]
+
+
+static func leaderboard_head() -> String:
+	return "GLOBAL LEADERBOARD"
+
+
+static func leaderboard_sub() -> String:
+	return "TOP 3 · RATED 1V1"
+
+
+static func all_ranks() -> String:
+	return "ALL RANKS >"
+
+
+static func leaderboard_loading() -> String:
+	return "LOADING..."
+
+
+static func leaderboard_empty() -> String:
+	return "NO RATED GAMES YET · BE FIRST"
+
+
+static func leaderboard_offline() -> String:
+	return "NO SIGNAL · THE LADDER NEEDS A CONNECTION"
+
+
 # ---- the pre-match pick (docs/BACKEND.md → Ranked, 2026-10-19) -------------------------
 
 
@@ -476,6 +527,9 @@ static func rewards_offline() -> String:
 
 static func strings() -> Array:
 	var out := ["QUICK MATCH", "CREATE CODE", "ENTER CODE", "GO", "CANCEL", "BACK", "<", ">", title(), code_sub(), join_sub(), code_caption(),
+		you_badge({}), you_record_line({}), you_record_line({"games": 48, "position": 18, "wins": 32, "losses": 16}),
+		progress_line({"have": 16, "need": 50, "next_tier": "mvp", "next_division": 1}), leaderboard_head(), leaderboard_sub(), all_ranks(),
+		leaderboard_loading(), leaderboard_empty(), leaderboard_offline(),
 		code_line("ABCDE"), waiting_big("quick"), waiting_big("code"), waiting_line("quick"), waiting_line("code"), found_big(),
 		found_line(), you_label(), opp_label(), vs_word(), "?", "...", card_tag({"tag": "07"}),
 		card_place({"town": "SALT HARBOR", "level": 9}), card_place({"level": 7}), card_online({}),
