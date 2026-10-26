@@ -7,11 +7,13 @@ func run(t) -> void:
 	var beach: ArenaSet = CosmeticLibrary.get_arena("beach")
 	var city: ArenaSet = CosmeticLibrary.get_arena("city")
 	var cage: ArenaSet = CosmeticLibrary.get_arena("cage")
-	# The beach's chalkboard came down (Ross, 2026-10-16): no in-world board
-	# in beach league heats; the park's too (2026-10-25). The city still hangs its own.
+	# The beach's chalkboard came down (Ross, 2026-10-16), the park's
+	# (2026-10-25) and the city's (2026-10-26): no in-world board in any
+	# league heat. The city keeps its anchor data, so the banner's layout
+	# tests below still have a real board to size.
 	t.eq(beach.league_banner_kind, "", "beach hangs no league board any more")
 	t.eq(CosmeticLibrary.get_arena("park").league_banner_kind, "", "nor the park (Ross, 2026-10-25)")
-	t.eq(city.league_banner_kind, "standings", "city shows the standings/bracket banner")
+	t.eq(city.league_banner_kind, "", "nor the city (Ross, 2026-10-26)")
 	t.eq(city.league_banner_style, "chalk", "city board is a chalkboard")
 	t.ok(city.league_banner_size.x > 0.5 and city.league_banner_size.y > 0.3, "city banner has a size")
 	t.ok(city.league_banner_pos.x > 5.0 and city.league_banner_pos.z > 0.5, "city banner on the back fence, shooter's right")
