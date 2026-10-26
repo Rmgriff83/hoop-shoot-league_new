@@ -72,11 +72,12 @@ static func _load_list(paths: PackedStringArray) -> Array:
 
 var _net_kind := "nylon"
 var _hoop_net_kind := "nylon"
-## The make clips of the HUNG net's kind when it is not the hoop's own (a
-## chain on the park's nylon rim swishes like the chain hoop; cotton on the
-## city's steel swishes like cotton). Empty while the net is the hoop's kind,
-## so make() plays the hoop's own clips.
-var _net_make: Array = []
+## Make clips per net kind ("nylon" | "chain") borrowed from that kind's
+## reference hoop, loaded on first use: a net of another kind than the hoop's
+## swishes like its own kind (a chain on the park's nylon rim sounds like the
+## chain hoop). Per KIND, not per court: the player's court and the PiP
+## opponent's each ask for their own net's kind (make_as), 2026-10-25.
+var _ref_make := {}
 
 
 ## Load a hoop set's sounds (replacing the previous hoop's).
@@ -85,7 +86,6 @@ func load_hoop_set(set: HoopSet) -> void:
 	_hoop_id = ""
 	_net_kind = "nylon"
 	_hoop_net_kind = "nylon"
-	_net_make = []
 	_last.erase("net:make")
 	if set == null:
 		return
@@ -135,12 +135,7 @@ func hang_net(ns: NetSet) -> void:
 		_net_kind = _hoop_net_kind
 	else:
 		_net_kind = "chain" if ns.kind == "chain" else "nylon"
-	_net_make = []
-	_last.erase("net:make")
-	if _net_kind != _hoop_net_kind:
-		var ref := _reference_hoop(_net_kind)
-		if ref != null:
-			_net_make = _load_list(ref.make_clips)
+	_make_clips(_net_kind)   # warm the borrowed clips now, not on the first make
 
 
 ## The hoop whose make clips a hung net of `kind` ("nylon" | "chain") borrows:
@@ -156,7 +151,30 @@ static func _reference_hoop(kind: String) -> HoopSet:
 ## Which kind the make clip sounds like right now: the hung net's kind when
 ## its reference hoop had clips to lend, else the hoop's own.
 func make_kind() -> String:
-	return _net_kind if not _net_make.is_empty() else _hoop_net_kind
+	return make_kind_for(_net_kind)
+
+
+## Which kind a make on a net of `kind` sounds like: that kind when the hoop
+## is of it or its reference hoop lends clips, else the hoop's own.
+func make_kind_for(kind: String) -> String:
+	return kind if kind == _hoop_net_kind or not _make_clips(kind).is_empty() else _hoop_net_kind
+
+
+## The make clips for a net of `kind`: the live hoop's own for its native
+## kind, else that kind's reference hoop's (cached).
+func _make_clips(kind: String) -> Array:
+	if kind == _hoop_net_kind:
+		return _hoop.get("make", [])
+	if not _ref_make.has(kind):
+		var ref := _reference_hoop(kind)
+		_ref_make[kind] = _load_list(ref.make_clips) if ref != null else []
+	return _ref_make[kind]
+
+
+## The sound layer's word for a court's net kind (CourtGeometry.net_kind():
+## "cotton" | "chain") → "nylon" | "chain".
+static func sound_kind(court_kind: String) -> String:
+	return "chain" if court_kind == "chain" else "nylon"
 
 
 func ball_id() -> String:
@@ -594,8 +612,14 @@ func contact(kind: String, speed: float) -> void:
 
 ## A made shot: the hoop's make clip (falls back to the synthetic swish).
 func make() -> void:
-	# The swish is the NET's sound: a hung net of another kind lends its own.
-	if not _net_make.is_empty() and _play_from({"make": _net_make}, "net", "make", MAKE_GAIN_DB):
+	make_as(_net_kind)
+
+
+## A made shot through a net of `kind` ("nylon" | "chain"): the PiP opponent's
+## court passes its own net's kind, so the player's hung net never leaks into
+## it. Falls back to the hoop's clips, then the synthetic swish.
+func make_as(kind: String) -> void:
+	if kind != _hoop_net_kind and _play_from({"make": _make_clips(kind)}, "net:" + kind, "make", MAKE_GAIN_DB):
 		return
 	if not _play_from(_hoop, "hoop", "make", MAKE_GAIN_DB):
 		_play("swish")

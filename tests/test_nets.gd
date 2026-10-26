@@ -113,9 +113,16 @@ func run(t) -> void:
 		sfx.hang_net(null)
 		t.eq(sfx.net_kind(), "nylon", "…no net set: the hoop's own again")
 		t.eq(sfx.make_kind(), "nylon", "…and the hoop's own make clips")
+		# The PiP opponent keeps its own net's swish (2026-10-25): the player
+		# hangs a chain on the park, the opponent's cotton still sounds cotton.
+		sfx.hang_net(CosmeticLibrary.get_net("jack"))
+		t.eq(sfx.make_kind(), "chain", "the player's chain swishes chain")
+		t.eq(sfx.make_kind_for(sfx.sound_kind("cotton")), "nylon", "…the opponent's cotton still swishes cotton")
+		t.eq(sfx.sound_kind("chain"), "chain", "a court's chain is the sound layer's chain")
 		sfx.load_hoop_set(CosmeticLibrary.get_hoop("chain"))
 		sfx.hang_net(CosmeticLibrary.get_net("cotton"))
 		t.eq(sfx.make_kind(), "nylon", "cotton on the city's steel swishes like cotton")
+		t.eq(sfx.make_kind_for("chain"), "chain", "…while a chain opponent there swishes chain")
 		sfx.load_hoop_set(CosmeticLibrary.starter_hoop())
 	# A tinted cotton: the cotton body with the set's colour on its cords.
 	var cage := CourtGeometry.new()

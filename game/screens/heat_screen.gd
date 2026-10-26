@@ -968,7 +968,7 @@ func _handle_ai_event(ev: Dictionary) -> void:
 		"contact":
 			var c: Dictionary = ev["contact"]
 			if c["kind"] == "enter":
-				Sfx.make()
+				Sfx.make_as(Sfx.sound_kind(_ai_court.net_kind()))   # the opponent's own net, not the one the player hung
 				_ai_court.net_kick(Vector3(c["pos"]["x"], c["pos"]["y"], c["pos"]["z"]), Vector3(0.0, -float(c.get("speed", 5.0)), 0.0))
 			elif c["kind"] == "rim":
 				_ai_court.rim_react(c["speed"])
