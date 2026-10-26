@@ -78,8 +78,14 @@ HARDWOOD_REPEATS_PER_M = 0.68       # 128-px tile ≈ 1.47 m: ~9 cm boards
 ARROW_LEN = 0.22
 ARROW_HALF_W = 0.18
 ARROW_ROW_Z = 0.42
-PAD_CELL = 0.12
-PAD_DEPTH = 0.07
+# Bigger egg-crate cells (design "Arcade Cage Concept" 32a, 2026-10-25): the
+# concept rebuilds the pad at 5.2x the first cut's cell (0.12 m) and half again
+# as deep, so the foam stops reading at the fence squares' scale — 4 x 5
+# pyramids (0.58 x 0.58 m) standing 0.105 m proud. The sim's back wall
+# (SimGeometry.ARCADE_BACK_X 4.31) stays at the old peaks: core/physics is
+# Ross's call, and a ball only meets the deeper peaks right at their tips.
+PAD_CELL = 0.12 * 5.2
+PAD_DEPTH = 0.07 * 1.5
 PAD_FACE_X = CAGE_X1 - 0.02         # the panel box is 4 cm thick, centred on CAGE_X1
 HANGER_LEN = 0.71                   # rail (3.5) down to the hoop's arm (2.79)
 # String lights along the two top-corner rails, in place of the old marquee sign.

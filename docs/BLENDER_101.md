@@ -1119,7 +1119,12 @@ Three cage changes, all in `build_cage.py` (`-- --force`) and
   mesh is flat-shaded, so each pyramid's faces catch the light differently.
   The material is matte (`mat_tex(matte=True)`: no specular lobe; and
   `CourtGeometry._matte("BackPad")` repeats it at load) — the first cut read
-  as glossy. The sim's back wall moved to the peaks
+  as glossy. **Bigger cells (design "Arcade Cage Concept" 32a, 2026-10-25):**
+  `PAD_CELL` is now 5.2x the first cut (4 x 5 pyramids, about 0.58 m) and
+  `PAD_DEPTH` 1.5x (0.105 m), so the foam no longer reads at the fence's
+  scale; the league housing rides forward with the peaks. The sim's back wall
+  below stays at the old peaks (4.31), 3.5 cm behind the new tips, until Ross
+  decides on core/physics. The sim's back wall moved to the peaks
   (`SimGeometry.ARCADE_BACK_X` 4.31): the ball bounces off the foam, not the
   panel behind it.
 - **The league ribbon** sits ON the foam: a dark `LeagueHousing` box whose back
