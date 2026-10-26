@@ -65,7 +65,8 @@ SHORE_X0, SHORE_X1 = 12.5, 13.6
 OCEAN_X0, OCEAN_X1 = 13.0, 75.0       # runs out past the sky cylinder (r 60) so no seam shows
 WIDE = 45.0
 OCEAN_HALF_W = 75.0
-SKY_R, SKY_Y0, SKY_Y1 = 60.0, -3.0, 50.0
+SKY_R, SKY_Y0, SKY_Y1 = 60.0, -3.0, 90.0   # 50 until 2026-10-25: the taller phone view saw over the rim
+SKY_TEX_SPAN = 53.0                          # the gradient still spans the old −3…50 m; above, the top colour extends (clamp)
 
 
 def add_box_uv(name, sim_size, sim_center, mat, coll, parent, uv_m):
@@ -435,7 +436,7 @@ def build():
             co = loop.vert.co
             ang = math.atan2(-co.y, co.x)            # sim azimuth: 0 = +x (ahead), +z = east
             u = ((ang - math.pi / 2) / (2 * math.pi)) % 1.0   # east (+z) -> u ≈ 0/1 seam (the glow)
-            v = (co.z + (SKY_Y1 - SKY_Y0) / 2) / (SKY_Y1 - SKY_Y0)
+            v = (co.z + (SKY_Y1 - SKY_Y0) / 2) / SKY_TEX_SPAN   # > 1 above 50 m: the texture clamps
             loop[uvl].uv = (u, v)
     # Fix the seam: loops that wrapped (u≈0 next to u≈1) get u+1 so the face doesn't stretch.
     for f in bm.faces:
@@ -447,6 +448,10 @@ def build():
     bm.to_mesh(skyobj.data)
     bm.free()
     skyobj.data.materials.append(sky)
+    # The gradient's top colour extends over the added height (no wrap).
+    for n in sky.node_tree.nodes:
+        if n.type == "TEX_IMAGE":
+            n.extension = "EXTEND"
     cage.link_obj(skyobj, c_sky, root, (0, 0, (SKY_Y0 + SKY_Y1) / 2))
 
     # Palms (design 34a, 2026-10-16): 3D coconut palms, no longer billboards.
