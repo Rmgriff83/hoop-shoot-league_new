@@ -269,5 +269,5 @@ while the crane moves), `peggy_ticket` (the flight), `peggy_peg_0..2`
 QA: `godot --path . --resolution 360x640 -- --qa-peggy` (the locker, PEGGY
 sliding in, PLAY and the ticket flight, the credited cap, the crane at the
 bumper, the drop, the card, AGAIN, the staged epic and net cards, the short
-state, `<` back to the locker, the badge, the NETS tab, dark mode);
+state, `<` back to the locker, the badge, the NETS tab, both tabs once more);
 `--qa-hud` snaps the locker's slide, BALLS, NETS and the CHAIN sub-tab.

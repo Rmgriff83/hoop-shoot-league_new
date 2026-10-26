@@ -77,16 +77,9 @@ func _dark_mode(t) -> void:
 	var app = _app()
 	if app == null:
 		return
-	var was: bool = app.dark_mode
-	app.set_dark_mode(true)
-	t.eq(app.dark_mode, true, "dark mode set")
-	t.eq(RetroTheme.current(), RetroTheme.DARK, "the theme follows the setting")
-	var svc = Engine.get_main_loop().root.get_node_or_null("SaveService")
-	if svc != null:
-		t.eq(bool(svc.get_settings().get("darkMode", false)), true, "dark mode persists in settings")
-	app.set_dark_mode(false)
-	t.eq(RetroTheme.current(), RetroTheme.LIGHT, "back to the cream page")
-	app.set_dark_mode(was)
+	# One palette, everywhere (Ross, 2026-10-26): no setting, no switch.
+	t.eq(RetroTheme.current(), RetroTheme.DARK, "the game is dark")
+	t.ok(not ("dark_mode" in app) and not app.has_method("set_dark_mode"), "App has no dark-mode setting")
 
 
 func _league_line(t) -> void:
@@ -504,7 +497,6 @@ func _widgets(t) -> void:
 	app.current_league = was_league
 	var panel := SettingsPanel.new()
 	panel._ready()
-	t.ok(panel.has_dark_mode(), "settings has the dark-mode row")
 	# The rows scroll (2026-10-24) and a touch that starts on a row scrolls the
 	# list: a ShadowCard under a ScrollContainer passes its press up once in the tree.
 	var sp: ScrollContainer = panel.find_child("Scroll", true, false)
@@ -548,8 +540,7 @@ func _widgets(t) -> void:
 	t.eq([_app().hud_side, panel.picked("HudSide")], ["right", "right"], "RIGHT moves the toasts and the note")
 	t.eq(str(SaveService.get_settings().get("hudSide", "")), "right", "…and the settings part remembers")
 	_app().set_hud_side(was_side)
-	t.ok(panel.find_child("DarkMode", true, false).find_child("Switch", true, false) is PixelSwitch, "DARK MODE is a pixel switch")
-	t.eq(panel.switch_on("DarkMode"), _app().dark_mode, "…showing the saved palette")
+	t.ok(panel.find_child("DarkMode", true, false) == null, "no DARK MODE row")
 	t.eq(panel.has_tuning(), OS.is_debug_build(), "tuning switch only in a debug build")
 	t.eq(panel.has_gates(), OS.is_debug_build(), "the LEVEL GATES switch only in a debug build")
 	if OS.is_debug_build():

@@ -14,8 +14,8 @@ extends Node3D
 ## cards out and the league in context in: LeagueContext), a FLOATING LAYER
 ## over the court above the area that shows data for the open tab (the
 ## loadout, your spot, what's coming up, this season), and the ticker at the
-## very bottom. No bottom nav. Two palettes (RetroTheme, App.dark_mode) over
-## one layout; the chrome rebuilds in place when the setting flips. One
+## very bottom. No bottom nav. One palette, the dark one (RetroTheme, since
+## 2026-10-26). One
 ## court lives at a time: a page turn covers the screen, rebuilds the court
 ## and refreshes the chrome.
 
@@ -1233,7 +1233,6 @@ func _open_settings() -> void:
 		_settings = null
 		_slide_home(false)
 	)
-	_settings.dark_mode_changed.connect(func(_on: bool) -> void: rebuild_chrome())
 	add_child(_settings)
 	_slide_home(true)
 	_settings.slide_in()

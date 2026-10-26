@@ -77,7 +77,7 @@ func run(t) -> void:
 	t.eq(svc.get_settings().get("shotHelp", null), 0, "shot help defaults off")
 	var st: Dictionary = svc.get_settings()
 	st["shotHelp"] = 2
-	st["darkMode"] = true
+	st["musicOn"] = true
 	svc.put_settings(st)
 	t.ok(svc.dirty_parts().has("settings"), "settings part is marked dirty (player state)")
 
@@ -127,7 +127,7 @@ func run(t) -> void:
 	t.eq(int(svc2.get_progress()["xp"]), 140, "progress survives reload")
 	t.eq(svc2.get_tuning()["tuningMode"], true, "tuning mode survives reload")
 	t.eq(int(svc2.get_settings()["shotHelp"]), 2, "shot help mode survives reload")
-	t.eq(bool(svc2.get_settings().get("darkMode", false)), true, "dark mode survives reload")
+	t.eq(bool(svc2.get_settings().get("musicOn", false)), true, "a setting survives reload")
 	t.eq(int(svc2.get_cosmetics()["tickets"]), 250, "tickets survive reload")
 	t.eq(svc2.get_cosmetics()["hoop"]["selected"], "neon", "hoop selection survives reload")
 	t.eq(svc2.get_cosmetics()["net"]["selected"]["city"], "jack", "the city's net survives reload")

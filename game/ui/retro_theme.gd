@@ -2,8 +2,9 @@ class_name RetroTheme
 extends RefCounted
 ## The home screen's look, one place: flat, sharp-cornered panels in the pixel
 ## faces over the live court, with a hard offset drop shadow in ink (the
-## "comic" style — no border, no blur). Two palettes over one layout;
-## App.dark_mode picks. Text drawn straight on the 3D (the area name, the
+## "comic" style — no border, no blur). The game is dark everywhere (Ross,
+## 2026-10-26: the DARK MODE switch is gone); LIGHT stays as the source of the
+## fixed accent colours (orange, gold) the pages use by name. Text drawn straight on the 3D (the area name, the
 ## chevrons, the card labels) uses `on_scene`: a fixed cream face with an ink
 ## outline. The mode cards are ShadowCard (transparent, their colour as the
 ## shadow). See docs/HOME.md.
@@ -49,8 +50,7 @@ static var _dither_mat: ShaderMaterial
 
 
 static func current() -> Dictionary:
-	var app = Engine.get_main_loop().root.get_node_or_null("App") if Engine.get_main_loop() is SceneTree else null
-	return DARK if app != null and bool(app.get("dark_mode")) else LIGHT
+	return DARK
 
 
 static func c(token: String) -> Color:

@@ -1436,9 +1436,7 @@ func _run_peggy() -> void:
 	await _snap("peggy_nets")
 	await _click_button_named("CLOSE")
 	await _sleep(0.6)
-	# Dark mode: both tabs must stay readable.
-	var was_dark: bool = App.dark_mode
-	App.set_dark_mode(true)
+	# The palette is always dark now: both tabs once more (the old dark snaps).
 	await _sleep(0.6)
 	locker = get_tree().root.find_child("Locker", true, false)
 	if locker != null:
@@ -1457,7 +1455,6 @@ func _run_peggy() -> void:
 		await _sleep(0.6)
 		await _click_button_named("CLOSE")
 		await _sleep(0.6)
-	App.set_dark_mode(was_dark)
 	SaveService.put_cosmetics(cos_before)
 	SaveService.put_settings(set_before)
 	get_tree().quit()
@@ -1956,8 +1953,7 @@ func _run_title() -> void:
 		if sp != null:
 			sp.call("close")
 		await _sleep(0.6)
-	# Dark mode: flip the setting and rebuild the chrome in place.
-	App.set_dark_mode(true)
+	# The chrome rebuilt in place (the palette is always dark now).
 	var home := get_tree().current_scene
 	if home != null and home.has_method("rebuild_chrome"):
 		home.call("rebuild_chrome")
@@ -1972,9 +1968,6 @@ func _run_title() -> void:
 	await _snap("title_dark_table")
 	await _click_button_named("<")
 	await _sleep(0.8)
-	App.set_dark_mode(false)
-	if home != null and home.has_method("rebuild_chrome"):
-		home.call("rebuild_chrome")
 	print("QA title: done")
 	get_tree().quit(0)
 

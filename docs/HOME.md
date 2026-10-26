@@ -1,7 +1,7 @@
 # Home screen — the retro card chrome over the live area (2026-09-26, design "Home League Context v2")
 
 Ross's concept, implemented: see-through, dither-shadowed cards in the pixel
-faces (cream palette or its dark twin) over a **full-screen live view of the
+faces (the dark palette — the only one since 2026-10-26) over a **full-screen live view of the
 current area**. `game/screens/title_screen.gd` (a `Node3D`), widgets in `game/ui/`.
 
 ```
@@ -34,9 +34,11 @@ won prize has not been looked at.
 cards usable only in that league for tickets (docs/ECONOMY.md: one currency
 since 2026-10-19); the pill shows TICKETS, the one wallet.
 
-- **Theme** (`game/ui/retro_theme.gd`, `RetroTheme`): two palettes over one
-  layout — `LIGHT` (the concept's cream, ink `#221C18`, orange / gold / teal /
-  blue) and `DARK` — picked by `App.dark_mode` (settings part, `darkMode`).
+- **Theme** (`game/ui/retro_theme.gd`, `RetroTheme`): the game is dark
+  everywhere — `current()` is always `DARK` (Ross, 2026-10-26: the DARK MODE
+  switch and `App.dark_mode` are gone; an old save's `darkMode` key is
+  ignored). `LIGHT` (the concept's cream, ink `#221C18`, orange / gold / teal /
+  blue) stays as the source of the fixed accents pages name directly.
   `face()` is the panel look: flat, sharp, no border, a hard offset drop
   shadow in ink (the comic-book style); `pressed()` drops the face onto its
   shadow; `flat()` is a strip with an ink rule (the ticker). The **mode cards**
@@ -79,7 +81,7 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
   CLOSE runs it back. Pages **stack**: PEGGY from the locker slides the
   locker out under it to the LEFT and brings it back when it closes
   (`slide_out(true, false)` / `slide_in(true)`); the locker's CLOSE then
-  returns home. A dark-mode `rebuild_chrome()` keeps the chrome out while a
+  returns home. A `rebuild_chrome()` keeps the chrome out while a
   page is open.
 - **The league in context** (`game/ui/league_context.gd`, `LeagueContext`):
   tapping the LEAGUE card (or ENTER LEAGUE) slides the home block out left
@@ -196,7 +198,7 @@ chevron (the footer says START INSIDE).
     sub-line what it does), AI DIFFICULTY (EASY / NORMAL / HARD, one
     strength for every AI on every court, `core/ai/ai_difficulty.gd`, the
     synced `aiDifficulty` setting) and HUD SIDE (LEFT / RIGHT) as pickers
-    showing every choice, the active one gold; DARK MODE a `PixelSwitch`.
+    showing every choice, the active one gold. (DARK MODE was removed 2026-10-26.)
   - **PLAYER** (the cloud line on the right): a gold card with how you
     appear in leagues and online. Its pencil opens NAME (with your tag) and
     HOMETOWN, tidied as you type, the card following; SAVE checks both
@@ -554,7 +556,7 @@ shuffle's `NEXT SPOT` over `L ELBOW IN 3` (gold, stopwatch, staying while
 the seconds swap) and `NEW SPOT` over `MOVE TO L ELBOW` (gold, 1.6 s). The
 old centre banner and the 160 px digit are gone: nothing sits over the hoop
 while you shoot. `Hud.banner(text, color)` keeps its name; the mapping is
-the copy. **HUD SIDE** (Ross, 2026-10-24; the settings row under DARK MODE,
+the copy. **HUD SIDE** (Ross, 2026-10-24; the last GAME settings row,
 `App.hud_side`, the `hudSide` setting): `LEFT` is the design's layout;
 `RIGHT` mirrors the toasts to the right edge and moves the note to the
 bottom-right with the chevron on its left (`music_positions(side)`); the

@@ -7,7 +7,7 @@ extends HomePage
 ## fade at its foot until the end is in view:
 ##  • GAME, one panel: SHOT HELP (OFF / NUMBERS / NUMBERS + ARC), AI
 ##    DIFFICULTY (EASY / NORMAL / HARD) and HUD SIDE (LEFT / RIGHT) as
-##    pickers showing every choice, the active one gold; DARK MODE a switch.
+##    pickers showing every choice, the active one gold. (DARK MODE is gone: the game is dark everywhere, 2026-10-26.)
 ##  • PLAYER (the cloud line on the right): a gold card — how you appear in
 ##    leagues and online — whose pencil opens NAME (with your tag) and
 ##    HOMETOWN, the card following as you type; SAVE checks both and closes,
@@ -18,11 +18,8 @@ extends HomePage
 ##  • DANGER ZONE, last: MOVE TO NEW PHONE (the one-time code on the row),
 ##    ENTER CODE (the code field and CLAIM) and DELETE ACCOUNT in orange —
 ##    the first tap arms it (DELETE_ARM_S), the second deletes.
-## `closed` fires when it goes away; `dark_mode_changed` when the theme
-## flips so the screen behind can rebuild (the page wears the scene colours
-## on both palettes).
+## `closed` fires when it goes away.
 
-signal dark_mode_changed(on: bool)
 
 const GOLD := Color("#F0B84A")
 const MUTED := Color("#E6D9B8")
@@ -41,7 +38,6 @@ const DELETE_ARM_S := 8.0
 
 var _pickers: Dictionary = {}     # name → {value: ShadowCard}
 var _shot_sub: Label
-var _dark_switch: PixelSwitch
 var _tuning_switch: PixelSwitch
 var _gates_switch: PixelSwitch
 var _card_name: Label
@@ -172,14 +168,6 @@ func _build_game() -> void:
 	# HUD SIDE (Ross, 2026-10-24): the match toasts and the music note.
 	col.add_child(_picker("HudSide", "HUD SIDE", "TOASTS + MUSIC NOTE", [["left", "LEFT"], ["right", "RIGHT"]], App.hud_side, func(v: Variant) -> void:
 		App.set_hud_side(str(v))))
-	col.add_child(_rule())
-	var dark := _switch_row("DarkMode", "DARK MODE", "THE LIGHT OR DARK PALETTE", App.dark_mode)
-	_dark_switch = dark.find_child("Switch", true, false)
-	dark.pressed.connect(func() -> void:
-		App.set_dark_mode(not App.dark_mode)
-		_dark_switch.set_on(App.dark_mode)
-		dark_mode_changed.emit(App.dark_mode))
-	col.add_child(dark)
 
 
 ## TITLE ........ sub, then every choice in a row (the active one gold).
@@ -598,10 +586,6 @@ func has_tuning() -> bool:
 
 func has_gates() -> bool:
 	return _gates_switch != null
-
-
-func has_dark_mode() -> bool:
-	return _dark_switch != null
 
 
 func has_difficulty() -> bool:

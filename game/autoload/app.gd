@@ -68,9 +68,6 @@ const SHOT_HELP_NUMBERS := 1
 const SHOT_HELP_FULL := 2
 const SHOT_HELP_LABELS := ["OFF", "NUMBERS", "NUMBERS + ARC"]
 var shot_help := SHOT_HELP_OFF
-## The home screen's palette (RetroTheme): cream, or the dark twin. Persisted
-## in the settings part as darkMode.
-var dark_mode := false
 ## The live flick tunables, shared by every time trial in this session and
 ## seeded from the persisted overrides, so adjustments never reset between
 ## runs (the overlay also persists every adjustment as it happens).
@@ -186,7 +183,6 @@ func _ready() -> void:
 	if OS.is_debug_build():
 		league_gating = bool(saved.get("gates", false))
 	shot_help = shot_help_from_saved(SaveService.get_settings().get("shotHelp", SHOT_HELP_OFF))
-	dark_mode = bool(SaveService.get_settings().get("darkMode", false))
 	music_on = bool(SaveService.get_settings().get("musicOn", false))
 	ai_difficulty = AiDifficulty.normalize(SaveService.get_settings().get("aiDifficulty", AiDifficulty.DEFAULT))
 	hud_side = hud_side_from_saved(SaveService.get_settings().get("hudSide", "left"))
@@ -203,7 +199,6 @@ func _ready() -> void:
 func _on_save_pulled(parts: Array) -> void:
 	if parts.has(SaveService.SETTINGS_PART):
 		shot_help = shot_help_from_saved(SaveService.get_settings().get("shotHelp", SHOT_HELP_OFF))
-		dark_mode = bool(SaveService.get_settings().get("darkMode", false))
 		music_on = bool(SaveService.get_settings().get("musicOn", false))
 		ai_difficulty = AiDifficulty.normalize(SaveService.get_settings().get("aiDifficulty", AiDifficulty.DEFAULT))
 		hud_side = hud_side_from_saved(SaveService.get_settings().get("hudSide", "left"))
@@ -303,13 +298,6 @@ func set_hud_side(side: String) -> void:
 ## The settings row's tap: left ↔ right.
 func cycle_hud_side() -> void:
 	set_hud_side("right" if hud_side == "left" else "left")
-
-
-func set_dark_mode(on: bool) -> void:
-	dark_mode = on
-	var s := SaveService.get_settings()
-	s["darkMode"] = on
-	SaveService.put_settings(s)
 
 
 func set_shot_help(mode: int) -> void:
