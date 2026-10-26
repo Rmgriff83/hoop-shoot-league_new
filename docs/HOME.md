@@ -736,3 +736,22 @@ readings; with tuning mode on, every release appends its gesture to
 
 It prints each flick's old and new reading, the ratio (what to scale the
 band by) and the spread of each — the inconsistency before and after.
+
+## League post-match (design "League Post-Match v2" 6b, 2026-10-25)
+
+`game/screens/heat_result_screen.gd` in the time-trial results layout: the
+league's name as the title (`HeatCopy.title`) under `★ SEASON 2 · DAY 4`
+(`HeatCopy.kicker`; a playoff game reads `SEMI 2 · GAME 3`); the result (36
+gold / 28 cream), the score at 60 with the OT chip and `VS NAME · "NICK"`
+on the left, the gold `TicketBox` on the right that the `TicketStream`
+fills from the score on arrival (one flyer per two tickets, fifteen at
+most, the count ticking up); an `XpMeter` (`game/ui/xp_meter.gd`) under them
+that fills with the XP just earned once the tickets land (0.8 s, ease-out;
+`HeatCopy.level_meter` / `meter_text`: gold and pulsing on a level up, full
+at the cap); the box score at y 442 with the larger YOU / opponent chips
+and the better number in gold, a loss's bright spots in gold under the
+rows (rows 56, 50 with bright spots); a card drop in its own teal row with
+the live card and `+1 CARD`; CONTINUE SEASON and HOME on one 120 px row.
+An online match keeps its rank line (in the score block), its rewards /
+spoils / meter row under the box and REMATCH? / SHOOT AROUND? beside HOME.
+QA: `--qa-heat-result` (`heat_win_stream` mid-flight, `heat_win` settled).

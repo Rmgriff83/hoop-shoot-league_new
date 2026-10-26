@@ -47,7 +47,60 @@ static func game_line(tag: String, doc: Dictionary) -> String:
 
 static func result(heat: Dictionary) -> Dictionary:
 	var won := bool(heat.get("won", false))
-	return {"text": "YOU WIN" if won else "THEY TOOK IT", "size": 56 if won else 48, "gold": won}
+	return {"text": "YOU WIN" if won else "THEY TOOK IT", "size": 36 if won else 28, "gold": won}
+
+
+## The page title (design "League Post-Match v2" 6b, 2026-10-25): the league's
+## name (`ARCADE LEAGUE`); an online match's header; QUICK HEAT for the test heat.
+static func title(heat: Dictionary) -> String:
+	var league := league_of(heat)
+	if league.is_empty():
+		return MatchCopy.header(heat) if bool(heat.get("online", false)) else "QUICK HEAT"
+	return str(LeagueData.league(str(league.get("id", ""))).get("name", "LEAGUE")).to_upper()
+
+
+## The line over the title: `SEASON 2 · DAY 4` / `SEMI 2 · GAME 3`; "" outside a league.
+static func kicker(heat: Dictionary, doc: Dictionary) -> String:
+	var league := league_of(heat)
+	if league.is_empty() or doc.is_empty():
+		return ""
+	var game := game_line(str(league.get("game", "")), doc)
+	return game if bool(league.get("playoff", false)) or game.begins_with("SEMI") or game.begins_with("FINAL") \
+		else "SEASON %d · %s" % [LeagueSummary.year_of(doc), game]
+
+
+## The XP meter (6b): where the bar starts and ends this match, in the level
+## the player was in. {} outside a league. {level, need, from, to, gained, up,
+## cap}: `from` / `to` are XP into the level (`to` = need on a level up, the
+## bar fills to the end and the line turns gold); `cap` holds it full.
+static func level_meter(heat: Dictionary, xp_now: int) -> Dictionary:
+	var xp: Dictionary = heat.get("xp", {})
+	if league_of(heat).is_empty() or xp.is_empty():
+		return {}
+	var gained := int(xp.get("gained", 0))
+	var after := int(xp.get("level_after", Progression.level_for(xp_now)))
+	var before := int(xp.get("level_before", after))
+	var before_in: Array = Progression.xp_in_level(maxi(xp_now - gained, 0))
+	var now_in: Array = Progression.xp_in_level(xp_now)
+	var cfg := LeagueData.league(str(league_of(heat).get("id", "")))
+	var cap := not cfg.is_empty() and Progression.at_cap(xp_now, cfg)
+	var up := after > before
+	var need := int(now_in[1])
+	return {"level": after, "level_before": before, "need": need, "gained": gained, "up": up, "cap": cap and not up,
+		"from": int(before_in[0]), "to": need if up else (need if cap else int(now_in[0]))}
+
+
+## The meter's line at fill fraction `k` (0 … 1): `LEVEL 2 · 64/100 XP`
+## counting up, `LEVEL UP · LEVEL 3` once a level-up bar is full, `LEVEL 3 · CAP`.
+static func meter_text(m: Dictionary, k: float) -> String:
+	if m.is_empty():
+		return ""
+	if bool(m["cap"]):
+		return "LEVEL %d · CAP" % int(m["level"])
+	if bool(m["up"]) and k >= 1.0:
+		return "LEVEL UP · LEVEL %d" % int(m["level"])
+	var now := roundi(lerpf(float(m["from"]), float(m["to"]), clampf(k, 0.0, 1.0)))
+	return "LEVEL %d · %d/%d XP" % [int(m["level_before"]) if bool(m["up"]) else int(m["level"]), now, int(m["need"])]
 
 
 static func score_line(heat: Dictionary) -> String:

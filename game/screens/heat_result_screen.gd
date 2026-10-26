@@ -14,25 +14,39 @@ extends Node3D
 const MARGIN := 36.0
 const RIGHT := 720.0 - 42.0
 const SCRIM_ALPHA := 0.5
-const HEAD_Y := 80.0
-const BOX_Y := 392.0
+## The layout (design "League Post-Match v2" 6b, 2026-10-25, 720 × 1280).
+const HEAD_POS := Vector2(36, 48)
+const SCORE_POS := Vector2(48, 192)
+const SCORE_W := 390.0
+const TICKETS_RECT := Rect2(720.0 - 42.0 - 240.0, 204.0, 240.0, 124.0)
+const METER_Y := 372.0
+const BOX_Y := 442.0
 const BOX_W := 642.0
-const CARDS_Y := 814.0
-const CARD_H := 150.0
-const ROW_H := 50.0          # a box score row
-const ROW_H_BRIGHT := 44.0   # …when bright spots follow the rows
-const BRIGHT_H := 28.0       # a bright-spot line
-const ONLINE_CARD_H := 140.0 # the online rewards row (a little shorter: the meter sits under it)
+const BOX_HEAD_H := 54.0
+const COL_W := 140.0
+const ROW_H := 56.0          # a box score row
+const ROW_H_BRIGHT := 50.0   # …when bright spots follow the rows
+const BRIGHT_H := 32.0       # a bright-spot line
+const DROP_GAP := 30.0
+const DROP_H := 140.0
+const ONLINE_CARD_H := 140.0 # the online rewards row (the meter sits under it)
 const METER_H := 40.0        # the meter bar + line under the online rewards row
-const CONT_Y := 1002.0
-const CONT_H := 128.0
-const HOME_Y := 1158.0
-const HOME_H := 64.0
+const BUTTONS_Y := 1124.0
+const BUTTON_H := 120.0
+const BUTTON_GAP := 26
+const HOME_W := 170.0
+const CONT_H := BUTTON_H     # REMATCH? / SHOOT AROUND? share the foot
+const STREAM_START := 0.45
+const HI := Color("#FFCE8A")
 const CREAM := RetroTheme.SCENE_TEXT
 const GOLD := Color("#F0B84A")
 
 var _t := 0.0
 var _spec: Dictionary = {}
+var _box: TicketBox
+var _stream: TicketStream
+var _meter: XpMeter
+var _score_label: Label
 var _court: CourtGeometry
 var _cam: Camera3D
 
@@ -47,6 +61,7 @@ func _ready() -> void:
 	var league := HeatCopy.league_of(heat)
 	var lid := str(league.get("id", ""))
 	ui.add_child(build_chrome(heat, App.league_doc(lid) if lid != "" else {}, LeagueData.league(lid) if lid != "" else {}))
+	_start_fx.call_deferred()
 
 
 func _process(dt: float) -> void:
@@ -103,29 +118,45 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	var in_league := not HeatCopy.league_of(heat).is_empty()
 	var online := bool(heat.get("online", false))
 
-	# Header: the league line, the result, the score (+ OT), the opponent.
-	var head := _vbox(26)
+	# The head: ★ SEASON 2 · DAY 4 over the league's name, dithered.
+	var head := _vbox(16)
 	head.name = "Head"
-	head.position = Vector2(MARGIN, HEAD_Y)
+	head.position = HEAD_POS
 	head.size = Vector2(720 - 2 * MARGIN, 0)
 	chrome.add_child(head)
-	var hl := _text(HeatCopy.header(heat, doc))
-	hl.name = "Header"
-	hl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	head.add_child(hl)
+	var krow := _hbox(12)
+	krow.name = "KickerRow"
+	var star := PixelIcon.new("icon_star", Vector2(22, 22), 0.0)
+	star.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	krow.add_child(star)
+	var kicker := _text(HeatCopy.kicker(heat, doc), 18)
+	kicker.name = "Kicker"
+	krow.add_child(kicker)
+	krow.visible = kicker.text != ""
+	head.add_child(krow)
+	var title := _text(HeatCopy.title(heat), 36, CREAM, true)
+	title.name = "Title"
+	RetroTheme.dithered(title)
+	head.add_child(title)
+
+	# The score block, left: the result, the score (+ OT), the opponent.
+	var sb := _vbox(18)
+	sb.name = "ScoreBlock"
+	sb.position = SCORE_POS
+	sb.size = Vector2(SCORE_W, 0)
+	chrome.add_child(sb)
 	var res := HeatCopy.result(heat)
 	var rl := _text(str(res["text"]), int(res["size"]), GOLD if bool(res["gold"]) else CREAM, true)
 	rl.name = "Result"
-	rl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	RetroTheme.dithered(rl)
-	head.add_child(rl)
-	var score_row := _hbox(20)
-	score_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	head.add_child(score_row)
-	var sl := _text(HeatCopy.score_line(heat), 88, CREAM, true)
-	sl.name = "ScoreLine"
-	RetroTheme.dithered(sl)
-	score_row.add_child(sl)
+	sb.add_child(rl)
+	var score_row := _hbox(14)
+	score_row.name = "ScoreRow"
+	sb.add_child(score_row)
+	_score_label = _text(HeatCopy.score_line(heat), 60, CREAM, true)
+	_score_label.name = "ScoreLine"
+	RetroTheme.dithered(_score_label)
+	score_row.add_child(_score_label)
 	if HeatCopy.ot(heat):
 		var chip := ShadowPanel.new(GOLD, 0.0, 0.30, 12.0)
 		chip.name = "OT"
@@ -135,47 +166,53 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 		ot.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		chip.add_child(ot)
 		score_row.add_child(chip)
-	var vs := _text(HeatCopy.vs_line(heat), 20)
+	var vs := _text(HeatCopy.vs_line(heat), 18)
 	vs.name = "Vs"
-	vs.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	var shift := 0.0
+	vs.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	vs.custom_minimum_size = Vector2(SCORE_W, 0)
+	sb.add_child(vs)
 	if online:
 		# The rank line (docs/BACKEND.md → Ranked): the rating change and the
 		# badge once the room's decision lands; nothing for a casual match.
-		# A rated match keeps the row (everything below drops with it) even
-		# while the decision is still on its way.
 		var rank_l := _text(MatchCopy.rank_delta_line(heat), 18, GOLD, true)
 		rank_l.name = "RankLine"
-		rank_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		rank_l.visible = rank_l.text != ""
-		App.online_settled.connect(func(s: Dictionary) -> void:
+		App.online_settled.connect(func(st: Dictionary) -> void:
 			if is_instance_valid(rank_l):
-				rank_l.text = MatchCopy.rank_delta_line(s)
+				rank_l.text = MatchCopy.rank_delta_line(st)
 				rank_l.visible = rank_l.text != ""
 		, CONNECT_ONE_SHOT)
-		head.add_child(rank_l)
-		if bool(heat.get("ranked", false)):
-			shift = 42.0
-	head.add_child(vs)
-	# The level line (docs/PROGRESSION.md) adds a row: everything below drops with it.
-	var lv := HeatCopy.level_line(heat, App.xp())
-	if not lv.is_empty():
-		var ll := _text(str(lv["text"]), 16, GOLD if bool(lv["gold"]) else CREAM, true)
-		ll.name = "LevelLine"
-		ll.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		head.add_child(ll)
-		shift = 42.0
+		sb.add_child(rank_l)
+
+	# The tickets box, right, and the stream into it (TicketBox / TicketStream,
+	# as the time-trial results page); the XP meter under both.
+	if in_league:
+		var ck := HeatCopy.rewards(heat)
+		var tk := int(heat.get("tickets", 0))
+		_box = TicketBox.new(TICKETS_RECT.size.y, 64.0, 30, 14, 20.0, 18.0, 64.0, 0.0, TICKETS_RECT.size.x)
+		_box.position = TICKETS_RECT.position
+		_box.set_count(tk)
+		_box.set_sub(str(ck.get("sub", "TICKETS")))
+		chrome.add_child(_box)
+		var m := HeatCopy.level_meter(heat, App.xp())
+		if not m.is_empty():
+			_meter = XpMeter.new(m, BOX_W)
+			_meter.position = Vector2(MARGIN, METER_Y)
+			chrome.add_child(_meter)
 
 	# The box score.
-	var box := ShadowPanel.new(CREAM, 14.0, 0.14, 24.0)
+	var bright := HeatCopy.bright_lines(heat)
+	var row_h := ROW_H_BRIGHT if not bright.is_empty() else ROW_H
+	var box := ShadowPanel.new(CREAM, 12.0, 0.14, 26.0)
 	box.name = "Box"
-	box.position = Vector2(MARGIN, BOX_Y + shift)
-	box.size = Vector2(BOX_W + ShadowStyle.OFFSET, 0)
+	box.position = Vector2(MARGIN, BOX_Y)
+	var box_h := box_height(bright.size())
+	box.size = Vector2(BOX_W + ShadowStyle.OFFSET, box_h + ShadowStyle.OFFSET)
 	chrome.add_child(box)
 	var bcol := _vbox(0)
 	box.add_child(bcol)
 	var bh := _hbox(0)
-	bh.custom_minimum_size = Vector2(0, 52)
+	bh.custom_minimum_size = Vector2(0, BOX_HEAD_H)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -183,11 +220,11 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	var oc := HeatCopy.opponent_chip(heat)
 	for spec in [["YOU", RetroTheme.c("orange"), 0.30, "YouChip"], [str(oc["text"]), oc["color"], 0.40, "ThemChip"]]:
 		var cell := _hbox(0)
-		cell.custom_minimum_size = Vector2(150, 0)
+		cell.custom_minimum_size = Vector2(COL_W, 0)
 		cell.alignment = BoxContainer.ALIGNMENT_END
 		var chip := ShadowPanel.new(spec[1], 0.0, float(spec[2]), 12.0)
 		chip.name = str(spec[3])
-		chip.custom_minimum_size = Vector2(0, 36 + ShadowStyle.OFFSET)
+		chip.custom_minimum_size = Vector2(0, 38 + ShadowStyle.OFFSET)
 		chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		var l := _text(str(spec[0]), 16, CREAM, true)
 		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -195,116 +232,98 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 		cell.add_child(chip)
 		bh.add_child(cell)
 	bcol.add_child(bh)
-	# The bright spots of a loss (docs/CARDS.md § Drops) sit in gold under
-	# the rows; the rows slim a little to keep the box above the rewards.
-	var bright := HeatCopy.bright_lines(heat)
 	for r in HeatCopy.box(heat):
-		bcol.add_child(_box_row(r, ROW_H_BRIGHT if not bright.is_empty() else ROW_H))
+		bcol.add_child(_box_row(r, row_h))
+	# The bright spots of a loss (docs/CARDS.md § Drops), in gold under the rows.
 	for line in bright:
-		var bl := _text(str(line), 14, GOLD, true)
+		var bl := _text(str(line), 17, GOLD)
 		bl.name = "Bright"
 		bl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		bl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		bl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		bl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		bl.custom_minimum_size = Vector2(0, BRIGHT_H)
 		bcol.add_child(bl)
+	var below := BOX_Y + box_h + DROP_GAP
 
-	# The tickets beside the card drop, CONTINUE SEASON, HOME. An online match
-	# pays nothing yet (docs/BACKEND.md → Cards online): no rewards row, HOME.
+	# A card drop gets its own teal row under the box, the live card in it.
 	if in_league:
-		var cards := _hbox(26 - int(ShadowStyle.OFFSET))
-		cards.name = "Cards"
-		cards.position = Vector2(MARGIN, CARDS_Y + shift)
-		cards.size = Vector2(RIGHT - MARGIN + ShadowStyle.OFFSET, CARD_H + ShadowStyle.OFFSET)
-		chrome.add_child(cards)
-		var ck := HeatCopy.rewards(heat)
-		var rewards := ShadowPanel.new(GOLD, 0.0, 0.22, 22.0)
-		rewards.name = "Rewards"
-		rewards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		rewards.custom_minimum_size = Vector2(0, CARD_H + ShadowStyle.OFFSET)
-		var cr := _hbox(18)
-		cr.alignment = BoxContainer.ALIGNMENT_BEGIN
-		var ticket := PixelIcon.new("icon_ticket", Vector2(48, 32), 3.0)
-		ticket.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		cr.add_child(ticket)
-		var cc := _vbox(12)
-		cc.alignment = BoxContainer.ALIGNMENT_CENTER
-		var big := _text(str(ck.get("big", "+0")), 32, CREAM, true)
-		big.name = "RewardsBig"
-		cc.add_child(big)
-		var sub_l := _text(str(ck.get("sub", "")))
-		sub_l.name = "RewardsSub"
-		cc.add_child(sub_l)
-		var t2 := _text(str(ck.get("sub2", "")))
-		t2.name = "XpLine"
-		t2.visible = str(ck.get("sub2", "")) != ""
-		cc.add_child(t2)
-		cr.add_child(cc)
-		rewards.add_child(cr)
-		cards.add_child(rewards)
 		var card := HeatCopy.drop(heat)
 		if not card.is_empty():
-			var dp := ShadowPanel.new(RetroTheme.c("teal"), 0.0, 0.22, 20.0)
+			var dp := ShadowPanel.new(RetroTheme.c("teal"), 0.0, 0.22, 24.0)
 			dp.name = "Drop"
-			dp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			dp.custom_minimum_size = Vector2(0, CARD_H + ShadowStyle.OFFSET)
-			var dr := _hbox(18)
-			var art := ModeCards.art(card, Vector2(84, 112), 4.0)
+			dp.position = Vector2(MARGIN, below)
+			dp.size = Vector2(BOX_W + ShadowStyle.OFFSET, DROP_H + ShadowStyle.OFFSET)
+			var dr := _hbox(22)
+			var art := ModeCards.art(card, Vector2(78, 104), 5.0)
 			art.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			dr.add_child(art)
-			var dc := _vbox(12)
+			var dc := _vbox(14)
 			dc.alignment = BoxContainer.ALIGNMENT_CENTER
 			dc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			var cap_l := _text(HeatCopy.drop_caption(heat), 14, CREAM, true)
+			var cap_l := _text(HeatCopy.drop_caption(heat), 16)
 			cap_l.name = "DropCaption"
 			cap_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			dc.add_child(cap_l)
-			var nm := _text(str(card.get("name", "")).to_upper().replace(" ", "\n"), 16, CREAM, true)
+			var nm := _text(str(card.get("name", "")).to_upper(), 22, CREAM, true)
 			nm.name = "DropName"
+			nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			nm.add_theme_constant_override("line_spacing", 6)
 			dc.add_child(nm)
 			dr.add_child(dc)
+			var plus := _text("+1 CARD", 16, HI)
+			plus.name = "DropPlus"
+			plus.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			dr.add_child(plus)
 			dp.add_child(dr)
-			cards.add_child(dp)
-		if in_league:
-			var cont := ShadowCard.new(RetroTheme.c("orange"))
-			cont.name = "ContinueSeason"
-			cont.position = Vector2(MARGIN, CONT_Y + shift)
-			cont.size = Vector2(RIGHT - MARGIN + ShadowStyle.OFFSET, CONT_H + ShadowStyle.OFFSET)
-			var cm := _margin(0, 24)
-			cont.add_child(cm)
-			var crow := _hbox(16)
-			cm.add_child(crow)
-			var ccol := _vbox(14)
-			ccol.alignment = BoxContainer.ALIGNMENT_CENTER
-			ccol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			ccol.add_child(_text("CONTINUE SEASON", 24, CREAM, true))
-			var sub := _text(HeatCopy.continue_sub(doc, cfg))
-			sub.name = "ContinueSub"
-			ccol.add_child(sub)
-			crow.add_child(ccol)
-			var ch := _text(">", 32, CREAM, true)
-			ch.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-			crow.add_child(ch)
-			cont.pressed.connect(App.to_league_hub)
-			chrome.add_child(cont)
+			chrome.add_child(dp)
+
+	# The foot: CONTINUE SEASON beside HOME (a league), REMATCH? / SHOOT
+	# AROUND? beside HOME (an open online room), HOME alone otherwise.
+	var foot := _hbox(BUTTON_GAP - int(ShadowStyle.OFFSET))
+	foot.name = "Buttons"
+	foot.position = Vector2(MARGIN, BUTTONS_Y)
+	foot.size = Vector2(BOX_W + ShadowStyle.OFFSET, BUTTON_H + ShadowStyle.OFFSET)
+	foot.alignment = BoxContainer.ALIGNMENT_END
+	chrome.add_child(foot)
+	if in_league:
+		var cont := ShadowCard.new(RetroTheme.c("orange"))
+		cont.name = "ContinueSeason"
+		cont.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		cont.custom_minimum_size = Vector2(0, BUTTON_H + ShadowStyle.OFFSET)
+		var cm := _margin(0, 24)
+		cont.add_child(cm)
+		var crow := _hbox(16)
+		cm.add_child(crow)
+		var ccol := _vbox(14)
+		ccol.alignment = BoxContainer.ALIGNMENT_CENTER
+		ccol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		ccol.add_child(_text("CONTINUE SEASON", 22, CREAM, true))
+		var sub := _text(HeatCopy.continue_sub(doc, cfg), 15)
+		sub.name = "ContinueSub"
+		ccol.add_child(sub)
+		crow.add_child(ccol)
+		var ch := _text(">", 30, CREAM, true)
+		ch.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		crow.add_child(ch)
+		cont.pressed.connect(App.to_league_hub)
+		foot.add_child(cont)
 	if online:
 		# Stage B (docs/BACKEND.md → Ranked → Stage B): the tickets beside the
-		# spoils / the granted card, the meter under them, then REMATCH? (and
-		# SHOOT AROUND? after a losing stretch). Filled now and again when the
-		# room's decision lands.
+		# spoils / the granted card and the meter under them, between the box
+		# and the foot; REMATCH? (and SHOOT AROUND?) in the foot. Filled now and
+		# again when the room's decision lands.
 		var rewards_box := Control.new()
 		rewards_box.name = "OnlineRewards"
-		rewards_box.position = Vector2(MARGIN, CARDS_Y + shift)
-		rewards_box.size = Vector2(RIGHT - MARGIN + ShadowStyle.OFFSET, ONLINE_CARD_H + ShadowStyle.OFFSET + METER_H)
+		rewards_box.position = Vector2(MARGIN, below)
+		rewards_box.size = Vector2(BOX_W + ShadowStyle.OFFSET, ONLINE_CARD_H + ShadowStyle.OFFSET + METER_H)
 		rewards_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		chrome.add_child(rewards_box)
 		_fill_online_rewards(rewards_box, heat)
-		var bottom := _hbox(16)
+		var bottom := _hbox(BUTTON_GAP - int(ShadowStyle.OFFSET))
 		bottom.name = "OnlineBottom"
-		bottom.position = Vector2(MARGIN, CONT_Y + shift)
-		bottom.size = Vector2(RIGHT - MARGIN + ShadowStyle.OFFSET, CONT_H + ShadowStyle.OFFSET)
-		chrome.add_child(bottom)
+		bottom.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		foot.add_child(bottom)
 		_fill_online_bottom(bottom)
 		App.online_settled.connect(func(_s: Dictionary) -> void:
 			if is_instance_valid(rewards_box):
@@ -314,15 +333,43 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 		, CONNECT_ONE_SHOT)
 	var home := ShadowCard.new(CREAM)
 	home.name = "Home"
-	home.position = Vector2(MARGIN, HOME_Y + shift)
-	home.size = Vector2(RIGHT - MARGIN + ShadowStyle.OFFSET, HOME_H + ShadowStyle.OFFSET)
+	home.custom_minimum_size = Vector2(HOME_W + ShadowStyle.OFFSET, BUTTON_H + ShadowStyle.OFFSET)
 	home.text = "HOME"
 	home.add_theme_font_override("font", UiFont.display())
-	home.add_theme_font_size_override("font_size", UiFont.snap(16))
+	home.add_theme_font_size_override("font_size", UiFont.snap(20))
 	RetroTheme.on_scene(home)
 	home.pressed.connect(App.to_title)
-	chrome.add_child(home)
+	foot.add_child(home)
+
+	_stream = TicketStream.new()
+	_stream.name = "Stream"
+	_stream.tickets = int(heat.get("tickets", 0)) if in_league else 0
+	chrome.add_child(_stream)
 	return chrome
+
+
+## The box score's height for `bright` bright-spot lines (the design's
+## 12 + 54 + 6 rows + the lines + 16 + the borders).
+static func box_height(bright: int) -> float:
+	var rows := HeatCopy.ROWS.size()
+	return 12.0 + BOX_HEAD_H + rows * (ROW_H_BRIGHT if bright > 0 else ROW_H) + bright * BRIGHT_H + 16.0 + 4.0
+
+
+## The arrival (deferred: the layout must have settled): the tickets stream
+## from the score into the box and count up, then the XP meter fills.
+func _start_fx() -> void:
+	var fill_at := STREAM_START
+	if _box != null and _stream != null and _stream.tickets > 0:
+		_box.set_count(0)
+		var from := _score_label.get_global_rect().get_center() if _score_label != null else Vector2(160, 300)
+		_stream.count_changed.connect(func(n: int) -> void:
+			_box.set_count(n)
+			_box.bump()
+		)
+		_stream.play(from, _box.icon_center(), _stream.tickets, STREAM_START)
+		fill_at = STREAM_START + float(TicketStream.count(_stream.tickets)) * TicketStream.GAP + TicketStream.DUR
+	if _meter != null:
+		_meter.play(fill_at)
 
 
 ## The online rewards row (MatchCopy.spoils_panel / HeatCopy.rewards): the
@@ -508,13 +555,13 @@ func _box_row(r: Dictionary, h := ROW_H) -> Control:
 	var row := _hbox(0)
 	row.name = "Row_" + str(r["l"]).replace(" ", "_")
 	row.custom_minimum_size = Vector2(0, h)
-	var l := _text(str(r["l"]))
+	var l := _text(str(r["l"]), 19)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(l)
 	for spec in [[str(r["a"]), r["hi"] == "a"], [str(r["b"]), r["hi"] == "b"]]:
-		var c := _text(spec[0], 16, GOLD if bool(spec[1]) else CREAM, true)
-		c.custom_minimum_size = Vector2(150, 0)
+		var c := _text(spec[0], 20, GOLD if bool(spec[1]) else CREAM, true)
+		c.custom_minimum_size = Vector2(COL_W, 0)
 		c.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		c.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		row.add_child(c)

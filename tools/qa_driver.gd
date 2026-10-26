@@ -754,7 +754,9 @@ func _run_heat_result() -> void:
 			"ai": {"makes": 18, "attempts": 31, "swishes": 6, "bestStreak": 6, "bonus": 7, "iced": 0}}}
 	App.last_heat = base
 	get_tree().change_scene_to_file(App.HEAT_RESULT_SCENE)
-	await _sleep(1.2)
+	await _sleep(0.9)
+	await _snap("heat_win_stream")   # the tickets mid-flight (design 6b)
+	await _sleep(3.4)   # past the stream and the XP fill: LEVEL UP in gold
 	await _snap("heat_win")
 	var loss := base.duplicate(true)
 	loss["won"] = false
