@@ -30,7 +30,7 @@ const HOME_W := 200.0
 ## The stream (design 7a): from the score into the box, after this long.
 const STREAM_START := 0.45
 const CREAM := RetroTheme.SCENE_TEXT
-const HI := Color("#FFCE8A")
+const HI := Color("#FFE45C")
 const GOLD := Color("#F0B84A")
 
 var _t := 0.0

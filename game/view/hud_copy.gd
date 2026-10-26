@@ -11,7 +11,7 @@ const TOAST_S := 2.8
 ## ticking down, faded — 1.7 s in all.
 const WAIT_TOAST_S := 1.7
 const SHOOTING_TOAST_S := 1.6
-const POP_CREAM := Color("#F1E8D0")
+const POP_CREAM := Color("#FFFFFF")
 const POP_GOLD := Color("#F0B84A")
 const POP_ORANGE := Color("#E8703A")
 

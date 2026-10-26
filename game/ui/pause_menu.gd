@@ -16,7 +16,7 @@ signal net_changed(id: String)
 
 const DIM := Color("#1B1815", 0.78)
 const CREAM := RetroTheme.SCENE_TEXT
-const HI := Color("#FFCE8A")
+const HI := Color("#FFE45C")
 
 var _help_value: Label
 var _ball_value: Label

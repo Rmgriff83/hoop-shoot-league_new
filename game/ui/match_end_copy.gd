@@ -10,7 +10,7 @@ extends RefCounted
 
 const GOLD := Color("#F0B84A")
 const ORANGE := Color("#E8703A")
-const CREAM := Color("#F1E8D0")
+const CREAM := Color("#FFFFFF")
 const BLUE := Color("#7FAEC6")
 const PALETTE_WIN := [ORANGE, GOLD, CREAM]
 const PALETTE_PLAYOFF := [GOLD, ORANGE, CREAM]

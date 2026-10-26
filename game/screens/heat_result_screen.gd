@@ -37,7 +37,7 @@ const BUTTON_GAP := 26
 const HOME_W := 170.0
 const CONT_H := BUTTON_H     # REMATCH? / SHOOT AROUND? share the foot
 const STREAM_START := 0.45
-const HI := Color("#FFCE8A")
+const HI := Color("#FFE45C")
 const CREAM := RetroTheme.SCENE_TEXT
 const GOLD := Color("#F0B84A")
 

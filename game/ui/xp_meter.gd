@@ -10,7 +10,7 @@ extends Control
 const FILL_S := 0.8
 const BAR_H := 12.0
 const GOLD := Color("#F0B84A")
-const HI := Color("#FFCE8A")
+const HI := Color("#FFE45C")
 const CREAM := RetroTheme.SCENE_TEXT
 
 var manual := false

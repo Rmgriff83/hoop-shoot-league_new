@@ -853,3 +853,15 @@ for in gold, the title as written, BY the author, the licence as a chip
 (teal for an open licence, cream for "see the … page"), and the source
 link. The list scrolls without a bar, and a fade at its foot hides once the
 end is in view. `--qa-credits` snaps each tab.
+
+## Palette (design "Palette", 2026-10-25)
+
+The base light tone moved from cream `#F1E8D0` to pure white `#FFFFFF`:
+`RetroTheme.SCENE_TEXT` (every word, default face edges, fills and the dots
+drawn in code), the dithered shadow (`SCENE_SHADOW`), the dark theme's
+ink / text, the pages' own `CREAM` constants, and the cream pixels of the UI
+icons (gear, jersey, lock, stopwatch, multiplayer, Discord, Reddit). The
+secondary highlight moved from peach `#FFCE8A` to butter `#FFE45C` (THIS RUN,
+your loadout count, small accent labels). Not changed: the light theme's
+paper `bg` (still cream), the REVIEW tones (bright cream `#FFF3D0`, muted
+`#A89E94`), the `#E6D9B8` sub-line tone, and 3D scene and shooter colours.

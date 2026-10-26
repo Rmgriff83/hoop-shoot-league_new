@@ -16,7 +16,7 @@ const CHIP := 40.0
 const CHIP_GAP := 8.0
 const MAX_TROPHIES := 5
 const CREAM := RetroTheme.SCENE_TEXT
-const HI := Color("#FFCE8A")
+const HI := Color("#FFE45C")
 
 
 # ---- the cards -------------------------------------------------------------------

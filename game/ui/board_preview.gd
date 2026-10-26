@@ -12,7 +12,7 @@ const ROW_H := 30.0
 const ROW_GAP := 22.0
 const YOU_GAP := 10.0
 const TOP := 5
-const YOU := Color("#FFCE8A")
+const YOU := Color("#FFE45C")
 const CREAM := RetroTheme.SCENE_TEXT
 
 var _col: VBoxContainer

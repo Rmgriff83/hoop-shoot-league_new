@@ -21,7 +21,7 @@ signal tab_changed(tab: String)
 const TABS := ["HEAT", "TABLE", "SCHED", "CARDS", "STATS"]
 const TAB_LABELS := {"HEAT": "MATCH"}
 const PINE := Color("#3E7C4F")
-const HI := Color("#FFCE8A")
+const HI := Color("#FFE45C")
 const BLUE := Color("#7FAEC6")
 const CREAM := RetroTheme.SCENE_TEXT
 const MUTED := RetroTheme.SCENE_MUTED

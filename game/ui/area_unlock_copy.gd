@@ -7,7 +7,7 @@ const GOLD := Color("#F0B84A")
 const ORANGE := Color("#E8703A")
 const TEAL := Color("#3F8C7A")
 const BLUE := Color("#7FAEC6")
-const CREAM := Color("#F1E8D0")
+const CREAM := Color("#FFFFFF")
 ## The rays' colour and the confetti palette per area.
 const LOOK := {
 	"beach": {"ray": ORANGE, "palette": [ORANGE, GOLD, BLUE, CREAM]},

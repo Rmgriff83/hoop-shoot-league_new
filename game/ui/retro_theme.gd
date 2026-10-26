@@ -15,7 +15,7 @@ const LIGHT := {
 	"teal": Color("#3F8C7A"), "blue": Color("#7FAEC6"),
 }
 const DARK := {
-	"bg": Color("#1B1815"), "ink": Color("#F1E8D0"), "text": Color("#F1E8D0"),
+	"bg": Color("#1B1815"), "ink": Color("#FFFFFF"), "text": Color("#FFFFFF"),
 	"card_text": Color("#1B1815"), "panel": Color("#2A2622"), "muted": Color("#B8AE9E"),
 	"shadow": Color("#000000"), "orange": Color("#D16534"), "gold": Color("#D8A643"),
 	"teal": Color("#397E6E"), "blue": Color("#729DB2"),
@@ -31,7 +31,7 @@ const PRESSED_SHADOW := Vector2(1, 1)
 ## A strip's edge line (the ticker), since strips carry no shadow.
 const RULE := 3
 ## Text over the court: cream with an ink outline, the same in both palettes.
-const SCENE_TEXT := Color("#F1E8D0")
+const SCENE_TEXT := Color("#FFFFFF")   # pure white since 2026-10-25 (Palette: was cream #F1E8D0)
 const SCENE_OUTLINE := Color("#221C18")
 const OUTLINE := 3
 ## Quieter text over the court: the muted cream (a label under a number),
@@ -39,7 +39,7 @@ const OUTLINE := 3
 ## a headline (cream at half strength, halved again by the checker).
 const SCENE_MUTED := Color("#E6D9B8")
 const SCENE_DIM := Color("#CFC3A3")
-const SCENE_SHADOW := Color("#F1E8D0", 0.5)
+const SCENE_SHADOW := Color("#FFFFFF", 0.5)
 ## The design's (7, 7), pulled well in (Ross, 2026-09-26).
 const TEXT_SHADOW := Vector2(4, 4)
 ## The active tab's face: solid cream with tan dots and an orange shadow.
