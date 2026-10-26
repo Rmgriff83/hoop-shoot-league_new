@@ -97,7 +97,7 @@ func build(v: Dictionary) -> Control:
 		_flash = ColorRect.new()
 		_flash.name = "Flash"
 		_flash.color = Color("#FFF3D0")
-		UiLayout.full_rect(_flash)
+		UiLayout.full_screen_fill(_flash)
 		_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_flash.modulate.a = 0.0
 		_root.add_child(_flash)
@@ -110,8 +110,10 @@ func _backdrop(scrim: float) -> void:
 	var base := ColorRect.new()
 	base.name = "Base"
 	base.color = Color("#171311")
-	UiLayout.full_rect(base)
-	base.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# Past the band to the screen's edges (the root keeps the band's coordinates
+	# for everything placed on it), and a tap out there still reaches the root.
+	UiLayout.full_screen_fill(base)
+	base.mouse_filter = Control.MOUSE_FILTER_PASS
 	_root.add_child(base)
 	for spec in [["Hall", "cage_hall.png", 330.0, 180.0, Vector2(720, 180)], ["Carpet", "cage_carpet.png", 510.0, H - 510.0, Vector2(192, 192)]]:
 		var path := "res://assets/textures/%s" % spec[1]
@@ -120,8 +122,9 @@ func _backdrop(scrim: float) -> void:
 		var tr := TextureRect.new()
 		tr.name = spec[0]
 		tr.texture = load(path)
-		tr.position = Vector2(0, spec[2])
-		tr.size = Vector2(W, spec[3])
+		tr.position = Vector2(-UiLayout.offset().x, spec[2])
+		# The carpet runs on under the band to the screen's bottom edge.
+		tr.size = Vector2(UiLayout.canvas().x if UiLayout.canvas().x > 0.0 else W, spec[3] + (UiLayout.offset().y if spec[0] == "Carpet" else 0.0))
 		tr.stretch_mode = TextureRect.STRETCH_TILE
 		tr.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -129,7 +132,7 @@ func _backdrop(scrim: float) -> void:
 	var sc := ColorRect.new()
 	sc.name = "Scrim"
 	sc.color = Color(DARK, scrim)
-	UiLayout.full_rect(sc)
+	UiLayout.full_screen_fill(sc)
 	sc.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(sc)
 
