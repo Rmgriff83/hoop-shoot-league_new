@@ -744,53 +744,31 @@ func _switch(dir: int) -> void:
 	_switching = false
 
 
-## The chip over a chevron while the next area loads: ⟳ BEACH… (cream, 60 tall).
-func _area_chip(i: int, chev: Control) -> Control:
+## The chip over a chevron while the next area loads (Ross, 2026-10-25: just
+## the spinner, no words): a 60 px cream box with the pixel spinner in it.
+const AREA_CHIP := 60.0
+
+func _area_chip(_i: int, chev: Control) -> Control:
 	if _chrome == null:
 		return null
-	var arena := CosmeticLibrary.get_arena(str(CARDS[i]["area"]))
-	var word := str(arena.display_name).to_upper() if arena != null else str(CARDS[i]["area"]).to_upper()
-	var chip := ShadowPanel.new(RetroTheme.SCENE_TEXT, 0.0, 0.22, 18.0)
+	var chip := ShadowPanel.new(RetroTheme.SCENE_TEXT, 0.0, 0.22, 0.0)
 	chip.name = "AreaChip"
 	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 14)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	chip.add_child(row)
+	chip.custom_minimum_size = Vector2.ONE * (AREA_CHIP + ShadowStyle.OFFSET)
 	var spin := PixelSpinner.new(32.0)
+	spin.name = "Spinner"
+	spin.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	spin.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(spin)
-	var l := AreaChipWords.new(word)
-	l.name = "AreaChipWords"
-	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	row.add_child(l)
-	chip.custom_minimum_size = Vector2(0, 60 + ShadowStyle.OFFSET)
+	chip.add_child(spin)
 	_chrome.add_child(chip)
 	chip.reset_size()
-	var w := maxf(chip.get_combined_minimum_size().x, 160.0)
+	var w := AREA_CHIP + ShadowStyle.OFFSET
 	var cy := (chev.position.y + chev.size.y * 0.5) if chev != null else float(_lay["chevron_y"]) + 88.0
-	var x := 8.0 if (chev == null or chev == _prev) else 720.0 - 8.0 - w
-	chip.position = Vector2(x, cy - (60.0 + ShadowStyle.OFFSET) * 0.5)
+	var cx := (chev.position.x + chev.size.x * 0.5) if chev != null else (36.0 if chev == _prev else 684.0)
+	chip.position = Vector2(clampf(cx - w * 0.5, 8.0, 720.0 - 8.0 - w), cy - w * 0.5)
 	if chev != null:
 		chev.modulate.a = 0.0
 	return chip
-
-
-## The area's name with LOADING's dots after it.
-class AreaChipWords extends Label:
-	var _word := ""
-	var _t := 0.0
-	func _init(word: String) -> void:
-		_word = word
-		add_theme_font_override("font", UiFont.display())
-		add_theme_font_size_override("font_size", UiFont.snap(16))
-		RetroTheme.on_scene(self)
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		text = word
-		custom_minimum_size = Vector2(UiFont.snap(16) * (word.length() + 3), 0)
-	func _process(dt: float) -> void:
-		_t += dt
-		text = _word + LoadingCopy.dots(_t)
 
 
 ## Load card `i`'s arena and hoop models on threads (the old court keeps
