@@ -582,11 +582,22 @@ the 30S MODE row (`ToggleSwitch`) under PAUSE and, under that, the spot rail
 (design 5a, 2026-10-05): a column of 150 × 56 `ShadowCard` chips at x 36 / y 200,
 the spot you stand on in orange, with a 44 × 56 chevron beside the column that
 slides the whole rail 200 px off the left edge and back (`--qa-spots` snaps
-`spots_00..02`). The pause menu is shared (`game/ui/pause_menu.gd`, `PauseMenu`):
-PAUSED, RESUME, SHOT HELP (taps cycle the value), BALL (taps cycle the owned
-balls; the equip is global), NET (taps cycle every owned net, any kind on
-any court; the equip is this court's — docs/LOCKER.md → NETS), QUIT TO TITLE — the old
-BACK button lives there now.
+`spots_00..02`). The pause menu is shared (`game/ui/pause_menu.gd`,
+`PauseMenu`; design "Pause Menu" 43a, 2026-10-25): the dim over the frozen
+match, PAUSED in gold over where you are (`ARCADE LEAGUE · OT1 · 41.7 LEFT ·
+12-9`, `TIME TRIAL · 41.7 LEFT · SCORE 12`, `PRACTICE · BEACH` — each
+screen's `_pause_info`), QUIT TO TITLE in two taps (the first arms it for 4 s
+in orange with what it costs: `THE MATCH WON'T BE PLAYED` in a league,
+`THE MATCH COUNTS AS A LOSS` online, `THIS RUN WON'T COUNT` in a trial),
+OPTIONS · TAP TO CHANGE over three tiles — SHOT HELP (its `icon_aim_*`
+icon), BALL and NET (their thumbnails) with the value and a gold caret — and
+the orange RESUME at the bottom right (`BACK TO THE MATCH · THE CLOCK PICKS
+UP AT 41.7`). A tile opens a popover under it, the rest dimmed: the owned
+balls / nets as a 5-wide grid of thumbnails (scrolling past 250 px) with the
+pick's name, or shot help as three rows; the current pick gold; picking
+equips it (the ball globally, the net on this court — docs/LOCKER.md → NETS)
+and closes; the dim, its X or the tile again close it; a tile with one
+owned option shows no caret and does not open.
 
 **League match** (design "League Match HUD", `game/screens/heat_screen.gd`):
 the same row with two 162×50 score cards in place of SCORE — YOU in orange,

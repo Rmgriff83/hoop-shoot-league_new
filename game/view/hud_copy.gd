@@ -88,6 +88,32 @@ static func toast_for(text: String, color: Color) -> Dictionary:
 	return out
 
 
+## The pause menu (design 43a, 2026-10-25). Under PAUSED: where you are,
+## `ARCADE LEAGUE · 41.7 LEFT · 12-9` (the parts the screen knows).
+static func pause_context(parts: Array) -> String:
+	var out := PackedStringArray()
+	for p in parts:
+		if str(p) != "":
+			out.append(str(p))
+	return " · ".join(out)
+
+
+## RESUME's line: when the clock picks up (`left` < 0: no clock, practice).
+static func pause_resume_sub(left: float) -> String:
+	if left < 0.0:
+		return "BACK TO PRACTICE · NO CLOCK"
+	return "BACK TO THE MATCH · THE CLOCK PICKS UP AT %.1f" % maxf(left, 0.0)
+
+
+## What the second tap of QUIT costs, by kind: trial / league / online / practice.
+static func pause_quit_note(kind: String) -> String:
+	match kind:
+		"online": return "THE MATCH COUNTS AS A LOSS"
+		"league": return "THE MATCH WON'T BE PLAYED"
+		"trial": return "THIS RUN WON'T COUNT"
+	return ""
+
+
 ## The next ball's wait on its mini toast: `0.8S` (never below 0.0S).
 static func wait_title(seconds: float) -> String:
 	return "%.1fS" % maxf(0.0, seconds)

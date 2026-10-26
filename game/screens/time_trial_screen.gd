@@ -516,8 +516,18 @@ func toggle_music() -> void:
 func pause_game() -> void:
 	if _pause_layer == null or _finished_handed_off or _tutorial != null:
 		return
-	_pause_layer.open()
+	_pause_layer.open(_pause_info())
 	get_tree().paused = true
+
+
+## The pause menu's words (design 43a): where you are, when the clock picks
+## up, what QUIT costs. The heat screen tells its own.
+func _pause_info() -> Dictionary:
+	if _practice:
+		var where := str(_arena_set.display_name).to_upper() if _arena_set != null else ""
+		return {"context": HudCopy.pause_context(["PRACTICE", where]), "resume_sub": HudCopy.pause_resume_sub(-1.0), "quit_note": ""}
+	return {"context": HudCopy.pause_context(["TIME TRIAL", "%.1f LEFT" % trial.time_left, "SCORE %d" % trial.score]),
+		"resume_sub": HudCopy.pause_resume_sub(trial.time_left), "quit_note": HudCopy.pause_quit_note("trial")}
 
 
 func resume_game() -> void:

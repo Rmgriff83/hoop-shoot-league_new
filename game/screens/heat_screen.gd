@@ -646,6 +646,29 @@ func _restore_slot(i: int, id: String) -> void:
 
 
 ## Whose cards these are: the league's bucket, or `online` for a room.
+## The pause menu's words for a match: the league (or ONLINE / RANKED), the
+## overtime, the time left, the score; quitting a league match leaves it
+## unplayed, quitting online forfeits it.
+func _pause_info() -> Dictionary:
+	var parts := []
+	var kind := "league"
+	var league = _heat_cfg.get("league")
+	if heat.remote:
+		kind = "online"
+		parts.push_back("RANKED" if bool(_heat_cfg.get("ranked", false)) else "ONLINE")
+	elif league is Dictionary and not (league as Dictionary).is_empty():
+		var lid := str(league.get("id", ""))
+		parts.push_back(str(App.league_cfg(lid).get("name", "LEAGUE")).to_upper() if lid != "" else "LEAGUE")
+	else:
+		parts.push_back("MATCH")
+	if heat.ot > 0:
+		parts.push_back("OT%d" % heat.ot)
+	parts.push_back("%.1f LEFT" % heat.player.time_left)
+	parts.push_back("%d-%d" % [heat.player.score, heat.score(Heat.AI)])
+	return {"context": HudCopy.pause_context(parts), "resume_sub": HudCopy.pause_resume_sub(heat.player.time_left),
+		"quit_note": HudCopy.pause_quit_note(kind)}
+
+
 func _bucket() -> String:
 	return str(_heat_cfg.get("bucket", App.current_league if App.current_league != "" else "cage"))
 

@@ -206,17 +206,35 @@ func _widgets(t) -> void:
 	t.ok(not screen_script.guard_hit(note.position - Vector2(0, g + 6.0), [note, chev], g), "past the margin the court takes the grab")
 	t.ok(not screen_script.guard_hit(Vector2(360, 900), [], g), "no buttons, no guard")
 	app.set_hud_side(was_side)
+	# The pause menu (design "Pause Menu" 43a, 2026-10-25): PAUSED and where
+	# you are, a two-tap QUIT, three option tiles with popovers, RESUME.
 	var pm := PauseMenu.new()
 	pm._ready()
 	for nm in ["Resume", "ShotHelp", "Ball", "Net", "Quit"]:
 		t.ok(pm.find_child(nm, true, false) is ShadowCard, "the pause menu has %s" % nm)
 	var was: int = app.shot_help
-	pm.open()
-	t.eq(pm.shot_help_text(), HudCopy.shot_help_value(was), "the shot-help value reads the setting")
+	pm.open({"context": HudCopy.pause_context(["ARCADE LEAGUE", "", "41.7 LEFT", "12-9"]), "resume_sub": HudCopy.pause_resume_sub(41.7), "quit_note": HudCopy.pause_quit_note("league")})
+	t.eq((pm.find_child("Context", true, false) as Label).text, "ARCADE LEAGUE · 41.7 LEFT · 12-9", "the line under PAUSED says where you are")
+	t.eq((pm.find_child("ResumeSub", true, false) as Label).text, "BACK TO THE MATCH · THE CLOCK PICKS UP AT 41.7", "…and RESUME when the clock picks up")
+	t.eq(HudCopy.pause_resume_sub(-1.0), "BACK TO PRACTICE · NO CLOCK", "practice has no clock")
+	t.eq(pm.shot_help_text(), HudCopy.shot_help_value(was), "the shot-help tile reads the setting")
 	(pm.find_child("ShotHelp", true, false) as Button).pressed.emit()
-	t.eq(pm.shot_help_text(), HudCopy.shot_help_value((was + 1) % App.SHOT_HELP_LABELS.size()), "a tap cycles it")
-	# The BALL and NET rows (docs/LOCKER.md → NETS): the ball cycles the owned
-	# balls (global), the net the owned nets of this court's kind (per court).
+	t.eq(pm.pop_kind(), "help", "a tap on the tile opens its popover")
+	t.ok(pm.find_child("Help_0", true, false) != null and pm.find_child("Help_2", true, false) != null, "…every choice at once")
+	(pm.find_child("ShotHelp", true, false) as Button).pressed.emit()
+	t.eq(pm.pop_kind(), "", "the tile again closes it")
+	(pm.find_child("ShotHelp", true, false) as Button).pressed.emit()
+	(pm.find_child("Help_0", true, false) as Button).pressed.emit()
+	t.ok(app.shot_help == 0 and pm.pop_kind() == "", "picking OFF sets it and closes")
+	# QUIT takes two taps.
+	var quits := [0]
+	pm.quit.connect(func() -> void: quits[0] += 1)
+	(pm.find_child("Quit", true, false) as Button).pressed.emit()
+	t.ok(quits[0] == 0 and pm.quit_armed(), "the first tap only arms QUIT")
+	t.eq((pm.find_child("QuitSub", true, false) as Label).text, "THE MATCH WON'T BE PLAYED", "…saying what it costs")
+	(pm.find_child("Quit", true, false) as Button).pressed.emit()
+	t.eq(quits[0], 1, "the second quits")
+	# The BALL and NET tiles (docs/LOCKER.md → NETS): the ball is global, the net per court.
 	var cos_before: Dictionary = SaveService.get_cosmetics()
 	var mode_before: String = app.next_mode
 	var ball_before: String = app.ball_set.id if app.ball_set != null else "classic"
@@ -228,46 +246,41 @@ func _widgets(t) -> void:
 	app.select("ball", "classic")
 	app.next_mode = "trial"
 	pm.open()
-	t.eq(pm.ball_text(), "CLASSIC", "the BALL row reads the equipped ball")
-	t.eq(pm.net_text(), "COTTON", "the NET row reads the cage's net")
+	t.eq(pm.ball_text(), "CLASSIC", "the BALL tile reads the equipped ball")
+	t.eq(pm.net_text(), "COTTON", "the NET tile reads the cage's net")
 	var balls_seen: Array = []
 	var nets_seen: Array = []
 	pm.ball_changed.connect(func(id: String) -> void: balls_seen.push_back(id))
 	pm.net_changed.connect(func(id: String) -> void: nets_seen.push_back(id))
 	(pm.find_child("Ball", true, false) as Button).pressed.emit()
-	t.ok(balls_seen.is_empty(), "one owned ball: the row does nothing")
-	t.ok(not (pm.find_child("BallChevron", true, false) as Label).visible, "…and shows no chevron")
+	t.ok(pm.pop_kind() == "" and balls_seen.is_empty(), "one owned ball: the tile does not open")
+	t.ok(not (pm.find_child("BallChevron", true, false) as Control).visible, "…and shows no caret")
 	app.grant_cosmetic("ball", "cherry")
 	pm.open()
-	t.ok((pm.find_child("BallChevron", true, false) as Label).visible, "two owned balls: the chevron is back")
+	t.ok((pm.find_child("BallChevron", true, false) as Control).visible, "two owned balls: the caret is back")
 	(pm.find_child("Ball", true, false) as Button).pressed.emit()
-	t.eq(balls_seen, ["cherry"], "a tap equips the next owned ball and tells the screen")
+	t.ok(pm.pop_kind() == "ball" and pm.find_child("Opt_cherry", true, false) != null, "the popover shows the owned balls")
+	(pm.find_child("Opt_cherry", true, false) as Button).pressed.emit()
+	t.eq(balls_seen, ["cherry"], "picking one equips it and tells the screen")
 	t.eq(app.ball_set.id, "cherry", "…globally (App.ball_set)")
-	t.eq(pm.ball_text(), "CHERRY", "…and the row follows")
-	(pm.find_child("Net", true, false) as Button).pressed.emit()
+	t.ok(pm.ball_text() == "CHERRY" and pm.pop_kind() == "", "…the tile follows and the popover closes")
+	pm.pick("net", "chain")
 	t.eq(nets_seen, ["chain"], "the stock chain hangs on the cage now (any net, any hoop)")
 	t.eq(app.net_set_for("cage").id, "chain", "…saved for the cage")
-	(pm.find_child("Net", true, false) as Button).pressed.emit()
-	t.eq(pm.net_text(), "COTTON", "another tap wraps back to cotton")
+	pm.pick("net", "cotton")
+	t.eq(pm.net_text(), "COTTON", "back to cotton")
 	nets_seen.clear()
 	app.next_mode = "city"
 	app.grant_cosmetic("net", "jack")
 	pm.open()
 	t.eq(pm.net_text(), "CHAIN", "the city hangs its stock chain")
-	(pm.find_child("Net", true, false) as Button).pressed.emit()
-	t.eq(nets_seen, ["jack"], "a tap hangs the next owned net on this court")
+	pm.pick("net", "jack")
+	t.eq(nets_seen, ["jack"], "a pick hangs it on this court")
 	t.eq(app.net_set_for("city").id, "jack", "…saved for the city")
 	t.eq(app.net_set_for("cage").id, "cotton", "…and the cage keeps its cotton")
-	(pm.find_child("Net", true, false) as Button).pressed.emit()
-	t.eq(pm.net_text(), "COTTON", "another tap goes round to cotton: it hangs on the steel rim too")
+	pm.pick("net", "jack")
+	t.eq(nets_seen, ["jack"], "picking what is on changes nothing")
 	app.select_net("city", "chain")
-	app.next_mode = "trial"
-	app.grant_cosmetic("net", "wool")
-	pm.open()
-	for i in 3:
-		(pm.find_child("Net", true, false) as Button).pressed.emit()
-	t.eq(pm.net_text(), "WOOL", "three taps round the owned nets reach the wool")
-	t.eq(app.net_set_for("beach").id, "cotton", "…and the beach keeps its cotton until switched there")
 	app.next_mode = mode_before
 	SaveService.put_cosmetics(cos_before)
 	app.select("ball", ball_before)
