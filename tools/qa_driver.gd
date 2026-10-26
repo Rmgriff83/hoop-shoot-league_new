@@ -1715,7 +1715,15 @@ func _run_ranks() -> void:
 	await _click_named("Menu")
 	await _sleep(0.8)
 	await _snap("settings_player")
+	await _click_named("Edit")
+	await _sleep(0.3)
+	await _snap("settings_edit")
+	var sscroll: ScrollContainer = get_tree().root.find_child("SettingsPanel", true, false).find_child("Scroll", true, false)
+	sscroll.scroll_vertical = 100000
+	await _sleep(0.3)
 	await _click_named("EnterCode")
+	await _sleep(0.3)
+	sscroll.scroll_vertical = 100000
 	await _sleep(0.3)
 	await _snap("settings_code")
 	get_tree().quit()
@@ -1927,7 +1935,9 @@ func _run_title() -> void:
 		_mouse_button(c, false)
 		await _sleep(0.8)
 		await _snap("title_settings")
-		await _click_button_named("CLOSE")
+		var sp: Node = get_tree().root.find_child("SettingsPanel", true, false)
+		if sp != null:
+			sp.call("close")
 		await _sleep(0.6)
 	# Dark mode: flip the setting and rebuild the chrome in place.
 	App.set_dark_mode(true)

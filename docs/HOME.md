@@ -183,29 +183,32 @@ chevron (the footer says START INSIDE).
   closes. The tour's buttons are `TourSkip` / `TourBack` / `TourNext` (the home
   has its own `Prev` / `Next` chevrons). `--qa-splash` snaps
   `walkthrough_00..06`; `tests/test_walkthroughs.gd`.
-- **Settings** (`game/ui/settings_panel.gd`, a `HomePage` since 2026-10-15,
-  design "Settings"): the menu button slides it in like the locker. The rows
-  scroll (a `ScrollContainer` since 2026-10-24: the player block and the dev
-  rows outgrow the frame), and a touch that starts on a row scrolls the list —
-  every `ShadowCard` under a `ScrollContainer` passes its press up
-  (`MOUSE_FILTER_PASS`, set in its `_enter_tree`) and the scroll's SCROLL_BEGIN
-  cancels the press past the project's 18 px deadzone
-  (`gui/common/default_scroll_deadzone`); the same fix reaches the area
-  archive, the locker, ranks, rewards and the card sheet. Every
-  row is a dotted face — cream, gold when a toggle is on, orange for SAVE /
-  CLAIM: SHOT HELP, AI DIFFICULTY (`AI DIFFICULTY: EASY / NORMAL / HARD`, taps cycle;
-  gold off NORMAL; one strength for every AI the player faces on every court,
-  `core/ai/ai_difficulty.gd`, docs/LEAGUE.md → One strength, four courts;
-  the `aiDifficulty` setting, synced), DARK MODE, the PLAYER section (your handle + SAVE, your
-  HOMETOWN + SAVE (a setting, saved on the spot), the
-  handle and cloud-save lines, MOVE TO NEW PHONE, ENTER CODE, the platform
-  link row — hidden until a Game Center / Play Games backend exists — and
-  DELETE ACCOUNT, two taps — docs/BACKEND.md → Identity / Phase 2 / Platform
-  identity), TUNING and LEVEL GATES (debug builds only — the gates toggle plays
-  the dev build with areas and leagues locked by level like a release build,
-  `App.set_league_gating`, remembered on the tuning part) over DEV BUILD ONLY,
-  CREDITS, the full-width CLOSE. Flipping DARK MODE rebuilds the home chrome
-  behind it (still slid out); the page itself wears the scene colours.
+- **Settings** (`game/ui/settings_panel.gd`, a `HomePage`; redesigned
+  2026-10-25 from design "Settings v2" 42a): the menu button slides it in
+  like the locker, a see-through full page over the area under a 60 % wash.
+  `<` SETTINGS (the back square is CLOSE) over one scrolling list with a
+  fade at its foot until the end is in view. A touch that starts on a row
+  scrolls the list: every `ShadowCard` under a `ScrollContainer` passes its
+  press up (`MOUSE_FILTER_PASS`, set in its `_enter_tree`) and the scroll's
+  SCROLL_BEGIN cancels the press past the project's 18 px deadzone
+  (`gui/common/default_scroll_deadzone`). The sections:
+  - **GAME**, one panel: SHOT HELP (OFF / NUMBERS / NUMBERS + ARC, its
+    sub-line what it does), AI DIFFICULTY (EASY / NORMAL / HARD, one
+    strength for every AI on every court, `core/ai/ai_difficulty.gd`, the
+    synced `aiDifficulty` setting) and HUD SIDE (LEFT / RIGHT) as pickers
+    showing every choice, the active one gold; DARK MODE a `PixelSwitch`.
+  - **PLAYER** (the cloud line on the right): a gold card with how you
+    appear in leagues and online. Its pencil opens NAME (with your tag) and
+    HOMETOWN, tidied as you type, the card following; SAVE checks both
+    (`NAME NOT ALLOWED · A-Z, 0-9, 3-24`, `PICK A HOMETOWN`), renames on the
+    server when the name changed and closes; CLOSE drops the changes. The
+    platform link row waits, hidden, for a store backend.
+  - **DEV** (debug builds only): TUNING and LEVEL GATES as switches.
+  - **MORE**: CREDITS.
+  - **DANGER ZONE**, last, in red over an orange rule: MOVE TO NEW PHONE
+    (its one-time code on the row), ENTER CODE (the code field and CLAIM;
+    its messages on the row) and DELETE ACCOUNT in orange — the first tap
+    arms it for 8 s, the second deletes.
 - **Ranks** (`game/ui/ranks_page.gd` `RanksPage`, copy in `ranks_copy.gd`;
   redesigned 2026-10-25 from design "Ranks" 41a): the global time-trial
   boards (docs/BACKEND.md) and the 1v1 ladder. A see-through full page over
