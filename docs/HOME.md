@@ -206,22 +206,29 @@ chevron (the footer says START INSIDE).
   `App.set_league_gating`, remembered on the tuning part) over DEV BUILD ONLY,
   CREDITS, the full-width CLOSE. Flipping DARK MODE rebuilds the home chrome
   behind it (still slid out); the page itself wears the scene colours.
-- **Ranks** (`game/ui/ranks_page.gd` `RanksPage`, copy in `ranks_copy.gd`):
-  the global time-trial boards (docs/BACKEND.md) and, since 2026-10-19, the
-  1v1 ladder. `<` RANKS and your handle; CAGE / BEACH / PARK / CITY tabs (a
-  locked area's tab greyed with `LVL n`) and **RANKED** (never locked, the
-  five share the row); THIS WEEK / ALL TIME (hidden on the ladder — one
-  board); a status line (`TOP 12 · THIS WEEK`, `NO RUNS YET · BE FIRST`, or
-  `NO SIGNAL · DEVICE BOARD` when the server is out of reach, with the
-  device's own runs as rows; the ladder: `TOP 50 · RATED 1V1`, `NO RATED
-  GAMES YET · BE FIRST`, `NO SIGNAL · THE LADDER NEEDS A CONNECTION`); the
-  top 50 as rows, ranks 1–3 in gold, your row on orange (a ladder row's
-  score column is the badge and record, `PRO II · 12-9`, `LEGEND #1 ·
-  40-11`); `YOU · #7 · 29` / `YOU · #12 · PRO II` / `YOU · UNRANKED · PLAY A
-  RATED GAME` pinned under the list. Opens on the current area's tab; the
-  page only emits `request(area, period)` (`ranked`, `all` for the ladder)
-  and the title feeds it from `Net` (`load_board` / `load_ranked_board`, both
-  cached 60 s). QA: `--qa-ranks`.
+- **Ranks** (`game/ui/ranks_page.gd` `RanksPage`, copy in `ranks_copy.gd`;
+  redesigned 2026-10-25 from design "Ranks" 41a): the global time-trial
+  boards (docs/BACKEND.md) and the 1v1 ladder. A see-through full page over
+  the area in the online lobby's style: the home slides out left as it slides
+  in. `<` RANKS; your gold player card (the jersey, handle and `#tag`, the
+  hometown; on the right your rank on the board in view and `29 PTS · BEST`,
+  or on RANKED your position and `PRO II · 12-9`, or `-` with NO RUN HERE YET
+  / UNRANKED · PLAY A RATED GAME / `31 PTS · DEVICE BEST` offline); BOARD
+  with `n OF 4 COURTS OPEN` over the five-court grid (CAGE / BEACH / PARK /
+  CITY / RANKED, the active one gold, a locked court dim with `LVL n` under
+  its name); ALL TIME (the default, first) / THIS WEEK, hidden on the ladder,
+  with the status line on the right (`TOP 12 · ALL TIME`, `NO RUNS YET · BE
+  FIRST`, `NO SIGNAL · DEVICE BOARD` with the device's own runs as rows; the
+  ladder: `TOP 50 · RATED 1V1`, `NO RATED GAMES YET · BE FIRST`, `NO SIGNAL ·
+  THE LADDER NEEDS A CONNECTION`). The top 50 sit in one see-through panel
+  with dashed rules: the rank, the name with its `#tag` muted after it, the
+  score (a ladder row's is the badge and record, `LEGEND #1 · 40-11`); ranks
+  1–3 in gold, your row on orange. A board on its way shows LOADING... with
+  the spinner, then the rows slide in a beat apart; a fade at the panel's
+  foot hides at the end of the list. Opens on the current area's ALL TIME
+  board; the page only emits `request(area, period)` (`ranked`, `all` for
+  the ladder) and the title feeds it from `Net` (`load_board` /
+  `load_ranked_board`, both cached 60 s). QA: `--qa-ranks`.
 - **1v1** (`game/ui/match_lobby_page.gd` `MatchLobbyPage`, a `HomePage` since
   2026-10-17 — design "Online Lobby" 37a; copy in `match_copy.gd`;
   docs/BACKEND.md → Phase 3): the ONLINE card beside the area name opens the

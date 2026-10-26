@@ -1308,7 +1308,7 @@ func _open_ranks() -> void:
 		return
 	_ranks = RanksPage.new()
 	_ranks.name = "RanksPage"
-	_ranks.build(RanksCopy.tabs(App.level(), App.league_gating), Net.handle())
+	_ranks.build(RanksCopy.tabs(App.level(), App.league_gating), FaceOffPage.you_record())
 	var on_board := func(area: String, period: String, data: Dictionary) -> void:
 		if _ranks != null:
 			_ranks.set_board(area, period, data)
@@ -1336,8 +1336,10 @@ func _open_ranks() -> void:
 		Net.ranked_board_loaded.disconnect(on_ladder)
 		Net.ranked_board_failed.disconnect(on_ladder_fail)
 		_ranks = null
+		_slide_home(false)
 	)
 	add_child(_ranks)
+	_slide_home(true)   # the home slides out left as the page slides in (design 41a)
 	_ranks.slide_in()
 	_ranks.select(str(CARDS[_index]["area"]), BOARD_PERIOD)   # the tab the home board shows
 

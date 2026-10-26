@@ -60,8 +60,6 @@ func run(t) -> void:
 	t.close(SkeletonList.pulse(0.6, 0.0), 0.6, 1e-6, "…and pulse to 0.6 halfway")
 	t.close(SkeletonList.pulse(0.75, 0.15), 0.6, 1e-6, "each row a beat behind")
 	sk.free()
-	t.eq(RanksCopy.loading_head("beach"), "LOADING RANKS", "the board's head")
-	t.eq(RanksCopy.loading_head(RanksCopy.RANKED), "LOADING THE LADDER", "the ladder's")
 	var cold := RewardsPage.new()
 	cold.build({})
 	t.ok(cold.root.find_child("Skeleton", true, false) != null and cold.root.find_child("MeterBar", true, false) == null, "rewards with nothing cached: the skeleton, not an empty meter")

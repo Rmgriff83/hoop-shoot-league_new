@@ -1,14 +1,15 @@
 class_name RanksCopy
 extends RefCounted
-## The Ranks page's words (docs/HOME.md → Ranks): the area tabs and the
-## RANKED tab (2026-10-19, the global 1v1 ladder — docs/BACKEND.md → Ranked),
-## the two periods, the status line, the rows from a server board or the
-## device's own, and the pinned YOU line. Pure; the page and the tests read it.
+## The Ranks page's words (docs/HOME.md → Ranks; design "Ranks" 41a,
+## 2026-10-25): the area tabs and the RANKED tab (the global 1v1 ladder —
+## docs/BACKEND.md → Ranked), the BOARD note, the two periods (ALL TIME
+## first), the status line, the rows from a server board or the device's
+## own, and the player card's rank and line. Pure; the page and the tests read it.
 
 const AREAS := ["cage", "beach", "park", "city"]
 ## The ladder's tab id (not an area): one board, no periods.
 const RANKED := "ranked"
-const PERIODS := ["week", "all"]
+const PERIODS := ["all", "week"]   # ALL TIME first: the default
 const BOARD_SIZE := 50
 const TOP_COLOURS := 3
 
@@ -45,9 +46,17 @@ static func loading_status() -> String:
 	return "LOADING..."
 
 
-## The skeleton list's head while a board loads (design "Loading States" 39b).
-static func loading_head(area: String) -> String:
-	return "LOADING THE LADDER" if area == RANKED else "LOADING RANKS"
+## Over the BOARD grid: how many courts are open (the ladder is always open).
+static func board_note(tabs_: Array) -> String:
+	var open := 0
+	var areas := 0
+	for tb in tabs_:
+		if str(tb["area"]) == RANKED:
+			continue
+		areas += 1
+		if not bool(tb.get("locked", false)):
+			open += 1
+	return "ALL COURTS OPEN" if open == areas else "%d OF %d COURTS OPEN" % [open, areas]
 
 
 static func status(period: String, count: int) -> String:
@@ -63,24 +72,31 @@ static func ranked_status(count: int) -> String:
 	return "TOP %d · RATED 1V1" % count
 
 
-## Ladder rows → {rank, name, score, me}: the score column is the badge and
-## the record (`PRO II · 12-9`, `LEGEND #1 · 40-11`).
+## Ladder rows → {rank, name, tag, score, me}: the score column is the badge
+## and the record (`PRO II · 12-9`, `LEGEND #1 · 40-11`).
 static func ranked_rows(data: Dictionary) -> Array:
 	var out := []
 	for r in data.get("rows", []):
 		var pos := int(r.get("position", 0))
 		var rank := {"tier": str(r.get("tier", "rookie")), "division": int(r.get("division", 3)), "position": pos, "games": int(r.get("games", 1))}
-		out.push_back({"rank": "#%d" % pos, "name": HandleWords.display(str(r.get("name", "")), str(r.get("tag", ""))),
+		out.push_back({"rank": "#%d" % pos, "name": str(r.get("name", "")), "tag": tag_text(str(r.get("tag", ""))),
 			"score": "%s · %d-%d" % [RankedRules.badge_text(rank), int(r.get("wins", 0)), int(r.get("losses", 0))], "me": bool(r.get("me", false))})
 	return out
 
 
-## The ladder's pinned line: `YOU · #12 · PRO II`, or UNRANKED without a game.
-static func ranked_me_line(data: Dictionary) -> String:
+## A handle's tag as the rows show it after the name: `#07`.
+static func tag_text(tag: String) -> String:
+	return "#" + tag if tag != "" else ""
+
+
+## The player card on the ladder: your position and your badge and record
+## (the same as your row), or UNRANKED before a rated game.
+static func ranked_me_card(data: Dictionary) -> Dictionary:
 	var me: Variant = data.get("me", null)
 	if me == null or not (me is Dictionary) or me.is_empty() or int(me.get("games", 0)) <= 0:
-		return "YOU · UNRANKED · PLAY A RATED GAME"
-	return "YOU · #%d · %s" % [int(me.get("position", 0)), RankedRules.badge_text(me)]
+		return {"rank": "-", "sub": "UNRANKED · PLAY A RATED GAME"}
+	return {"rank": "#%d" % int(me.get("position", 0)),
+		"sub": "%s · %d-%d" % [RankedRules.badge_text(me), int(me.get("wins", 0)), int(me.get("losses", 0))]}
 
 
 static func ranked_offline_status() -> String:
@@ -91,11 +107,11 @@ static func offline_status() -> String:
 	return "NO SIGNAL · DEVICE BOARD"
 
 
-## Server rows → {rank, name, score, me}.
+## Server rows → {rank, name, tag, score, me}.
 static func rows(data: Dictionary) -> Array:
 	var out := []
 	for r in data.get("rows", []):
-		out.push_back({"rank": "#%d" % int(r.get("rank", 0)), "name": HandleWords.display(str(r.get("name", "")), str(r.get("tag", ""))),
+		out.push_back({"rank": "#%d" % int(r.get("rank", 0)), "name": str(r.get("name", "")), "tag": tag_text(str(r.get("tag", ""))),
 			"score": str(int(r.get("score", 0))), "me": bool(r.get("me", false))})
 	return out
 
@@ -104,27 +120,33 @@ static func rows(data: Dictionary) -> Array:
 static func local_rows(top: Array) -> Array:
 	var out := []
 	for i in mini(top.size(), BOARD_SIZE):
-		out.push_back({"rank": "#%d" % (i + 1), "name": "YOU", "score": str(int(top[i].get("score", 0))), "me": i == 0})
+		out.push_back({"rank": "#%d" % (i + 1), "name": "YOU", "tag": "", "score": str(int(top[i].get("score", 0))), "me": i == 0})
 	return out
 
 
-## The pinned line: `YOU · #12 · 31`, or where you stand without a run.
-static func me_line(data: Dictionary) -> String:
+## The player card on an area board: your rank and best (`#12`, `31 PTS ·
+## BEST`), or NO RUN HERE YET.
+static func me_card(data: Dictionary) -> Dictionary:
 	var me: Variant = data.get("me", null)
 	if me == null or not (me is Dictionary) or me.is_empty():
-		return "YOU · NO RUN HERE YET"
-	return "YOU · #%d · %d" % [int(me.get("rank", 0)), int(me.get("score", 0))]
+		return {"rank": "-", "sub": "NO RUN HERE YET"}
+	return {"rank": "#%d" % int(me.get("rank", 0)), "sub": "%d PTS · BEST" % int(me.get("score", 0))}
 
 
-static func local_me_line(top: Array) -> String:
-	return "YOU · BEST %d" % int(top[0].get("score", 0)) if not top.is_empty() else "YOU · NO RUN HERE YET"
+## No signal: the device's own best, no rank.
+static func local_me_card(top: Array) -> Dictionary:
+	if top.is_empty():
+		return {"rank": "-", "sub": "NO RUN HERE YET"}
+	return {"rank": "-", "sub": "%d PTS · DEVICE BEST" % int(top[0].get("score", 0))}
 
 
 ## Every string the page can show, for the glyph test.
 static func strings(data: Dictionary, top: Array) -> Array:
-	var out := ["RANKS", "<", loading_status(), offline_status(), status("week", 0), status("all", 12), me_line(data), local_me_line(top),
-		ranked_status(0), ranked_status(50), ranked_offline_status(), ranked_me_line({}),
-		ranked_me_line({"me": {"tier": "legend", "division": 1, "position": 12, "games": 3}})]
+	var out := ["RANKS", "<", "BOARD", loading_status(), offline_status(), status("week", 0), status("all", 12),
+		ranked_status(0), ranked_status(50), ranked_offline_status(), board_note(tabs(1, true)), board_note(tabs(9, true))]
+	for c in [me_card(data), me_card({}), local_me_card(top), ranked_me_card({}), ranked_me_card({"me": {"tier": "legend", "division": 1, "position": 12, "games": 3, "wins": 40, "losses": 11}})]:
+		out.push_back(c["rank"])
+		out.push_back(c["sub"])
 	for t in RankedRules.tiers():
 		for d in [1, 2, 3]:
 			out.push_back(RankedRules.badge_text({"tier": t["id"], "division": d, "games": 1}))
@@ -136,5 +158,6 @@ static func strings(data: Dictionary, top: Array) -> Array:
 	for r in rows(data) + local_rows(top):
 		out.push_back(r["rank"])
 		out.push_back(r["name"])
+		out.push_back(r["tag"])
 		out.push_back(r["score"])
 	return out

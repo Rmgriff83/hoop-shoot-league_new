@@ -434,7 +434,7 @@ func _run_loading() -> void:
 	# Lists (39b): a ranks board that has not answered yet.
 	var rp := RanksPage.new()
 	rp.name = "QaRanks"
-	rp.build(RanksCopy.tabs(App.level(), false), "QA")
+	rp.build(RanksCopy.tabs(App.level(), false), {"name": "QA", "tag": "01", "town": "Oakridge"})
 	add_child(rp)
 	rp.select("beach", "week")
 	await _sleep(0.5)
@@ -1659,7 +1659,7 @@ func _run_ranks() -> void:
 	page.set_board(page.area(), page.period(), data)
 	await _sleep(0.3)
 	await _snap("ranks_week")
-	await _click_named("PeriodAll")
+	await _click_named("PeriodWeek")
 	await _sleep(0.5)
 	await _snap("ranks_offline")
 	page.set_board(page.area(), page.period(), data)
