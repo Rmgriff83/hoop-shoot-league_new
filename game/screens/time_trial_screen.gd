@@ -156,8 +156,26 @@ func _ready() -> void:
 	input.flick_released.connect(_on_flick)
 	_after_ready()
 	# The first-shot tutorial (design 38a): once, before the first offline match's countdown.
+	if not _defer_tutorial():
+		_maybe_tutorial()
+
+
+## The first-shot tutorial, when it is due.
+func _maybe_tutorial() -> void:
 	if ShotTutorial.due(App.shot_tutorial_seen(), online(), App.qa_skip_tutorial):
 		_start_tutorial()
+
+
+## A screen with a page in front of the match (the heat's pre-match pick)
+## starts the tutorial itself once the page has gone.
+func _defer_tutorial() -> bool:
+	return false
+
+
+## The match held behind a page (the heat's pre-match pick): the rules do
+## not tick and the countdown chip waits.
+func _match_held() -> bool:
+	return false
 
 
 ## An online heat? The base screen never is (the heat screen answers for its room).
@@ -1112,7 +1130,7 @@ const MAX_FRAME_DT := 0.05
 func _process(dt: float) -> void:
 	if _tutorial != null:
 		_step_tutorial(minf(dt, MAX_FRAME_DT))   # the real rules wait for the lesson
-	else:
+	elif not _match_held():
 		_step_rules(minf(dt, MAX_FRAME_DT))
 	_process_shuffle(dt)
 	_follow_music_setting()
@@ -1133,7 +1151,8 @@ func _process(dt: float) -> void:
 	_court.magnet_follow(CourtGeometry.magnet_target(trial.balls()))
 	_court.step_rim(dt)
 	_court.step_net(dt, trial.balls())
-	_hud.update_clock(trial.time_left, trial.countdown, trial.phase)
+	if not _match_held():
+		_hud.update_clock(trial.time_left, trial.countdown, trial.phase)
 	# The city scoreboard's clock and period (practice has no clock: blank).
 	if not _practice:
 		_court.set_clock(trial.time_left)

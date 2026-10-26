@@ -232,12 +232,22 @@ func _run_heat() -> void:
 			App.add_card(str(pair[1]), 1, "cage")
 			App.equip_card(int(pair[0]), str(pair[1]), "cage")
 	App.start_league_heat()
-	await _sleep(0.9)
-	await _click_button_named("READY")   # the pre-match pick (docs/CARDS.md § Drops) sits before the heat
-	# The pre-match page counts down (design 37a) before the heat screen comes up: wait for it.
+	# The match loads first; the pre-match pick opens over it (design 37a, 2026-10-25).
 	for i in 40:
 		var sc := get_tree().current_scene
-		if sc != null and "heat" in sc:
+		if sc != null and "heat" in sc and sc.has_method("prematch_open") and sc.call("prematch_open"):
+			break
+		await _sleep(0.5)
+	await _sleep(0.8)
+	await _snap("heat_prematch")
+	var heat_sc: Node = get_tree().current_scene
+	var page: PreMatchPage = heat_sc.call("prematch_page")
+	if page != null:
+		page.press_ready()
+		await _sleep(4.2)   # the AI readies at 3.6 s
+		await _snap("heat_prematch_count")
+	for i in 30:
+		if not bool(heat_sc.call("prematch_open")):
 			break
 		await _sleep(0.5)
 	await _sleep(0.6)
@@ -1606,13 +1616,15 @@ func _run_multi() -> void:
 	ob["loadout"] = ["fire7", null, null]
 	SaveService.put_cards(cd)
 	var staged := QaFakePeer.new()
-	var title_screen: Node = get_tree().current_scene
 	var matched: Dictionary = staged.matched_message()
 	matched["side"] = "a"
-	title_screen.call("_open_pre_match", matched)
 	staged.free()
+	# (In a real match the page opens over the loaded court; here, over the home.)
+	var pre := PreMatchPage.new()
+	pre.name = "PreMatch"
+	pre.build(matched, Net.ONLINE_BUCKET)
+	add_child(pre)
 	await _sleep(0.5)
-	var pre: PreMatchPage = get_tree().root.find_child("PreMatch", true, false)
 	await _snap("multi_prematch")
 	if pre != null:
 		pre.press_ready()
@@ -1620,7 +1632,7 @@ func _run_multi() -> void:
 		await _sleep(0.4)
 		await _snap("multi_prematch_ready")
 		print("QA multi: prematch cap=%s opp=%s / %s %s %s ready=%s top=%s" % [pre.cap_text(), pre.opp_name(), pre.opp_stat(0), pre.opp_stat(1), pre.opp_stat(2), pre.is_ready(), pre.ready_top()])
-	title_screen.call("_close_pre_match")
+	pre.queue_free()
 	await _sleep(0.3)
 	lobby.close()
 	await _sleep(0.4)
@@ -1900,15 +1912,6 @@ func _run_title() -> void:
 	await _click_button_named("LEAGUE")
 	await _sleep(0.8)
 	await _snap("title_league_heat")
-	# The pre-match pick before a league heat (docs/CARDS.md § Drops): the
-	# next opponent, the cap at your level, this league's cards, the clock.
-	var title_scene: Node = get_tree().current_scene
-	if title_scene != null and title_scene.has_method("open_league_pre_match"):
-		title_scene.call("open_league_pre_match", App.league_pre_match_info(App.league_doc(), App.league_cfg()))
-		await _sleep(0.5)
-		await _snap("title_prematch")
-		title_scene.call("_close_pre_match")
-		await _sleep(0.3)
 	for tab in ["TABLE", "SCHED", "CARDS", "STATS"]:
 		await _click_button_named(tab)
 		await _sleep(0.6)

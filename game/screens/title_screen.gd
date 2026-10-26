@@ -89,7 +89,6 @@ var _ranks: RanksPage
 var _lobby: MatchLobbyPage
 var _pre_match: PreMatchPage
 var _rewards: RewardsPage
-var _pre_match_league := false   # the pick is over the league in context (not the lobby)
 var _league_slide: Tween
 var _switching := false
 
@@ -1362,7 +1361,7 @@ func _open_lobby() -> void:
 				_close_pre_match()
 				_lobby.show_failed(str(a))
 			"court": _lobby.set_found_court(str(a))
-			"matched": _open_pre_match(Dictionary(a) if a is Dictionary else {})
+			"matched": pass   # App moves to the match scene; the pick opens there (design 37a)
 			"peer_loadout":
 				if _pre_match != null and a is Dictionary:
 					_pre_match.set_peer_loadout(Array(Dictionary(a).get("slots", [])), bool(Dictionary(a).get("ready", false)))
@@ -1419,45 +1418,13 @@ func lobby() -> MatchLobbyPage:
 	return _lobby
 
 
-## The pre-match pick (docs/BACKEND.md → Ranked): over the lobby once the
-## room says `matched` — the opponent, the card cap, the loadout, READY.
-func _open_pre_match(info: Dictionary) -> void:
-	_close_pre_match()
-	_pre_match = PreMatchPage.new()
-	_pre_match.name = "PreMatch"
-	_pre_match.build(info, Net.ONLINE_BUCKET)
-	_pre_match.readied.connect(func(slots: Array) -> void: App.send_loadout(slots, true))
-	_pre_match.unreadied.connect(func(slots: Array) -> void: App.send_loadout(slots, false))
-	_pre_match.picked.connect(func(slots: Array) -> void: App.send_loadout(slots, false))
-	_pre_match.go.connect(func() -> void: App.tip_off_now())
-	_pre_match.cancelled.connect(func() -> void:
-		_close_pre_match()
-		App.cancel_online()
-		if _lobby != null:
-			_lobby.show_menu())
-	var on_cards := func() -> void:
-		if _pre_match != null:
-			_pre_match.refresh_cards()
-	Net.cards_changed.connect(on_cards)
-	_pre_match.closed.connect(func() -> void:
-		Net.cards_changed.disconnect(on_cards)
-		_pre_match = null)
-	add_child(_pre_match)
-	if _lobby != null:
-		_lobby.slide_out(true, false)
-	_pre_match.slide_in()
-
-
+## The pre-match pick now opens in the match scene (design 37a, 2026-10-25:
+## HeatScreen._open_prematch); a page left over from an older flow goes.
 func _close_pre_match() -> void:
 	if _pre_match != null and is_instance_valid(_pre_match):
 		var p := _pre_match
 		_pre_match = null
 		p.queue_free()
-		if _pre_match_league:
-			_pre_match_league = false
-			_slide_league_aside(false)
-		elif _lobby != null:
-			_lobby.slide_in(true)
 
 
 func pre_match() -> PreMatchPage:
@@ -1506,44 +1473,6 @@ func _close_rewards() -> void:
 
 func rewards_page() -> RewardsPage:
 	return _rewards
-
-
-## PLAY HEAT in a league (App.start_league_heat): the pre-match pick over
-## the league in context — this league's cards under your level, the short
-## clock, READY → the heat (docs/CARDS.md § Drops, 2026-10-19).
-func open_league_pre_match(info: Dictionary) -> void:
-	_close_pre_match()
-	_pre_match = PreMatchPage.new()
-	_pre_match.name = "PreMatch"
-	_pre_match.build(info, str(info.get("bucket", "cage")))
-	_pre_match.go.connect(func() -> void:
-		App.play_league_heat())
-	_pre_match.cancelled.connect(func() -> void:
-		_close_pre_match())
-	_pre_match.closed.connect(func() -> void:
-		_pre_match = null)
-	add_child(_pre_match)
-	_pre_match_league = true
-	_slide_league_aside(true)
-	_pre_match.slide_in()
-
-
-## The league in context (and the home chrome) steps aside for the pick
-## and comes back when it closes — the court alone shows under the page.
-func _slide_league_aside(aside: bool) -> void:
-	_slide_home(aside)
-	if _float != null:
-		_float.visible = _open and not aside
-	if _league == null:
-		return
-	if _league_slide != null and _league_slide.is_valid():
-		_league_slide.kill()
-	var x := 1.1 * AREA_W if aside else 0.0
-	if not is_inside_tree():
-		_league.position.x = x
-		return
-	_league_slide = create_tween()
-	_league_slide.tween_property(_league, "position:x", x, OPEN_S).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 
 
 ## Land on an area's home from the archive: the page's ink hands over to

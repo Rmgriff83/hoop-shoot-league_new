@@ -1,57 +1,82 @@
 class_name PreMatchPage
 extends FaceOffPage
-## The pre-match page (design "Pre Match" 37a, 2026-10-23; docs/HOME.md →
-## Pre-match pick): full screen before every match — a league heat and an
-## online match alike — between PLAYER FOUND and the tip-off countdown. Card
+## The pre-match page (design "Pre Match" 37a, latest pass 2026-10-25;
+## docs/HOME.md → Pre-match pick): full screen before every match — a league
+## heat and an online match alike — opened by the heat screen once the match
+## has loaded, over the court in match view (the camera on the hoop, the HUD
+## behind it), never over the home; the match's own 3-2-1 follows it. Card
 ## arming lives here; the league CARDS tab is the shop only.
 ##
-## Top: who you face (name, town or league, three stats — league: RECORD ·
-## SEED · AVG PTS; online: RANK · RATING · RECORD), THEIR LOADOUT filling live
-## as they pick (the AI in a league, the other phone online), their chip
-## flipping to READY. Middle: VS, or MATCH STARTS IN and the count once both
-## are ready. Bottom: you — the same card, YOUR LOADOUT (three slots; tap a
-## card to take it back), YOUR CARDS · HOLD + DRAG TO A SLOT (press and hold
-## a card, drag it onto an open slot: open slots outline gold while you drag,
+## Top: OPPONENT — their name and town (league: the league · nickname) in a
+## dark box with the jersey, their three stats under a rule (league: RECORD ·
+## SEED · AVG PTS; online: RANK · RATING · RECORD), THEIR LOADOUT filling
+## live as they pick (the AI in a league, the other phone online; the slot
+## they are picking next blinks "?"), their gold READY chip hanging off the
+## panel's corner. Then VS. Bottom: YOU — the same box in gold, YOUR
+## LOADOUT · n OF 3 (and your READY chip), three big slots (tap a card to
+## take it back), YOUR CARDS · HOLD + DRAG TO A SLOT with the count: a row
+## that scrolls sideways, a `<` / `>` over a fade at whichever end has more
+## (a tap steps four cards). Press and hold a card (0.22 s, or pull it up
+## out of the row) and drag it onto an open slot: open slots outline gold,
 ## the one under the card fills gold with ARM; let go to arm it, drop
 ## anywhere else and it snaps back; a plain tap arms it into the first open
-## slot). READY locks the loadout; tap again to unlock while the other side
-## is still deciding. Both ready → the count (data: prematch.countdown_s),
-## then `go`: the match loads and its own 3-2-1 runs. A spare above the cap
-## wears its level and refuses. The room's deadline (`seconds`) still
-## readies the page silently at zero, so both phones agree.
+## slot. A spare above the cap wears its level and refuses. READY (a 428 ×
+## 216 block, bottom right, a shine sweeping the orange face) locks the
+## loadout; tap again to unlock while the other side is still deciding.
+## Both ready → the button turns gold into MATCH STARTS IN over the big
+## count (data: prematch.countdown_s), then GO and `go`. The room's deadline
+## (`seconds`) still readies the page silently at zero, so both phones agree.
+##
+## Laid out in the design's 720-wide column from the OPPONENT tab down to
+## READY; on a screen too short for it the column scales down to fit.
 ##
 ## `build(info, bucket)` takes the room's `matched` (+ `side`) or a league
 ## info dict from App.league_pre_match_info (`league: true`, `league_stats`,
 ## `ai_hand`, `countdown_s`). Signals: `picked(slots)` on every change,
-## `readied(slots)` / `unreadied(slots)` on READY, `go` at the count's end,
-## `cancelled` on the back button.
+## `readied(slots)` / `unreadied(slots)` on READY, `go` at the count's end.
 
 signal picked(slots: Array)
 signal readied(slots: Array)
 signal unreadied(slots: Array)
 signal go
+## Kept for older callers; the page has no back button (the match is loaded).
 signal cancelled
 
 const HITCH_S := 0.25   # the most one frame may take off a clock
-const PANEL_X := 6.0
+const PAGE_WASH := Color(20.0 / 255.0, 16.0 / 255.0, 14.0 / 255.0, 0.6)
+const BOX_BG := Color(20.0 / 255.0, 16.0 / 255.0, 14.0 / 255.0, 0.8)
+const TAB_BG := Color("#2A2420")
+const MUTED := Color("#E6D9B8")
+const COUNT_C := Color("#FFCE8A")
+const FADE_C := Color(40.0 / 255.0, 30.0 / 255.0, 18.0 / 255.0, 0.92)
+const STREAK_W := Color("#5BD16B")
+const STREAK_L := Color("#FF6A5A")
+const STREAK_BG := Color("#1B1512")
+## The column, in the design's px with y from the OPPONENT tab (design y 124).
+const COL_W := 720.0
+const PANEL_X := 36.0
 const PANEL_W := 642.0
-const OPP_TAB_Y := 163.0
-const OPP_Y := 180.0
-const OPP_H := 236.0
-const VS_Y := 436.0
+const OPP_PANEL_Y := 34.0
+const VS_GAP := 46.0
 const VS_H := 110.0
-const YOU_TAB_Y := 557.0
-const YOU_Y := 574.0
-const YOU_H := 440.0
-const READY_Y := 1104.0
-const READY_H := 116.0
-const BACK_Y := 96.0
-const OPP_SLOT := Vector2(66, 88)
-const OWNED := Vector2(60, 80)
+const YOU_TAB_UP := 17.0
+const READY_W := 428.0
+const READY_H := 216.0
+const READY_RIGHT := 42.0
+const READY_GAP := 82.0
+const TOP_MIN := 44.0
+const BOTTOM := 48.0
+const YOU_SLOT := Vector2(102, 136)
+const OPP_SLOT := Vector2(72, 96)
+const OWNED := Vector2(72, 96)
+const OWNED_GAP := 22.0
 const DRAG_START_PX := 10.0
+const HOLD_S := 0.22
 const SLOT_HIT_MARGIN := 14.0
+const STEP_CARDS := 4
 const AI_PICK_TIMES := [1.0, 1.9, 2.7]
 const AI_READY_AT := 3.6
+const FADE_S := 0.25
 
 var bucket := Net.ONLINE_BUCKET
 var cap := 1
@@ -64,29 +89,39 @@ var _opp_ready := false
 var _opp_name := "THEM"
 var _counting := false
 var _count_left := 0.0
-var _count_total := 10.0
+var _count_total := 5.0
 var _count_shown := -1
 var _went := false
 var _t := 0.0
 # Nodes.
+var _stage: Control
+var _opp_panel: ShadowPanel
+var _you_panel: ShadowPanel
+var _you_tab: Control
+var _vs: Control
 var _opp_slot_nodes: Array = []
 var _opp_status: Label
 var _opp_ready_chip: Control
 var _vs_word: Label
-var _vs_block: VBoxContainer
 var _count_label: Label
+var _count_box: VBoxContainer
+var _top_row: HBoxContainer
 var _you_slots: HBoxContainer
 var _you_slot_nodes: Array = []
 var _highlights: Array = []
 var _load_count: Label
+var _cards_count: Label
 var _owned_row: HBoxContainer
 var _owned_block: VBoxContainer
+var _owned_scroll: ScrollContainer
+var _row_left: Control
+var _row_right: Control
 var _you_ready_chip: Control
 var _ready_btn: ShadowCard
+var _shine: Shine
 var _ready_top: Label
 var _ready_sub: Label
 var _ready_mark: Label
-var _cap_label: Label
 var _opp_name_l: Label
 var _opp_town_l: Label
 # The drag.
@@ -130,15 +165,66 @@ func is_league() -> bool:
 	return bool(_info.get("league", false))
 
 
+# ---- the frame: the whole screen, the column fitted into it ----------------------------------
+
+
+func _anchored() -> bool:
+	return true
+
+
+func _layout_frame() -> void:
+	if root == null:
+		return
+	root.position = Vector2.ZERO
+	root.size = Vector2(COL_W, UiLayout.screen_height())
+	body.size = root.size
+	_fit()
+
+
+## The column's natural height, and the column placed: under the top safe
+## area, READY on the bottom edge's margin; scaled down when it cannot fit.
+func _fit() -> void:
+	if _stage == null or _you_panel == null:
+		return
+	var top := maxf(UiLayout.safe_top() + 6.0, TOP_MIN)
+	var avail := UiLayout.screen_height() - top - BOTTOM
+	# Panels first (their heights come from their contents).
+	_opp_panel.reset_size()
+	_you_panel.reset_size()
+	_opp_panel.position = Vector2(PANEL_X, OPP_PANEL_Y)
+	var opp_end := _opp_panel.position.y + _opp_panel.size.y
+	_vs.position = Vector2(0, opp_end + VS_GAP)
+	_you_tab.position = Vector2(PANEL_X + 22.0, _vs.position.y + VS_H + 11.0)
+	_you_panel.position = Vector2(PANEL_X, _you_tab.position.y + YOU_TAB_UP)
+	var ready_y := _you_panel.position.y + _you_panel.size.y + READY_GAP
+	var natural := ready_y + READY_H
+	var s := 1.0
+	if natural > avail:
+		s = maxf(avail / natural, 0.5)
+		ready_y = _you_panel.position.y + _you_panel.size.y + READY_GAP * 0.5
+	else:
+		ready_y = maxf(ready_y, avail - READY_H)   # READY sits on the bottom margin
+	_ready_btn.position = Vector2(COL_W - READY_RIGHT - READY_W, ready_y)
+	_stage.scale = Vector2.ONE * s
+	_stage.position = Vector2((COL_W - COL_W * s) * 0.5, top)
+	if _opp_ready_chip != null:
+		_opp_ready_chip.reset_size()
+		_opp_ready_chip.position = Vector2(PANEL_X + PANEL_W + 8.0 - _opp_ready_chip.size.x, opp_end - 28.0)
+	if _you_ready_chip != null:
+		_you_ready_chip.reset_size()
+		_you_ready_chip.position = Vector2(PANEL_X + PANEL_W + 8.0 - _you_ready_chip.size.x, _you_panel.position.y - 18.0)
+
+
+## The column's scale on this screen (tests, QA).
+func stage_scale() -> float:
+	return _stage.scale.x if _stage != null else 1.0
+
+
 # ---- the build ---------------------------------------------------------------------------
 
 
-## Laid out in absolute 1234-tall coordinates: keeps the centred band frame
-## until its full-height design arrives (2026-10-24).
-func _anchored() -> bool:
-	return false
-
 func _build() -> void:
+	wash.color = PAGE_WASH
 	for c in root.get_children():
 		if c != body:
 			root.remove_child(c)
@@ -150,58 +236,57 @@ func _build() -> void:
 	_you_slot_nodes.clear()
 	_opp_slot_nodes.clear()
 	_highlights.clear()
-	# BACK OUT, small, top-left.
-	var back := button("<", CREAM, 24, 56.0 - ShadowStyle.OFFSET)
-	back.name = "Cancel"
-	back.position = Vector2(PANEL_X, BACK_Y)
-	back.size = Vector2(56 + ShadowStyle.OFFSET, 56 + ShadowStyle.OFFSET)
-	back.pressed.connect(func() -> void:
-		cancelled.emit()
-		slide_out(false, true))
-	root.add_child(back)
+	_stage = Control.new()
+	_stage.name = "Stage"
+	_stage.size = Vector2(COL_W, 1400)
+	_stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(_stage)
+	_tab(MatchCopy.prematch_tab_opp(), CREAM, Vector2(PANEL_X + 22.0, 0.0))
 	_build_opponent()
 	_build_vs()
+	_you_tab = _tab(MatchCopy.prematch_tab_you(), GOLD, Vector2(PANEL_X + 22.0, 600.0))
 	_build_you()
 	_build_ready()
 	_refresh_ready()
+	_fit()
+	_fit.call_deferred()   # the fonts settle a frame late
 	picked.emit(slots())   # the provisional pick: a timeout starts with it
 
 
-## A tab word sitting on a panel's top edge.
-func _tab(text: String, colour: Color, y: float) -> Control:
+## A tab word on a panel's top edge: dark, a 2 px edge in the colour.
+func _tab(text: String, colour: Color, at: Vector2) -> Control:
 	var p := PanelContainer.new()
 	p.name = text.capitalize().replace(" ", "") + "Tab"
 	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color("#2A2420")
+	sb.bg_color = TAB_BG
 	sb.border_color = colour
 	sb.set_border_width_all(2)
 	sb.content_margin_left = 12
 	sb.content_margin_right = 12
-	sb.content_margin_top = 6
-	sb.content_margin_bottom = 6
+	sb.content_margin_top = 8
+	sb.content_margin_bottom = 8
 	p.add_theme_stylebox_override("panel", sb)
-	p.position = Vector2(PANEL_X + 22, y)
+	p.position = at
 	p.z_index = 2
 	p.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var l := words(text, 16, true)
 	l.add_theme_color_override("font_color", colour)
 	p.add_child(l)
-	root.add_child(p)
+	_stage.add_child(p)
 	return p
 
 
-## A panel's content column with the design's padding (36 under the tab, 22 sides and bottom).
-func _panel(name_: String, colour: Color, y: float, h: float, tint: float) -> VBoxContainer:
+## A side's panel: the see-through dotted face, 32 px under its top, 20 at the sides, 22 at the foot.
+func _panel(name_: String, colour: Color, tint: float) -> Array:
 	var panel := ShadowPanel.new(colour, 0.0, tint, 0.0)
 	panel.name = name_
-	panel.position = Vector2(PANEL_X, y)
-	panel.size = Vector2(PANEL_W + ShadowStyle.OFFSET, h + ShadowStyle.OFFSET)
-	root.add_child(panel)
+	panel.custom_minimum_size = Vector2(PANEL_W + ShadowStyle.OFFSET, 0)
+	panel.mouse_filter = Control.MOUSE_FILTER_PASS
+	_stage.add_child(panel)
 	var m := MarginContainer.new()
-	UiLayout.full_rect(m)
-	m.add_theme_constant_override("margin_left", 22)
-	m.add_theme_constant_override("margin_right", 22 + int(ShadowStyle.OFFSET))
-	m.add_theme_constant_override("margin_top", 36)
+	m.add_theme_constant_override("margin_left", 20)
+	m.add_theme_constant_override("margin_right", 20 + int(ShadowStyle.OFFSET))
+	m.add_theme_constant_override("margin_top", 32)
 	m.add_theme_constant_override("margin_bottom", 22 + int(ShadowStyle.OFFSET))
 	m.mouse_filter = Control.MOUSE_FILTER_PASS
 	panel.add_child(m)
@@ -210,51 +295,180 @@ func _panel(name_: String, colour: Color, y: float, h: float, tint: float) -> VB
 	col.add_theme_constant_override("separation", 18)
 	col.mouse_filter = Control.MOUSE_FILTER_PASS
 	m.add_child(col)
-	return col
+	return [panel, col]
 
 
-## Name + town on the left, three stats on the right.
-func _who_row(name_: String, town: String, stats: Array, gold: bool) -> HBoxContainer:
+## Who: the jersey, the name over the town in a dark box, the three stats under a rule.
+func _who_box(name_: String, town: String, stats: Array, colour: Color, name_size: int) -> PanelContainer:
+	var box := PanelContainer.new()
+	box.name = "Who"
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = BOX_BG
+	sb.border_color = colour
+	sb.set_border_width_all(2)
+	sb.content_margin_left = 20
+	sb.content_margin_right = 20
+	sb.content_margin_top = 16
+	sb.content_margin_bottom = 14
+	box.add_theme_stylebox_override("panel", sb)
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 14)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(col)
 	var row := HBoxContainer.new()
-	row.name = "Who"
 	row.add_theme_constant_override("separation", 16)
-	row.custom_minimum_size = Vector2(0, 60)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var left := VBoxContainer.new()
-	left.add_theme_constant_override("separation", 12)
-	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var nm := words(name_, 22, true)
+	col.add_child(row)
+	var jersey := PixelIcon.new("icon_jersey", Vector2(48, 48), 3.0)
+	jersey.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(jersey)
+	var lines := VBoxContainer.new()
+	lines.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	lines.add_theme_constant_override("separation", 12)
+	lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(lines)
+	var nm := words(name_, name_size, true)
 	nm.name = "Name"
 	nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	nm.clip_text = true
 	nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	if gold:
-		nm.add_theme_color_override("font_color", GOLD)
-	left.add_child(nm)
+	nm.add_theme_color_override("font_color", colour)
+	lines.add_child(nm)
 	var tw := words(town, 16)
 	tw.name = "Town"
 	tw.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	left.add_child(tw)
-	row.add_child(left)
-	var right := HBoxContainer.new()
-	right.name = "Stats"
-	right.add_theme_constant_override("separation", 14)
-	right.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for st in stats:
-		var c := VBoxContainer.new()
-		c.add_theme_constant_override("separation", 10)
-		c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var v := words(str(st[0]), 16, true)
-		v.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		v.name = "Stat_" + str(st[1]).replace(" ", "_")
-		c.add_child(v)
-		var l := words(str(st[1]), 14)
-		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		c.add_child(l)
-		right.add_child(c)
-	row.add_child(right)
-	return row
+	tw.add_theme_color_override("font_color", MUTED)
+	tw.clip_text = true
+	tw.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	lines.add_child(tw)
+	col.add_child(_rule(Color(CREAM, 0.25)))
+	var st := HBoxContainer.new()
+	st.name = "Stats"
+	st.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(st)
+	for i in stats.size():
+		if i > 0:
+			st.add_child(_spacer_h())
+		# A cell holds the value + label pair, and the streak tag over it.
+		var cell := Control.new()
+		cell.name = "StatCell%d" % i
+		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var pair := HBoxContainer.new()
+		pair.add_theme_constant_override("separation", 10)
+		pair.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cell.add_child(pair)
+		var v := words(str(stats[i][0]), 16, true)
+		v.name = "Stat_" + str(stats[i][1]).replace(" ", "_")
+		v.size_flags_vertical = Control.SIZE_SHRINK_END
+		pair.add_child(v)
+		var l := words(str(stats[i][1]), 13)
+		l.add_theme_color_override("font_color", MUTED)
+		l.size_flags_vertical = Control.SIZE_SHRINK_END
+		pair.add_child(l)
+		var tag: Control = null
+		if (stats[i] as Array).size() > 2 and str(stats[i][2]) != "":
+			tag = _streak_tag(str(stats[i][2]))
+			cell.add_child(tag)
+		var last := i == stats.size() - 1
+		var fit := func() -> void:
+			var m := pair.get_combined_minimum_size()
+			pair.size = m
+			cell.custom_minimum_size = m
+			if tag != null:
+				var tag_w := tag.get_combined_minimum_size().x
+				tag.size = tag.get_combined_minimum_size()
+				tag.position = Vector2(m.x + 12.0 - tag_w if last else m.x - 8.0, -20.0)
+		pair.minimum_size_changed.connect(fit)
+		fit.call()
+		st.add_child(cell)
+	return box
+
+
+## The streak tag over RECORD (design 37a, 2026-10-25): a green W or red L
+## square, the up / down arrow, the length — `W · 3`.
+func _streak_tag(code: String) -> Control:
+	var win := code.begins_with("W")
+	var c := STREAK_W if win else STREAK_L
+	var tag := PanelContainer.new()
+	tag.name = "Streak"
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = STREAK_BG
+	sb.border_color = c
+	sb.set_border_width_all(2)
+	sb.content_margin_left = 2
+	sb.content_margin_right = 8
+	tag.add_theme_stylebox_override("panel", sb)
+	tag.custom_minimum_size = Vector2(0, 24)
+	tag.z_index = 1
+	tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 7)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tag.add_child(row)
+	var sq := PanelContainer.new()
+	var ssb := StyleBoxFlat.new()
+	ssb.bg_color = c
+	sq.add_theme_stylebox_override("panel", ssb)
+	sq.custom_minimum_size = Vector2(18, 18)
+	sq.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	sq.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var letter := UiFont.label("W" if win else "L", 11, RetroTheme.SCENE_OUTLINE, UiFont.display())
+	letter.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	letter.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	sq.add_child(letter)
+	row.add_child(sq)
+	var arrow := PixelIcon.new("icon_streak_up" if win else "icon_streak_down", Vector2(12, 12))
+	arrow.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(arrow)
+	var n := UiFont.label(code.substr(1), 11, c, UiFont.display())
+	n.name = "StreakLen"
+	n.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	n.size_flags_vertical = Control.SIZE_FILL
+	row.add_child(n)
+	return tag
+
+
+## ——— WORDS [extra] ———: the loadout dividers.
+func _divider(name_: String, text: String) -> HBoxContainer:
+	var h := HBoxContainer.new()
+	h.name = name_
+	h.add_theme_constant_override("separation", 18)
+	h.custom_minimum_size = Vector2(0, 36)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var r1 := _rule(Color(CREAM, 0.4))
+	r1.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	r1.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(r1)
+	var mid := HBoxContainer.new()
+	mid.name = "Mid"
+	mid.add_theme_constant_override("separation", 16)
+	mid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(mid)
+	var l := words(text, 15, true)
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.size_flags_vertical = Control.SIZE_FILL
+	mid.add_child(l)
+	var r2 := _rule(Color(CREAM, 0.4))
+	r2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	r2.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	h.add_child(r2)
+	return h
+
+
+func _rule(c: Color) -> ColorRect:
+	var r := ColorRect.new()
+	r.color = c
+	r.custom_minimum_size = Vector2(0, 2)
+	r.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return r
+
+
+func _spacer_h() -> Control:
+	var c := Control.new()
+	c.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return c
 
 
 func _opp_record() -> Dictionary:
@@ -290,29 +504,31 @@ func _you_stats() -> Array:
 
 
 func _build_opponent() -> void:
-	_tab(MatchCopy.prematch_tab_opp(), CREAM, OPP_TAB_Y)
-	var col := _panel("OppPanel", CREAM, OPP_Y, OPP_H, 0.16)
+	var pc := _panel("OppPanel", CREAM, 0.16)
+	_opp_panel = pc[0]
+	var col: VBoxContainer = pc[1]
 	var rec := _opp_record()
 	# Online the tag rides the town line (`SALT HARBOR · #07`) so the name keeps its room.
 	var town := str(rec.get("place_text", "")) if is_league() else str(rec.get("town", "")).to_upper()
 	var tag := MatchCopy.card_tag(rec) if not is_league() and str(rec.get("tag", "")) != "" else ""
 	if tag != "":
 		town = (town + " · " + tag) if town != "" else tag
-	var who := _who_row(_opp_name, town, _opp_stats(), false)
+	var who := _who_box(_opp_name, town, _opp_stats(), CREAM, 20)
 	_opp_name_l = who.find_child("Name", true, false)
 	_opp_town_l = who.find_child("Town", true, false)
 	col.add_child(who)
-	var row := HBoxContainer.new()
-	row.name = "TheirLoadout"
-	row.add_theme_constant_override("separation", 18)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var lab := words(MatchCopy.their_loadout(), 16)
-	lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	lab.custom_minimum_size = Vector2(150, 0)
-	row.add_child(lab)
+	var div := _divider("TheirLoadout", MatchCopy.their_loadout())
+	_opp_status = words(MatchCopy.opp_status(true), 15)
+	_opp_status.name = "OppStatus"
+	_opp_status.add_theme_color_override("font_color", MUTED)
+	_opp_status.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_opp_status.size_flags_vertical = Control.SIZE_FILL
+	div.get_node("Mid").add_child(_opp_status)
+	col.add_child(div)
 	var slots_row := HBoxContainer.new()
 	slots_row.name = "OppSlots"
-	slots_row.add_theme_constant_override("separation", 16)
+	slots_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	slots_row.add_theme_constant_override("separation", 20)
 	slots_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	for i in CardDefs.SLOTS:
 		var holder := Control.new()
@@ -321,191 +537,282 @@ func _build_opponent() -> void:
 		holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		slots_row.add_child(holder)
 		_opp_slot_nodes.push_back(holder)
-	row.add_child(slots_row)
-	var push := Control.new()
-	push.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	push.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(push)
-	_opp_ready_chip = _ready_chip()
+	col.add_child(slots_row)
+	# Their READY: a gold chip hanging off the panel's corner (placed by _fit).
+	_opp_ready_chip = _ready_chip(18, 46.0)
 	_opp_ready_chip.name = "OppReady"
 	_opp_ready_chip.visible = false
-	row.add_child(_opp_ready_chip)
-	_opp_status = words(MatchCopy.opp_status(true), 16)
-	_opp_status.name = "OppStatus"
-	_opp_status.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(_opp_status)
-	col.add_child(row)
+	_opp_ready_chip.z_index = 3
+	_stage.add_child(_opp_ready_chip)
 	_refresh_opp_slots()
 
 
-## The gold READY chip (theirs and yours).
-func _ready_chip() -> Control:
+## The gold READY chip (theirs on the panel's corner, yours in the divider).
+func _ready_chip(size_: int, h: float) -> Control:
 	var chip_ := ShadowPanel.new(GOLD, 0.0, 0.40, 14.0)
-	chip_.custom_minimum_size = Vector2(0, 44 + ShadowStyle.OFFSET)
+	chip_.custom_minimum_size = Vector2(0, h + ShadowStyle.OFFSET)
 	chip_.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var l := words(MatchCopy.ready_word(false), 16, true)
+	var l := words(MatchCopy.ready_word(false), size_, true)
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	chip_.add_child(l)
 	return chip_
 
 
 func _build_vs() -> void:
-	var block := Control.new()
-	block.name = "VsBlock"
-	block.position = Vector2(0, VS_Y)
-	block.size = Vector2(FRAME_SIZE.x, VS_H)
-	block.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(block)
+	_vs = Control.new()
+	_vs.name = "VsBlock"
+	_vs.size = Vector2(COL_W, VS_H)
+	_vs.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_stage.add_child(_vs)
 	var row := HBoxContainer.new()
-	UiLayout.full_rect(row)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 24)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	block.add_child(row)
-	var left := Rule.new()
+	row.position = Vector2(PANEL_X, 0)
+	row.size = Vector2(COL_W - PANEL_X - READY_RIGHT, VS_H)
+	_vs.add_child(row)
+	var left := _rule(Color(CREAM, 0.4))
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(left)
-	_vs_word = RetroTheme.display(MatchCopy.vs_word(), 40, GOLD)
+	_vs_word = RetroTheme.display(MatchCopy.vs_word(), 64, GOLD)
 	_vs_word.name = "VsWord"
 	_vs_word.add_theme_color_override("font_outline_color", RetroTheme.SCENE_OUTLINE)
 	_vs_word.add_theme_constant_override("outline_size", RetroTheme.OUTLINE)
 	_vs_word.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_vs_word.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	RetroTheme.dithered(_vs_word, Vector2(5, 5))
+	RetroTheme.dithered(_vs_word, Vector2(6, 6))
 	row.add_child(_vs_word)
-	_vs_block = VBoxContainer.new()
-	_vs_block.name = "Count"
-	_vs_block.alignment = BoxContainer.ALIGNMENT_CENTER
-	_vs_block.add_theme_constant_override("separation", 12)
-	_vs_block.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_vs_block.visible = false
-	var si := words(MatchCopy.starts_in(), 16)
-	si.name = "StartsIn"
-	_vs_block.add_child(si)
-	_count_label = RetroTheme.display("10", 64, GOLD)
-	_count_label.name = "CountNumber"
-	_count_label.add_theme_color_override("font_outline_color", RetroTheme.SCENE_OUTLINE)
-	_count_label.add_theme_constant_override("outline_size", RetroTheme.OUTLINE)
-	_count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_count_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_count_label.pivot_offset = Vector2(60, 40)
-	_vs_block.add_child(_count_label)
-	row.add_child(_vs_block)
-	var right := Rule.new()
+	var right := _rule(Color(CREAM, 0.4))
 	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	right.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(right)
 
 
 func _build_you() -> void:
-	_tab(MatchCopy.prematch_tab_you(), GOLD, YOU_TAB_Y)
-	var col := _panel("YouPanel", GOLD, YOU_Y, YOU_H, 0.20)
+	var pc := _panel("YouPanel", GOLD, 0.20)
+	_you_panel = pc[0]
+	var col: VBoxContainer = pc[1]
 	var me := you_record()
 	if _info.get("you") is Dictionary:
 		me.merge(_info["you"], true)
-	var who := _who_row(str(me.get("name", "YOU")), str(me.get("town", "")).to_upper(), _you_stats(), true)
-	col.add_child(who)
-	_cap_label = words(MatchCopy.cap_line(cap, is_league()), 14)
-	_cap_label.name = "CapLine"
-	_cap_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_cap_label.add_theme_color_override("font_color", GOLD)
-	col.add_child(_cap_label)
-	# YOUR LOADOUT · n OF 3 · the slots · your READY chip.
-	var row := HBoxContainer.new()
-	row.name = "YourLoadout"
-	row.add_theme_constant_override("separation", 18)
-	row.mouse_filter = Control.MOUSE_FILTER_PASS
-	var labcol := VBoxContainer.new()
-	labcol.add_theme_constant_override("separation", 10)
-	labcol.custom_minimum_size = Vector2(150, 0)
-	labcol.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var lab := words(MatchCopy.your_loadout(), 16)
-	lab.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	labcol.add_child(lab)
+	col.add_child(_who_box(str(me.get("name", "YOU")), str(me.get("town", "")).to_upper(), _you_stats(), GOLD, 24))
+	# ——— YOUR LOADOUT · n OF 3 [READY] ———
+	var div := _divider("YourLoadout", MatchCopy.your_loadout())
 	_load_count = words(MatchCopy.load_count(0), 15)
 	_load_count.name = "LoadoutLine"
-	_load_count.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_load_count.add_theme_color_override("font_color", Color("#FFCE8A"))
-	labcol.add_child(_load_count)
-	row.add_child(labcol)
-	_you_slots = HBoxContainer.new()
-	_you_slots.name = "Slots"
-	_you_slots.add_theme_constant_override("separation", 16)
-	_you_slots.mouse_filter = Control.MOUSE_FILTER_PASS
-	row.add_child(_you_slots)
-	var push := Control.new()
-	push.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	push.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(push)
-	_you_ready_chip = _ready_chip()
+	_load_count.add_theme_color_override("font_color", COUNT_C)
+	_load_count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_load_count.size_flags_vertical = Control.SIZE_FILL
+	div.get_node("Mid").add_child(_load_count)
+	col.add_child(div)
+	# Your READY: a gold chip on the panel's top-right corner (placed by _fit).
+	_you_ready_chip = _ready_chip(18, 46.0)
 	_you_ready_chip.name = "YouReady"
 	_you_ready_chip.visible = false
-	row.add_child(_you_ready_chip)
-	col.add_child(row)
-	# YOUR CARDS · HOLD + DRAG TO A SLOT.
+	_you_ready_chip.z_index = 3
+	_stage.add_child(_you_ready_chip)
+	_you_slots = HBoxContainer.new()
+	_you_slots.name = "Slots"
+	_you_slots.alignment = BoxContainer.ALIGNMENT_CENTER
+	_you_slots.add_theme_constant_override("separation", 22)
+	_you_slots.mouse_filter = Control.MOUSE_FILTER_PASS
+	col.add_child(_you_slots)
+	# YOUR CARDS · HOLD + DRAG TO A SLOT ........ n CARDS, then the row.
 	_owned_block = VBoxContainer.new()
 	_owned_block.name = "Yours"
 	_owned_block.add_theme_constant_override("separation", 12)
 	_owned_block.mouse_filter = Control.MOUSE_FILTER_PASS
+	col.add_child(_owned_block)
+	var head_ := HBoxContainer.new()
+	head_.add_theme_constant_override("separation", 12)
+	head_.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_owned_block.add_child(head_)
+	var hint := VBoxContainer.new()
+	hint.add_theme_constant_override("separation", 4)
+	hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head_.add_child(hint)
 	var yt := words(MatchCopy.your_cards_hint(), 16)
 	yt.name = "YoursTitle"
 	yt.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_owned_block.add_child(yt)
-	var rule := Control.new()
-	rule.custom_minimum_size = Vector2(0, 2)
-	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var line := ColorRect.new()
-	line.color = Color(CREAM, 0.6)
-	UiLayout.full_rect(line)
-	rule.add_child(line)
-	_owned_block.add_child(rule)
+	hint.add_child(yt)
+	hint.add_child(_rule(CREAM))   # the underline
+	head_.add_child(_spacer_h())
+	_cards_count = words("", 14)
+	_cards_count.name = "CardsCount"
+	_cards_count.add_theme_color_override("font_color", MUTED)
+	head_.add_child(_cards_count)
+	# The row runs to the panel's edges (the design's -20 margins) and scrolls.
+	var row_box := Control.new()
+	row_box.name = "SparesBox"
+	row_box.custom_minimum_size = Vector2(0, OWNED.y + 24)
+	row_box.mouse_filter = Control.MOUSE_FILTER_PASS
+	_owned_block.add_child(row_box)
+	_owned_scroll = ScrollContainer.new()
+	_owned_scroll.name = "SparesScroll"
+	_owned_scroll.position = Vector2(-20, 0)
+	_owned_scroll.size = Vector2(PANEL_W, OWNED.y + 24)
+	_owned_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_owned_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	row_box.add_child(_owned_scroll)
+	var pad := MarginContainer.new()
+	pad.add_theme_constant_override("margin_left", 20)
+	pad.add_theme_constant_override("margin_right", 20)
+	pad.add_theme_constant_override("margin_top", 4)
+	pad.mouse_filter = Control.MOUSE_FILTER_PASS
+	_owned_scroll.add_child(pad)
 	_owned_row = HBoxContainer.new()
 	_owned_row.name = "Spares"
-	_owned_row.add_theme_constant_override("separation", 22)
-	_owned_row.custom_minimum_size = Vector2(0, OWNED.y + 16)
+	_owned_row.add_theme_constant_override("separation", int(OWNED_GAP))
 	_owned_row.mouse_filter = Control.MOUSE_FILTER_PASS
-	_owned_block.add_child(_owned_row)
-	col.add_child(_owned_block)
+	pad.add_child(_owned_row)
+	_row_left = _row_end(true)
+	row_box.add_child(_row_left)
+	_row_right = _row_end(false)
+	row_box.add_child(_row_right)
+	_owned_scroll.get_h_scroll_bar().value_changed.connect(func(_v: float) -> void: _refresh_row_ends())
+	_owned_scroll.get_h_scroll_bar().changed.connect(_refresh_row_ends)
 	refresh_cards()
+
+
+## A row end: a fade towards the row's middle with a `<` / `>` that steps four cards.
+func _row_end(left: bool) -> Control:
+	var c := Control.new()
+	c.name = "RowLeft" if left else "RowRight"
+	c.size = Vector2(76, OWNED.y + 12)
+	c.position = Vector2(-20.0 if left else PANEL_W - 20.0 - 76.0, 0)
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	c.visible = false
+	var grad := Gradient.new()
+	grad.set_color(0, FADE_C if left else Color(FADE_C, 0.0))
+	grad.set_color(1, Color(FADE_C, 0.0) if left else FADE_C)
+	var gt := GradientTexture2D.new()
+	gt.gradient = grad
+	gt.width = 64
+	gt.height = 4
+	var fade := TextureRect.new()
+	fade.texture = gt
+	fade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	fade.stretch_mode = TextureRect.STRETCH_SCALE
+	fade.size = c.size
+	fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	c.add_child(fade)
+	var b := button("<" if left else ">", CREAM, 18, 52.0 - 3.0)
+	b.name = "Step"
+	b.custom_minimum_size = Vector2(40 + ShadowStyle.OFFSET, 52 + ShadowStyle.OFFSET)
+	b.size = b.custom_minimum_size
+	b.position = Vector2(8.0 if left else 76.0 - 8.0 - 40.0 - ShadowStyle.OFFSET, (c.size.y - 52.0) * 0.5)
+	b.pressed.connect(_step_row.bind(-1 if left else 1))
+	c.add_child(b)
+	return c
+
+
+func _step_row(dir: int) -> void:
+	var bar := _owned_scroll.get_h_scroll_bar()
+	var to := clampf(bar.value + dir * STEP_CARDS * (OWNED.x + OWNED_GAP + 6.0), 0.0, maxf(0.0, bar.max_value - bar.page))
+	if is_inside_tree():
+		create_tween().tween_property(_owned_scroll, "scroll_horizontal", int(to), 0.26).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	else:
+		_owned_scroll.scroll_horizontal = int(to)
+
+
+func _refresh_row_ends() -> void:
+	if _owned_scroll == null:
+		return
+	var bar := _owned_scroll.get_h_scroll_bar()
+	var more := bar.max_value - bar.page > 4.0
+	_row_left.visible = more and bar.value > 4.0
+	_row_right.visible = more and bar.value + bar.page < bar.max_value - 4.0
 
 
 func _build_ready() -> void:
 	_ready_btn = ShadowCard.new(ORANGE)
 	_ready_btn.name = "Ready"
-	_ready_btn.position = Vector2(PANEL_X, READY_Y)
-	_ready_btn.size = Vector2(PANEL_W + ShadowStyle.OFFSET, READY_H + ShadowStyle.OFFSET)
-	root.add_child(_ready_btn)
-	var m := MarginContainer.new()
-	UiLayout.full_rect(m)
-	m.add_theme_constant_override("margin_left", 30)
-	m.add_theme_constant_override("margin_right", 30 + int(ShadowStyle.OFFSET))
-	m.add_theme_constant_override("margin_bottom", int(ShadowStyle.OFFSET))
-	m.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ready_btn.add_child(m)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 16)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	m.add_child(row)
+	_ready_btn.size = Vector2(READY_W + ShadowStyle.OFFSET, READY_H + ShadowStyle.OFFSET)
+	_ready_btn.custom_minimum_size = _ready_btn.size
+	_ready_btn.clip_contents = true
+	_stage.add_child(_ready_btn)
+	_shine = Shine.new()
+	_shine.name = "Shine"
+	_shine.position = Vector2.ZERO
+	_shine.size = Vector2(READY_W, READY_H)
+	_ready_btn.add_child(_shine)
 	var col := VBoxContainer.new()
+	col.name = "Words"
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
-	col.add_theme_constant_override("separation", 14)
-	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 20)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ready_top = words("", 30, true)
+	col.position = Vector2(32, 0)
+	col.size = Vector2(READY_W - 64, READY_H)
+	_ready_btn.add_child(col)
+	_top_row = HBoxContainer.new()
+	_top_row.add_theme_constant_override("separation", 24)
+	_top_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(_top_row)
+	_ready_top = words("", 44, true)
 	_ready_top.name = "ReadyTop"
 	_ready_top.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	col.add_child(_ready_top)
-	_ready_sub = words("", 16)
-	_ready_sub.name = "ReadySub"
-	_ready_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_ready_sub.clip_text = true
-	_ready_sub.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	col.add_child(_ready_sub)
-	row.add_child(col)
-	_ready_mark = words(">", 30, true)
+	_top_row.add_child(_ready_top)
+	_ready_mark = words(">", 34, true)
 	_ready_mark.name = "ReadyMark"
 	_ready_mark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(_ready_mark)
+	_top_row.add_child(_ready_mark)
+	_count_box = VBoxContainer.new()
+	_count_box.name = "Count"
+	_count_box.add_theme_constant_override("separation", 16)
+	_count_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_count_box.visible = false
+	col.add_child(_count_box)
+	var si := words(MatchCopy.starts_in(), 20)
+	si.name = "StartsIn"
+	si.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_count_box.add_child(si)
+	_count_label = RetroTheme.display("5", 112, CREAM)
+	_count_label.name = "CountNumber"
+	RetroTheme.on_scene(_count_label)
+	_count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_count_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_count_box.add_child(_count_label)
+	_ready_sub = words("", 17)
+	_ready_sub.name = "ReadySub"
+	_ready_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_ready_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	_ready_sub.custom_minimum_size = Vector2(370, 0)
+	_ready_sub.add_theme_constant_override("line_spacing", 6)
+	col.add_child(_ready_sub)
 	_ready_btn.pressed.connect(press_ready)
+
+
+## The orange READY's shine (the design's dotWave): a band of light sweeping
+## left to right every 2 s, clipped to the face.
+class Shine extends Control:
+	const PERIOD := 2.0
+	const BAND := 200.0
+	var _t := 0.0
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _process(dt: float) -> void:
+		if not visible:
+			return
+		_t = fposmod(_t + dt, PERIOD)
+		queue_redraw()
+
+	func _draw() -> void:
+		var k := clampf(_t / (PERIOD * 0.7), 0.0, 1.0)
+		var cx := -BAND + (size.x + 2.0 * BAND) * k
+		var step := 6.0
+		var y := 3.0
+		while y < size.y:
+			var x := maxf(0.0, cx - BAND * 0.5)
+			x = floorf(x / step) * step
+			while x < minf(size.x, cx + BAND * 0.5):
+				var a := 1.0 - absf(x - cx) / (BAND * 0.5)
+				if a > 0.0:
+					draw_rect(Rect2(x, y, 2, 2), Color(1.0, 0.95, 0.85, 0.55 * a))
+				x += step
+			y += step
 
 
 # ---- the cards ------------------------------------------------------------------------------
@@ -533,7 +840,7 @@ func refresh_cards() -> void:
 		if id != null:
 			set_count += 1
 			var card := CardDefs.get_card(str(id))
-			holder = ModeCards.art(card, SLOT, 6.0, true)
+			holder = ModeCards.art(card, YOU_SLOT, 6.0, true)
 			var slot_i := i
 			(holder.get_meta("button") as TextureButton).pressed.connect(func() -> void:
 				if _ready_sent or _counting:
@@ -542,9 +849,10 @@ func refresh_cards() -> void:
 				refresh_cards()
 				picked.emit(slots()))
 		else:
-			holder = ModeCards.empty_slot(SLOT, 28, 2.0)
+			holder = ModeCards.empty_slot(YOU_SLOT, 30, 2.0)
 		holder.name = "Slot%d" % i
-		# The drag's highlight: a gold frame with ARM, shown over the slot under the card.
+		holder.pivot_offset = YOU_SLOT * 0.5
+		# The drag's highlight: the slot under the card fills gold with + and ARM.
 		var hl := PanelContainer.new()
 		hl.name = "Arm%d" % i
 		var sb := StyleBoxFlat.new()
@@ -553,28 +861,37 @@ func refresh_cards() -> void:
 		sb.set_border_width_all(3)
 		hl.add_theme_stylebox_override("panel", sb)
 		hl.position = Vector2.ZERO
-		hl.size = SLOT
+		hl.size = YOU_SLOT
 		hl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		hl.visible = false
+		var arm_col := VBoxContainer.new()
+		arm_col.alignment = BoxContainer.ALIGNMENT_CENTER
+		arm_col.add_theme_constant_override("separation", 10)
+		arm_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hl.add_child(arm_col)
+		arm_col.add_child(words("+", 30, true))
 		var arm := words(MatchCopy.arm_word(), 14, true)
 		arm.add_theme_color_override("font_color", GOLD)
-		arm.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		hl.add_child(arm)
+		arm_col.add_child(arm)
 		holder.add_child(hl)
 		_highlights.push_back(hl)
 		_you_slots.add_child(holder)
 		_you_slot_nodes.push_back(holder)
 	_load_count.text = MatchCopy.load_count(set_count)
-	# YOUR CARDS: every owned id (the cache's inventory is the spares), ×n, dimmed when none left or over the cap.
+	# YOUR CARDS: every owned id (the cache's inventory is the spares), ×n,
+	# dimmed when none left or over the cap.
 	var ids: Array = inv.keys()
 	ids.sort()
+	var total := set_count
 	for id in ids:
 		var card := CardDefs.get_card(str(id))
 		if card.is_empty():
 			continue
 		var left := int(inv[id])
+		total += maxi(left, 0)
 		var holder := ModeCards.art(card, OWNED, 4.0, true)
 		holder.name = "Spare_" + str(id)
+		holder.custom_minimum_size.x += 6.0
 		var cid := str(id)
 		var allowed := left > 0 and App.can_equip(cid) and (cap < 0 or Progression.card_level(card) <= cap)
 		if left <= 0:
@@ -595,10 +912,11 @@ func refresh_cards() -> void:
 			holder.add_child(lock)
 		var n := words("×%d" % left, 14, true)
 		n.name = "Left"
-		n.position = Vector2(OWNED.x - 16, OWNED.y - 10)
+		n.position = Vector2(OWNED.x - 6, OWNED.y - 6)
 		n.z_index = 1
 		holder.add_child(n)
 		var btn := holder.get_meta("button") as TextureButton
+		btn.mouse_filter = Control.MOUSE_FILTER_PASS   # a swipe across the row scrolls it
 		btn.gui_input.connect(_on_owned_input.bind(cid, holder, allowed))
 		btn.pressed.connect(func() -> void:
 			# A plain tap (no drag happened) arms it into the first open slot.
@@ -607,7 +925,9 @@ func refresh_cards() -> void:
 			_end_drag(false)
 			_arm_first(cid, allowed))
 		_owned_row.add_child(holder)
+	_cards_count.text = MatchCopy.cards_count(total)
 	_owned_block.modulate = Color(1, 1, 1, 0.45 if locked else 1.0)
+	_refresh_row_ends.call_deferred()
 	_refresh_ready()
 
 
@@ -622,7 +942,9 @@ func _arm_first(cid: String, allowed: bool) -> void:
 			return
 
 
-## Press on an owned card starts a drag; the page's _input follows it.
+## A press on an owned card arms a drag: it starts after HOLD_S held still,
+## or at once when the finger pulls up out of the row; a sideways move first
+## is a swipe, and the row scrolls instead.
 func _on_owned_input(event: InputEvent, cid: String, holder: Control, allowed: bool) -> void:
 	var pressed := false
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
@@ -631,7 +953,7 @@ func _on_owned_input(event: InputEvent, cid: String, holder: Control, allowed: b
 		pressed = true
 	if not pressed or _ready_sent or _counting or not allowed:
 		return
-	_drag = {"id": cid, "from": root.get_local_mouse_position(), "moved": false, "holder": holder}
+	_drag = {"id": cid, "from": _stage.get_local_mouse_position(), "moved": false, "holder": holder, "held": 0.0}
 
 
 func _input(event: InputEvent) -> void:
@@ -644,52 +966,68 @@ func _input(event: InputEvent) -> void:
 	elif event is InputEventScreenTouch:
 		release = not event.pressed
 	if motion:
-		var at := root.get_local_mouse_position()
-		if not bool(_drag["moved"]) and at.distance_to(_drag["from"]) >= DRAG_START_PX:
-			_drag["moved"] = true
-			_start_ghost()
-		if bool(_drag["moved"]):
+		var at := _stage.get_local_mouse_position()
+		if not bool(_drag["moved"]):
+			var d: Vector2 = at - (_drag["from"] as Vector2)
+			if d.length() >= DRAG_START_PX:
+				if absf(d.y) > absf(d.x):
+					_start_ghost()   # pulled up out of the row: a drag
+				else:
+					_drag = {}       # a swipe: the row scrolls
+					return
+		if bool(_drag.get("moved", false)):
 			_move_ghost(at)
-	elif release and bool(_drag.get("moved", false)):
-		var over := _hover
-		var cid := str(_drag["id"])
-		_end_drag(true)
-		if over >= 0 and App.loadout_slots(bucket)[over] == null and App.equip_card(over, cid, bucket):
-			refresh_cards()
-			picked.emit(slots())
-		get_viewport().set_input_as_handled()
+	elif release:
+		if bool(_drag.get("moved", false)):
+			var over := _hover
+			var cid := str(_drag["id"])
+			_end_drag(true)
+			if over >= 0 and App.loadout_slots(bucket)[over] == null and App.equip_card(over, cid, bucket):
+				refresh_cards()
+				picked.emit(slots())
+			get_viewport().set_input_as_handled()
+		else:
+			_drag = {}
 
 
 func _start_ghost() -> void:
+	if _drag.is_empty() or bool(_drag.get("moved", false)):
+		return
+	_drag["moved"] = true
 	var card := CardDefs.get_card(str(_drag["id"]))
-	_ghost = ModeCards.art(card, SLOT, 8.0)
+	_ghost = ModeCards.art(card, YOU_SLOT, 8.0)
 	_ghost.name = "Ghost"
 	_ghost.z_index = 5
 	_ghost.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ghost.pivot_offset = SLOT / 2.0
+	_ghost.pivot_offset = YOU_SLOT / 2.0
 	_ghost.rotation_degrees = -6.0
 	_ghost.scale = Vector2(1.05, 1.05)
-	root.add_child(_ghost)
+	_stage.add_child(_ghost)
 	(_drag["holder"] as Control).modulate = Color(1, 1, 1, 0.5)
+	_owned_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED   # the row holds still under the drag
 	_set_drag_frames(true)
+	_move_ghost(_stage.get_local_mouse_position())
 
 
 func _move_ghost(at: Vector2) -> void:
 	if _ghost == null:
 		return
-	_ghost.position = at - Vector2(SLOT.x / 2.0, SLOT.y * 0.62)
+	_ghost.position = at - Vector2(YOU_SLOT.x / 2.0, YOU_SLOT.y * 0.62)
 	var hover := -1
 	var gp := root.get_global_mouse_position()
 	for i in _you_slot_nodes.size():
 		if App.loadout_slots(bucket)[i] != null:
 			continue
 		var h: Control = _you_slot_nodes[i]
-		if Rect2(h.global_position, SLOT).grow(SLOT_HIT_MARGIN).has_point(gp):
+		var xf := h.get_global_transform()
+		var r := Rect2(xf.origin, YOU_SLOT * xf.get_scale())
+		if r.grow(SLOT_HIT_MARGIN * stage_scale()).has_point(gp):
 			hover = i
 	if hover != _hover:
 		_hover = hover
 		for i in _highlights.size():
 			(_highlights[i] as Control).visible = i == hover
+			(_you_slot_nodes[i] as Control).scale = Vector2.ONE * (1.08 if i == hover else 1.0)
 		_ghost.rotation_degrees = 0.0 if hover >= 0 else -6.0
 		_ghost.scale = Vector2(0.95, 0.95) if hover >= 0 else Vector2(1.05, 1.05)
 
@@ -702,9 +1040,13 @@ func _end_drag(_dropped: bool) -> void:
 		(_drag["holder"] as Control).modulate = Color(1, 1, 1, 1.0)
 	_drag = {}
 	_hover = -1
-	for hl in _highlights:
-		if is_instance_valid(hl):
-			(hl as Control).visible = false
+	for i in _highlights.size():
+		if is_instance_valid(_highlights[i]):
+			(_highlights[i] as Control).visible = false
+		if i < _you_slot_nodes.size() and is_instance_valid(_you_slot_nodes[i]):
+			(_you_slot_nodes[i] as Control).scale = Vector2.ONE
+	if _owned_scroll != null:
+		_owned_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
 	_set_drag_frames(false)
 
 
@@ -736,22 +1078,40 @@ func set_peer_loadout(p_slots: Array, ready: bool) -> void:
 	_maybe_count()
 
 
+## The slot they are picking next blinks "?" (a league's AI), the rest show "+".
+func _next_pick() -> int:
+	if _opp_ready or not is_league():
+		return -1
+	var hand: Array = _info.get("ai_hand", []) if _info.get("ai_hand") is Array else []
+	for i in mini(hand.size(), CardDefs.SLOTS):
+		if str(_opp_slots[i]) == "":
+			return i
+	return -1
+
+
 func _refresh_opp_slots() -> void:
+	var next := _next_pick()
 	for i in _opp_slot_nodes.size():
 		var holder: Control = _opp_slot_nodes[i]
 		var id := str(_opp_slots[i]) if i < _opp_slots.size() else ""
+		var key := id if id != "" else ("?" if i == next else "+")
 		var had := str(holder.get_meta("id", "\u0001"))
-		if had == id and holder.get_child_count() > 0:
+		if had == key and holder.get_child_count() > 0:
 			continue
 		for c in holder.get_children():
 			holder.remove_child(c)
 			c.queue_free()
-		holder.set_meta("id", id)
+		holder.set_meta("id", key)
 		var card := CardDefs.get_card(id) if id != "" else {}
 		if card.is_empty():
-			var e := ModeCards.empty_slot(OPP_SLOT, 20, 2.0)
+			var e := ModeCards.empty_slot(OPP_SLOT, 24, 2.0)
 			e.name = "Empty"
 			e.modulate = Color(1, 1, 1, 0.6)
+			if key == "?":
+				var mark := e.get_child(0) as Label
+				if mark != null:
+					mark.text = "?"
+				e.name = "Next"
 			holder.add_child(e)
 		else:
 			var art := ModeCards.art(card, OPP_SLOT, 4.0)
@@ -831,7 +1191,8 @@ func _maybe_count() -> void:
 		start_countdown(_count_total)
 
 
-## The count to the tip-off (the room's `start.countdown_s` online).
+## The count to the tip-off (the room's `start.countdown_s` online), in the
+## READY button; the VS stays.
 func start_countdown(secs: float) -> void:
 	if _counting or _went:
 		return
@@ -843,8 +1204,6 @@ func start_countdown(secs: float) -> void:
 	_opp_ready = true
 	_refresh_opp_slots()
 	refresh_cards()
-	_vs_word.visible = false
-	_vs_block.visible = true
 	_refresh_count()
 
 
@@ -866,6 +1225,7 @@ func _refresh_count() -> void:
 		_count_shown = n
 		_count_label.text = str(n) if n > 0 else MatchCopy.go_word()
 		if is_inside_tree():
+			_count_label.pivot_offset = Vector2(0, _count_label.get_minimum_size().y * 0.5)
 			_count_label.scale = Vector2(1.6, 1.6)
 			_count_label.modulate.a = 0.0
 			var tw := create_tween().set_parallel(true).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
@@ -893,17 +1253,29 @@ func _refresh_ready() -> void:
 	_ready_sub.text = str(rb["sub"])
 	_ready_mark.text = str(rb["mark"])
 	_ready_mark.visible = str(rb["mark"]) != ""
+	var big_count := _counting or _went
+	_top_row.visible = not big_count
+	_count_box.visible = big_count
+	(_count_box.get_node("StartsIn") as Control).visible = _counting and not _went
+	_ready_sub.visible = not _went
 	_ready_btn.color = GOLD if bool(rb["gold"]) else ORANGE
 	_ready_btn.disabled = _went or _counting
+	_shine.visible = not bool(rb["gold"])
 	_ready_btn.queue_redraw()
 	if _you_ready_chip != null:
 		_you_ready_chip.visible = _ready_sent
+	if _load_count != null:
+		_load_count.text = MatchCopy.load_count(set_count)
 
 
 ## The clocks: _process drives them; tests call it. The room's deadline
 ## readies the page silently at zero; the count ends in `go`.
 func advance(dt: float) -> void:
 	_t += dt
+	if not _drag.is_empty() and not bool(_drag.get("moved", false)):
+		_drag["held"] = float(_drag.get("held", 0.0)) + dt
+		if float(_drag["held"]) >= HOLD_S:
+			_start_ghost()   # held still: the card comes up
 	if not _ready_sent and _left > 0.0:
 		_left = maxf(0.0, _left - dt)
 		if _left <= 0.0:
@@ -931,19 +1303,49 @@ func advance(dt: float) -> void:
 			_went = true
 			_refresh_ready()
 			go.emit()
-	# Their status blinks while they decide.
+	# Their status (and the slot they pick next) blinks while they decide.
+	var blink := 0.55 if int(floor(_t * 2.0)) % 2 == 1 else 1.0
 	if _opp_status != null and _opp_status.visible:
-		_opp_status.modulate.a = 0.55 if int(floor(_t * 2.0)) % 2 == 1 else 1.0
+		_opp_status.modulate.a = blink
+	for holder in _opp_slot_nodes:
+		var nx := (holder as Node).get_node_or_null("Next") as Control
+		if nx != null:
+			nx.modulate.a = 0.45 if int(floor(_t * 3.0)) % 2 == 1 else 1.0
 
 
 func _process(dt: float) -> void:
 	advance(minf(dt, HITCH_S))
 
 
+## Up over the loaded match: the wash and the column fade in.
+func fade_in() -> void:
+	if root == null or not is_inside_tree():
+		return
+	root.modulate.a = 0.0
+	wash.modulate.a = 0.0
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(root, "modulate:a", 1.0, FADE_S)
+	tw.tween_property(wash, "modulate:a", 1.0, FADE_S)
+
+
+## Gone after GO: fade out over the match, then free (the match's 3-2-1 follows).
+func fade_out_free() -> void:
+	if not is_inside_tree():
+		queue_free()
+		return
+	var tw := create_tween().set_parallel(true)
+	tw.tween_property(root, "modulate:a", 0.0, FADE_S)
+	tw.tween_property(wash, "modulate:a", 0.0, FADE_S)
+	tw.chain().tween_callback(func() -> void:
+		closed.emit()
+		queue_free())
+
+
 # ---- for tests and QA --------------------------------------------------------------------------
 
+## The cap, as words (the design no longer prints it; the locks on the spares show it).
 func cap_text() -> String:
-	return _cap_label.text
+	return MatchCopy.cap_line(cap, is_league())
 
 
 func opp_name() -> String:

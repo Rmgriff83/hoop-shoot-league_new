@@ -138,7 +138,7 @@ func run(t) -> void:
 	t.ok(root.find_child("Lock_magnet6", true, false) != null, "a Magnet above the cap wears its level")
 	t.ok(root.find_child("Lock_ice", true, false) == null, "an ice under the cap does not")
 	t.eq(pre.ready_top(), "READY", "the button says READY")
-	t.eq(pre.ready_sub(), "0 OF 3 CARDS SET · LOCKS YOUR LOADOUT", "…and what it does")
+	t.eq(pre.ready_sub(), "0 OF 3 CARDS SET", "…and what it does")
 	var picks := []
 	pre.picked.connect(func(s: Array) -> void: picks.push_back(s))
 	(root.find_child("Spare_magnet6", true, false).get_meta("button") as TextureButton).pressed.emit()

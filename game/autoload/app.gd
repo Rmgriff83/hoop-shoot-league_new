@@ -915,10 +915,19 @@ func _open_room(room_id: String, area: String, on_state: Callable) -> bool:
 				pre_match = msg.duplicate(true)
 				pre_match["side"] = client.side
 				on_state.call("matched", pre_match)
+				_stage_online(client)
 			MatchProtocol.PEER_LOADOUT:
-				on_state.call("peer_loadout", msg)
+				if _prematch_routed:
+					_to_prematch("peer_loadout", msg)
+				else:
+					on_state.call("peer_loadout", msg)
 			MatchProtocol.START:
-				if not pre_match.is_empty() and not bool(msg.get("resumed", false)):
+				if _prematch_routed and not bool(msg.get("resumed", false)):
+					# The match scene is up behind the pre-match page (design 37a,
+					# 2026-10-25): it re-makes the heat from this and counts down.
+					pending_start = msg.duplicate(true)
+					_to_prematch("start", pending_start)
+				elif not pre_match.is_empty() and not bool(msg.get("resumed", false)):
 					# The pre-match page runs the count (design "Pre Match" 37a), then tip_off_now().
 					pending_start = msg.duplicate(true)
 					on_state.call("court", str(msg.get("area", match_area)))
@@ -937,19 +946,31 @@ func _open_room(room_id: String, area: String, on_state: Callable) -> bool:
 			MatchProtocol.REMATCH_GO:
 				_rematch_go(str(msg["room"]), str(msg.get("area", area)), on_state)
 			MatchProtocol.EXPIRED:
+				var routed := _prematch_routed
 				cancel_online()
-				on_state.call("failed", "expired")
+				if routed:
+					_to_prematch("failed", "expired")
+				else:
+					on_state.call("failed", "expired")
 			MatchProtocol.PEER_LEFT:
 				if client.start.is_empty():   # they left before the tip-off
+					var routed := _prematch_routed
 					cancel_online()
-					on_state.call("failed", "peer_left")
+					if routed:
+						_to_prematch("failed", "peer_left")
+					else:
+						on_state.call("failed", "peer_left")
 				else:
 					_set_rematch("gone")
 	)
 	client.closed.connect(func(reason: String) -> void:
 		if room == client and client.start.is_empty():
+			var routed := _prematch_routed
 			cancel_online()
-			on_state.call("failed", "expired" if reason == "expired" else "offline")
+			if routed:
+				_to_prematch("failed", "offline")
+			else:
+				on_state.call("failed", "expired" if reason == "expired" else "offline")
 	)
 	return true
 
@@ -1004,6 +1025,65 @@ func _rematch_go(room_id: String, area: String, on_state: Callable) -> void:
 	match_area = area
 	if not _open_room(room_id, area, on_state):
 		_set_rematch("gone")
+
+
+## The pre-match pick in the match scene (design "Pre Match" 37a, 2026-10-25):
+## the room's `matched` moves us to the heat scene at once — a provisional
+## heat on the room's court with the other phone in the opponent slot — and
+## the page opens over it. The room's peer_loadout / start / failures go to
+## that screen (queued while it loads); `start` re-makes the heat for real.
+var _prematch_routed := false
+var _prematch_inbox: Array = []
+## The lobby's face-off gets a beat before the scene moves.
+const STAGE_HOLD_S := 1.2
+
+
+func _stage_online(client: MatchClient) -> void:
+	_prematch_routed = true
+	_prematch_inbox.clear()
+	var info := pre_match.duplicate(true)
+	var prov := {"area": str(info.get("area", match_area)), "levels": info.get("levels", {}), "ranked": info.get("ranked", false),
+		"cap": info.get("cap", 1), "tiers": info.get("tiers", {}), "hands": {}, "kits": {}, "seed": 1}
+	var cfg := MatchProtocol.heat_cfg(prov, client.peer, client.side)
+	cfg["prematch"] = info
+	await (Engine.get_main_loop() as SceneTree).create_timer(STAGE_HOLD_S).timeout
+	if room != client or not _prematch_routed:
+		return
+	start_heat(str(cfg["mode"]), cfg)
+
+
+func _to_prematch(kind: String, msg: Variant) -> void:
+	var sc := get_tree().current_scene
+	if sc != null and sc.has_method("prematch_message") and bool(sc.call("prematch_open")):
+		sc.call("prematch_message", kind, msg)
+	else:
+		_prematch_inbox.push_back([kind, msg])
+
+
+## What the room said while the match scene was loading (the screen drains it once).
+func take_prematch_inbox() -> Array:
+	var out := _prematch_inbox.duplicate()
+	_prematch_inbox.clear()
+	return out
+
+
+## The room's start, for the screen already up behind the page: the
+## bookkeeping _tip_off does, and the real heat config (also next_heat).
+func stage_online_start(start: Dictionary) -> Dictionary:
+	if not (room is MatchClient):
+		return {}
+	var client := room as MatchClient
+	_prematch_routed = false
+	pending_start = {}
+	if match_how == "quick":
+		Net.request_json("match", HTTPClient.METHOD_POST, "/v1/match/leave", {"area": match_area})
+	pre_match = {}
+	online_settle = {}
+	rematch_state = ""
+	var cfg := MatchProtocol.heat_cfg(start, client.peer, client.side)
+	next_heat = cfg.duplicate(true)
+	next_mode = str(cfg["mode"])
+	return cfg
 
 
 ## Both phones are in: the heat on the room's seed, the other phone in the
@@ -1142,6 +1222,8 @@ func cancel_online() -> void:
 		room = null
 	rematch_state = ""
 	pre_match = {}
+	_prematch_routed = false
+	_prematch_inbox.clear()
 	if match_how == "quick" and match_area != "" and Net.enabled and Net.registered():
 		Net.request_json("match", HTTPClient.METHOD_POST, "/v1/match/leave", {"area": match_area})
 	elif match_how == "ranked" and Net.enabled and Net.registered():
@@ -1542,20 +1624,21 @@ func _ai_hand_for(season: Dictionary, cfg: Dictionary, opp_id: String) -> Array:
 	return out
 
 
-## PLAY HEAT from the dashboard: the pre-match pick first (docs/CARDS.md §
-## Drops, 2026-10-19 — the same page as online: this league's cards, only
-## those at or under your level, a short clock falling back to the last
-## loadout), then play_league_heat. A scene without the page plays at once.
+## PLAY HEAT from the dashboard: the heat loads with the pre-match pick on
+## top of it (docs/CARDS.md § Drops; design "Pre Match" 37a, 2026-10-25 —
+## the same page as online: this league's cards, only those at or under your
+## level, a short clock falling back to the last loadout); its GO hands the
+## loadout to the heat (HeatScreen._prematch_go).
 func start_league_heat() -> void:
 	var cfg := league_cfg()
 	var doc := league_doc()
 	if league_heat_config(doc, cfg).is_empty():
 		return
-	var scene := get_tree().current_scene
-	if scene != null and scene.has_method("open_league_pre_match"):
-		scene.call("open_league_pre_match", league_pre_match_info(doc, cfg))
-	else:
-		play_league_heat()
+	# The match loads first; the pick opens over it (design 37a, 2026-10-25).
+	var info := league_pre_match_info(doc, cfg)
+	var heat_cfg := league_heat_config(doc, cfg)
+	heat_cfg["prematch"] = info
+	start_heat(str(cfg.get("mode", "heat")), heat_cfg)
 
 
 ## What the pre-match page shows before a league heat: the next opponent as
@@ -1584,12 +1667,20 @@ func league_pre_match_info(doc: Dictionary, cfg: Dictionary) -> Dictionary:
 			"place_text": "%s · %s" % [str(cfg.get("name", "LEAGUE")).to_upper(), str(shooter.get("nickname", "")).to_upper()],
 			"online_text": "%d-%d THIS SEASON" % [int(rec[0]), int(rec[1])]},
 		"you": {"online_text": "%d-%d THIS SEASON" % [int(mine.get("w", 0)), int(mine.get("l", 0))]},
-		"league_stats": {"opp": MatchCopy.league_stats(opp_row), "you": MatchCopy.league_stats(my_row)},
+		"league_stats": {"opp": _league_streak(MatchCopy.league_stats(opp_row), opp_id, season),
+			"you": _league_streak(MatchCopy.league_stats(my_row), LeagueData.PLAYER_ID, season)},
 		"cap": level(), "seconds": float(CardDefs.prematch_seconds("league")), "bucket": str(cfg["id"]),
 		"countdown_s": float(RankedRules.prematch_cfg().get("countdown_s", 5)),
 		"ai_hand": _ai_hand_for(season, cfg, opp_id),
 		"side": "a", "league": true,
 	}
+
+
+## A league side's streak (2+) tagged on its RECORD (design 37a, 2026-10-25).
+static func _league_streak(stats: Array, team_id: String, season: Dictionary) -> Array:
+	var games: Array = season.get("schedule", []) if season.get("schedule") is Array else []
+	var st := Standings.current_streak(team_id, games)
+	return MatchCopy.with_streak(stats, str(st.get("type", "W")), int(st.get("count", 0)))
 
 
 ## The heat itself, with the loadout as picked.

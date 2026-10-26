@@ -443,6 +443,9 @@ app.get("/v1/match/room/:id", async (c) => {
   headers.set("x-player-games", String(band.games));
   headers.set("x-player-wins", String(band.wins));
   headers.set("x-player-losses", String(band.losses));
+  // The rated streak tagged over RECORD (design "Pre Match" 37a, 2026-10-25).
+  headers.set("x-player-win-streak", String(band.win_streak ?? 0));
+  headers.set("x-player-loss-streak", String(band.loss_streak ?? 0));
   headers.set("x-player-position", String(rating ? await db.rankedPosition(c.env.DB, rating.cons, rating.updated_at) : 0));
   headers.set("x-ranked", ranked ? "1" : "0");
   headers.set("x-area", area);

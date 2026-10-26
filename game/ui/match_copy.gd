@@ -323,11 +323,16 @@ static func prematch_tab_you() -> String:
 
 
 static func their_loadout() -> String:
-	return "THEIR\nLOADOUT"
+	return "THEIR LOADOUT"
 
 
 static func your_loadout() -> String:
-	return "YOUR\nLOADOUT"
+	return "YOUR LOADOUT"
+
+
+## YOUR CARDS' count on the right: `4 CARDS` (every owned card, spares and armed).
+static func cards_count(n: int) -> String:
+	return "%d CARD%s" % [n, "" if n == 1 else "S"]
 
 
 static func load_count(n: int) -> String:
@@ -376,7 +381,21 @@ static func online_stats(st: Dictionary, tier: Dictionary) -> Array:
 	if games > 0:
 		rank = "#%d" % int(st["position"]) if int(st.get("position", 0)) > 0 else RankedRules.badge_text({"tier": str(tier.get("tier", "rookie")), "division": int(tier.get("division", 3)), "games": games})
 	var rating := thousands(int(st.get("cons", 0))) if games > 0 else "-"
-	return [[rank, "RANK"], [rating, "RATING"], ["%d-%d" % [int(st.get("wins", 0)), int(st.get("losses", 0))], "RECORD"]]
+	var out := [[rank, "RANK"], [rating, "RATING"], ["%d-%d" % [int(st.get("wins", 0)), int(st.get("losses", 0))], "RECORD"]]
+	var ws := int(st.get("win_streak", 0))
+	var ls := int(st.get("loss_streak", 0))
+	return with_streak(out, "W" if ws >= ls else "L", maxi(ws, ls))
+
+
+## A win or loss streak of 2+ tagged on the RECORD stat (design "Pre Match"
+## 37a, 2026-10-25): the stat gets a third field, `W3` / `L2`.
+static func with_streak(stats: Array, kind: String, n: int) -> Array:
+	if n < 2:
+		return stats
+	for st in stats:
+		if str(st[1]) == "RECORD":
+			(st as Array).push_back("%s%d" % [kind, n])
+	return stats
 
 
 ## A league card's three stats from a standings row: RECORD · SEED · AVG PTS.
@@ -391,7 +410,7 @@ static func league_stats(row: Dictionary) -> Array:
 
 
 ## The READY button by state: {top, sub, mark, gold}. `pick` (orange: READY · n OF 3
-## CARDS SET · LOCKS YOUR LOADOUT · >), `ready` (gold: WAITING FOR NAME · TAP TO
+## CARDS SET · >), `ready` (gold: WAITING FOR NAME · TAP TO
 ## UNLOCK), `count` (STARTING IN n · BOTH PLAYERS READY · LOADOUTS LOCKED), `go`
 ## (TIP-OFF · LOADING THE MATCH...).
 static func ready_button(state: String, n: int, opp_name: String, left: int) -> Dictionary:
@@ -399,7 +418,7 @@ static func ready_button(state: String, n: int, opp_name: String, left: int) -> 
 		"go": return {"top": "TIP-OFF", "sub": "LOADING THE MATCH...", "mark": "", "gold": true}
 		"count": return {"top": "STARTING IN %d" % left, "sub": "BOTH PLAYERS READY · LOADOUTS LOCKED", "mark": "", "gold": true}
 		"ready": return {"top": "READY", "sub": "WAITING FOR %s · TAP TO UNLOCK" % opp_name.split(" #")[0], "mark": "", "gold": true}
-	return {"top": "READY", "sub": "%d OF %d CARDS SET · LOCKS YOUR LOADOUT" % [n, CardDefs.SLOTS], "mark": ">", "gold": false}
+	return {"top": "READY", "sub": "%d OF %d CARDS SET" % [n, CardDefs.SLOTS], "mark": ">", "gold": false}
 
 
 # ---- the post-match payout (docs/BACKEND.md → Ranked → Stage B) ----------------------------

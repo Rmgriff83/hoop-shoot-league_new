@@ -38,6 +38,8 @@ interface Player {
   id: string; name: string; tag: string; level: number; town?: string; tier: string; division: number;
   /** The pre-match card's stats (design "Pre Match" 37a): the rating shown, the record, the world position (0 = unrated). */
   cons: number; games: number; wins: number; losses: number; position: number;
+  /** The rated win / loss streak (one of them 0), tagged over RECORD when 2+. */
+  winStreak?: number; lossStreak?: number;
 }
 interface Meta {
   area: string;
@@ -127,7 +129,8 @@ export class MatchRoom extends DurableObject<Env> {
 
   /** Each side's pre-match stats: rating shown, record, world position. */
   private stats(m: Meta) {
-    const of = (p: Player | null) => ({ cons: p?.cons ?? 0, games: p?.games ?? 0, wins: p?.wins ?? 0, losses: p?.losses ?? 0, position: p?.position ?? 0 });
+    const of = (p: Player | null) => ({ cons: p?.cons ?? 0, games: p?.games ?? 0, wins: p?.wins ?? 0, losses: p?.losses ?? 0, position: p?.position ?? 0,
+      win_streak: p?.winStreak ?? 0, loss_streak: p?.lossStreak ?? 0 });
     return { a: of(m.a), b: of(m.b) };
   }
 
@@ -164,6 +167,8 @@ export class MatchRoom extends DurableObject<Env> {
       wins: Number.parseInt(request.headers.get("x-player-wins") ?? "0", 10) || 0,
       losses: Number.parseInt(request.headers.get("x-player-losses") ?? "0", 10) || 0,
       position: Number.parseInt(request.headers.get("x-player-position") ?? "0", 10) || 0,
+      winStreak: Number.parseInt(request.headers.get("x-player-win-streak") ?? "0", 10) || 0,
+      lossStreak: Number.parseInt(request.headers.get("x-player-loss-streak") ?? "0", 10) || 0,
     };
     if (!TIERS.some((t) => t.id === player.tier)) player.tier = TIERS[0].id;
     const ranked = request.headers.get("x-ranked") === "1";

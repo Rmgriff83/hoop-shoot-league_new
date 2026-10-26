@@ -302,38 +302,58 @@ chevron (the footer says START INSIDE).
   (`me_rank`, the cached ranked board); the leaderboard shows only on a
   frame of 1400 px or more (a 9:16 screen has no room for it).
 - **Pre-match page** (`game/ui/pre_match_page.gd` `PreMatchPage`, design "Pre
-  Match" 37a, 2026-10-23; `FaceOffPage` keeps the shared pieces): full screen
-  before EVERY match — a league heat (`App.start_league_heat` →
-  `open_league_pre_match`: the league in context and the home chrome step
-  aside) and an online match (over the lobby, on the room's `matched`) —
-  between PLAYER FOUND and the tip-off. Card arming lives here; the league
-  CARDS tab is the shop only. Top, the OPPONENT tab on a cream panel: their
-  name (+ `#tag` online), their town (online) or `ARCADE LEAGUE · SUNSHINE`
-  (league), three stats — league `RECORD · SEED · AVG PTS` from the table,
-  online `RANK · RATING · RECORD` from the room's `matched.stats` (`#142`,
-  `1,480`, `22-17`; `NEW` / `-` unrated) — THEIR LOADOUT (three 66×88 slots)
-  filling live as they pick (the AI's season hand drops in at 1.0 / 1.9 /
-  2.7 s and readies at 3.6 s; online the room's `peer_loadout`), their chip
-  flipping to READY (`PICKING CARDS...` / `DECIDING...` blinking until
-  then). Middle: `VS` in gold, or `MATCH STARTS IN` and the count once both
-  are ready. Bottom, the YOU tab on a gold panel: your card and stats, `CARD
-  CAP · LVL 1 · THE LOWER LEVEL PLAYS` (league: `· YOUR LEVEL`), YOUR LOADOUT
-  `n OF 3` with three 84×112 slots (tap a card to take it back), `YOUR CARDS ·
-  HOLD + DRAG TO A SLOT` — your owned cards 60×80 with `×n`; press and hold
-  one, drag it onto an open slot (open slots tint gold while you drag, the one
-  under the card frames gold with ARM), let go to arm it, drop anywhere else
-  and it snaps back; a plain tap arms it into the first open slot; a card
-  above the cap is dim with its `LVL n` tag and refuses; everything dims while
-  you are READY. The READY button (orange, `READY · n OF 3 CARDS SET · LOCKS
-  YOUR LOADOUT · >`) locks the loadout and turns gold (`WAITING FOR GLASS
-  WIZARD · TAP TO UNLOCK` — tap again to unlock while they are still deciding);
-  both ready → the 5 s count (10 s until 2026-10-25) (`data/ranked.json → prematch.countdown_s`,
-  `STARTING IN 7 · BOTH PLAYERS READY · LOADOUTS LOCKED`, the number popping
-  in the middle; online the room's `start` carries the count, a league counts
-  on its own), then `TIP-OFF · LOADING THE MATCH...` and the heat loads with
-  its own 3-2-1. The room's 20 s deadline still readies the page silently at
-  zero. A small `<` top-left backs out. QA: `--qa-title` → `title_prematch`
-  (league), `--qa-multi` → `multi_prematch`, `multi_prematch_ready`.
+  Match" 37a, reworked 2026-10-25; `FaceOffPage` keeps the shared pieces):
+  full screen before EVERY match, opened by the heat screen once the match
+  has loaded — over the court in match view (the camera on the hoop, the HUD
+  behind a 60 % wash), never over the home — and the match's own 3-2-1
+  follows it. The rules are held meanwhile (`HeatScreen._held`: no tick, no
+  countdown chip; the first-shot tutorial waits for GO). A league heat:
+  `App.start_league_heat` loads the heat with `prematch` in its config and
+  GO hands it the loadout as picked (`HeatScreen._prematch_go`). Online: the
+  room's `matched` moves us to the heat scene (`App._stage_online`, after a
+  1.2 s beat for the lobby's face-off) on a provisional heat; the room's
+  `peer_loadout` / `start` / failures go to that screen
+  (`prematch_message`, queued while it loads), and `start` re-makes the heat
+  for real behind the page (the seed, both hands, their kit: the tray and
+  the opponent window rebuilt, `HeatScreen._restage`). Card arming lives
+  here; the league CARDS tab is the shop only.
+  - **Top**, the OPPONENT tab on a cream panel: their name (+ `#tag` online)
+    and town (online) or `ARCADE LEAGUE · SUNSHINE` (league) beside the
+    jersey in a dark box, three stats under a rule — league `RECORD · SEED ·
+    AVG PTS` from the table, online `RANK · RATING · RECORD` from the room's
+    `matched.stats` — and a **streak tag** over RECORD at 2+ (a green W or
+    red L square, the arrow, the length: league `Standings.current_streak`,
+    online the ratings' `win_streak` / `loss_streak`, sent in `matched.stats`
+    — needs the Worker deploy). THEIR LOADOUT under a divider, three 72×96
+    slots filling live as they pick (the AI's season hand at 1.0 / 1.9 / 2.7
+    s, ready at 3.6 s; online the room's `peer_loadout`), the slot they pick
+    next blinking `?`, `PICKING CARDS...` / `DECIDING...` blinking beside the
+    divider, and their gold READY chip hanging off the panel's bottom-right.
+  - **VS** in gold between rules; it stays through the count.
+  - **Bottom**, the YOU tab on a gold panel: your box in gold, YOUR LOADOUT
+    `n OF 3` and three 102×136 slots (tap a card to take it back), `YOUR CARDS
+    · HOLD + DRAG TO A SLOT` with `n CARDS`, your owned cards 72×96 with
+    `×n` in a row that scrolls sideways (a `<` / `>` over a fade at whichever
+    end has more steps four cards). Press and hold a card 0.22 s (or pull it
+    up out of the row; a sideways move is a swipe) and drag it onto an open
+    slot (open slots tint gold, the one under the card fills gold with ARM),
+    let go to arm it, drop anywhere else and it snaps back; a plain tap arms
+    it into the first open slot; a card above the cap is dim with its `LVL n`
+    tag and refuses; everything dims while you are READY, and your gold
+    READY chip sits on the panel's top-right corner.
+  - **READY**, a 428×216 block at the bottom right (orange, a shine sweeping
+    it: `READY >` over `n OF 3 CARDS SET`) locks the loadout and turns gold
+    (`WAITING FOR GLASS WIZARD · TAP TO UNLOCK` — tap again to unlock while
+    they are still deciding); both ready → the button becomes `MATCH STARTS
+    IN` over the big 5 s count (`data/ranked.json → prematch.countdown_s`;
+    online the room's `start` carries it, a league counts on its own), then
+    GO, the page fades and the match counts 3-2-1. The room's 20 s deadline
+    still readies the page silently at zero. No back button (the match is
+    loaded). The column is the design's 720 wide, from the OPPONENT tab under
+    the top safe area to READY on the bottom margin; a screen too short for
+    it scales it down. QA: `--qa-heat` → `heat_prematch`,
+    `heat_prematch_count`; `--qa-multi` → `multi_prematch`,
+    `multi_prematch_ready`.
 - ~~Level element~~ — real now (docs/PROGRESSION.md): `LVL0n` is
   `App.level()`, the meter the progress inside the level; the beach page is
   locked below level 3 (every card disabled with `LOCKED · LEVEL 3`).

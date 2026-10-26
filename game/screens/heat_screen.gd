@@ -97,6 +97,137 @@ func _after_ready() -> void:
 	_build_tray()
 	_build_toast()
 	_build_league_banner()
+	if _heat_cfg.get("prematch") is Dictionary:
+		_open_prematch(Dictionary(_heat_cfg["prematch"]))
+
+
+# ---- the pre-match pick (design "Pre Match" 37a, 2026-10-25) ---------------------------------
+# The page opens over the loaded match — the camera on the hoop, the HUD
+# behind it — and holds the rules (no clock, no countdown chip) until its
+# count ends in GO; then the match's own 3-2-1 runs. A league heat takes the
+# loadout picked here; an online one is re-made from the room's `start`
+# (the seed, both hands, their kit), which lands while both are ready.
+
+var _prematch: PreMatchPage
+var _held := false
+
+
+func _match_held() -> bool:
+	return _held
+
+
+func _defer_tutorial() -> bool:
+	return _held
+
+
+func _open_prematch(info: Dictionary) -> void:
+	_held = true
+	var league := bool(info.get("league", false))
+	_prematch = PreMatchPage.new()
+	_prematch.name = "PreMatch"
+	_prematch.build(info, str(info.get("bucket", "cage")) if league else Net.ONLINE_BUCKET)
+	_prematch.go.connect(_prematch_go)
+	if not league:
+		_prematch.picked.connect(func(slots: Array) -> void: App.send_loadout(slots, false))
+		_prematch.readied.connect(func(slots: Array) -> void: App.send_loadout(slots, true))
+		_prematch.unreadied.connect(func(slots: Array) -> void: App.send_loadout(slots, false))
+		var on_cards := func() -> void:
+			if is_instance_valid(_prematch):
+				_prematch.refresh_cards()
+		Net.cards_changed.connect(on_cards)
+		_prematch.tree_exited.connect(func() -> void:
+			if Net.cards_changed.is_connected(on_cards):
+				Net.cards_changed.disconnect(on_cards))
+	add_child(_prematch)
+	_prematch.fade_in()
+	# Anything the room said while the scene was loading.
+	for m in App.take_prematch_inbox():
+		prematch_message(str(m[0]), m[1])
+
+
+## The room's word for the page (App routes it here while it is up).
+func prematch_message(kind: String, msg: Variant) -> void:
+	match kind:
+		"peer_loadout":
+			if is_instance_valid(_prematch) and msg is Dictionary:
+				_prematch.set_peer_loadout(Array(Dictionary(msg).get("slots", [])), bool(Dictionary(msg).get("ready", false)))
+		"start":
+			if msg is Dictionary:
+				_restage(App.stage_online_start(Dictionary(msg)))
+				if is_instance_valid(_prematch):
+					_prematch.start_countdown(float(Dictionary(msg).get("countdown_s", 5)))
+		"failed":
+			# They left, the room expired, the socket died: back home.
+			App.to_title()
+
+
+func prematch_open() -> bool:
+	return is_instance_valid(_prematch) and _held
+
+
+func prematch_page() -> PreMatchPage:
+	return _prematch if is_instance_valid(_prematch) else null
+
+
+## GO: the loadout into the match (a league's, as picked; online the room's
+## start already re-made it), the page fades, the match's countdown runs.
+func _prematch_go() -> void:
+	if _heat_cfg.get("league", null) != null:
+		var bucket := _bucket()
+		var hand: Array = App.loadout_hand(bucket)
+		_heat_cfg["player_cards"] = hand.duplicate()
+		_heat_cfg["player_slots"] = App.loadout_slots(bucket).duplicate()
+		App.next_heat["player_cards"] = _heat_cfg["player_cards"]
+		App.next_heat["player_slots"] = _heat_cfg["player_slots"]
+		heat.hands[Heat.PLAYER] = hand.duplicate()
+		_rebuild_tray()
+	_held = false
+	if is_instance_valid(_prematch):
+		_prematch.fade_out_free()
+	_prematch = null
+	_maybe_tutorial()
+
+
+## The online match as the room started it: the rules made again from the
+## real config (the seed, both hands, their kit), and every piece that reads
+## them rebuilt — the tray, the opponent window — behind the page.
+func _restage(cfg: Dictionary) -> void:
+	if cfg.is_empty():
+		return
+	_heat_cfg = cfg
+	_make_rules()
+	trial.endless = false
+	trial.board_motion = _mode["board_motion"]
+	var list := []
+	for sp in _spots:
+		var pos: Vector3 = sp["pos"]
+		list.push_back({"x": float(pos.x), "y": float(pos.y), "z": float(pos.z)})
+	heat.set_spots(list, _shuffle_enabled)
+	var chip := HeatCopy.opponent_chip({"opponent": _heat_cfg.get("opponent", {})})
+	_opp_color = chip["color"]
+	_opp_short = str(chip["text"])
+	_hud.set_heat(true, _opp_short, _opp_color)
+	_rebuild_tray()
+	if _pip_layer != null:
+		_pip_layer.free()
+		_pip_layer = null
+	_ai_applied_geo = null
+	_opp_hand_n = -1
+	_build_pip()
+
+
+func _rebuild_tray() -> void:
+	var layer := get_node_or_null("CardUi")
+	if layer != null:
+		remove_child(layer)
+		layer.free()
+	_tray.clear()
+	_tray_ids = []
+	_empties.clear()
+	_fire_slot = -1
+	_magnet_slot = -1
+	_dealt_slot = -1
+	_build_tray()
 
 
 func _ai_id() -> String:
@@ -117,8 +248,9 @@ func _wire_online() -> void:
 	_online = App.room
 	if _online == null:
 		return
-	_online.message.connect(_on_online_message)
-	_online.closed.connect(_on_online_closed)
+	if not _online.message.is_connected(_on_online_message):   # a restaged heat wires once
+		_online.message.connect(_on_online_message)
+		_online.closed.connect(_on_online_closed)
 
 
 func _on_online_message(msg: Dictionary) -> void:
