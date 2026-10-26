@@ -1257,7 +1257,7 @@ func _refresh_ready() -> void:
 	_top_row.visible = not big_count
 	_count_box.visible = big_count
 	(_count_box.get_node("StartsIn") as Control).visible = _counting and not _went
-	_ready_sub.visible = not _went
+	_ready_sub.visible = _ready_sub.text != ""   # none once both are ready (2026-10-26)
 	_ready_btn.color = GOLD if bool(rb["gold"]) else ORANGE
 	_ready_btn.disabled = _went or _counting
 	_shine.visible = not bool(rb["gold"])

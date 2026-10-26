@@ -411,12 +411,12 @@ static func league_stats(row: Dictionary) -> Array:
 
 ## The READY button by state: {top, sub, mark, gold}. `pick` (orange: READY · n OF 3
 ## CARDS SET · >), `ready` (gold: WAITING FOR NAME · TAP TO
-## UNLOCK), `count` (STARTING IN n · BOTH PLAYERS READY · LOADOUTS LOCKED), `go`
-## (TIP-OFF · LOADING THE MATCH...).
+## UNLOCK), `count` (STARTING IN n, no sub-line), `go` (TIP-OFF, no sub-line).
 static func ready_button(state: String, n: int, opp_name: String, left: int) -> Dictionary:
 	match state:
-		"go": return {"top": "TIP-OFF", "sub": "LOADING THE MATCH...", "mark": "", "gold": true}
-		"count": return {"top": "STARTING IN %d" % left, "sub": "BOTH PLAYERS READY · LOADOUTS LOCKED", "mark": "", "gold": true}
+		# Both ready (design 37a, 2026-10-26): the count stands alone, no sub-line.
+		"go": return {"top": "TIP-OFF", "sub": "", "mark": "", "gold": true}
+		"count": return {"top": "STARTING IN %d" % left, "sub": "", "mark": "", "gold": true}
 		"ready": return {"top": "READY", "sub": "WAITING FOR %s · TAP TO UNLOCK" % opp_name.split(" #")[0], "mark": "", "gold": true}
 	return {"top": "READY", "sub": "%d OF %d CARDS SET" % [n, CardDefs.SLOTS], "mark": ">", "gold": false}
 

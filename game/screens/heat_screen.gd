@@ -122,6 +122,9 @@ func _defer_tutorial() -> bool:
 
 func _open_prematch(info: Dictionary) -> void:
 	_held = true
+	# The match's own UI (the HUD, the card tray, the opponent window, the
+	# buttons) stays hidden until GO (Ross, 2026-10-26).
+	_set_chrome_visible(false)
 	var league := bool(info.get("league", false))
 	_prematch = PreMatchPage.new()
 	_prematch.name = "PreMatch"
@@ -185,6 +188,7 @@ func _prematch_go() -> void:
 	if is_instance_valid(_prematch):
 		_prematch.fade_out_free()
 	_prematch = null
+	_set_chrome_visible(true)   # the match's UI comes up with its 3-2-1
 	_maybe_tutorial()
 
 
@@ -214,6 +218,8 @@ func _restage(cfg: Dictionary) -> void:
 	_ai_applied_geo = null
 	_opp_hand_n = -1
 	_build_pip()
+	if _held:
+		_set_chrome_visible(false)   # the rebuilt tray and window stay hidden behind the page
 
 
 func _rebuild_tray() -> void:

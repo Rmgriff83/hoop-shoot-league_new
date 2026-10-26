@@ -251,7 +251,9 @@ func _set_chrome_visible(on: bool) -> void:
 		_hidden_layers = {}
 		return
 	for c in get_children():
-		if c is CanvasLayer and c != _tutorial and c.name != "ShotHelpUi" and c.name != "ShotTutorial":
+		if c is CanvasLayer and c != _tutorial and c.name != "ShotHelpUi" and c.name != "ShotTutorial" and c.name != "PreMatch":
+			if _hidden_layers.has(c):
+				continue   # hidden already: keep the visibility it had before
 			_hidden_layers[c] = (c as CanvasLayer).visible
 			(c as CanvasLayer).visible = false
 
