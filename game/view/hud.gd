@@ -71,6 +71,13 @@ func set_top_wash(alpha: float) -> void:
 	if alpha <= 0.0:
 		return
 	_top_wash = ShadowStyle.top_wash(alpha)
+	# The HUD is a centred layer: its y 0 is the 1280 band's top, which on a
+	# tall phone sits under the notch. The wash starts at the screen's very
+	# top edge and keeps its depth below the band's top (Ross, 2026-10-25: the
+	# park's gradient began just under the safe area).
+	var lift := UiLayout.offset().y
+	_top_wash.position = Vector2(-UiLayout.offset().x, -lift)
+	_top_wash.size = Vector2(UiLayout.canvas().x, ShadowStyle.TOP_WASH_H + lift)
 	add_child(_top_wash)
 	move_child(_top_wash, 0)
 
