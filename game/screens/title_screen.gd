@@ -26,6 +26,9 @@ const MARGIN := 36.0
 const COLUMN_W := 648.0
 const SCRIM_ALPHA := 0.25
 const FADE_S := 0.2
+## The area switch (design "Loading States" 39b): the chip at least this long, then the crossfade.
+const CHIP_MIN_S := 0.35
+const CROSSFADE_S := 0.35
 ## The chrome's rows (design px). The zone: the stars over the name under the
 ## top bar, the ALL AREAS line under the name; the chevrons at mid-height
 ## between the zone and the card area — `<` to the area before, `>` to the
@@ -714,20 +717,140 @@ func _switch(dir: int) -> void:
 	if _switching or _open or not _chevron_ok(dir):
 		return
 	_switching = true
-	_cover.color = Color(RetroTheme.c("ink"), 0.0)
-	var fade := create_tween()
-	fade.tween_property(_cover, "color:a", 1.0, FADE_S).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	await fade.finished
-	_index = _index + dir
+	var next := _index + dir
+	# The chevron becomes a chip (design "Loading States" 39b): a spinner and
+	# the next area's name while its arena loads; the old court stays up.
+	var chev := _prev if dir < 0 else _next
+	var chip := _area_chip(next, chev)
+	var held := await _preload_area(next)
+	# Then a crossfade: the old frame held over the new court, fading out.
+	var shot := _snapshot()
+	_index = next
 	App.home_card = _index
 	_build_court(_index)
 	_update_zone()
 	_fill_cards()
 	_refresh_ticker()
-	var back := create_tween()
-	back.tween_property(_cover, "color:a", 0.0, FADE_S * 1.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	await back.finished
+	held.clear()
+	if is_instance_valid(chip):
+		chip.queue_free()
+	if chev != null and is_instance_valid(chev):
+		chev.modulate.a = 1.0
+	if shot != null:
+		var fade := create_tween()
+		fade.tween_property(shot.get_child(0), "modulate:a", 0.0, CROSSFADE_S).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+		await fade.finished
+		shot.queue_free()
 	_switching = false
+
+
+## The chip over a chevron while the next area loads: ⟳ BEACH… (cream, 60 tall).
+func _area_chip(i: int, chev: Control) -> Control:
+	if _chrome == null:
+		return null
+	var arena := CosmeticLibrary.get_arena(str(CARDS[i]["area"]))
+	var word := str(arena.display_name).to_upper() if arena != null else str(CARDS[i]["area"]).to_upper()
+	var chip := ShadowPanel.new(RetroTheme.SCENE_TEXT, 0.0, 0.22, 18.0)
+	chip.name = "AreaChip"
+	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 14)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	chip.add_child(row)
+	var spin := PixelSpinner.new(32.0)
+	spin.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(spin)
+	var l := AreaChipWords.new(word)
+	l.name = "AreaChipWords"
+	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(l)
+	chip.custom_minimum_size = Vector2(0, 60 + ShadowStyle.OFFSET)
+	_chrome.add_child(chip)
+	chip.reset_size()
+	var w := maxf(chip.get_combined_minimum_size().x, 160.0)
+	var cy := (chev.position.y + chev.size.y * 0.5) if chev != null else float(_lay["chevron_y"]) + 88.0
+	var x := 8.0 if (chev == null or chev == _prev) else 720.0 - 8.0 - w
+	chip.position = Vector2(x, cy - (60.0 + ShadowStyle.OFFSET) * 0.5)
+	if chev != null:
+		chev.modulate.a = 0.0
+	return chip
+
+
+## The area's name with LOADING's dots after it.
+class AreaChipWords extends Label:
+	var _word := ""
+	var _t := 0.0
+	func _init(word: String) -> void:
+		_word = word
+		add_theme_font_override("font", UiFont.display())
+		add_theme_font_size_override("font_size", UiFont.snap(16))
+		RetroTheme.on_scene(self)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		text = word
+		custom_minimum_size = Vector2(UiFont.snap(16) * (word.length() + 3), 0)
+	func _process(dt: float) -> void:
+		_t += dt
+		text = _word + LoadingCopy.dots(_t)
+
+
+## Load card `i`'s arena and hoop models on threads (the old court keeps
+## drawing meanwhile); returns them, held until the court is built from cache.
+func _preload_area(i: int) -> Array:
+	var card: Dictionary = CARDS[i]
+	var paths: Array = []
+	var arena := CosmeticLibrary.get_arena(str(card["area"]))
+	if arena != null and arena.model_path != "":
+		paths.push_back(arena.model_path)
+	var hoop := App.hoop_for_mode(str(card["mode"]))
+	if hoop != null and hoop.model_path != "":
+		paths.push_back(hoop.model_path)
+	var asked: Array = []
+	for p in paths:
+		if ResourceLoader.exists(p) and ResourceLoader.load_threaded_request(p, "", true) == OK:
+			asked.push_back(p)
+	var t := 0.0
+	while true:
+		var done := true
+		for p in asked:
+			if ResourceLoader.load_threaded_get_status(p) == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+				done = false
+		if done or not is_inside_tree():
+			break
+		await get_tree().process_frame
+		t += get_process_delta_time()
+	# Keep the chip up a moment so a fast load still reads (no flash).
+	while t < CHIP_MIN_S and is_inside_tree():
+		await get_tree().process_frame
+		t += get_process_delta_time()
+	var held: Array = []
+	for p in asked:
+		var r = ResourceLoader.load_threaded_get(p)
+		if r != null:
+			held.push_back(r)
+	return held
+
+
+## The current frame held over the screen (under the chrome) for the crossfade.
+func _snapshot() -> CanvasLayer:
+	var vp := get_viewport()
+	if vp == null or DisplayServer.get_name() == "headless":
+		return null
+	var img := vp.get_texture().get_image()
+	if img == null or img.is_empty():
+		return null
+	var layer := CanvasLayer.new()
+	layer.name = "Crossfade"
+	layer.layer = 9   # under the chrome (10): the new title draws over the old frame
+	UiLayout.anchor_layer(layer)
+	var pic := TextureRect.new()
+	pic.texture = ImageTexture.create_from_image(img)
+	pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pic.stretch_mode = TextureRect.STRETCH_SCALE
+	pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	UiLayout.screen_fill(pic)
+	layer.add_child(pic)
+	add_child(layer)
+	return layer
 
 
 ## The gold NEW dot on the next chevron.

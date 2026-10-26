@@ -780,3 +780,10 @@ WHERE YOU LEFT OFF, a match → LEAGUE · SEASON 2 · DAY 4 · VS OLLIE, a trial
 that changes every 2.2 s; (4) changes to the packed scene under the screen
 and fades it out. QA passes keep instant moves (`loader.instant`, their
 sleeps assume them); `--qa-loading` exercises the loader (`force_show`).
+
+The home's chevrons (39b) switch areas in place, without the screen: the
+pressed chevron turns into a chip (`AreaChip`: a small spinner, the next
+area's name and LOADING dots) while the next area's arena and hoop models
+load on threads behind the old court (at least 0.35 s, so the chip reads).
+Then the frame is snapshotted into the `Crossfade` layer (under the chrome),
+the new court is built underneath, and the snapshot fades out over 0.35 s.

@@ -373,6 +373,23 @@ func _run_loading() -> void:
 	await _snap("loading_screen_tip")
 	await _sleep(2.0)
 	await _snap("loading_home")
+	# Close the archive (the front door) and switch areas with the chevron:
+	# the chip over it while the beach loads, then the crossfade (39b).
+	await _click_button_named("ARCADE CAGE")
+	await _sleep(1.0)
+	var nxt: BaseButton = get_tree().root.find_child("Next", true, false)
+	if nxt != null and nxt.visible:
+		var nc := _win_of(nxt)
+		_mouse_move(nc, Vector2.ZERO)
+		_mouse_button(nc, true)
+		await _sleep(0.05)
+		_mouse_button(nc, false)
+		await _sleep(0.12)
+		await _snap("loading_area_chip")
+		await _sleep(0.45)
+		await _snap("loading_area_fade")
+		await _sleep(0.8)
+		await _snap("loading_area_done")
 	if App.loader != null:
 		App.loader.instant = false
 	App.start_area("trial", "beach")
