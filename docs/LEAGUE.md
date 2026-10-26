@@ -252,7 +252,7 @@ opponent's clock not running or rim already iced); played cards leave the tray.
 
 ## League banners (environment dressing, league heats only)
 
-`game/view/league_banner.gd` hangs a quad textured by a one-shot 2D SubViewport. The park's and the city's boards are **chalkboards**: a slate texture from `tools/aseprite/gen_chalkboard.lua`, the Caveat handwriting font (OFL, `assets/fonts/caveat/`, credited), chalk colours, per-line jitter/tilt and hand-drawn underlines. The cage label stays cloth. The
+`game/view/league_banner.gd` hangs a quad textured by a one-shot 2D SubViewport. The park's and the city's boards (both taken down 2026-10-25 / -26; the code and anchors remain) are **chalkboards**: a slate texture from `tools/aseprite/gen_chalkboard.lua`, the Caveat handwriting font (OFL, `assets/fonts/caveat/`, credited), chalk colours, per-line jitter/tilt and hand-drawn underlines. The cage label stays cloth. The
 city's back fence (to the shooter's back-right of the hoop) shows the **standings** in the
 regular season and the **playoff bracket** in the playoffs (the beach showed the same until
 2026-10-16, when its chalkboard came down); the cage's left wall carries a small
