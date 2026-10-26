@@ -787,3 +787,14 @@ area's name and LOADING dots) while the next area's arena and hoop models
 load on threads behind the old court (at least 0.35 s, so the chip reads).
 Then the frame is snapshotted into the `Crossfade` layer (under the chrome),
 the new court is built underneath, and the snapshot fades out over 0.35 s.
+
+Lists that wait on the server show `SkeletonList` (`game/ui/skeleton_list.gd`)
+until the answer: the spinner with LOADING RANKS… (LOADING THE LADDER… on
+RANKED, LOADING REWARDS… on a rewards page with nothing cached), then four
+skeleton rows under dashed rules, their bars pulsing 0.35 ↔ 0.6 a beat
+apart. The ranks status line still reads LOADING... over it. PEGGY's cabinet
+(`assets/locker/peggy.glb`) loads on a thread the first time the page opens
+(`PeggyMachine.threaded`, on in the game, off in tests and instant QA): the
+slot keeps its size and face with a `PixelSpinner` in the middle, PLAY waits
+(`is_busy`), and `model_loaded` brings it back. The locker and the net
+thumbnails are PNGs, so they need no spinner.

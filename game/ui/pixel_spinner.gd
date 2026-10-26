@@ -9,6 +9,8 @@ const GOLD := Color("#F0B84A")
 ## The ring at 48 px: [x, y] of each square, from the faintest to the lead.
 const RING := [[20, 0], [34, 6], [40, 20], [34, 34], [20, 40], [6, 34], [0, 20], [6, 6]]
 
+## The trailing squares' colour (cream on a scene; a page's ink on paper); the lead stays gold.
+var color := RetroTheme.SCENE_TEXT
 var _t := 0.0
 
 
@@ -36,4 +38,4 @@ func _draw() -> void:
 		var at := Vector2(float(p[0]), float(p[1])) * k
 		var a := 0.25 + 0.75 * float(j) / 7.0
 		draw_rect(Rect2(at + Vector2(2, 2), Vector2(sq, sq)), Color(RetroTheme.SCENE_OUTLINE, a))
-		draw_rect(Rect2(at, Vector2(sq, sq)), Color(GOLD if j == 7 else RetroTheme.SCENE_TEXT, a if j < 7 else 1.0))
+		draw_rect(Rect2(at, Vector2(sq, sq)), Color(GOLD if j == 7 else color, a if j < 7 else 1.0))

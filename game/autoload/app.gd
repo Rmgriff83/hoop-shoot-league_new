@@ -180,6 +180,7 @@ func _ready() -> void:
 	loader = SceneLoader.new()
 	loader.name = "SceneLoader"
 	add_child(loader)
+	PeggyMachine.threaded = true   # the cabinet loads behind the slot spinner (39b)
 	var saved := SaveService.get_tuning()
 	tuning_mode = bool(saved.get("tuningMode", false))
 	if OS.is_debug_build():

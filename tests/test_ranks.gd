@@ -55,6 +55,7 @@ func run(t) -> void:
 	page.select("beach", "week")
 	t.eq(asked, [["beach", "week"]], "selecting asks for the board")
 	t.eq(page.status_text(), "LOADING...", "…and shows LOADING")
+	t.ok(page.find_child("Skeleton", true, false) != null, "…over skeleton rows (39b)")
 	page.select("city", "week")
 	t.eq(asked.size(), 1, "a locked area is ignored")
 	page.set_board("cage", "week", data)

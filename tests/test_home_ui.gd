@@ -406,6 +406,7 @@ func _widgets(t) -> void:
 	t.ok(closed_[0], "CLOSE off-tree emits closed at once")
 	# The PEGGY page: the cabinet filling the frame, PLAY over it, the credit
 	# flow, the ball and net cards.
+	PeggyMachine.threaded = false   # the threaded load (and its spinner) is the game's; build at once here
 	var page := PeggyPage.new()
 	page._ready()
 	t.ok(page.machine() != null and page.machine().peg_count() == 84, "the drop machine is built with its 84 pegs")

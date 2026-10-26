@@ -70,6 +70,9 @@ func _build() -> void:
 		var off := words(MatchCopy.rewards_offline(), 16)
 		off.name = "Offline"
 		col.add_child(off)
+	elif _data.is_empty():
+		# Nothing cached yet: the skeleton until /v1/rewards answers (39b).
+		col.add_child(SkeletonList.new("LOADING REWARDS", RetroTheme.SCENE_TEXT, true))
 	else:
 		_build_meter(col)
 		_build_pending(col)

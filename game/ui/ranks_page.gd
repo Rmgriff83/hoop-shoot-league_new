@@ -169,6 +169,7 @@ func select(area: String, period: String) -> void:
 	_restyle()
 	_clear()
 	_status.text = RanksCopy.loading_status()
+	_list.add_child(SkeletonList.new(RanksCopy.loading_head(_area), RetroTheme.c("text")))
 	_me.text = ""
 	request.emit(_area, _period)
 

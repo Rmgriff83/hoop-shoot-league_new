@@ -18,6 +18,9 @@ signal dropped(prize: Dictionary)
 signal aim_changed(aim: float)
 signal credited
 signal feeding(frac: float)
+## The cabinet is in (at once when it loads synchronously; after the slot
+## spinner when it loads on a thread).
+signal model_loaded
 
 const GLB := "res://assets/locker/peggy.glb"
 const FEED_S := 2.1
@@ -41,7 +44,16 @@ const CAP_ORANGE := Color("#E8703A")
 const CAP_DIM := Color("#7A4A34")
 const CAP_GREY := Color("#5A514A")
 
+## Load the cabinet on a thread with the slot spinner up (design "Loading
+## States" 39b: the slot keeps its size and face, the spinning ball sits in
+## the middle until the model is in). App turns it on; tests and the instant
+## QA passes build synchronously.
+static var threaded := false
+const SPINNER_PX := 40.0
+
 var tilt := 0.0
+var _spinner: PixelSpinner
+var _pending := false
 
 var _vp: SubViewport
 var _cam: Camera3D
@@ -137,16 +149,56 @@ func _build() -> void:
 	_cam.far = 20.0
 	_vp.add_child(_cam)
 	_rail_y = BOARD_Y0 + PeggyBoard.RELEASE_Y * U + 0.05
-	var scene: PackedScene = load(GLB)
-	if scene != null:
-		_root = scene.instantiate()
-		_root.name = "Cabinet"
-		_vp.add_child(_root)
-		_bind()
+	if threaded and not ResourceLoader.has_cached(GLB) and ResourceLoader.load_threaded_request(GLB, "", true) == OK:
+		_pending = true
+		_spinner = PixelSpinner.new(SPINNER_PX)
+		_spinner.name = "SlotSpinner"
+		add_child(_spinner)
+		_center_spinner()
+	else:
+		_attach(load(GLB))
 	_fit_camera(Vector2(576, 1000))
 	gui_input.connect(_on_gui_input)
-	resized.connect(func() -> void: _fit_camera(size))
+	resized.connect(func() -> void:
+		_fit_camera(size)
+		_center_spinner())
 	set_process(true)
+
+
+func _attach(scene: PackedScene, late := false) -> void:
+	if scene == null:
+		return
+	_root = scene.instantiate()
+	_root.name = "Cabinet"
+	_vp.add_child(_root)
+	_bind()
+	if late:   # the page set the plates and read the save while it loaded
+		set_slots(_slots)
+		refresh_state()
+
+
+## Whether the cabinet is in (false while the threaded load runs).
+func loaded() -> bool:
+	return _root != null
+
+
+func _center_spinner() -> void:
+	if _spinner != null:
+		_spinner.position = ((size - _spinner.size) * 0.5).round()
+
+
+## Poll the threaded load; when the model is in, drop the spinner.
+func _poll_load() -> void:
+	var st := ResourceLoader.load_threaded_get_status(GLB)
+	if st == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+		return
+	_pending = false
+	var scene: PackedScene = ResourceLoader.load_threaded_get(GLB) if st == ResourceLoader.THREAD_LOAD_LOADED else load(GLB)
+	_attach(scene, true)
+	if _spinner != null:
+		_spinner.queue_free()
+		_spinner = null
+	model_loaded.emit()
 
 
 ## The design's fit: the whole cabinet (2.7 m tall, 1.18 m wide) in frame
@@ -374,7 +426,7 @@ func _place() -> void:
 
 
 func is_busy() -> bool:
-	return _playing or _feeding
+	return _playing or _feeding or _pending
 
 
 func playing() -> bool:
@@ -530,6 +582,8 @@ func _hit(pos: Vector2, node: Node3D, r_m: float) -> bool:
 
 
 func _on_gui_input(ev: InputEvent) -> void:
+	if _root == null:
+		return
 	var pressed := false
 	var released := false
 	var pos := Vector2.ZERO
@@ -569,6 +623,10 @@ func _on_gui_input(ev: InputEvent) -> void:
 
 func _process(delta: float) -> void:
 	_t += delta
+	if _pending:
+		_center_spinner()   # sized before it entered the tree: no resized yet
+		_poll_load()
+		return
 	var busy := _playing or _feeding
 	# The joystick drives the crane; the servo whines while it moves.
 	var moving := false

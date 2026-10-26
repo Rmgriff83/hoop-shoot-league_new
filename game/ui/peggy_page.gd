@@ -64,6 +64,7 @@ func _build() -> void:
 	_machine = PeggyMachine.new()
 	_machine.dropped.connect(_on_dropped)
 	_machine.credited.connect(_refresh_play)
+	_machine.model_loaded.connect(_refresh_play)
 	root.add_child(_machine)
 	root.move_child(_machine, 0)
 	stage.item_rect_changed.connect(_fit_machine.bind(stage))

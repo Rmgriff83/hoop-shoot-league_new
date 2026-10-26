@@ -45,6 +45,11 @@ static func loading_status() -> String:
 	return "LOADING..."
 
 
+## The skeleton list's head while a board loads (design "Loading States" 39b).
+static func loading_head(area: String) -> String:
+	return "LOADING THE LADDER" if area == RANKED else "LOADING RANKS"
+
+
 static func status(period: String, count: int) -> String:
 	if count == 0:
 		return "NO RUNS YET · BE FIRST"

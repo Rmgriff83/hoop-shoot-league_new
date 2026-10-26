@@ -55,6 +55,7 @@ func _ready() -> void:
 	if App.loader != null:
 		App.loader.instant = _has_prefixed(args, "--qa") and not args.has("--qa-loading")
 		App.loader.force_show = args.has("--qa-loading")
+		PeggyMachine.threaded = not App.loader.instant
 	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
@@ -390,6 +391,54 @@ func _run_loading() -> void:
 		await _snap("loading_area_fade")
 		await _sleep(0.8)
 		await _snap("loading_area_done")
+	# 3D previews (39b): PEGGY's slot spinner while the cabinet loads on a thread.
+	var home := get_tree().current_scene
+	if home != null and home.has_method("_open_peggy"):
+		# The slot itself at its first frame (the page's slide outlasts a desktop load).
+		var lay := CanvasLayer.new()
+		lay.layer = 50
+		var dim := ColorRect.new()
+		dim.color = Color("#1B1815")
+		UiLayout.full_rect(dim)
+		lay.add_child(dim)
+		var solo := PeggyMachine.new()
+		solo.position = Vector2(72, 140)
+		solo.size = Vector2(576, 1000)
+		lay.add_child(solo)
+		add_child(lay)
+		await get_tree().process_frame
+		print("QA loading: solo cabinet in: ", solo.loaded())
+		await _snap("loading_peggy_spinner")
+		lay.queue_free()
+		await _sleep(0.3)
+		home.call("_open_locker")
+		await _sleep(0.6)
+		home.call("_open_peggy")
+		await get_tree().process_frame
+		var ppage: PeggyPage = get_tree().root.find_child("PeggyPage", true, false) as PeggyPage
+		var pm: PeggyMachine = ppage.machine() if ppage != null else null
+		print("QA loading: PEGGY cabinet in at open: ", pm.loaded() if pm != null else "?", ", spinner: ", pm != null and pm.find_child("SlotSpinner", false, false) != null)
+		await _snap("loading_peggy_slot")
+		await _sleep(1.5)
+		await _snap("loading_peggy_in")
+		var pp: Node = get_tree().root.find_child("PeggyPage", true, false)
+		if pp != null:
+			pp.call("close")
+		await _sleep(0.5)
+		var lp: Node = get_tree().root.find_child("LockerPanel", true, false)
+		if lp != null:
+			lp.call("close")
+		await _sleep(0.5)
+	# Lists (39b): a ranks board that has not answered yet.
+	var rp := RanksPage.new()
+	rp.name = "QaRanks"
+	rp.build(RanksCopy.tabs(App.level(), false), "QA")
+	add_child(rp)
+	rp.select("beach", "week")
+	await _sleep(0.5)
+	await _snap("loading_ranks")
+	rp.queue_free()
+	await _sleep(0.2)
 	if App.loader != null:
 		App.loader.instant = false
 	App.start_area("trial", "beach")
