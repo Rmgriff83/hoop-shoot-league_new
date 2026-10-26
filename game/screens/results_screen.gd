@@ -119,7 +119,7 @@ func build_chrome(run: Dictionary, is_best: bool) -> Control:
 	var scrim := ColorRect.new()
 	scrim.name = "Scrim"
 	scrim.color = Color(RetroTheme.SCENE_OUTLINE, SCRIM_ALPHA)
-	UiLayout.full_rect(scrim)
+	UiLayout.full_screen_fill(scrim)   # past the band to the screen's edges
 	scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chrome.add_child(scrim)
 	var location := str(run.get("location", "cage"))

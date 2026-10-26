@@ -112,7 +112,7 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	var scrim := ColorRect.new()
 	scrim.name = "Scrim"
 	scrim.color = Color(RetroTheme.SCENE_OUTLINE, SCRIM_ALPHA)
-	UiLayout.full_rect(scrim)
+	UiLayout.full_screen_fill(scrim)   # past the band to the screen's edges
 	scrim.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chrome.add_child(scrim)
 	var in_league := not HeatCopy.league_of(heat).is_empty()

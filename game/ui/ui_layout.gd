@@ -208,6 +208,19 @@ static func full_rect(c: Control) -> void:
 		c.tree_entered.connect(bleed.bind(c), CONNECT_ONE_SHOT)
 
 
+## A full-screen fill NESTED in a centred layer's band (a scrim inside a
+## screen's chrome Control): anchored to its parent's full rect and pushed
+## out by the band's offset on every side, so it covers the real screen —
+## full_rect only bleeds a fill rooted at the layer (Ross, 2026-10-25: the
+## post-match scrim began under the notch).
+static func full_screen_fill(c: Control) -> void:
+	c.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	c.offset_left = -_offset.x
+	c.offset_right = _offset.x
+	c.offset_top = -_offset.y
+	c.offset_bottom = _offset.y
+
+
 static func bleed(c: Control) -> void:
 	if c.get_parent() is Control:
 		return
