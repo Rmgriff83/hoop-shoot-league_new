@@ -209,7 +209,7 @@ func _continue() -> void:
 		return
 	_leaving = true
 	App.show_archive = true
-	App.to_title()
+	App.to_title("continue")
 
 
 ## NEW GAME: the splash (sign and all) slides out to the left while the NEW

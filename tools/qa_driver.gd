@@ -50,7 +50,12 @@ func _ready() -> void:
 	# keeps it — this autoload runs in every build, so the skip must not be the
 	# default (Ross's phone never saw the tutorial, 2026-10-24).
 	App.qa_skip_tutorial = skips_tutorial(args)
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi")):
+	# QA passes keep instant scene moves (their sleeps assume them); --qa-loading
+	# exercises the loader and raises the screen at once.
+	if App.loader != null:
+		App.loader.instant = _has_prefixed(args, "--qa") and not args.has("--qa-loading")
+		App.loader.force_show = args.has("--qa-loading")
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# The splash is the main scene now: every other pass starts from the title.
@@ -111,6 +116,8 @@ func _ready() -> void:
 		_run_net_style.call_deferred("rwb")
 	elif args.has("--qa-tattered"):
 		_run_net_style.call_deferred("tattered")
+	elif args.has("--qa-loading"):
+		_run_loading.call_deferred()
 	elif args.has("--qa-net-thumbs"):
 		_run_net_thumbs.call_deferred()
 	elif args.has("--qa-ranks"):
@@ -341,6 +348,41 @@ func _run_chain() -> void:
 
 ## A bought chain style hung on the city through App.net_override (no save
 ## change): --qa-jack / --qa-ladder → jack_* / ladder_* snaps.
+## The loading states (design "Loading States" 39a / 39b): from the splash,
+## CONTINUE → the pressed button's LOADING state, the loading screen, home;
+## then TIME TRIAL from home → the screen again on the way to the court.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-loading
+func _run_loading() -> void:
+	while App.loader != null and App.loader.busy():   # the driver's own startup move home
+		await get_tree().process_frame
+	await _sleep(1.0)
+	get_tree().change_scene_to_file(App.SPLASH_SCENE)
+	await _sleep(5.6)   # the neon sign lights, the buttons rise
+	var primary: BaseButton = get_tree().root.find_child("Primary", true, false)
+	if primary != null:
+		var c := _win_of(primary)
+		_mouse_move(c, Vector2.ZERO)
+		_mouse_button(c, true)
+		await _sleep(0.06)
+		_mouse_button(c, false)
+	await _sleep(0.05)
+	await _snap("loading_button")
+	await _sleep(0.6)
+	await _snap("loading_screen")
+	await _sleep(1.6)
+	await _snap("loading_screen_tip")
+	await _sleep(2.0)
+	await _snap("loading_home")
+	if App.loader != null:
+		App.loader.instant = false
+	App.start_area("trial", "beach")
+	await _sleep(0.9)
+	await _snap("loading_match")
+	await _sleep(3.0)
+	await _snap("loading_court")
+	get_tree().quit()
+
+
 func _run_net_style(style: String) -> void:
 	var ns := CosmeticLibrary.get_net(style)
 	App.net_override = ns

@@ -176,6 +176,10 @@ func hoop_for_mode(id: String) -> HoopSet:
 func _ready() -> void:
 	# The designed 720×1280 band centred on whatever the screen is (docs/HOME.md → Screen vs. design).
 	UiLayout.install(get_tree().root)
+	# Every move between scenes goes through the loader (design "Loading States" 39a).
+	loader = SceneLoader.new()
+	loader.name = "SceneLoader"
+	add_child(loader)
 	var saved := SaveService.get_tuning()
 	tuning_mode = bool(saved.get("tuningMode", false))
 	if OS.is_debug_build():
@@ -1147,18 +1151,51 @@ func cancel_online() -> void:
 
 # ---- routing -------------------------------------------------------------------
 
+## The scene mover (game/ui/scene_loader.gd): threaded loads, the busy
+## button, the loading screen past 0.4 s (design "Loading States" 39a / 39b).
+var loader: SceneLoader
 
-func to_title() -> void:
+
+## Move to `path` through the loader: `kind` and the area pick the loading
+## screen's words and art (LoadingCopy.dest), and the area's arena and hoop
+## models load on threads with the scene.
+func _move(path: String, kind: String, area: String, extra := "") -> void:
+	var arena := CosmeticLibrary.get_arena(area)
+	var name_ := str(arena.display_name) if arena != null else area.to_upper()
+	var extras: Array = []
+	if arena != null and arena.model_path != "":
+		extras.push_back(arena.model_path)
+	var mode := str(AREA_MODES["practice"].get(area, "practice"))
+	var hoop := hoop_for_mode(mode)
+	if hoop != null and hoop.model_path != "":
+		extras.push_back(hoop.model_path)
+	if ball_set != null and ball_set.model_path != "":
+		extras.push_back(ball_set.model_path)
+	var art := "res://assets/ui/areas/area_%s_tall.png" % area if arena != null else ""
+	if loader == null:
+		get_tree().change_scene_to_file(path)
+		return
+	loader.go(path, LoadingCopy.dest(kind, name_, extra), art, extras)
+
+
+## The home's area (the card the home opens on).
+func home_area() -> String:
+	var areas: Array = AreaArchiveCopy.AREAS
+	return str(areas[clampi(home_card, 0, areas.size() - 1)]["area"])
+
+
+## Home. `kind`: "home" (from a page), "continue" (the splash), "new" (a new player).
+func to_title(kind := "home") -> void:
 	get_tree().paused = false
 	cancel_online()   # leaving a post-match page closes the room
-	get_tree().change_scene_to_file(TITLE_SCENE)
+	_move(TITLE_SCENE, kind, home_area())
 
 
 ## The splash (docs/HOME.md → Splash): the first screen, and where the area
 ## archive's back leads.
 func to_splash() -> void:
 	get_tree().paused = false
-	get_tree().change_scene_to_file(SPLASH_SCENE)
+	_move(SPLASH_SCENE, "splash", "")
 
 
 ## Anything played yet? The splash reads CONTINUE over a save, NEW GAME on
@@ -1220,7 +1257,7 @@ func create_player(name: String, tag: String, town: String, go := true) -> void:
 	else:
 		Net.ensure_account()
 	if go:
-		to_title()
+		to_title("new")
 
 
 func start_mode(id: String) -> void:
@@ -1228,9 +1265,29 @@ func start_mode(id: String) -> void:
 	if mode_config(next_mode).get("heat", false):
 		if next_heat.is_empty() or next_heat.get("mode", "") != next_mode:
 			next_heat = quick_heat_config(next_mode)
-		get_tree().change_scene_to_file(HEAT_SCENE)
+		_move(HEAT_SCENE, "heat", str(mode_config(next_mode).get("location", "cage")), _heat_line(next_heat))
 		return
-	get_tree().change_scene_to_file(TIME_TRIAL_SCENE)
+	var cfg := mode_config(next_mode)
+	var endless := bool(cfg.get("endless", false))
+	_move(TIME_TRIAL_SCENE, "practice" if endless else "trial", str(cfg.get("location", "cage")),
+		"PRACTICE · NO CLOCK" if endless else "TIME TRIAL · %d S" % int(TimeTrial.TIME_TRIAL_SECONDS))
+
+
+## A match's line on the loading screen: `LEAGUE · SEASON 2 · DAY 4 · VS OLLIE`.
+func _heat_line(cfg: Dictionary) -> String:
+	var parts := PackedStringArray()
+	var league = cfg.get("league")
+	if league is Dictionary and not (league as Dictionary).is_empty():
+		parts.append("LEAGUE")
+		var lid := str(league.get("id", ""))
+		var kick := HeatCopy.kicker({"league": league}, league_doc(lid) if lid != "" else {})
+		if kick != "":
+			parts.append(kick)
+	var opp = cfg.get("opponent")
+	var first := str((opp as Dictionary).get("name", "")).get_slice(" ", 0).to_upper() if opp is Dictionary else ""
+	if first != "":
+		parts.append("VS %s" % first)
+	return " · ".join(parts)
 
 
 ## TEST-ONLY. Quick heats left the game (2026-09-25): heats are league games.
@@ -1253,7 +1310,7 @@ func start_heat(mode_id: String, cfg: Dictionary) -> void:
 	next_heat = cfg.duplicate(true)
 	next_heat["mode"] = mode_id
 	next_mode = mode_id
-	get_tree().change_scene_to_file(HEAT_SCENE)
+	_move(HEAT_SCENE, "heat", str(mode_config(mode_id).get("location", "cage")), _heat_line(next_heat))
 
 
 ## Settle a finished heat: the league apply, payouts, XP and the card roll
@@ -1278,7 +1335,7 @@ func settle_heat(result: Dictionary) -> Dictionary:
 
 
 func to_heat_result() -> void:
-	get_tree().change_scene_to_file(HEAT_RESULT_SCENE)
+	_move(HEAT_RESULT_SCENE, "postmatch", str(last_heat.get("location", "cage")))
 
 
 func finish_heat(result: Dictionary) -> void:
@@ -1435,7 +1492,7 @@ func start_league(id: String) -> void:
 
 
 func to_credits() -> void:
-	get_tree().change_scene_to_file(CREDITS_SCENE)
+	_move(CREDITS_SCENE, "credits", "")
 
 
 ## The "dashboard" is the home page with the current league open in context.
@@ -1692,4 +1749,4 @@ func finish_run(run: Dictionary) -> void:
 	# net allows — the results page never waits on it.
 	Net.queue_run(last_run)
 	Net.push_save()
-	get_tree().change_scene_to_file(RESULTS_SCENE)
+	_move(RESULTS_SCENE, "results", str(last_run.get("location", "cage")))

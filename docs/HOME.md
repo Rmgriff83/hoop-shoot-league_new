@@ -755,3 +755,28 @@ the live card and `+1 CARD`; CONTINUE SEASON and HOME on one 120 px row.
 An online match keeps its rank line (in the score block), its rewards /
 spoils / meter row under the box and REMATCH? / SHOOT AROUND? beside HOME.
 QA: `--qa-heat-result` (`heat_win_stream` mid-flight, `heat_win` settled).
+
+## Loading (design "Loading States" 39a / 39b, 2026-10-25)
+
+Every move between scenes goes through `App._move` → `SceneLoader`
+(`game/ui/scene_loader.gd`, a child of the App autoload, so it outlives the
+change). The old moves were blocking `change_scene_to_file` calls and the
+screen froze while the next scene's `_ready` loaded its arena and hoop
+models. Now a move (1) puts the button under the finger in its loading
+state — `ButtonBusy` (`game/ui/button_busy.gd`): the button stays pushed in,
+its words swap to a `PixelSpinner` + LOADING… with its own name under it
+(the splash's CONTINUE / LET'S PLAY say LOADING YOUR SAVE / SETTING UP YOUR
+GAME), every other button dims to 45 % and stops taking taps; (2) loads the
+scene and the resources its `_ready` will ask for (the area's arena model,
+its hoop model, the ball) with `ResourceLoader.load_threaded_request`, so
+the bar shows real progress and the scene's own `load()` calls hit the
+cache; (3) raises the `LoadingScreen` (`game/ui/loading_screen.gd`) only if
+that runs past 0.4 s and keeps it up at least 0.6 s (`LoadingCopy.next_step`):
+the destination's tall art faintly behind (`assets/ui/areas/area_<id>_tall.png`),
+the bouncing pixel ball, LOADING… with the destination in gold and its line
+(`LoadingCopy.dest`: NEW GAME → ARCADE CAGE · YOUR FIRST COURT, CONTINUE →
+WHERE YOU LEFT OFF, a match → LEAGUE · SEASON 2 · DAY 4 · VS OLLIE, a trial
+→ TIME TRIAL · 60 S…), the stage line and percentage over the bar, and a tip
+that changes every 2.2 s; (4) changes to the packed scene under the screen
+and fades it out. QA passes keep instant moves (`loader.instant`, their
+sleeps assume them); `--qa-loading` exercises the loader (`force_show`).
