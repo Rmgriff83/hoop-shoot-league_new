@@ -1391,7 +1391,7 @@ func _open_lobby() -> void:
 			"start":
 				# The room started: the page counts down, then App.tip_off_now().
 				if _pre_match != null:
-					_pre_match.start_countdown(float(Dictionary(a).get("countdown_s", 10)) if a is Dictionary else 10.0)
+					_pre_match.start_countdown(float(Dictionary(a).get("countdown_s", 5)) if a is Dictionary else 5.0)
 				else:
 					App.tip_off_now()
 	_lobby.ranked.connect(func() -> void: App.start_online("any", "ranked", "", on_state))

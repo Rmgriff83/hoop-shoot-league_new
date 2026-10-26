@@ -327,7 +327,7 @@ chevron (the footer says START INSIDE).
   you are READY. The READY button (orange, `READY · n OF 3 CARDS SET · LOCKS
   YOUR LOADOUT · >`) locks the loadout and turns gold (`WAITING FOR GLASS
   WIZARD · TAP TO UNLOCK` — tap again to unlock while they are still deciding);
-  both ready → the 10 s count (`data/ranked.json → prematch.countdown_s`,
+  both ready → the 5 s count (10 s until 2026-10-25) (`data/ranked.json → prematch.countdown_s`,
   `STARTING IN 7 · BOTH PLAYERS READY · LOADOUTS LOCKED`, the number popping
   in the middle; online the room's `start` carries the count, a league counts
   on its own), then `TIP-OFF · LOADING THE MATCH...` and the heat loads with

@@ -60,7 +60,7 @@
   "prematch": {
     "seconds": 20,
     "grace_s": 3,
-    "countdown_s": 10
+    "countdown_s": 5
   },
   "level_trust": {
     "max_levels_per_hour": 2,

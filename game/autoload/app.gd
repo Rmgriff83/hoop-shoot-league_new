@@ -1586,7 +1586,7 @@ func league_pre_match_info(doc: Dictionary, cfg: Dictionary) -> Dictionary:
 		"you": {"online_text": "%d-%d THIS SEASON" % [int(mine.get("w", 0)), int(mine.get("l", 0))]},
 		"league_stats": {"opp": MatchCopy.league_stats(opp_row), "you": MatchCopy.league_stats(my_row)},
 		"cap": level(), "seconds": float(CardDefs.prematch_seconds("league")), "bucket": str(cfg["id"]),
-		"countdown_s": float(RankedRules.prematch_cfg().get("countdown_s", 10)),
+		"countdown_s": float(RankedRules.prematch_cfg().get("countdown_s", 5)),
 		"ai_hand": _ai_hand_for(season, cfg, opp_id),
 		"side": "a", "league": true,
 	}
