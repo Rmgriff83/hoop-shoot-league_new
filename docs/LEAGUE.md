@@ -168,8 +168,9 @@ so simulated box scores match live volume.
 
 ## League boards (2026-09-18)
 
-The park and the city show the standings (regular season) / bracket (playoffs) on an in-world
-chalkboard in league heats (`game/view/league_banner.gd`, Caveat handwriting with per-line
+The city shows the standings (regular season) / bracket (playoffs) on an in-world
+chalkboard in league heats (the park's came down on 2026-10-25, Ross: its `arena_set.tres`
+`league_banner_kind` is empty now) (`game/view/league_banner.gd`, Caveat handwriting with per-line
 jitter; `chalkboard.png`, chalk palette). The beach's chalkboard came down on 2026-10-16
 (Ross: "remove the chalkboard from the beach league mode" — its `league_banner_*` fields are
 gone from the beach set, so beach league heats hang nothing); the arcade cage hangs a slim

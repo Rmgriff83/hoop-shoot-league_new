@@ -8,8 +8,9 @@ func run(t) -> void:
 	var city: ArenaSet = CosmeticLibrary.get_arena("city")
 	var cage: ArenaSet = CosmeticLibrary.get_arena("cage")
 	# The beach's chalkboard came down (Ross, 2026-10-16): no in-world board
-	# in beach league heats. The city (and the park) still hang theirs.
+	# in beach league heats; the park's too (2026-10-25). The city still hangs its own.
 	t.eq(beach.league_banner_kind, "", "beach hangs no league board any more")
+	t.eq(CosmeticLibrary.get_arena("park").league_banner_kind, "", "nor the park (Ross, 2026-10-25)")
 	t.eq(city.league_banner_kind, "standings", "city shows the standings/bracket banner")
 	t.eq(city.league_banner_style, "chalk", "city board is a chalkboard")
 	t.ok(city.league_banner_size.x > 0.5 and city.league_banner_size.y > 0.3, "city banner has a size")
