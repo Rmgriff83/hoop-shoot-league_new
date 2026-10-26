@@ -225,7 +225,12 @@ eight authored ice cards, so its target is now **0.7** (cage 0.5 → beach 0.7 �
 closes on the clock (or the rim ices) the loan is withdrawn and the makes
 shot under it stay a real streak, capped under `FIRE_AT` — the fire goes
 out, the shooter earns the next one. A miss still puts the fire out and
-breaks the streak. Before this the
+breaks the streak — a miss *shot under the card*: since 2026-10-25 each
+flight remembers whether the fire was on when it left the hand, and a ball
+already in the air when the card is played that then misses only breaks
+the streak the card found (the loan becomes the whole `FIRE_AT`, so the
+makes under the card still stay a streak at the close) and counts toward the
+cold streak; the fire burns on (`outcome.fire_kept`, Ross's bug). Before this the
 close hard-reset the streak to 0, which the card lab caught as a NEGATIVE
 power in the city (−0.84 ± 0.26): a strong shooter lost the streak the card
 had helped build, then shot the next five makes at base points.

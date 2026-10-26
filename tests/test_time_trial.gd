@@ -171,6 +171,36 @@ func _card_fire(t) -> void:
 			hot_pts = int(ev["outcome"]["points"])
 	t.eq(hot_pts, 3, "the in-flight shot still paid the hot tier")
 	t.ok(not tt5.fire_card and tt5.streak == 1, "then the window closed; the one make under it stays a streak")
+	# A ball shot BEFORE the card, missing after it lit, does not put it out (Ross, 2026-10-25).
+	var tt6 := TimeTrial.new()
+	_tick_seconds(tt6, TimeTrial.COUNTDOWN_SECONDS + 0.05)
+	for i in 2:
+		tt6.pickup()
+		tt6.release(SWISH_LAUNCH)
+		_tick_seconds(tt6, 1.6)
+	t.eq(tt6.streak, 2, "a streak of two before the card")
+	tt6.drain_events()
+	t.ok(tt6.pickup() and tt6.release(BRICK_LAUNCH), "a brick in the air…")
+	t.ok(tt6.light_rim(7.0), "…and the fire card played before it lands")
+	_tick_seconds(tt6, 1.6)
+	var stale := {}
+	var stale_offs := []
+	for ev in tt6.drain_events():
+		if ev["kind"] == "outcome":
+			stale = ev["outcome"]
+		elif ev["kind"] == "fire_off":
+			stale_offs.push_back(ev["reason"])
+	t.ok(not bool(stale.get("made", true)) and bool(stale.get("fire_kept", false)), "the brick lands a miss, the card's fire kept")
+	t.eq(int(stale.get("streak_broken", -1)), 2, "…it breaks the streak the card found")
+	t.ok(tt6.fire_card and stale_offs.is_empty() and tt6.streak == StreakRules.FIRE_AT, "the rim burns on at FIRE_AT")
+	t.eq(tt6.miss_streak, 1, "…the miss still counts toward the cold streak")
+	tt6.pickup()
+	tt6.release(SWISH_LAUNCH)
+	_tick_seconds(tt6, 1.6)
+	t.eq(tt6.streak, StreakRules.FIRE_AT + 1, "a make under the card stacks")
+	_tick_seconds(tt6, 6.0)
+	t.ok(not tt6.fire_card and tt6.streak == 1, "the window closes: the make under it stays a streak of one")
+	# …while a miss shot under the card still puts it out (tt2 above).
 
 
 ## Overtime period: the arena resets (balls gone, hoop home, no board slide or

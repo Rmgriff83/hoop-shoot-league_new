@@ -303,7 +303,9 @@ func release(launch: Dictionary) -> bool:
 	attempts += 1
 	if ball_return_s > 0.0:
 		ball_ready_at = t + ball_return_s
-	_flights.push_back({"state": ShotSim.create_shot(launch, geo), "seen_events": 0, "scored": false, "magnet": magnet_card})
+	# Each flight remembers the cards lit when it left the hand: a ball already
+	# in the air when the fire card goes on is not the card's (Ross, 2026-10-25).
+	_flights.push_back({"state": ShotSim.create_shot(launch, geo), "seen_events": 0, "scored": false, "magnet": magnet_card, "fire": fire_card})
 	_events.push_back({"kind": "release", "launch": launch})
 	return true
 
@@ -457,8 +459,19 @@ func _step_fixed() -> void:
 				score += outcome["points"]
 				best_streak = maxi(best_streak, streak)
 			else:
-				outcome["streak_broken"] = streak
-				streak = 0
+				if fire_card and not f.get("fire", false):
+					# Shot before the fire card went on, missed after: the miss
+					# is the streak's from before the card, not the card's. The
+					# fire burns on. The streak the card found (FIRE_AT − the
+					# loan) is what breaks; the makes under the card came after
+					# it, so they stay a real streak when the window closes:
+					# the loan becomes the whole FIRE_AT.
+					outcome["streak_broken"] = StreakRules.FIRE_AT - _fire_loan
+					outcome["fire_kept"] = true
+					_fire_loan = StreakRules.FIRE_AT
+				else:
+					outcome["streak_broken"] = streak
+					streak = 0
 				miss_streak += 1
 				if not iced and miss_streak >= StreakRules.COLD_AT:
 					iced = true
@@ -475,7 +488,7 @@ func _step_fixed() -> void:
 				"outcome": outcome,
 				"buzzer_beater": phase != PHASE_RUNNING,
 			})
-			if fire_card and not outcome["made"] and not outcome.get("iced_out", false):
+			if fire_card and not outcome["made"] and not outcome.get("iced_out", false) and not outcome.get("fire_kept", false):
 				_end_card_fire("miss")
 	var kept: Array[Dictionary] = []
 	for f in _flights:
