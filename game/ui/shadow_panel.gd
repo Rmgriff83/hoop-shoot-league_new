@@ -11,6 +11,10 @@ extends PanelContainer
 var color := Color.WHITE
 var tint := ShadowStyle.TINT
 var shadow := Color.TRANSPARENT
+## An opaque-ish ground under the see-through face, for a panel that carries
+## long body text over a busy court (the walkthrough card): the words read
+## on dark instead of on the light dots. Transparent = none.
+var ground := Color.TRANSPARENT
 
 
 func _init(p_color := Color.WHITE, pad := 20.0, p_tint := ShadowStyle.TINT, pad_h := -1.0) -> void:
@@ -22,5 +26,7 @@ func _init(p_color := Color.WHITE, pad := 20.0, p_tint := ShadowStyle.TINT, pad_
 
 
 func _draw() -> void:
+	if ground.a > 0.0:
+		draw_rect(Rect2(Vector2.ZERO, size - Vector2.ONE * ShadowStyle.OFFSET), ground)
 	var s := shadow if shadow.a > 0.0 else Color(color, ShadowStyle.SHADOW_ALPHA)
 	ShadowStyle.draw_ex(self, size, color, Color(color, ShadowStyle.face_alpha(tint)), Color(color, ShadowStyle.DOT_ALPHA), s, false, false, false)

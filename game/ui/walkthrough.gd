@@ -19,6 +19,9 @@ const CREAM := RetroTheme.SCENE_TEXT
 const CARD_X := 36.0
 const CARD_W := 642.0
 const CARD_PAD := 28.0
+## The card's ground under its dotted face, and the room between body lines.
+const CARD_GROUND := Color(27.0 / 255.0, 24.0 / 255.0, 21.0 / 255.0, 0.88)
+const BODY_LINE_GAP := 12
 const GAP := 36.0              # between the spot and the card
 const BOOKEND_TOP := 380.0
 const SPOT_PAD := 12.0
@@ -196,8 +199,11 @@ func _build_card(st: Dictionary, kind: String) -> void:
 		if _card.get_parent() != null:
 			_card.get_parent().remove_child(_card)
 		_card.queue_free()
-	_card = ShadowPanel.new(CREAM, CARD_PAD)
+	_card = ShadowPanel.new(CREAM, CARD_PAD, 0.12)
 	_card.name = "Card"
+	# A dark ground under the dotted face (Ross, 2026-10-25: the white words
+	# bled into the light dots once the palette went white).
+	_card.ground = CARD_GROUND
 	_card.mouse_filter = Control.MOUSE_FILTER_STOP
 	_root.add_child(_card)
 	var col := VBoxContainer.new()
@@ -235,6 +241,7 @@ func _build_card(st: Dictionary, kind: String) -> void:
 	body.name = "Body"
 	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	body.add_theme_constant_override("line_spacing", BODY_LINE_GAP)   # the outlines no longer touch
 	body.custom_minimum_size = Vector2(CARD_W - 2.0 * CARD_PAD - ShadowStyle.OFFSET, 0)
 	col.add_child(body)
 	var buttons := HBoxContainer.new()
@@ -313,7 +320,11 @@ func _card_height() -> float:
 			if (c as Label) != null:
 				var lab := c as Label
 				var w := CARD_W - 2.0 * CARD_PAD - ShadowStyle.OFFSET
-				ch = maxf(ch, lab.get_theme_font("font").get_multiline_string_size(lab.text, HORIZONTAL_ALIGNMENT_LEFT, w, lab.get_theme_font_size("font_size")).y)
+				var f := lab.get_theme_font("font")
+				var fs := lab.get_theme_font_size("font_size")
+				var mh := f.get_multiline_string_size(lab.text, HORIZONTAL_ALIGNMENT_LEFT, w, fs).y
+				var lines := maxi(1, roundi(mh / maxf(f.get_height(fs), 1.0)))
+				ch = maxf(ch, mh + (lines - 1) * lab.get_theme_constant("line_spacing"))
 			h += ch
 			items += 1
 	h += 20.0 * maxi(items - 1, 0)
