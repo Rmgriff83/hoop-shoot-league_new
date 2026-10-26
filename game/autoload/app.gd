@@ -1017,10 +1017,8 @@ func _hold_tip_off(client: MatchClient, start: Dictionary) -> void:
 func _rematch_go(room_id: String, area: String, on_state: Callable) -> void:
 	var old: Node = room
 	room = null
-	if old != null and old.has_method("close"):
-		old.close("rematch")
-	if not (old is MatchClient) and old != null:
-		old.queue_free()
+	if old != null and is_instance_valid(old):
+		_close_room_node(old, "rematch")
 	match_how = "rematch"
 	match_area = area
 	if not _open_room(room_id, area, on_state):
@@ -1212,14 +1210,30 @@ func start_shoot_around() -> void:
 	start_area("trial", area if area_unlocked(area) else "cage")
 
 
+## Close a room node that is no longer `room`: a MatchClient drains its
+## queue and frees itself; anything else (a test double) is freed here. The
+## kind is read BEFORE close, which may free it.
+func _close_room_node(r: Node, reason: String) -> void:
+	var client := r is MatchClient
+	if r.has_method("close"):
+		r.close(reason)
+	if not client and is_instance_valid(r):
+		r.queue_free()
+
+
 ## Leave the lobby / the room (a cancel, a back, a finished match).
 func cancel_online() -> void:
-	if room != null:
-		if room.has_method("close"):
-			room.close("bye")   # a MatchClient drains its queue and frees itself
-		if not (room is MatchClient):
-			room.queue_free()
-		room = null
+	# Clear `room` BEFORE closing (the 2026-10-26 TestFlight crash): a
+	# MatchClient's close emits `closed` before it frees itself, and the
+	# handler _open_room wired re-entered this function while `room` still
+	# pointed at the client — the inner call nulled `room`, and the outer one
+	# then called queue_free() on null (a segfault in a release build; only a
+	# logged error in the debug builds). With `room` cleared first the handler
+	# sees `room != client` and stays out.
+	var r := room
+	room = null
+	if r != null and is_instance_valid(r):
+		_close_room_node(r, "bye")
 	rematch_state = ""
 	pre_match = {}
 	_prematch_routed = false

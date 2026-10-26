@@ -501,11 +501,18 @@ func fade_out(delay := 0.0, seconds := LEAVE_S) -> void:
 		return
 	_staying = false
 	if _tween != null and _tween.is_valid() and _sliding:
-		# Still sliding in: finish the slide, then hold and fade.
+		# Still sliding in: finish the slide, then hold and fade. A fresh
+		# tween — a running one takes no new steps (tween_property returns
+		# null, and a call on it crashes a release build: the 2026-10-26 sweep).
+		_tween.kill()
 		_leaving = delay <= 0.0
-		_tween.tween_interval(delay)
+		_tween = create_tween()
+		_tween.tween_property(self, "x_pos", _home_x(), SLIDE_SETTLE_S * 2.0).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		_tween.tween_callback(func() -> void: _sliding = false)
+		if delay > 0.0:
+			_tween.tween_interval(delay)
 		_tween.tween_callback(func() -> void: _leaving = true)
-		_tween.tween_property(self, "modulate:a", 0.0, seconds).set_trans(Tween.TRANS_LINEAR)
+		_tween.tween_property(self, "modulate:a", 0.0, seconds)
 		_tween.tween_callback(hide_now)
 		return
 	if _tween != null:
