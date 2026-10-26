@@ -1353,6 +1353,12 @@ band — via `CottonNet._diag_color` / `_knot_color` / `_tail_color`; ~10 mm
 cord (r 5.2 mm, knots r 9.5 mm). The neons (`NetSet.tint`) are the plain
 cotton body painted one colour with a faint glow.
 
+The Net Roster (2026-10-25) adds three bodies on this family without new
+geometry: `WoolOceanNet` / `WoolEmberNet` (designs 26e / 26f) are the wool
+net with their own twelve yarns (`WoolNet._yarn()` is the hook), and
+`RastaNet` is the red-white-blue build banded red / gold / green
+(`RwbNet._band(k)` is the hook). Neon Blue and Neon Purple are cotton tints.
+
 ## 32. The tattered net (2026-10-24)
 
 Ross's design "Tattered Net Model" (26d): the cotton net from §28, aged into

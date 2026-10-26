@@ -31,7 +31,7 @@ A net is a **look for the hoop's kind of net** (`game/cosmetics/net_set.gd`,
 city's steel rim), `style` names the body `NetBodies` builds
 (docs/BLENDER_101.md §28–32), `price_coins` is tickets. The feel — the nine
 `net_*` knobs and the make sounds — stays on the court's `HoopSet`; a style
-only changes what hangs. Nine nets ship (`assets/nets/<id>/net_set.tres`,
+only changes what hangs. Fourteen nets ship (`assets/nets/<id>/net_set.tres`,
 `CosmeticLibrary.NETS`): **Cotton** and **Chain** (the stock pair, free,
 owned by every save), **Jack** (a jack chain, valued 600 — a *mid* tier),
 **Ladder** (straight drops tied by hoop chains, 1000 — *premium*), **Wool**
@@ -40,7 +40,11 @@ courts), the **Neon Yellow** / **Neon Orange** cottons (the cotton body with
 a `NetSet.tint`, 400 each — *entry*), **Red White Blue** (the heavy-duty
 polyester net in colour bands, 500 — *mid*) and **Tattered** (the worn park
 net, 2026-10-24: three hooks torn off, snapped pieces, loose strands, a
-grimy grey-cream — valued 500, *mid*; §32). Every net but the stock pair is
+grimy grey-cream — valued 500, *mid*; §32), and from Ross's "Net Roster"
+(2026-10-25) **Neon Blue** / **Neon Purple** (tints #1AB8FF / #B43CFF, 400 —
+*entry*), **Wool Ocean** and **Wool Ember** (the wool net in sea and fire
+yarns, 700 — *mid*) and **Rasta** (the red-white-blue build banded red, gold,
+green, 500 — *mid*). Every net but the stock pair is
 a PEGGY prize (since 2026-10-15 nothing is bought outright; the value is the
 economy ledger's tier). **Any
 net hangs on any hoop** (Ross, 2026-10-16): a chain on the park's nylon rim,
@@ -183,16 +187,17 @@ lvl 1 rare 13 / 27 %; lvl 3 epic 13 / 27 %, rare 19 / 28 %; lvl 5 legend
 ## The economy
 
 Balls and nets are priced 0 (`NetSet.stock` marks the free pair);
-`EconomyBudget.peggy_roster()` is the 91 balls plus the 9 nets,
+`EconomyBudget.peggy_roster()` is the 91 balls plus the 14 nets,
 `peggy_tickets()` the expected cost of winning everything from a fresh save
 (`PeggyPrizes.expected_tickets_to_complete`, 60 seeded collection runs at
 the centre aim) and `catalog_hours()` is the priced hoops plus that.
-Shipped (2026-10-25, Ross's 44 new balls in — the "Ball Roster" design: 16
-common, 24 rare, 33 epic, 18 legend): 97 prizes to win (90 balls, 7 nets),
-29,100 tickets expected (300 a prize — no drop is wasted), 45.5 h; with the
-hoops 46.6 h, inside the 15–50 h band (widened from 15–35 with Ross's OK:
-the bigger collection simply takes longer). At level 1 the 46 reachable
-prizes take 13,800 tickets; at level 3, 79 prizes 23,700. Rules in `EconomyBudget.problems()`: a drop is
+Shipped (2026-10-25, Ross's 44 new balls and 5 new nets in): 102 prizes to
+win (90 balls, 12 nets), 30,600 tickets expected (300 a prize — no drop is
+wasted), 47.8 h; with the hoops 48.9 h, inside the 15–50 h band (widened
+from 15–35 with Ross's OK: the bigger collection simply takes longer — and
+now close to its ceiling: the next prizes need the band or the drop price
+looked at). At level 1 the 51 reachable prizes take 15,300 tickets; at
+level 3, 84 prizes 25,200. Rules in `EconomyBudget.problems()`: a drop is
 an entry purchase, the roster is payable, a prize costs at most 1.35 drops,
 every ball is rated and unpriced, every net is unpriced with one stock net
 per kind.

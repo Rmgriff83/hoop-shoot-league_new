@@ -199,7 +199,7 @@ func _nets(t) -> void:
 		t.ok(NetBodies.has_style(n.body_style()) and NetBodies.kind_of(n.body_style()) == n.kind, "net %s has a body of its kind" % n.id)
 		t.ok(not ids.has(n.id), "net id %s is unique" % n.id)
 		ids.push_back(n.id)
-	t.eq(ids, ["cotton", "chain", "jack", "ladder", "wool", "neon_yellow", "neon_orange", "rwb", "tattered"], "the nine nets, stock first")
+	t.eq(ids, ["cotton", "chain", "jack", "ladder", "wool", "neon_yellow", "neon_orange", "rwb", "tattered", "neon_blue", "neon_purple", "wool_ocean", "wool_ember", "rasta"], "the fourteen nets, stock first (Ross's Net Roster, 2026-10-25)")
 	t.ok(CosmeticLibrary.get_net("rwb").kind == "cotton" and CosmeticLibrary.get_net("rwb").body_style() == "rwb", "the red white blue net is a cotton with its own body")
 	for nid in ["neon_yellow", "neon_orange"]:
 		var neon := CosmeticLibrary.get_net(nid)
@@ -207,7 +207,7 @@ func _nets(t) -> void:
 	t.ok(not CosmeticLibrary.get_net("wool").stock and CosmeticLibrary.get_net("wool").kind == "cotton", "the wool net is a cotton prize")
 	for n2 in all:
 		t.eq(n2.price_coins, 0, "net %s is never bought (price 0)" % n2.id)
-	t.eq(CosmeticLibrary.nets_of_kind("cotton").size(), 6, "six cotton styles")
+	t.eq(CosmeticLibrary.nets_of_kind("cotton").size(), 11, "eleven cotton styles")
 	t.ok(CosmeticLibrary.get_net("tattered").kind == "cotton" and CosmeticLibrary.get_net("tattered").body_style() == "tattered", "tattered is a cotton with its own worn body (26d)")
 	t.ok(CosmeticLibrary.get_net("cotton").stock, "cotton is the stock cotton")
 	t.ok(CosmeticLibrary.get_net("chain").stock, "the stock chain is stock")

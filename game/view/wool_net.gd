@@ -109,12 +109,20 @@ func _knot_brightness() -> float:
 	return 0.88
 
 
+## The twelve yarns, one per cord (a colour variant overrides this:
+## WoolOceanNet, WoolEmberNet — Ross's 26e / 26f, 2026-10-25).
+func _yarn() -> Array:
+	return YARN
+
+
 func _cord_color(i: int) -> Color:
-	return Color.html(YARN[posmod(i, YARN.size())])
+	var y := _yarn()
+	return Color.html(y[posmod(i, y.size())])
 
 
 func _knot_color(k: int, i: int) -> Color:
-	return Color.html(YARN[posmod(i + (k % 2) * 7, YARN.size())])
+	var y := _yarn()
+	return Color.html(y[posmod(i + (k % 2) * 7, y.size())])
 
 
 func _uv_x_diag() -> float:

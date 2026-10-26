@@ -1,0 +1,12 @@
+[gd_resource type="Resource" script_class="NetSet" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://game/cosmetics/net_set.gd" id="1"]
+
+[resource]
+script = ExtResource("1")
+id = "neon_purple"
+display_name = "Neon Purple"
+price_coins = 0
+kind = "cotton"
+style = "cotton"
+tint = Color(0.7059, 0.2353, 1.0000, 1)

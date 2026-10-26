@@ -4,8 +4,8 @@ extends RefCounted
 ## class and the rest layout per style id. A NetSet's `style` names one;
 ## the stock styles are the kinds themselves ("cotton", "chain").
 
-const STYLES := ["cotton", "chain", "jack", "ladder", "wool", "rwb", "tattered"]
-const KIND_OF := {"cotton": "cotton", "chain": "chain", "jack": "chain", "ladder": "chain", "wool": "cotton", "rwb": "cotton", "tattered": "cotton"}
+const STYLES := ["cotton", "chain", "jack", "ladder", "wool", "rwb", "tattered", "wool_ocean", "wool_ember", "rasta"]
+const KIND_OF := {"cotton": "cotton", "chain": "chain", "jack": "chain", "ladder": "chain", "wool": "cotton", "rwb": "cotton", "tattered": "cotton", "wool_ocean": "cotton", "wool_ember": "cotton", "rasta": "cotton"}
 
 
 static func has_style(style: String) -> bool:
@@ -44,6 +44,12 @@ static func for_style(style: String) -> NetRig:
 			return RwbNet.new()
 		"tattered":
 			return TatteredNet.new()
+		"wool_ocean":
+			return WoolOceanNet.new()
+		"wool_ember":
+			return WoolEmberNet.new()
+		"rasta":
+			return RastaNet.new()
 		_:
 			return CottonNet.new()
 
@@ -62,5 +68,9 @@ static func layout(style: String, rim_r := SimConstants.R_RIM, tube_r := SimCons
 			return RwbNet.layout(rim_r, tube_r)
 		"tattered":
 			return TatteredNet.layout(rim_r, tube_r)
+		"wool_ocean", "wool_ember":
+			return WoolNet.layout(rim_r, tube_r)
+		"rasta":
+			return RwbNet.layout(rim_r, tube_r)
 		_:
 			return NetSim.cotton_layout(rim_r, tube_r)

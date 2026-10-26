@@ -28,6 +28,11 @@ static func band(k: int) -> Color:
 	return Color.html(BLUE)
 
 
+## The band colours as this body wears them (RastaNet: red, gold, green).
+func _band(k: int) -> Color:
+	return band(k)
+
+
 func _cord_r() -> float:
 	return R_CORD_R
 
@@ -42,17 +47,17 @@ func _knot_brightness() -> float:
 
 ## The loops are red (the top band).
 func _cord_color(_i: int) -> Color:
-	return band(0)
+	return _band(0)
 
 
 func _diag_color(_i: int, k: int) -> Color:
-	return band(k)
+	return _band(k)
 
 
 func _knot_color(k: int, _i: int) -> Color:
-	return band(k)
+	return _band(k)
 
 
 ## The stubs are blue (the bottom band).
 func _tail_color(_i: int) -> Color:
-	return band(NetSim.COTTON_ROWS)
+	return _band(NetSim.COTTON_ROWS)
