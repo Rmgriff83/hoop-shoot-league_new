@@ -191,6 +191,16 @@ func _widgets(t) -> void:
 	var at: Dictionary = screen_script.music_positions("right")
 	t.ok(absf(float(at["music"].x) - (720.0 - 36.0 - IconButton.SIZE)) < 0.5 and float(at["next"].x) < float(at["music"].x), "the note at the bottom-right with the chevron on its left")
 	t.eq(screen_script.music_positions("left")["music"], screen_script.MUSIC_POS, "LEFT is the note where it always was")
+	# The guard box around the note and the chevron (Ross, 2026-10-25): a near miss starts no grab.
+	var note := Rect2(screen_script.MUSIC_POS, Vector2.ONE * IconButton.SIZE)
+	var chev := Rect2(screen_script.NEXT_POS, Vector2.ONE * screen_script.NEXT_SIZE)
+	var g: float = screen_script.MUSIC_GUARD
+	t.ok(not screen_script.guard_hit(note.get_center(), [note, chev], g), "a tap on the note is the note's")
+	t.ok(not screen_script.guard_hit(chev.get_center(), [note, chev], g), "…and on the chevron the chevron's")
+	t.ok(screen_script.guard_hit(note.position - Vector2(10, 10), [note, chev], g), "just off the note's corner is swallowed")
+	t.ok(screen_script.guard_hit(Vector2(note.end.x + 4.0, note.position.y + 2.0), [note, chev], g), "…as is the gap above the smaller chevron")
+	t.ok(not screen_script.guard_hit(note.position - Vector2(0, g + 6.0), [note, chev], g), "past the margin the court takes the grab")
+	t.ok(not screen_script.guard_hit(Vector2(360, 900), [], g), "no buttons, no guard")
 	app.set_hud_side(was_side)
 	var pm := PauseMenu.new()
 	pm._ready()

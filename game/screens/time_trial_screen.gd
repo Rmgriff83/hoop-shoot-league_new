@@ -430,6 +430,11 @@ const NEXT_GAP := 10.0
 const NEXT_POS := Vector2(36 + IconButton.SIZE + NEXT_GAP, 1192 + (IconButton.SIZE - NEXT_SIZE))
 var _music_button: IconButton
 var _next_button: IconButton
+## A guard box around the note and the chevron (Ross, 2026-10-25): a press
+## that just misses them would start a grab and pop the ball into the hand.
+## A press inside this margin around the pair is swallowed (with its
+## release); a press on either button still reaches it.
+const MUSIC_GUARD := 28.0
 
 
 ## Where the note and the chevron sit for a HUD side (App.hud_side, Ross
@@ -577,6 +582,10 @@ func _input(event: InputEvent) -> void:
 	else:
 		return
 	if pressed:
+		if in_music_guard(pos):
+			_tap_index = index
+			get_viewport().set_input_as_handled()
+			return
 		var icon: Dictionary = _prop_icons.hit_icon(pos) if _prop_icons != null else {}
 		if not icon.is_empty():
 			_tap_index = index
@@ -591,6 +600,33 @@ func _input(event: InputEvent) -> void:
 	elif released and index == _tap_index:
 		_tap_index = -1
 		get_viewport().set_input_as_handled()
+
+
+## The note and the chevron on the screen (the visible ones).
+func music_rects() -> Array:
+	var out := []
+	for b in [_music_button, _next_button]:
+		if b != null and is_instance_valid(b) and (b as Control).is_visible_in_tree():
+			out.push_back(UiLayout.screen_rect_of(b))
+	return out
+
+
+## Whether a press here is in the guard margin (near the note or the
+## chevron, but not on either: those take their own taps).
+func in_music_guard(pos: Vector2) -> bool:
+	return guard_hit(pos, music_rects(), MUSIC_GUARD)
+
+
+## Pure: `pos` inside the buttons' joint box grown by `margin`, and on none of them.
+static func guard_hit(pos: Vector2, rects: Array, margin: float) -> bool:
+	if rects.is_empty():
+		return false
+	var box: Rect2 = rects[0]
+	for r in rects:
+		box = box.merge(r)
+		if (r as Rect2).has_point(pos):
+			return false
+	return box.grow(margin).has_point(pos)
 
 
 ## For probes/tests: what a tap at this screen point would hit.

@@ -56,7 +56,7 @@ func _ready() -> void:
 		App.loader.instant = _has_prefixed(args, "--qa") and not args.has("--qa-loading")
 		App.loader.force_show = args.has("--qa-loading")
 		PeggyMachine.threaded = not App.loader.instant
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# The splash is the main scene now: every other pass starts from the title.
@@ -103,6 +103,8 @@ func _ready() -> void:
 		_run_area_snaps.call_deferred()
 	elif args.has("--qa-credits"):
 		_run_credits.call_deferred()
+	elif args.has("--qa-music-guard"):
+		_run_music_guard.call_deferred()
 	elif args.has("--qa-archive"):
 		_run_archive.call_deferred()
 	elif args.has("--qa-net"):
@@ -448,6 +450,39 @@ func _run_loading() -> void:
 	await _snap("loading_match")
 	await _sleep(3.0)
 	await _snap("loading_court")
+	get_tree().quit()
+
+
+## The guard box around the HUD's note (Ross, 2026-10-25): a press just off
+## the note grabs nothing; one out on the court still grabs the ball.
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-music-guard
+func _run_music_guard() -> void:
+	await _sleep(1.0)
+	App.start_area("practice", "cage")
+	await _sleep(3.0)
+	var screen := get_tree().current_scene
+	var input: Node = screen.find_child("FlickInput", true, false)
+	var note: Control = screen.find_child("MusicButton", true, false)
+	if input == null or note == null:
+		print("QA music guard: no input / note")
+		get_tree().quit()
+		return
+	var grabs := [0]
+	input.grab_pressed.connect(func() -> void: grabs[0] += 1)
+	var ft := get_viewport().get_final_transform()
+	for spec in [["near the note", UiLayout.screen_rect_of(note).position - Vector2(10, 10)], ["out on the court", Vector2(360, UiLayout.screen_height() - 300.0)]]:
+		var before: int = grabs[0]
+		var win: Vector2 = ft * (spec[1] as Vector2)
+		for down in [true, false]:
+			var ev := InputEventMouseButton.new()
+			ev.button_index = MOUSE_BUTTON_LEFT
+			ev.pressed = down
+			ev.position = win
+			ev.global_position = win
+			Input.parse_input_event(ev)
+			await _sleep(0.15)
+		print("QA music guard: press %s → %d grab(s)" % [spec[0], grabs[0] - before])
+		await _sleep(1.5)
 	get_tree().quit()
 
 
