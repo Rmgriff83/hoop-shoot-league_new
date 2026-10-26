@@ -7,6 +7,9 @@ extends RefCounted
 const HOT_SECONDS := 10.0
 ## The toasts' seconds (designs 4a / 5a: toastSlide is 2.8 s).
 const TOAST_S := 2.8
+## The next ball's mini toast (design 4a, 2026-10-25): in, the seconds
+## ticking down, faded — 1.7 s in all.
+const WAIT_TOAST_S := 1.7
 const SHOOTING_TOAST_S := 1.6
 const POP_CREAM := Color("#F1E8D0")
 const POP_GOLD := Color("#F0B84A")
@@ -83,6 +86,11 @@ static func toast_for(text: String, color: Color) -> Dictionary:
 		out["icon"] = "icon_stopwatch"
 		out["seconds"] = SHOOTING_TOAST_S
 	return out
+
+
+## The next ball's wait on its mini toast: `0.8S` (never below 0.0S).
+static func wait_title(seconds: float) -> String:
+	return "%.1fS" % maxf(0.0, seconds)
 
 
 ## The buzzer's toast (design 5a): TIME! over `SCORE n` (`· NEW BEST` when it is).

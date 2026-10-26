@@ -520,10 +520,13 @@ once you pass it) — and the **toast chips** (designs 4a / 5a, 2026-10-24;
 `game/ui/toast.gd` `Mode.SIDE`, `HudCopy.toast_for`): a chip hangs off the
 screen's edge 36 px in with its centre a third of the way up (y 853, clear of
 the opponent window and the hoop), slides in from off-screen with an 8 px
-overshoot (0.4 s), holds and slides back out (0.45 s; 2.8 s in all). The
-countdown is the big chip (`STARTS IN` over the 56 px digit, which pops on
-every tick, min 260 wide and 150 tall; then `GO` centred in orange for
-0.9 s) and every mid-play call is the small 72 px chip (min 300 wide: a
+overshoot, holds and fades out where it is (2026-10-25, 4a's latest pass:
+in over the first 12 % of its life, settled by 16 %, faded over the last
+20 % — 2.8 s in all for a notice; a toast taken down early fades over
+0.45 s; nothing slides back out). The countdown is the big chip (`STARTS IN`
+over the 56 px digit, which pops on every tick, min 260 wide and 150 tall),
+which slides in once and turns over to `GO` in orange where it is, holds
+0.6 s and fades over 0.45 s and every mid-play call is the small 72 px chip (min 300 wide: a
 32 px icon beside the title over the sub) — `TIME!` over `SCORE 31 · NEW
 BEST` (orange, stopwatch; `Hud.time_toast`), `30S MODE` over `ON · SPOTS
 SHUFFLE` / `ON · HOOP ON THE MOVE` / `OFF` (orange, stopwatch), the spot
@@ -568,10 +571,11 @@ BACK button lives there now.
 **League match** (design "League Match HUD", `game/screens/heat_screen.gd`):
 the same row with two 162×50 score cards in place of SCORE — YOU in orange,
 the opponent's first name in their shooter colour — a gold `OT1` tag in the
-clock card in overtime, and the ball-return wait as the `NEXT BALL` over
-`IN 0.8S` toast (cream, staying, the seconds swapped in place; any other
-notice takes the slot and the wait returns once it has gone —
-`Hud.set_ball_wait`). The
+clock card in overtime, and the ball-return wait as the mini toast
+(2026-10-25: the ball beside `0.8S`, 60 tall, hugging its words, the
+seconds ticking down in place; it lives 1.7 s and fades by itself, reading
+`0.0S` once the ball is ready; any other notice takes the slot —
+`Hud.set_ball_wait`, `HudCopy.WAIT_TOAST_S`). The
 opponent's window sits under the row at the right margin in a frame of their
 colour with a dithered shadow (`PipFrame`), OPP top-left, a minimize button
 top-right and their loadout hanging off the bottom as chips; minimized it is
@@ -625,7 +629,7 @@ skip it (`App.qa_skip_tutorial`) except `--qa-tutorial`.
 
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-heat` →
   `user://qa/heat_countdown.png`, `heat_live.png` (the tray's animated
-  faces, the NEXT BALL toast), `heat_deal.png` (the deal and its card toast), `heat_pipmin.png`,
+  faces, the next-ball mini toast), `heat_deal.png` (the deal and its card toast), `heat_pipmin.png`,
   `heat_pause.png` on a real cage league heat (it equips ice + fire7 in
   empty slots of the dev save).
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-hud` →

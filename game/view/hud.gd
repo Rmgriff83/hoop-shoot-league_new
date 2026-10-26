@@ -15,7 +15,8 @@ extends CanvasLayer
 ## (design "League Match HUD") swaps the score card for two 162×50 cards —
 ## YOU in orange, the opponent's first name in their shooter colour — puts
 ## a gold OT tag in the clock card in overtime, and shows the ball-return
-## wait as the NEXT BALL toast. Copy from HudCopy (pure).
+## wait as the mini toast (the ball and `0.8S`, 2026-10-25). Every toast
+## leaves by fading where it is (design 4a's latest pass). Copy from HudCopy (pure).
 
 const CREAM := RetroTheme.SCENE_TEXT
 const GOLD := Color("#F0B84A")
@@ -205,30 +206,32 @@ func set_ot(n: int) -> void:
 	_ot_tag.text = "OT%d" % n
 
 
-## Seconds until the next ball may be picked up (0 hides it): the NEXT BALL ·
-## IN 0.8S toast (design 4a), staying, its seconds swapped in place. Any other
-## notice takes the slot; the screen asks every frame, so the wait comes back
-## once that notice has gone.
+## Seconds until the next ball may be picked up, every frame (design 4a,
+## 2026-10-25): a wait starting slides in the mini toast — the ball and
+## `0.8S` ticking down — which lives HudCopy.WAIT_TOAST_S and fades by
+## itself (reading 0.0S once the ball is ready). Any other notice takes the
+## slot; a wait still running when the mini toast has gone brings it back.
 func set_ball_wait(seconds: float) -> void:
+	var mini_up := _toast_small.visible and _toast_small.is_mini()
 	if seconds <= 0.0:
-		if _wait_shown:
-			_toast_small.hide_now()
-			_wait_shown = false
+		if mini_up:
+			_toast_small.set_mini(HudCopy.wait_title(0.0), "icon_ball")
+		_wait_shown = false
 		return
-	var sub := "IN %.1fS" % seconds
-	if _wait_shown:
-		_toast_small.set_small("NEXT BALL", sub)
+	var title := HudCopy.wait_title(seconds)
+	if _wait_shown and mini_up:
+		_toast_small.set_mini(title, "icon_ball")
 		return
-	if _toast_small.visible:
+	if toast_shown() and not mini_up:
 		return   # another notice has the slot
 	_toast_small.color = CREAM
-	_toast_small.set_small("NEXT BALL", sub)
-	_toast_small.show_stay()
+	_toast_small.set_mini(title, "icon_ball")
+	_toast_small.show_once(HudCopy.WAIT_TOAST_S)
 	_wait_shown = true
 
 
 func wait_shown() -> bool:
-	return _wait_shown and _toast_small.visible
+	return _wait_shown and _toast_small.visible and _toast_small.is_mini()
 
 
 ## Endless practice: the clock slot reads PRACTICE (or the area's label) and the countdown never shows.
@@ -267,9 +270,9 @@ func update_clock(time_left: float, countdown: float, phase: String) -> void:
 		# Every mode counts down in the toast chip: STARTS IN over the digit.
 		countdown_toast(str(ceili(countdown)), HudCopy.countdown_pre(), CREAM)
 	elif phase == TimeTrial.PHASE_RUNNING:
-		# GO replaces the digits (go_toast / banner("GO!")); a stale digit goes.
-		if _toast_big.visible and _toast_big.title_text() != "GO":
-			_toast_big.hide_now()
+		# GO replaces the digits (go_toast / banner("GO!")); a stale digit fades.
+		if _toast_big.visible and _toast_big.title_text() != "GO" and not _toast_big.leaving():
+			_toast_big.fade_out()
 
 
 func set_score(score: int) -> void:
@@ -294,12 +297,16 @@ func hide_countdown_toast() -> void:
 	_toast_big.hide_now()
 
 
-## GO in orange, up for GO_TOAST_S then gone.
+## GO in orange (design 4a `toastSlideOut`): the countdown's chip turns
+## over to GO where it is — the word pops — holds 0.6 s and fades over
+## 0.45 s. With no countdown up it slides in first.
 func go_toast() -> void:
-	_toast_big.hide_now()
+	var up := _toast_big.visible and not _toast_big.leaving()
 	_toast_big.color = RetroTheme.LIGHT["orange"]
 	_toast_big.set_big("", "GO")
-	_toast_big.show_once(GO_TOAST_S)
+	if not up:
+		_toast_big.show_stay()
+	_toast_big.fade_out(Toast.GO_HOLD_S, Toast.GO_FADE_S)
 
 
 ## The small notice chip (OVERTIME · 20S ON THE CLOCK with the stopwatch); stays until hidden.
@@ -328,13 +335,15 @@ func time_toast(score: int, new_best: bool) -> void:
 	_toast_small.show_once(float(t["seconds"]))
 
 
+## Take the notice down (the OT break is over…): it fades where it is.
 func hide_toast() -> void:
 	_wait_shown = false
-	_toast_small.hide_now()
+	_toast_small.fade_out()
 
 
+## A notice is up (not on its way out).
 func toast_shown() -> bool:
-	return _toast_small.visible
+	return _toast_small.visible and not _toast_small.leaving()
 
 
 func countdown_toast_text() -> String:
@@ -347,10 +356,7 @@ func countdown_toast_text() -> String:
 func banner(text: String, color := GOLD) -> void:
 	var t := HudCopy.toast_for(text, color)
 	if str(t["kind"]) == "big":
-		_toast_big.hide_now()
-		_toast_big.color = t["color"]
-		_toast_big.set_big(str(t["pre"]), str(t["title"]))
-		_toast_big.show_once(float(t["seconds"]))
+		go_toast()
 		return
 	var same_stay := bool(t["stay"]) and _toast_small.visible and _toast_small.staying() and not _wait_shown
 	_wait_shown = false

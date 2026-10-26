@@ -58,7 +58,7 @@ func _copy(t) -> void:
 	t.eq(HudCopy.shot_help_value(2), "NUMBERS + ARC", "shot help full")
 	var display := UiFont.display()
 	var bold := UiFont.body_bold()
-	for s in ["SWISH +2", "HEATING UP", "TIME!", "GO", "IN AND OUT", "BUZZER BEATER +3", "NEW BEST", "30S MODE", "ON · SPOTS SHUFFLE", "ON · HOOP ON THE MOVE", "OFF", "NEXT SPOT", "L ELBOW IN 3", "NEW SPOT", "MOVE TO L ELBOW", "STARTS IN", "OT1 12.3", "SCORE 31 · NEW BEST", "NEXT BALL", "IN 0.8S", "20S ON THE CLOCK", "PLAYED ON OLLIE", "SHOT HELP", "QUIT TO TITLE", "PAUSED", "RESUME"]:
+	for s in ["SWISH +2", "HEATING UP", "TIME!", "GO", "IN AND OUT", "BUZZER BEATER +3", "NEW BEST", "30S MODE", "ON · SPOTS SHUFFLE", "ON · HOOP ON THE MOVE", "OFF", "NEXT SPOT", "L ELBOW IN 3", "NEW SPOT", "MOVE TO L ELBOW", "STARTS IN", "OT1 12.3", "SCORE 31 · NEW BEST", "0.8S", "0.0S", "20S ON THE CLOCK", "PLAYED ON OLLIE", "SHOT HELP", "QUIT TO TITLE", "PAUSED", "RESUME"]:
 		for ch in s:
 			t.ok(display.has_char(ch.unicode_at(0)) and bold.has_char(ch.unicode_at(0)), "glyph '%s' in both faces (%s)" % [ch, s])
 
@@ -150,21 +150,25 @@ func _widgets(t) -> void:
 	t.eq(HudCopy.ot_toast(1, 20), {"title": "OVERTIME", "sub": "20S ON THE CLOCK"}, "ot toast copy")
 	t.eq(HudCopy.ot_toast(2, 20)["title"], "OVERTIME 2", "…numbered from the second")
 	t.eq(HudCopy.countdown_pre(), "STARTS IN", "countdown pre-line")
-	# The ball wait is the NEXT BALL toast (design 4a), staying, its seconds swapped in place.
+	# The ball wait is the mini toast (design 4a, 2026-10-25): the ball and the seconds, gone by itself.
 	hud.set_ball_wait(0.8)
-	t.ok(hud.wait_shown() and small.visible and small.title_text() == "NEXT BALL" and small.sub_text() == "IN 0.8S" and small.staying(), "the NEXT BALL toast")
-	t.ok(hud.find_child("Wait", true, false) == null, "…the old chip is gone")
+	t.ok(hud.wait_shown() and small.is_mini() and small.title_text() == "0.8S" and small.has_icon() and not small.staying(), "the mini toast: the ball and 0.8S, gone by itself")
+	t.ok(absf(small.size.y - (Toast.SIDE_MINI_H + ShadowStyle.OFFSET)) < 0.5 and small.size.x < Toast.SIDE_SMALL_MIN_W, "…60 tall, hugging its words (%.0f wide)" % small.size.x)
+	t.ok(small.sub_text() == "" and hud.find_child("Wait", true, false) == null, "…no NEXT BALL words, no old chip")
 	hud.set_ball_wait(0.5)
-	t.eq(small.sub_text(), "IN 0.5S", "…the seconds swap")
+	t.eq(small.title_text(), "0.5S", "…the seconds tick down in place")
 	hud.toast("OVERTIME", "20S ON THE CLOCK", "icon_stopwatch", Hud.GOLD)
 	t.ok(not hud.wait_shown() and small.title_text() == "OVERTIME", "another notice takes the slot")
 	hud.set_ball_wait(0.4)
 	t.ok(small.title_text() == "OVERTIME", "…and keeps it while it is up")
 	hud.hide_toast()
+	t.ok(small.visible and small.leaving() and not hud.toast_shown(), "a notice taken down fades where it is")
 	hud.set_ball_wait(0.4)
-	t.ok(hud.wait_shown() and small.title_text() == "NEXT BALL", "…the wait comes back once it has gone")
+	t.ok(hud.wait_shown() and small.title_text() == "0.4S", "…and the wait takes the slot as it goes")
 	hud.set_ball_wait(0.0)
-	t.ok(not small.visible and not hud.wait_shown(), "hidden when the ball is ready")
+	t.ok(not hud.wait_shown() and small.visible and small.title_text() == "0.0S", "the ball is ready: 0.0S, the toast fades on its own")
+	t.eq([HudCopy.wait_title(0.84), HudCopy.wait_title(-0.2)], ["0.8S", "0.0S"], "the wait's words")
+	t.ok(is_equal_approx(Toast.LIFE_IN + Toast.LIFE_FADE, 0.32) and is_equal_approx(Toast.LIFE_SETTLE, 0.16), "a toast's life: in by 12 %, settled by 16 %, faded over the last 20 %")
 	# A card played: the thumb, the name over PLAYED ON …, the target badge (100 tall).
 	hud.card_toast("DEEP FREEZE", "PLAYED ON OLLIE", CardDefs.get_card("ice"), "opp", LeagueContext.BLUE)
 	t.ok(small.visible and small.has_thumb() and small.title_text() == "DEEP FREEZE" and small.sub_text() == "PLAYED ON OLLIE", "the card toast")

@@ -4,14 +4,18 @@ extends Control
 ## chip — `#1B1815` at 85 % under the colour's dot pattern, a 2 px edge in the
 ## colour, the dithered checker shadow. Two placements:
 ##
-## `Mode.SIDE` (the match HUDs, 2026-10-24): the chip hangs off the screen's
-## left or right edge (36 px in, App.hud_side) with its centre a third of the
-## way up (y 853), slides in from off-screen with an 8 px overshoot, holds,
-## and slides back out. Shapes: `big` (the countdown: STARTS IN over a 56 px
-## digit that pops on every tick, GO centred; min width 260, 150 tall),
-## `small` (72 tall, min width 300: a 32 px icon beside the 20 px title over
-## the 16 px sub) and `card` (100 tall: a 54×72 card thumb with its fx loop
-## and the target badge at the corner, beside the title and sub).
+## `Mode.SIDE` (the match HUDs, 2026-10-24): the chip hangs off the
+## screen's left or right edge (36 px in, App.hud_side) with its centre a
+## third of the way up (y 853), slides in from off-screen with an 8 px
+## overshoot, holds, and fades out where it is (2026-10-25, design 4a's
+## `toastSlide`: in over the first 12 % of its life, settled by 16 %, faded
+## over the last 20 % — never sliding back out). Shapes: `big` (the
+## countdown: STARTS IN over a 56 px digit that pops on every tick, GO
+## centred; min width 260, 150 tall), `small` (72 tall, min width 300: a
+## 32 px icon beside the 20 px title over the 16 px sub), `card` (100 tall:
+## a 54×72 card thumb with its fx loop and the target badge at the corner,
+## beside the title and sub) and `mini` (60 tall, hugging an icon and a
+## 20 px title: the next ball's wait).
 ##
 ## `Mode.CENTER` (the title screen's WELCOME): centred at a given y, 64 tall,
 ## slides in from 24 px above with a fade (`show_stay`) and fades out
@@ -37,6 +41,20 @@ const SIDE_SMALL_H := 72.0
 const SIDE_CARD_H := 100.0
 const SIDE_BIG_H := 150.0
 const SIDE_SMALL_MIN_W := 300.0
+const SIDE_MINI_H := 60.0
+const SIDE_MINI_PAD := Vector2(14.0, 18.0)   # left, right
+const SIDE_MINI_GAP := 12.0
+## A side toast's life (design 4a `toastSlide`): in to the overshoot by 12 %,
+## settled by 16 %, held to 80 %, faded over the rest.
+const LIFE_IN := 0.12
+const LIFE_SETTLE := 0.16
+const LIFE_FADE := 0.20
+## The countdown's chip, gone after GO (design 4a `toastSlideOut`): a 0.6 s
+## beat, then a 0.45 s fade in place.
+const GO_HOLD_S := 0.6
+const GO_FADE_S := 0.45
+## Any toast taken down early leaves by fading over this long.
+const LEAVE_S := 0.45
 const SIDE_BIG_MIN_W := 260.0
 const SIDE_ICON := 32.0
 const THUMB := Vector2(54, 72)
@@ -46,7 +64,6 @@ const BADGE_AT := Vector2(-10, -10)
 const OVERSHOOT := 8.0
 const SLIDE_IN_S := 0.34
 const SLIDE_SETTLE_S := 0.06
-const SLIDE_OUT_S := 0.45
 const POP_SCALE := 1.45
 const POP_S := 0.3
 
@@ -62,11 +79,13 @@ var _thumb: Control
 var _badge: PixelIcon
 var _big := false
 var _card := false
+var _mini := false
 var _tween: Tween
 var _pop: Tween
 var _top := 0.0
 var _staying := false
 var _sliding := false
+var _leaving := false
 ## Side mode: the chip's left offset (tweened; moving it moves the right one with it).
 var x_pos := 0.0:
 	set(v):
@@ -135,7 +154,7 @@ func set_big(pre: String, title: String) -> void:
 ## optional `pre` word. A chip already in this shape with the same parts just
 ## swaps its text.
 func set_small(title: String, sub := "", icon_name := "", pre := "") -> void:
-	if _box != null and not _big and not _card and (_pre != null) == (pre != "") and (_sub != null) == (sub != "") and (_icon != null) == (icon_name != ""):
+	if _box != null and not _big and not _card and not _mini and (_pre != null) == (pre != "") and (_sub != null) == (sub != "") and (_icon != null) == (icon_name != ""):
 		if _pre != null:
 			_pre.text = pre
 		_title.text = title
@@ -186,6 +205,36 @@ func set_small(title: String, sub := "", icon_name := "", pre := "") -> void:
 		_sub.name = "Sub"
 		_box.add_child(_sub)
 	_fit()
+
+
+## The mini shape (design 4a, side mode): a 32 px icon beside one 20 px
+## title, 60 tall, hugging its words — the next ball's `0.8S`. A chip
+## already in this shape just swaps its title.
+func set_mini(title: String, icon_name: String) -> void:
+	if _box != null and _mini and _icon != null and _icon.icon_name == icon_name:
+		_title.text = title
+		_title.add_theme_color_override("font_color", color)
+		_fit()
+		queue_redraw()
+		return
+	_rebuild(false)
+	_mini = true
+	_box.add_theme_constant_override("separation", int(SIDE_MINI_GAP))
+	_box.offset_left = SIDE_MINI_PAD.x + RetroTheme.OUTLINE
+	_box.offset_right = -SIDE_MINI_PAD.y - RetroTheme.OUTLINE - ShadowStyle.OFFSET
+	_icon = PixelIcon.new(icon_name, Vector2(SIDE_ICON, SIDE_ICON))
+	_icon.name = "Icon"
+	_icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_box.add_child(_icon)
+	_title = _label(title, 20, true)
+	_title.name = "Title"
+	_title.add_theme_color_override("font_color", color)
+	_box.add_child(_title)
+	_fit()
+
+
+func is_mini() -> bool:
+	return _mini
 
 
 ## A card played (design 4a, side mode): the card's 54×72 thumb with its fx
@@ -263,6 +312,7 @@ func _rebuild(big: bool) -> void:
 	_thumb = null
 	_big = big
 	_card = false
+	_mini = false
 	_box = VBoxContainer.new() if big else HBoxContainer.new()
 	_box.name = "Row"
 	_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -300,6 +350,9 @@ func _fit() -> void:
 		var need := inner.x + 2.0 * SIDE_PAD_X + 2.0 * RetroTheme.OUTLINE
 		w = maxf(SIDE_BIG_MIN_W if _big else SIDE_SMALL_MIN_W, need)
 		h = SIDE_BIG_H if _big else (SIDE_CARD_H if _card else SIDE_SMALL_H)
+		if _mini:
+			w = inner.x + SIDE_MINI_PAD.x + SIDE_MINI_PAD.y + 2.0 * RetroTheme.OUTLINE
+			h = SIDE_MINI_H
 		var full := Vector2(w, h) + Vector2.ONE * ShadowStyle.OFFSET
 		custom_minimum_size = full
 		size = full
@@ -374,6 +427,7 @@ func _kill() -> void:
 		_tween.kill()
 		_tween = null
 	_sliding = false
+	_leaving = false
 
 
 ## Up with no fade-out scheduled (show_stay, not show_once)?
@@ -406,16 +460,28 @@ func show_stay() -> void:
 	_tween.tween_property(self, "modulate:a", 1.0, SLIDE_S)
 
 
-## Slide in, hold `seconds` in all, then leave (slide out from the side, fade centred).
+## Up for `seconds` in all, then gone: from the side it slides in (its first
+## 12 %, settled by 16 %), holds, and fades where it is over the last 20 %;
+## centred it drops in with a fade and fades out.
 func show_once(seconds := 2.8) -> void:
-	show_stay()
-	_staying = false
 	if mode == Mode.SIDE:
-		_tween.tween_interval(maxf(0.0, seconds - SLIDE_IN_S - SLIDE_SETTLE_S - SLIDE_OUT_S))
-		_tween.tween_callback(func() -> void: _sliding = true)
-		_tween.tween_property(self, "x_pos", _off_x(), SLIDE_OUT_S).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+		_kill()
+		_staying = false
+		visible = true
+		modulate.a = 1.0
+		_sliding = true
+		x_pos = _off_x()
+		_tween = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		_tween.tween_property(self, "x_pos", _over_x(), seconds * LIFE_IN)
+		_tween.tween_property(self, "x_pos", _home_x(), seconds * (LIFE_SETTLE - LIFE_IN))
+		_tween.tween_callback(func() -> void: _sliding = false)
+		_tween.tween_interval(seconds * (1.0 - LIFE_SETTLE - LIFE_FADE))
+		_tween.tween_callback(func() -> void: _leaving = true)
+		_tween.tween_property(self, "modulate:a", 0.0, seconds * LIFE_FADE).set_trans(Tween.TRANS_LINEAR)
 		_tween.tween_callback(hide_now)
 		return
+	show_stay()
+	_staying = false
 	_tween.chain().tween_interval(maxf(0.0, seconds - SLIDE_S - FADE_OUT_S))
 	_tween.chain().tween_property(self, "modulate:a", 0.0, FADE_OUT_S)
 	_tween.chain().tween_callback(hide_now)
@@ -425,6 +491,41 @@ func hide_now() -> void:
 	_kill()
 	_staying = false
 	visible = false
+	modulate.a = 1.0
+
+
+## Leave where it is (the fade-out rule, 2026-10-25): after `delay`, fade
+## over `seconds`, then hide. Nothing to do when it is already down.
+func fade_out(delay := 0.0, seconds := LEAVE_S) -> void:
+	if not visible:
+		return
+	_staying = false
+	if _tween != null and _tween.is_valid() and _sliding:
+		# Still sliding in: finish the slide, then hold and fade.
+		_leaving = delay <= 0.0
+		_tween.tween_interval(delay)
+		_tween.tween_callback(func() -> void: _leaving = true)
+		_tween.tween_property(self, "modulate:a", 0.0, seconds).set_trans(Tween.TRANS_LINEAR)
+		_tween.tween_callback(hide_now)
+		return
+	if _tween != null:
+		_tween.kill()
+	if mode == Mode.SIDE:
+		_sliding = false
+		x_pos = _home_x()
+	_tween = create_tween()
+	if delay > 0.0:
+		_tween.tween_interval(delay)
+	else:
+		_leaving = true
+	_tween.tween_callback(func() -> void: _leaving = true)
+	_tween.tween_property(self, "modulate:a", 0.0, seconds)
+	_tween.tween_callback(hide_now)
+
+
+## On its way out (fading, still drawn)?
+func leaving() -> bool:
+	return visible and _leaving
 
 
 func title_text() -> String:
