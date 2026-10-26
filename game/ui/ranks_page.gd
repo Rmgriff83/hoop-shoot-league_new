@@ -461,20 +461,14 @@ func _style(b: ShadowCard, active: bool) -> void:
 	b.queue_redraw()
 
 
-## LOADING… with the spinner, while a board is on its way.
+## The spinner alone while a board is on its way (no LOADING words since
+## 2026-10-25: the icon keeps the space).
 func _loading_row() -> Control:
-	var h := HBoxContainer.new()
+	var h := CenterContainer.new()
 	h.name = "Loading"
 	h.custom_minimum_size = Vector2(0, 72)
-	h.add_theme_constant_override("separation", 16)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var spin := PixelSpinner.new(28.0)
-	spin.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	h.add_child(spin)
-	var l := _display(RanksCopy.loading_status(), 16)
-	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	l.size_flags_vertical = Control.SIZE_FILL
-	h.add_child(l)
+	h.add_child(PixelSpinner.new(28.0))
 	return h
 
 

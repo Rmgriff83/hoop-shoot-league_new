@@ -47,7 +47,10 @@ func run(t) -> void:
 	page.add_child(other)
 	ButtonBusy.apply(b, "", page)
 	t.ok(ButtonBusy.is_busy(b) and b.button_pressed and b.disabled, "the pressed button stays pushed in")
-	t.eq((b.find_child("BusySub", true, false) as Label).text, "RUN IT BACK", "…LOADING with its own name under it")
+	var busy := b.get_node("Busy") as Control
+	t.ok(busy.find_child("BusySpinner", true, false) is PixelSpinner and busy.find_children("*", "Label", true, false).is_empty(), "…the spinner alone, no LOADING words (2026-10-25)")
+	t.ok(ButtonBusy.spinner_px(125.0) <= 125.0 * 0.5 and ButtonBusy.spinner_px(40.0) >= 20.0, "…sized to the button, never past it")
+	t.eq(b.custom_minimum_size, Vector2(400, 125), "…and the button keeps its size")
 	t.ok(other.disabled and is_equal_approx(other.modulate.a, ButtonBusy.DIM), "every other button dims and stops taking taps")
 	page.free()
 	# Lists (39b): the skeleton rows while a board loads.
@@ -55,7 +58,7 @@ func run(t) -> void:
 	t.eq(sk.custom_minimum_size.y, SkeletonList.HEAD_H + SkeletonList.ROW_H * 4, "a head and four skeleton rows")
 	t.ok(sk.find_child("Spinner", false, false) is PixelSpinner, "…with the spinner in the head")
 	sk._process(0.65)
-	t.eq(sk.text(), "LOADING RANKS..", "LOADING RANKS with live dots")
+	t.eq(sk.text(), "", "the head is the spinner alone (no LOADING words, 2026-10-25)")
 	t.close(SkeletonList.pulse(0.0, 0.0), 0.35, 1e-6, "the bars rest at 0.35")
 	t.close(SkeletonList.pulse(0.6, 0.0), 0.6, 1e-6, "…and pulse to 0.6 halfway")
 	t.close(SkeletonList.pulse(0.75, 0.15), 0.6, 1e-6, "each row a beat behind")

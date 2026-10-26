@@ -817,9 +817,11 @@ change). The old moves were blocking `change_scene_to_file` calls and the
 screen froze while the next scene's `_ready` loaded its arena and hoop
 models. Now a move (1) puts the button under the finger in its loading
 state — `ButtonBusy` (`game/ui/button_busy.gd`): the button stays pushed in,
-its words swap to a `PixelSpinner` + LOADING… with its own name under it
-(the splash's CONTINUE / LET'S PLAY say LOADING YOUR SAVE / SETTING UP YOUR
-GAME), every other button dims to 45 % and stops taking taps; (2) loads the
+its words give way to a `PixelSpinner` alone, centred and sized to the
+button (since 2026-10-25: the LOADING words overflowed small buttons; the
+icon keeps the button's size — the same rule swaps the ranks list's, the
+lobby leaderboard's, the skeleton head's and the settings rows' …ING words
+for the spinner), every other button dims to 45 % and stops taking taps; (2) loads the
 scene and the resources its `_ready` will ask for (the area's arena model,
 its hoop model, the ball) with `ResourceLoader.load_threaded_request`, so
 the bar shows real progress and the scene's own `load()` calls hit the

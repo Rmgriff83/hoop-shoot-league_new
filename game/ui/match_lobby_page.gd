@@ -428,7 +428,17 @@ func _build_top() -> void:
 	_top_rows.add_theme_constant_override("separation", 0)
 	_top_rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(_top_rows)
-	_top_line(MatchCopy.leaderboard_loading())
+	_top_rows.add_child(_top_spinner())
+
+
+## The spinner while the ladder is on its way (no LOADING words, 2026-10-25).
+func _top_spinner() -> Control:
+	var c := CenterContainer.new()
+	c.name = "TopLoading"
+	c.custom_minimum_size = Vector2(0, 44)
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	c.add_child(PixelSpinner.new(24.0))
+	return c
 
 
 ## The ladder's answer: its top three (or BE FIRST on an empty ladder).

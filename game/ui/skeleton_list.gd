@@ -1,7 +1,7 @@
 class_name SkeletonList
 extends Control
 ## A list that is still loading (design "Loading States" 39b → LISTS): a
-## head row with the spinner and LOADING RANKS… (live dots), then four
+## head row with the spinner (alone since 2026-10-25: no LOADING words), then four
 ## skeleton rows under dashed rules — a short bar for the rank, a name bar
 ## of the design's width, a score bar on the right — pulsing 0.35 ↔ 0.6
 ## over 1.2 s, each row a beat behind the one above. Drawn in `ink` (cream
@@ -21,10 +21,9 @@ const ROWS := [[220.0, 0.0], [180.0, 0.15], [250.0, 0.3], [200.0, 0.45]]
 var ink := RetroTheme.SCENE_TEXT
 var _word := ""
 var _t := 0.0
-var _label: Label
 
 
-func _init(word: String, ink_ := RetroTheme.SCENE_TEXT, on_scene := false) -> void:
+func _init(word: String, ink_ := RetroTheme.SCENE_TEXT, _on_scene := false) -> void:
 	name = "Skeleton"
 	ink = ink_
 	_word = word
@@ -35,17 +34,7 @@ func _init(word: String, ink_ := RetroTheme.SCENE_TEXT, on_scene := false) -> vo
 	spin.name = "Spinner"
 	spin.color = ink
 	spin.position = Vector2(0, (HEAD_H - 28.0) * 0.5)
-	add_child(spin)
-	_label = UiFont.label(word, 16, ink, UiFont.display())
-	_label.name = "Loading"
-	if on_scene:
-		RetroTheme.on_scene(_label)
-		_label.add_theme_color_override("font_color", ink)
-	_label.position = Vector2(28.0 + 14.0, 0)
-	_label.size = Vector2(560, HEAD_H)
-	_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_label)
+	add_child(spin)   # the spinner alone: no LOADING words (2026-10-25)
 
 
 ## A row's bar opacity at second `t`: 0.35 at rest, 0.6 at the pulse's top.
@@ -54,13 +43,13 @@ static func pulse(t: float, delay: float) -> float:
 	return 0.35 + 0.25 * (0.5 - 0.5 * cos(TAU * k))
 
 
+## What the head says: nothing (the spinner stands for it since 2026-10-25).
 func text() -> String:
-	return _label.text
+	return ""
 
 
 func _process(dt: float) -> void:
 	_t += dt
-	_label.text = _word + LoadingCopy.dots(_t)
 	queue_redraw()
 
 

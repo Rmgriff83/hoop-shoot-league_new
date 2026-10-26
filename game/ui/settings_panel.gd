@@ -504,10 +504,13 @@ func _save_player() -> void:
 		_say("PICK A HOMETOWN", false)
 		return
 	if name_ != str(Net.account().get("name", "")):
-		_say("SAVING...")
+		var save_b := _edit_box.find_child("Save", true, false) as ShadowCard
+		_say("")
+		_button_spin(save_b, true)
 		var ok: bool = await Net.rename(name_)
 		if not is_instance_valid(_msg):
 			return
+		_button_spin(save_b, false)
 		if not ok:
 			_say("NO SIGNAL · TRY AGAIN LATER", false)
 			return
@@ -541,19 +544,21 @@ func _link_text() -> String:
 func _toggle_link() -> void:
 	var top := _link_row.find_child("Top", true, false) as Label
 	if Platform.is_linked():
-		top.text = "UNLINKING..."
+		_spin(top, true)
 		var ok: bool = await Platform.unlink()
 		if not is_instance_valid(_link_row):
 			return
+		_spin(top, false)
 		top.text = _link_text() if ok else "NO SIGNAL · TRY AGAIN LATER"
 		_tone(_link_row, Platform.is_linked())
 		return
 	if not Platform.backend.is_signed_in():
 		Platform.backend.sign_in()
-	top.text = "LINKING..."
+	_spin(top, true)
 	await Platform.sync_link()
 	if not is_instance_valid(_link_row):
 		return
+	_spin(top, false)
 	top.text = _link_text()
 	_tone(_link_row, Platform.is_linked())
 
@@ -656,10 +661,11 @@ func _build_danger() -> void:
 
 
 func _move_to_phone() -> void:
-	_set_sub(_move, "ASKING...", MUTED)
+	_spin(_move.find_child("Sub", true, false) as Label, true)
 	var r: Dictionary = await Net.transfer_code()
 	if not is_instance_valid(_move):
 		return
+	_spin(_move.find_child("Sub", true, false) as Label, false)
 	if r.is_empty():
 		_set_sub(_move, "NO SIGNAL · TRY AGAIN LATER", BAD)
 		return
@@ -672,10 +678,11 @@ func _claim_code() -> void:
 	if code.length() != 8:
 		_set_sub(_enter, "A CODE IS 8 LETTERS", BAD)
 		return
-	_set_sub(_enter, "CLAIMING...", MUTED)
+	_spin(_enter.find_child("Sub", true, false) as Label, true)
 	var ok: bool = await Net.claim_transfer(code)
 	if not is_instance_valid(_enter):
 		return
+	_spin(_enter.find_child("Sub", true, false) as Label, false)
 	if ok:
 		_code_row.visible = false
 		_code_edit.text = ""
@@ -699,10 +706,11 @@ func _delete_account() -> void:
 		_delete.queue_redraw()
 		return
 	_delete_armed_at = -1.0
-	top.text = "DELETING..."
+	_spin(top, true)
 	var ok: bool = await Net.delete_account()
 	if not is_instance_valid(_delete):
 		return
+	_spin(top, false)
 	if ok:
 		top.text = "ACCOUNT DELETED"
 		App.to_title()
@@ -818,6 +826,52 @@ func row_sub(name_: String) -> String:
 	var row := _list.find_child(name_, true, false)
 	var s := row.find_child("Sub", true, false) as Label if row != null else null
 	return s.text if s != null else ""
+
+
+## A spinner in a label's place while something is on its way (no
+## …ING words since 2026-10-25): the words stay laid out but unseen, so the
+## row keeps its size.
+func _spin(l: Label, on: bool) -> void:
+	if l == null:
+		return
+	var sp := l.get_node_or_null("Spin") as PixelSpinner
+	if on:
+		l.visible = true
+		l.self_modulate.a = 0.0
+		if sp == null:
+			sp = PixelSpinner.new(20.0)
+			sp.name = "Spin"
+			l.add_child(sp)
+		sp.position = Vector2(0.0, maxf(0.0, (l.size.y - 20.0) * 0.5))
+	else:
+		l.self_modulate.a = 1.0
+		if sp != null:
+			sp.queue_free()
+
+
+## The same on a button with its own words (SAVE): the spinner in the face's middle.
+func _button_spin(b: ShadowCard, on: bool) -> void:
+	if b == null:
+		return
+	var box := b.get_node_or_null("Spin")
+	if on:
+		b.set_meta("spin_text", b.text)
+		b.text = ""
+		b.disabled = true
+		if box == null:
+			var c := CenterContainer.new()
+			c.name = "Spin"
+			c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			UiLayout.full_rect(c)   # inside the button: fills it, no bleed
+			c.offset_right = -ShadowStyle.OFFSET
+			c.offset_bottom = -ShadowStyle.OFFSET
+			c.add_child(PixelSpinner.new(ButtonBusy.spinner_px(b.size.y if b.size.y > 0.0 else b.custom_minimum_size.y)))
+			b.add_child(c)
+	else:
+		b.text = str(b.get_meta("spin_text", b.text))
+		b.disabled = false
+		if box != null:
+			box.queue_free()
 
 
 func _rule() -> ColorRect:
