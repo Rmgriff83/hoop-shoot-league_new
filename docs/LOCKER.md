@@ -135,7 +135,7 @@ ledger (the price must land in a tier and keep the catalog in band).
   their own — and every plate that would otherwise be empty hides a net
   too. Only when nothing unowned is left at your level does a plate pay
   **150 back**.
-- A win pops the card: NEW BALL · name · rarity · n/47 BALLS · **SET AS
+- A win pops the card: NEW BALL · name · rarity · n/91 BALLS · **SET AS
   YOUR BALL?** or NEW NET · name · n/8 NETS · **HANG IT ON YOUR COURTS?** —
   EQUIP / KEEP · AGAIN · 300 (AGAIN is the PLAY path). An epic or legend
   plate takes the screen with rotating rays (`game/ui/prize_rays.gd`) and
@@ -183,14 +183,16 @@ lvl 1 rare 13 / 27 %; lvl 3 epic 13 / 27 %, rare 19 / 28 %; lvl 5 legend
 ## The economy
 
 Balls and nets are priced 0 (`NetSet.stock` marks the free pair);
-`EconomyBudget.peggy_roster()` is the 47 balls plus the 9 nets,
+`EconomyBudget.peggy_roster()` is the 91 balls plus the 9 nets,
 `peggy_tickets()` the expected cost of winning everything from a fresh save
 (`PeggyPrizes.expected_tickets_to_complete`, 60 seeded collection runs at
 the centre aim) and `catalog_hours()` is the priced hoops plus that.
-Shipped (2026-10-24, the tattered net in): 53 prizes to win (46 balls, 7
-nets), 15,900 tickets expected (300 a prize — no drop is wasted), 24.8 h;
-with the hoops 25.9 h, inside the 15–35 h band. At level 1 the 27 reachable
-prizes take 8,100 tickets; at level 3, 43 prizes 12,900. Rules in `EconomyBudget.problems()`: a drop is
+Shipped (2026-10-25, Ross's 44 new balls in — the "Ball Roster" design: 16
+common, 24 rare, 33 epic, 18 legend): 97 prizes to win (90 balls, 7 nets),
+29,100 tickets expected (300 a prize — no drop is wasted), 45.5 h; with the
+hoops 46.6 h, inside the 15–50 h band (widened from 15–35 with Ross's OK:
+the bigger collection simply takes longer). At level 1 the 46 reachable
+prizes take 13,800 tickets; at level 3, 79 prizes 23,700. Rules in `EconomyBudget.problems()`: a drop is
 an entry purchase, the roster is payable, a prize costs at most 1.35 drops,
 every ball is rated and unpriced, every net is unpriced with one stock net
 per kind.

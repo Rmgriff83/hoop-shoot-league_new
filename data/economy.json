@@ -4,7 +4,7 @@
     "reference": {"trial_minutes": 1.5, "heat_minutes": 2.5, "avg_score": {"cage": 24, "beach": 18, "park": 17, "city": 16}, "p_win": 0.5},
     "rate_band_per_min": [6, 14],
     "tiers": {"entry": [15, 40], "mid": [40, 70], "premium": [70, 115], "grail": [115, 170]},
-    "catalog_hours": [15, 35]
+    "catalog_hours": [15, 50]
   },
   "cards": {
     "heats_to_afford": {"common": [1.5, 4.5], "rare": [3.0, 8.0], "epic": [6.0, 14.0]},

@@ -177,7 +177,7 @@ static func problems() -> PackedStringArray:
 			out.push_back("%s %s at %d tickets takes %.0f min: in no price tier" % [item["kind"], item["id"], item["price"], item["minutes"]])
 		elif float(item["minutes"]) > ceiling:
 			out.push_back("%s %s at %d tickets takes %.0f min, past the grail ceiling %.0f" % [item["kind"], item["id"], item["price"], item["minutes"], ceiling])
-	var hours: Array = cfg.get("catalog_hours", [15, 35])
+	var hours: Array = cfg.get("catalog_hours", [15, 50])
 	var h := catalog_hours()
 	if h < float(hours[0]) or h > float(hours[1]):
 		out.push_back("the whole catalog takes %.1f hours, outside %s-%s" % [h, hours[0], hours[1]])

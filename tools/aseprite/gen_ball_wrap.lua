@@ -57,6 +57,11 @@ local PX_PER_LAT = H / 180.0
 --   legend  seamless wrapped designs: a pumpkin, a smiley, a beach ball ...
 -- `panels` cycles over the 8 panels; `kind` picks a decorator (shade_for).
 -- `classic` must stay first and is the starter everyone owns.
+-- kind = "file": a skin authored outside this script (Ross's "Ball Roster"
+-- design, 2026-10-25: 44 balls drawn in the claude.ai design project and
+-- copied into assets/textures/balls/<id>.png). It is not rendered here — the
+-- PNG is left as it is — but it is in the roster and the manifest like any
+-- other, at its place in the design's order.
 -- ---------------------------------------------------------------------------
 local LEATHER = {226, 118, 47}
 local DARK = {36, 22, 15}
@@ -105,6 +110,8 @@ local STYLES = {
   {id="classic", name="Classic", rarity="common", panels={LEATHER}, seam=DARK},
   {id="cherry", name="Cherry", rarity="common", kind="panel",
    panels={{206, 44, 48}}, seam={54, 16, 18}},
+  {id="pink", name="Pink", rarity="common", kind="panel",   -- rendered here: the design's file is over the import cap
+   panels={{236, 128, 168}}, seam={70, 22, 44}},
   {id="royal", name="Royal", rarity="common", kind="panel",
    panels={{40, 76, 190}}, seam={14, 24, 62}},
   {id="forest", name="Forest", rarity="common", kind="panel",
@@ -123,6 +130,10 @@ local STYLES = {
    panels={{112, 110, 106}, {96, 94, 90}}, seam={44, 44, 46}, grain=0.22},
   {id="midnight", name="Midnight", rarity="common", kind="panel",
    panels={{34, 38, 58}, {26, 29, 46}}, seam={12, 13, 22}},
+  {id="offwhite", name="Off-White", rarity="common", kind="file"},
+  {id="lightgray", name="Light Gray", rarity="common", kind="file"},
+  {id="tan", name="Tan", rarity="common", kind="file"},
+  {id="babyblue", name="Baby Blue", rarity="common", kind="file"},
 
   -- ---- RARE: coloured panels, classic seams ---------------------------------
   {id="usa", name="USA", rarity="rare", kind="panel",
@@ -138,6 +149,11 @@ local STYLES = {
   {id="jamaica", name="Jamaica", rarity="rare", kind="panel",
    panels={{20, 20, 24}, {30, 150, 60}, {244, 196, 36}, {30, 150, 60}},
    seam={42, 36, 20}},
+  {id="mexico", name="Mexico", rarity="rare", kind="file"},
+  {id="colombia", name="Colombia", rarity="rare", kind="file"},
+  {id="venezuela", name="Venezuela", rarity="rare", kind="file"},
+  {id="argentina", name="Argentina", rarity="rare", kind="file"},
+  {id="france", name="France", rarity="rare", kind="file"},
   {id="globetrotters", name="Globetrotters", rarity="rare", kind="panel",
    panels={{206, 32, 48}, {245, 245, 245}, {28, 58, 140}, {245, 245, 245}},
    seam={30, 30, 38}, stars=true},
@@ -152,6 +168,15 @@ local STYLES = {
    panels={{214, 156, 52}, {142, 84, 40}}, seam={72, 44, 24}},
   {id="varsity", name="Varsity", rarity="rare", kind="panel",
    panels={{26, 44, 96}, {240, 240, 244}}, seam={18, 26, 54}},
+  {id="neon_lime", name="Neon Lime", rarity="rare", kind="file"},
+  {id="neon_pink", name="Neon Pink", rarity="rare", kind="file"},
+  {id="neon_cyan", name="Neon Cyan", rarity="rare", kind="file"},
+  {id="neon_volt", name="Neon Volt", rarity="rare", kind="file"},
+  {id="neon_violet", name="Neon Violet", rarity="rare", kind="file"},
+  {id="speckle_cream", name="Speckle Cream", rarity="rare", kind="file"},
+  {id="speckle_navy", name="Speckle Navy", rarity="rare", kind="file"},
+  {id="speckle_mint", name="Speckle Mint", rarity="rare", kind="file"},
+  {id="speckle_coral", name="Speckle Coral", rarity="rare", kind="file"},
 
   -- ---- EPIC: patterns under the seams --------------------------------------
   {id="camo", name="Woodland Camo", rarity="epic", kind="blotch",
@@ -175,16 +200,41 @@ local STYLES = {
   {id="leopard", name="Leopard", rarity="epic", kind="dots",
    base={222, 176, 92}, dot={198, 150, 70}, ring={52, 36, 22}, ring_w=2.6,
    dot_deg=6.5, dot_step=19, jitter=true, seam={48, 32, 18}},
+  {id="leopard_snow", name="Snow Leopard", rarity="epic", kind="file"},
+  {id="leopard_pink", name="Pink Leopard", rarity="epic", kind="file"},
+  {id="leopard_neon", name="Neon Leopard", rarity="epic", kind="file"},
+  {id="leopard_blue", name="Blue Leopard", rarity="epic", kind="file"},
   {id="checker", name="Checker", rarity="epic", kind="check",
    palette={{244, 240, 232}, {28, 26, 30}}, cells=12, seam={120, 40, 40}},
+  {id="checker_bw", name="Black & White Checker", rarity="epic", kind="file"},
+  {id="checker_red", name="Red Checker", rarity="epic", kind="file"},
+  {id="checker_teal", name="Teal Checker", rarity="epic", kind="file"},
+  {id="checker_purple", name="Purple Checker", rarity="epic", kind="file"},
   {id="polka", name="Polka", rarity="epic", kind="dots",
    base={226, 48, 60}, dot={250, 246, 240}, dot_deg=6, dot_step=22,
    seam={60, 14, 20}},
+  {id="polka_navy", name="Navy Polka", rarity="epic", kind="file"},
+  {id="polka_mint", name="Mint Polka", rarity="epic", kind="file"},
+  {id="polka_yellow", name="Yellow Polka", rarity="epic", kind="file"},
+  {id="polka_black", name="Black Polka", rarity="epic", kind="file"},
+  {id="pineapple", name="Pineapple", rarity="epic", kind="file"},
   {id="watermelon", name="Watermelon", rarity="epic", kind="stripes",
    base={86, 168, 66}, stripe={34, 88, 40}, stripes=14, seam={46, 92, 44}},
   {id="galaxy", name="Galaxy", rarity="epic", kind="blotch",
    palette={{38, 24, 66}, {58, 32, 98}, {26, 18, 48}, {86, 48, 132}},
    seam={16, 12, 30}, sparkle=true},
+  {id="galaxy_rose", name="Galaxy Rose", rarity="epic", kind="blotch",   -- rendered here (import cap)
+   palette={{66, 18, 50}, {104, 30, 76}, {44, 12, 34}, {146, 50, 104}},
+   seam={30, 8, 22}, sparkle=true},
+  {id="galaxy_emerald", name="Galaxy Emerald", rarity="epic", kind="blotch",   -- rendered here (import cap)
+   palette={{14, 50, 40}, {22, 78, 60}, {10, 34, 28}, {34, 108, 82}},
+   seam={6, 24, 18}, sparkle=true},
+  {id="galaxy_solar", name="Galaxy Solar", rarity="epic", kind="blotch",   -- rendered here (import cap)
+   palette={{78, 30, 10}, {118, 52, 14}, {52, 20, 8}, {166, 84, 22}},
+   seam={34, 12, 4}, sparkle=true},
+  {id="galaxy_aqua", name="Galaxy Aqua", rarity="epic", kind="blotch",   -- rendered here (import cap)
+   palette={{12, 44, 64}, {18, 70, 96}, {8, 30, 46}, {30, 102, 130}},
+   seam={6, 20, 30}, sparkle=true},
   {id="sunset", name="Sunset", rarity="epic", kind="gradient",
    ramp={{250, 186, 60}, {236, 96, 52}, {96, 40, 128}}, seam={52, 26, 48}},
   {id="ice", name="Ice", rarity="epic", kind="gradient",
@@ -224,10 +274,18 @@ local STYLES = {
   {id="moon", name="Moon", rarity="legend", kind="craters",
    base={178, 178, 182}, floor={146, 146, 152}, rim={214, 214, 218},
    craters=26, seams=false, pebble=0.0, grain=0.12},
+  {id="mars", name="Mars", rarity="legend", kind="file"},
   {id="donut", name="Donut", rarity="legend", kind="donut",
    dough={222, 170, 96}, glaze={246, 128, 178},
    sprinkles={{250, 236, 80}, {90, 200, 120}, {80, 150, 240}, {250, 250, 250}},
    seams=false, pebble=0.0, grain=0.0},
+  {id="skeleton", name="Skeleton", rarity="legend", kind="file"},
+  {id="frankenstein", name="Frankenstein", rarity="legend", kind="file"},
+  {id="woodgrain", name="Woodgrain", rarity="legend", kind="file"},
+  {id="mahogany", name="Mahogany", rarity="legend", kind="file"},
+  {id="mosaic", name="Mosaic", rarity="legend", kind="file"},
+  {id="mosaic_blue", name="Mosaic Blue", rarity="legend", kind="file"},
+  {id="mosaic_red", name="Mosaic Red", rarity="legend", kind="file"},
 }
 
 -- ---------------------------------------------------------------------------
@@ -619,12 +677,18 @@ local function render(st)
 end
 
 local rows = {}
+local rendered = 0
 for _, st in ipairs(STYLES) do
-  local sp = render(st)
-  local path = app.fs.joinPath(TEX_DIR, st.id .. ".png")
-  sp:saveCopyAs(path)
-  if st.id == "classic" then sp:saveCopyAs(LEGACY) end
-  sp:close()
+  if st.kind ~= "file" then
+    local sp = render(st)
+    local path = app.fs.joinPath(TEX_DIR, st.id .. ".png")
+    sp:saveCopyAs(path)
+    if st.id == "classic" then sp:saveCopyAs(LEGACY) end
+    sp:close()
+    rendered = rendered + 1
+  elseif not app.fs.isFile(app.fs.joinPath(TEX_DIR, st.id .. ".png")) then
+    print("  MISSING file skin " .. st.id .. ".png")
+  end
   rows[#rows + 1] = string.format(
     '  {"id": "%s", "name": "%s", "rarity": "%s", "price": %d, "skin": "res://assets/textures/balls/%s.png"}',
     st.id, st.name, st.rarity or "common", st.price or 0, st.id)
@@ -634,5 +698,5 @@ end
 local f = io.open(MANIFEST, "w")
 f:write("[\n" .. table.concat(rows, ",\n") .. "\n]\n")
 f:close()
-print(string.format("wrote %d skins -> %s", #STYLES, TEX_DIR))
+print(string.format("rendered %d skins, %d from files -> %s", rendered, #STYLES - rendered, TEX_DIR))
 print("manifest -> " .. MANIFEST)

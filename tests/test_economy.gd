@@ -84,7 +84,7 @@ func _envelope(t) -> void:
 	t.ok(pt >= to_win * PeggyPrizes.DROP_COST, "winning %d prizes costs at least %d drops (%.0f tickets)" % [to_win, to_win, pt])
 	t.ok(EconomyBudget.peggy_per_prize() <= PeggyPrizes.DROP_COST * 1.35, "a prize costs about a drop (%.0f tickets)" % EconomyBudget.peggy_per_prize())
 	t.ok(EconomyBudget.peggy_hours() > EconomyBudget.catalog_hours() * 0.5, "the roster is most of the catalog (%.1f of %.1f h)" % [EconomyBudget.peggy_hours(), EconomyBudget.catalog_hours()])
-	var hours: Array = Economy.tickets_cfg().get("catalog_hours", [15, 35])
+	var hours: Array = Economy.tickets_cfg().get("catalog_hours", [15, 50])
 	var h := EconomyBudget.catalog_hours()
 	t.ok(h >= float(hours[0]) and h <= float(hours[1]), "the whole catalog takes %.1f hours, inside %s-%s" % [h, hours[0], hours[1]])
 	t.ok(EconomyBudget.minutes_to_afford(250) < EconomyBudget.minutes_to_afford(1500), "pricier takes longer")

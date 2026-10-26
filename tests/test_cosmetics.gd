@@ -42,7 +42,23 @@ func run(t) -> void:
 		per_rarity[b.rarity] = int(per_rarity.get(b.rarity, 0)) + 1
 	# starter_ball() returns the FIRST set priced 0: classic must stay first.
 	t.eq(loaded[0].id, "classic", "classic is the first ball, so it is the starter")
-	t.eq(loaded.size(), 47, "the four-tier roster (%d)" % loaded.size())
+	t.eq(loaded.size(), 91, "the four-tier roster: 47 + Ross's 44 from the Ball Roster design, 2026-10-25 (%d)" % loaded.size())
+	t.eq(per_rarity, {"common": 16, "rare": 24, "epic": 33, "legend": 18}, "the design's rarity counts")
+	var manifest: Array = JSON.parse_string(FileAccess.get_file_as_string("res://assets/balls/ball_manifest.json"))
+	var listed: Array = []
+	for b in loaded:
+		listed.push_back(b.id)
+	var order: Array = []
+	for r in manifest:
+		order.push_back(str(r["id"]))
+	t.eq(listed, order, "the library lists the manifest's balls in its order")
+	var skins_ok := true
+	for b in loaded:
+		if not ResourceLoader.exists(b.skin_path) or not ResourceLoader.exists("res://assets/textures/balls/thumbs/%s.png" % b.id):
+			skins_ok = false
+	t.ok(skins_ok, "every ball has its skin and its locker thumbnail")
+	for nid in ["pink", "speckle_navy", "leopard_neon", "galaxy_aqua", "mosaic_red", "frankenstein"]:
+		t.ok(CosmeticLibrary.get_ball(nid) != null, "%s is in" % nid)
 	for r in PeggyPrizes.RARITIES:
 		t.ok(int(per_rarity.get(r, 0)) >= 8, "a bunch of %s balls (%d)" % [r, int(per_rarity.get(r, 0))])
 	t.eq(CosmeticLibrary.get_ball("classic").rarity, "common", "classic is common")
