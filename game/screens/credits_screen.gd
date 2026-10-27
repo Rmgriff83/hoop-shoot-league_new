@@ -156,7 +156,7 @@ func _ready() -> void:
 	built.size_flags_vertical = Control.SIZE_FILL
 	tools.add_child(built)
 	for n in TOOLS:
-		var chip := ShadowPanel.new(GOLD, 0.0, 0.25, 12.0)
+		var chip := ShadowPanel.new(GOLD, 0.0, 0.35, 12.0)
 		chip.name = "Tool" + str(n).capitalize()
 		chip.custom_minimum_size = Vector2(0, 40 + ShadowStyle.OFFSET)
 		var l := _display(str(n), 14)
@@ -273,7 +273,7 @@ func _check_end() -> void:
 
 
 func _card(r: Dictionary) -> Control:
-	var p := ShadowPanel.new(CREAM, 20.0, 0.14, 22.0)
+	var p := ShadowPanel.new(CREAM, 20.0, 0.24, 22.0)
 	p.name = "Credit"
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 14)

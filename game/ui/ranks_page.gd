@@ -256,7 +256,7 @@ func _build_card(top: float, w: float, you: Dictionary) -> void:
 func _build_list(top: float, w: float) -> void:
 	var panel_top := top + PANEL_DY
 	var panel_h := UiLayout.screen_height() - BOTTOM - panel_top
-	var panel := ShadowPanel.new(CREAM, 0.0, 0.14)
+	var panel := ShadowPanel.new(CREAM, 0.0, 0.24)
 	panel.name = "Panel"
 	panel.position = Vector2(LEFT, panel_top)
 	panel.size = Vector2(w + ShadowStyle.OFFSET, panel_h + ShadowStyle.OFFSET)

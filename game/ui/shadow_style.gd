@@ -15,10 +15,10 @@ extends RefCounted
 ## touch tighter).
 const OFFSET := 5.0
 const EDGE := 2.0
-## The face's tint from the design, and the gain every face gets on top so
-## they read less transparent over the court (Ross, 2026-09-26).
-const TINT := 0.22
-const FACE_GAIN := 1.5
+## The face's default tint: the design's own rgba alpha, used verbatim. The
+## 1.5x gain of 2026-09-26 is gone: Ross's designs carry the lift themselves
+## (every dotted face +0.10, 2026-10-27), so a design's number IS the tint.
+const TINT := 0.32
 ## How much more opaque a pressed face gets.
 const PRESSED_GAIN := 3.2
 ## Dither cell, in design px (about 1.5 device px on the phone).
@@ -65,9 +65,9 @@ static func draw(ci: CanvasItem, size: Vector2, color: Color, pressed: bool, hov
 	draw_ex(ci, size, color, Color(color, face_alpha(TINT)), Color(color, DOT_ALPHA), Color(color, SHADOW_ALPHA), pressed, hovered, disabled)
 
 
-## A design tint with the face gain applied (solid faces stay solid).
+## A design tint as the face's alpha (solid faces stay solid).
 static func face_alpha(tint: float) -> float:
-	return minf(1.0, tint * FACE_GAIN)
+	return minf(1.0, tint)
 
 
 ## The style with its colours apart: `edge` (the flat line), `fill` (the

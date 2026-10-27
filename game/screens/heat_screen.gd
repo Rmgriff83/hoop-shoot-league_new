@@ -956,7 +956,7 @@ func _build_pip() -> void:
 	# The minimized chip.
 	_pip_chip = ShadowCard.new(_opp_color)
 	_pip_chip.name = "PipChip"
-	_pip_chip.tint = 0.32
+	_pip_chip.tint = 0.42
 	_pip_chip.position = Vector2(720 - 36 - 180 - ShadowStyle.OFFSET, frame_pos.y)
 	_pip_chip.size = Vector2(180 + ShadowStyle.OFFSET, 50 + ShadowStyle.OFFSET)
 	_pip_chip.visible = false

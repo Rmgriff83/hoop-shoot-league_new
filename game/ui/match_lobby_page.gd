@@ -420,7 +420,7 @@ func _build_top() -> void:
 	all.custom_minimum_size.x = UiFont.display().get_string_size(MatchCopy.all_ranks(), HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(12)).x + 24.0 + 2.0 * RetroTheme.OUTLINE + ShadowStyle.OFFSET
 	all.pressed.connect(func() -> void: all_ranks.emit())
 	head_.add_child(all)
-	var panel := ShadowPanel.new(CREAM, 6.0, 0.14, 20.0)
+	var panel := ShadowPanel.new(CREAM, 6.0, 0.24, 20.0)
 	panel.name = "TopPanel"
 	_top_box.add_child(panel)
 	_top_rows = VBoxContainer.new()

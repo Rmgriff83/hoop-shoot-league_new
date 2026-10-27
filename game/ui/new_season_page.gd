@@ -57,7 +57,7 @@ func _fill() -> void:
 	word.name = "SeasonWord"
 	RetroTheme.dithered(word, Vector2(6, 6))
 	_put(word, 0.0, 0.0, word_w, BOX_H, roll)
-	var box := ShadowPanel.new(ORANGE, 0.0, 0.3, 0.0)
+	var box := ShadowPanel.new(ORANGE, 0.0, 0.4, 0.0)
 	box.name = "SeasonBox"
 	_put(box, word_w + 28.0, 0.0, BOX_W, BOX_H, roll)
 	var clip := _inner(box)
@@ -78,7 +78,7 @@ func _fill() -> void:
 	_anim(roll, "rise", 0.3, 0.4)
 	# DEFENDING CHAMPS.
 	if bool(v.get("defending", false)):
-		var chip := _panel(GOLD, 0.0, CHIP_Y, 0.0, 48.0, 16.0, 0.35)
+		var chip := _panel(GOLD, 0.0, CHIP_Y, 0.0, 48.0, 16.0, 0.45)
 		chip.name = "Defending"
 		chip.ground = Color(DARK, 0.5)
 		var inner := HBoxContainer.new()
@@ -148,7 +148,7 @@ func _fill() -> void:
 	for i in cards.size():
 		var c: Dictionary = cards[i]
 		var colour := ORANGE if i == 0 else CREAM
-		var card := _panel(colour, 0.0, cy, W, CARD_H, 24.0, 0.25 if i == 0 else 0.16)
+		var card := _panel(colour, 0.0, cy, W, CARD_H, 24.0, 0.35 if i == 0 else 0.26)
 		card.name = "DayCard_%d" % i
 		card.ground = Color(DARK, 0.55)
 		var day := _label(str(c.get("day", "")), 18, CREAM, true)

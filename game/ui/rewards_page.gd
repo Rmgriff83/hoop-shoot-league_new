@@ -127,7 +127,7 @@ func _build_pending(col: VBoxContainer) -> void:
 	for g in pending:
 		var gd: Dictionary = g if g is Dictionary else {}
 		var key := str(gd.get("key", ""))
-		var row := ShadowPanel.new(CREAM, 0.0, 0.14, 16.0)
+		var row := ShadowPanel.new(CREAM, 0.0, 0.24, 16.0)
 		row.name = "Grant_" + key
 		row.custom_minimum_size = Vector2(0, ROW_H + ShadowStyle.OFFSET)
 		var h := HBoxContainer.new()

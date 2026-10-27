@@ -218,7 +218,7 @@ func _fill_shop() -> void:
 	var level := App.level()
 	for card in CardDefs.all():
 		var cid := str(card["id"])
-		var panel := ShadowPanel.new(RetroTheme.c("ink"), 16.0, 0.08)
+		var panel := ShadowPanel.new(RetroTheme.c("ink"), 16.0, 0.18)
 		panel.name = "Shop_" + cid
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation", 18)

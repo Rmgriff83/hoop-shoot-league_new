@@ -502,7 +502,7 @@ func _you_stats() -> Array:
 
 
 func _build_opponent() -> void:
-	var pc := _panel("OppPanel", CREAM, 0.16)
+	var pc := _panel("OppPanel", CREAM, 0.26)
 	_opp_panel = pc[0]
 	var col: VBoxContainer = pc[1]
 	var rec := _opp_record()
@@ -547,7 +547,7 @@ func _build_opponent() -> void:
 
 ## The gold READY chip (theirs on the panel's corner, yours in the divider).
 func _ready_chip(size_: int, h: float) -> Control:
-	var chip_ := ShadowPanel.new(GOLD, 0.0, 0.40, 14.0)
+	var chip_ := ShadowPanel.new(GOLD, 0.0, 0.50, 14.0)
 	chip_.custom_minimum_size = Vector2(0, h + ShadowStyle.OFFSET)
 	chip_.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var l := words(MatchCopy.ready_word(false), size_, true)
@@ -588,7 +588,7 @@ func _build_vs() -> void:
 
 
 func _build_you() -> void:
-	var pc := _panel("YouPanel", GOLD, 0.20)
+	var pc := _panel("YouPanel", GOLD, 0.30)
 	_you_panel = pc[0]
 	var col: VBoxContainer = pc[1]
 	var me := you_record()

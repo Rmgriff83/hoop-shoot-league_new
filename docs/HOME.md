@@ -46,7 +46,10 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
   `ShadowStyle`; cards are `ShadowCard`s): a transparent face over the court
   with the element's own colour as a hard offset shadow, **dithered** with a
   3 px checkerboard (a tiled texture, drawn only as the L strip past the
-  face), a thin edge in that colour and a faint tint; labels in cream + ink
+  face), a thin edge in that colour and a faint tint — the tint is the
+  design's own rgba alpha, verbatim (Ross's designs carry a +0.10 lift since
+  2026-10-27: the default face 32 %, lists 24 %, sheet rows 22 %, chips 40 %;
+  the old hidden 1.5× gain is gone); labels in cream + ink
   outline. Cards use their colour; the level, locker, ranks and menu use
   cream; the tickets pill (`CoinsPill`, its old class name) gold. `on_scene()` gives
   any text drawn straight on the court that cream face with an ink outline.
@@ -102,7 +105,7 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
   dim); CARDS — LOADOUT (the **spares**; the equipped slots float above) and
   SHOP (your tickets, the buy pill with the ticket icon); STATS — the
   career grid, seasons, BEST MATCHES, the area's time trials. Every panel is
-  a see-through cream `ShadowPanel` at 14 % with cream text. `changed` fires
+  a see-through cream `ShadowPanel` at 24 % with cream text. `changed` fires
   when the doc moves, `tab_changed` on a tab; `go_loadout()` lands on CARDS ·
   LOADOUT. `App.enter_league(id)` makes a league current without a scene
   change; `App.to_league_hub()` (CONTINUE SEASON after a heat) lands on the

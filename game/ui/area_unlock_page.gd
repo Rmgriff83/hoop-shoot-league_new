@@ -274,7 +274,7 @@ func build(v: Dictionary) -> Control:
 	_root.add_child(go)
 	var lt := ShadowCard.new(CREAM)
 	lt.name = "Later"
-	lt.tint = 0.14
+	lt.tint = 0.24
 	lt.position = Vector2(W - 42 - LATER_W, BUTTONS_Y)
 	lt.size = Vector2(LATER_W, BUTTON_H) + Vector2.ONE * ShadowStyle.OFFSET
 	lt.text = str(v.get("later", "LATER"))

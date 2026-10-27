@@ -158,7 +158,7 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	RetroTheme.dithered(_score_label)
 	score_row.add_child(_score_label)
 	if HeatCopy.ot(heat):
-		var chip := ShadowPanel.new(GOLD, 0.0, 0.30, 12.0)
+		var chip := ShadowPanel.new(GOLD, 0.0, 0.40, 12.0)
 		chip.name = "OT"
 		chip.custom_minimum_size = Vector2(0, 40 + ShadowStyle.OFFSET)
 		chip.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -203,7 +203,7 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	# The box score.
 	var bright := HeatCopy.bright_lines(heat)
 	var row_h := ROW_H_BRIGHT if not bright.is_empty() else ROW_H
-	var box := ShadowPanel.new(CREAM, 12.0, 0.14, 26.0)
+	var box := ShadowPanel.new(CREAM, 12.0, 0.24, 26.0)
 	box.name = "Box"
 	box.position = Vector2(MARGIN, BOX_Y)
 	var box_h := box_height(bright.size())
@@ -218,7 +218,7 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bh.add_child(spacer)
 	var oc := HeatCopy.opponent_chip(heat)
-	for spec in [["YOU", RetroTheme.c("orange"), 0.30, "YouChip"], [str(oc["text"]), oc["color"], 0.40, "ThemChip"]]:
+	for spec in [["YOU", RetroTheme.c("orange"), 0.40, "YouChip"], [str(oc["text"]), oc["color"], 0.50, "ThemChip"]]:
 		var cell := _hbox(0)
 		cell.custom_minimum_size = Vector2(COL_W, 0)
 		cell.alignment = BoxContainer.ALIGNMENT_END
@@ -250,7 +250,7 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	if in_league:
 		var card := HeatCopy.drop(heat)
 		if not card.is_empty():
-			var dp := ShadowPanel.new(RetroTheme.c("teal"), 0.0, 0.22, 24.0)
+			var dp := ShadowPanel.new(RetroTheme.c("teal"), 0.0, 0.32, 24.0)
 			dp.name = "Drop"
 			dp.position = Vector2(MARGIN, below)
 			dp.size = Vector2(BOX_W + ShadowStyle.OFFSET, DROP_H + ShadowStyle.OFFSET)
@@ -388,7 +388,7 @@ func _fill_online_rewards(box: Control, heat: Dictionary) -> void:
 	# Two panels split the row evenly whatever their words measure; one alone takes it all.
 	var half := (box.size.x - ShadowStyle.OFFSET - 21.0) / 2.0 if (not ck.is_empty() and not sp.is_empty()) else 0.0
 	if not ck.is_empty():
-		var rewards := ShadowPanel.new(GOLD, 0.0, 0.22, 22.0)
+		var rewards := ShadowPanel.new(GOLD, 0.0, 0.32, 22.0)
 		rewards.name = "Rewards"
 		rewards.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		rewards.custom_minimum_size = Vector2(half, ONLINE_CARD_H + ShadowStyle.OFFSET)
@@ -418,7 +418,7 @@ func _fill_online_rewards(box: Control, heat: Dictionary) -> void:
 		row.add_child(rewards)
 	if not sp.is_empty():
 		var lost := bool(sp.get("lost", false))
-		var dp := ShadowPanel.new(CREAM if lost else RetroTheme.c("teal"), 0.0, 0.22, 20.0)
+		var dp := ShadowPanel.new(CREAM if lost else RetroTheme.c("teal"), 0.0, 0.32, 20.0)
 		dp.name = "Spoils"
 		dp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		dp.custom_minimum_size = Vector2(half, ONLINE_CARD_H + ShadowStyle.OFFSET)

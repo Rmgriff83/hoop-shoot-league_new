@@ -31,7 +31,7 @@ const INK := RetroTheme.SCENE_OUTLINE
 const TAB_H := 58.0
 const SLIDE_S := 0.3
 const FADE_H := 88.0
-const PANEL_TINT := 0.14
+const PANEL_TINT := 0.24
 
 var league_id := ""
 var cfg: Dictionary = {}
@@ -383,7 +383,7 @@ func _fill_heat() -> void:
 ## nickname over hometown, ACC / ARC segments and PACE beside the PLAY
 ## button (the equipped cards as chips on its corner), then the bio.
 func _shooter_card(sh: Dictionary, line: String) -> Control:
-	var card := ShadowPanel.new(PINE, 14.0, 0.3, 22.0)
+	var card := ShadowPanel.new(PINE, 14.0, 0.4, 22.0)
 	card.name = "Opponent"
 	var vb := _vcol(14)
 	card.add_child(vb)
@@ -436,7 +436,7 @@ func _shooter_card(sh: Dictionary, line: String) -> Control:
 	ratings.add_child(pace)
 	var play := ShadowCard.new(RetroTheme.c("orange"))
 	play.name = "PlayHeat"
-	play.tint = 0.32
+	play.tint = 0.42
 	play.custom_minimum_size = Vector2(232 + ShadowStyle.OFFSET, 104 + ShadowStyle.OFFSET)
 	play.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	play.pressed.connect(func() -> void: App.start_league_heat())
@@ -796,7 +796,7 @@ func _fill_shop(vb: VBoxContainer) -> void:
 	vb.add_child(_caps("%d TICKETS · CARDS BOUGHT HERE PLAY IN THE %s ONLY" % [App.tickets(), str(cfg.get("name", "LEAGUE")).to_upper()]))
 	var cd := App.cards_bucket(league_id)
 	for card in CardDefs.all():
-		var panel := ShadowPanel.new(CREAM, 20.0, 0.12)
+		var panel := ShadowPanel.new(CREAM, 20.0, 0.22)
 		panel.name = "Shop_" + str(card["id"])
 		var row := _hrow(20)
 		panel.add_child(row)

@@ -50,7 +50,7 @@ func _fill() -> void:
 	x.name = "Close"
 	x.pressed.connect(close)
 	# The banner: headline and line, the trophy for champions.
-	var banner := _panel(v.get("banner_color", CREAM), 0.0, BANNER_Y, W, 170.0, 26.0, 0.25)
+	var banner := _panel(v.get("banner_color", CREAM), 0.0, BANNER_Y, W, 170.0, 26.0, 0.35)
 	banner.name = "Banner"
 	banner.ground = Color(DARK, 0.6)
 	var text_x := 26.0
@@ -73,7 +73,7 @@ func _fill() -> void:
 	# CHAMPION · 2-1 / name and RUNNER-UP / name.
 	var card_w := (W - 24.0) * 0.5
 	var ch: Dictionary = v.get("champion", {})
-	var champ := _panel(GOLD, 0.0, CARDS_Y, card_w, 104.0, 18.0, 0.22)
+	var champ := _panel(GOLD, 0.0, CARDS_Y, card_w, 104.0, 18.0, 0.32)
 	champ.name = "Champion"
 	champ.ground = Color(DARK, 0.6)
 	var ccup := PixelIcon.new("icon_trophy", Vector2(44, 44), 3.0)
@@ -89,7 +89,7 @@ func _fill() -> void:
 	_put(cn, 76.0, 56.0, card_w - 90.0, 24.0, champ)
 	_anim(champ, "rise", 0.8, 0.4)
 	var ru: Dictionary = v.get("runner_up", {})
-	var runner := _panel(CREAM, card_w + 24.0, CARDS_Y, card_w, 104.0, 18.0, 0.16)
+	var runner := _panel(CREAM, card_w + 24.0, CARDS_Y, card_w, 104.0, 18.0, 0.26)
 	runner.name = "RunnerUp"
 	runner.ground = Color(DARK, 0.6)
 	var rt := _label(str(ru.get("title", "")), 15, CREAM, false)
@@ -104,7 +104,7 @@ func _fill() -> void:
 	_anim(runner, "rise", 0.8, 0.4)
 	# Six stats in three columns.
 	var stats: Array = v.get("stats", [])
-	var grid := _panel(CREAM, 0.0, STATS_Y, W, 26.0 * 2.0 + 2.0 * 64.0 + 34.0, 26.0, 0.14)
+	var grid := _panel(CREAM, 0.0, STATS_Y, W, 26.0 * 2.0 + 2.0 * 64.0 + 34.0, 26.0, 0.24)
 	grid.name = "Stats"
 	var col_w := (W - 52.0) / 3.0
 	for i in stats.size():
@@ -162,7 +162,7 @@ func _fill() -> void:
 	eh.name = "EarningsHead"
 	eh.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_put(eh, 0.0, 0.0, W, 20.0, earn)
-	var xp_card := ShadowPanel.new(CREAM, 0.0, 0.16, 0.0)
+	var xp_card := ShadowPanel.new(CREAM, 0.0, 0.26, 0.0)
 	xp_card.name = "XpCard"
 	xp_card.ground = Color(DARK, 0.5)
 	_put(xp_card, 0.0, 32.0, card_w, 92.0, earn)

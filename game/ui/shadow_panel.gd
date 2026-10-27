@@ -5,7 +5,7 @@ extends PanelContainer
 ## with content margins that keep children clear of the shadow strip. The
 ## sibling of ShadowCard for panels that only hold content (the opponent
 ## card, the table, the lists, the shop rows). `tint` is the face's opacity
-## (the design's lists sit at 14 %, the pine card at 30 %); `shadow` can
+## (the design's lists sit at 24 %, the pine card at 40 %); `shadow` can
 ## differ from the edge (a gold upcoming card with the cream shadow).
 
 var color := Color.WHITE

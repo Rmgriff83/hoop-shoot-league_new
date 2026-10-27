@@ -154,7 +154,7 @@ func _init(d: Dictionary, art := "") -> void:
 	frame.size = Vector2(_bar_w, 20)
 	bar.add_child(frame)
 	# The tip.
-	var tipbox := ShadowPanel.new(CREAM, 20.0, 0.14, 24.0)
+	var tipbox := ShadowPanel.new(CREAM, 20.0, 0.24, 24.0)
 	tipbox.name = "TipBox"
 	tipbox.position = Vector2(36, 1080)
 	tipbox.size = Vector2(642 + ShadowStyle.OFFSET, 110 + ShadowStyle.OFFSET)

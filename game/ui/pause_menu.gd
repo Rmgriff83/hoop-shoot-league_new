@@ -486,7 +486,7 @@ func _refresh_values() -> void:
 		v.custom_minimum_size.x = minf(w, room)
 		var on: bool = str(k) == _pop_kind
 		(t["card"] as ShadowCard).color = GOLD if on else CREAM
-		(t["card"] as ShadowCard).tint = 0.3 if on else 0.18
+		(t["card"] as ShadowCard).tint = 0.40 if on else 0.28
 		(t["card"] as ShadowCard).queue_redraw()
 
 
@@ -610,7 +610,7 @@ func _open_pop(kind: String) -> void:
 		for i in 3:
 			var row := ShadowCard.new(GOLD if i == App.shot_help else CREAM)
 			row.name = "Help_%d" % i
-			row.tint = 0.3 if i == App.shot_help else 0.18
+			row.tint = 0.40 if i == App.shot_help else 0.28
 			row.custom_minimum_size = Vector2(0, 64 + ShadowStyle.OFFSET)
 			var h := HBoxContainer.new()
 			h.add_theme_constant_override("separation", 14)
@@ -654,7 +654,7 @@ func _open_pop(kind: String) -> void:
 		var on := str(id) == cur
 		var c := ShadowCard.new(GOLD if on else CREAM)
 		c.name = "Opt_" + str(id)
-		c.tint = 0.3 if on else 0.18
+		c.tint = 0.40 if on else 0.28
 		c.custom_minimum_size = Vector2.ONE * (cell + ShadowStyle.OFFSET)
 		var pic := TextureRect.new()
 		pic.texture = _thumb(kind, str(id))

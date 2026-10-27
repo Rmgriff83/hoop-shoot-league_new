@@ -107,7 +107,7 @@ func has_top_wash() -> bool:
 func _ready() -> void:
 	layer = 5
 	# The clock card (a trial / heat) and the PRACTICE card share the slot.
-	_clock_card = _card(CREAM, CLOCK_POS, CLOCK_SIZE, 0.22, 12.0)
+	_clock_card = _card(CREAM, CLOCK_POS, CLOCK_SIZE, 0.32, 12.0)
 	_clock_card.name = "Clock"
 	var ccol := _vbox(16)
 	var cr := _hbox(10)
@@ -124,7 +124,7 @@ func _ready() -> void:
 	_clock.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	ccol.add_child(_clock)
 	_clock_card.add_child(ccol)
-	_practice_card = _card(RetroTheme.c("teal"), CLOCK_POS, CLOCK_SIZE, 0.22, 12.0)
+	_practice_card = _card(RetroTheme.c("teal"), CLOCK_POS, CLOCK_SIZE, 0.32, 12.0)
 	_practice_card.name = "Practice"
 	_practice_card.visible = false
 	var pr := _vbox(16)
@@ -135,7 +135,7 @@ func _ready() -> void:
 	pr.add_child(pl)
 	_practice_card.add_child(pr)
 	# The score card.
-	var sc := _card(RetroTheme.c("orange"), SCORE_POS, SCORE_SIZE, 0.22, 16.0)
+	var sc := _card(RetroTheme.c("orange"), SCORE_POS, SCORE_SIZE, 0.32, 16.0)
 	sc.name = "ScoreCard"
 	_score_card = sc
 	var col := VBoxContainer.new()
@@ -151,7 +151,7 @@ func _ready() -> void:
 	col.add_child(_score)
 	sc.add_child(col)
 	# The BEST chip (trials: shown by set_best).
-	_best_chip = _card(GOLD, BEST_POS, BEST_SIZE, 0.30, 12.0, true)
+	_best_chip = _card(GOLD, BEST_POS, BEST_SIZE, 0.40, 12.0, true)
 	_best_chip.name = "BestChip"
 	_best_chip.visible = false
 	var br := _hbox(10)
@@ -166,7 +166,7 @@ func _ready() -> void:
 	br.add_child(_best_val)
 	_best_chip.add_child(br)
 	# The TOP chip (trials, with BEST): the area's all-time global top score.
-	_top_chip = _card(CREAM, TOP_POS, TOP_SIZE, 0.20, 12.0, true)
+	_top_chip = _card(CREAM, TOP_POS, TOP_SIZE, 0.30, 12.0, true)
 	_top_chip.name = "TopChip"
 	_top_chip.visible = false
 	var tr := _hbox(10)
@@ -217,10 +217,10 @@ func set_heat(on: bool, opp_label := "OPP", opp_color := LeagueContext.PINE) -> 
 	_score_card.visible = false
 	_best_chip.visible = false
 	_top_chip.visible = false
-	var you := _card(RetroTheme.c("orange"), YOU_POS, SIDE_SIZE, 0.22, 14.0)
+	var you := _card(RetroTheme.c("orange"), YOU_POS, SIDE_SIZE, 0.32, 14.0)
 	you.name = "YouCard"
 	_you_score = _side(you, "YOU")
-	var opp := _card(opp_color, OPP_POS, SIDE_SIZE, 0.32, 14.0)
+	var opp := _card(opp_color, OPP_POS, SIDE_SIZE, 0.42, 14.0)
 	opp.name = "OppCard"
 	_opp_score = _side(opp, opp_label.to_upper())
 

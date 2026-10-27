@@ -72,7 +72,7 @@ func _build() -> void:
 	# PLAY (300), over the machine.
 	_play = ShadowCard.new(RetroTheme.LIGHT["orange"])
 	_play.name = "Play"
-	_play.tint = 0.3
+	_play.tint = 0.4
 	var col := VBoxContainer.new()
 	col.name = "Col"
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -155,7 +155,7 @@ func _refresh_play() -> void:
 		_play_need.text = "NEED %s MORE" % RetroTheme.thousands(short)
 	var grey := short > 0
 	_play.color = GREY_EDGE if grey else RetroTheme.LIGHT["orange"]
-	_play.tint = 0.45 if grey else 0.3
+	_play.tint = 0.55 if grey else 0.4
 	for l in _play.find_children("*", "Label", true, false):
 		(l as Label).add_theme_color_override("font_color", GREY_TEXT if grey else CREAM)
 	var icon: PixelIcon = _play.find_child("Icon", true, false)

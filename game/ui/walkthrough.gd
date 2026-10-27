@@ -199,7 +199,7 @@ func _build_card(st: Dictionary, kind: String) -> void:
 		if _card.get_parent() != null:
 			_card.get_parent().remove_child(_card)
 		_card.queue_free()
-	_card = ShadowPanel.new(CREAM, CARD_PAD, 0.12)
+	_card = ShadowPanel.new(CREAM, CARD_PAD, 0.22)
 	_card.name = "Card"
 	# A dark ground under the dotted face (Ross, 2026-10-25: the white words
 	# bled into the light dots once the palette went white).

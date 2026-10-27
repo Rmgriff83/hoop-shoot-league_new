@@ -152,7 +152,7 @@ func build_loadout_strip(into: Control, bucket: String, cap: int, on_change: Cal
 	var slots: Array = App.loadout_slots(bucket)
 	var inv: Dictionary = cd.get("inventory", {})
 	# The LOADOUT panel.
-	var panel := ShadowPanel.new(GOLD, 12.0, 0.18, 18.0)
+	var panel := ShadowPanel.new(GOLD, 12.0, 0.28, 18.0)
 	panel.name = "Loadout"
 	into.add_child(panel)
 	var col := VBoxContainer.new()

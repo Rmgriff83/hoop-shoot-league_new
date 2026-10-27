@@ -472,7 +472,7 @@ func rebuild_chrome() -> void:
 	_next.position = Vector2(720 - 8 - CHEVRON_SIZE.x, float(_lay["chevron_y"]))
 	_chrome.add_child(_next)
 	# The season chip: `SEASON 2 - 2-1`, slid in from the left while the league is open.
-	_season_chip = ShadowPanel.new(RetroTheme.c("orange"), 0.0, 0.30, 16.0)
+	_season_chip = ShadowPanel.new(RetroTheme.c("orange"), 0.0, 0.40, 16.0)
 	_season_chip.name = "SeasonChip"
 	_season_chip.position = Vector2(CHIP_X, float(_lay["chip_y"]))
 	_season_chip.custom_minimum_size = Vector2(0, CHIP_H + ShadowStyle.OFFSET)
@@ -768,7 +768,7 @@ const AREA_CHIP := 60.0
 func _area_chip(_i: int, chev: Control) -> Control:
 	if _chrome == null:
 		return null
-	var chip := ShadowPanel.new(RetroTheme.SCENE_TEXT, 0.0, 0.22, 0.0)
+	var chip := ShadowPanel.new(RetroTheme.SCENE_TEXT, 0.0, 0.32, 0.0)
 	chip.name = "AreaChip"
 	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	chip.custom_minimum_size = Vector2.ONE * (AREA_CHIP + ShadowStyle.OFFSET)
@@ -1089,7 +1089,7 @@ func _float_upcoming(doc: Dictionary) -> void:
 		var u: Dictionary = games[i]
 		var first := i == 0 and str(u["day"]) != ""
 		var line := RetroTheme.c("gold") if first else RetroTheme.SCENE_TEXT
-		var card := ShadowPanel.new(line, 0.0, 0.30 if first else 0.18, 16.0)
+		var card := ShadowPanel.new(line, 0.0, 0.40 if first else 0.28, 16.0)
 		card.name = "Up_%d" % i
 		card.shadow = Color(RetroTheme.SCENE_TEXT, ShadowStyle.SHADOW_ALPHA)
 		card.custom_minimum_size = Vector2(0, 112 + ShadowStyle.OFFSET)

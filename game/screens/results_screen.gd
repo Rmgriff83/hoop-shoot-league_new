@@ -156,7 +156,7 @@ func build_chrome(run: Dictionary, is_best: bool) -> Control:
 	score_col.position = SCORE_POS
 	chrome.add_child(score_col)
 	if is_best:
-		var chip := ShadowPanel.new(GOLD, 0.0, 0.35, 14.0)
+		var chip := ShadowPanel.new(GOLD, 0.0, 0.45, 14.0)
 		chip.name = "NewBest"
 		chip.custom_minimum_size = Vector2(0, 42 + ShadowStyle.OFFSET)
 		chip.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
@@ -207,7 +207,7 @@ func build_chrome(run: Dictionary, is_best: bool) -> Control:
 		stats.add_child(col)
 
 	# The TOP 5 board, this run as a sixth row under a break when it is lower.
-	var board := ShadowPanel.new(CREAM, 14.0, 0.14, 26.0)
+	var board := ShadowPanel.new(CREAM, 14.0, 0.24, 26.0)
 	board.name = "Board"
 	board.position = Vector2(MARGIN, BOARD_Y)
 	board.size = Vector2(BOARD_W + ShadowStyle.OFFSET, 0)

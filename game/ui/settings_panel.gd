@@ -142,7 +142,7 @@ func _build() -> void:
 
 func _build_game() -> void:
 	_list.add_child(_section("GAME"))
-	var panel := ShadowPanel.new(CREAM, 22.0, 0.14, 22.0)
+	var panel := ShadowPanel.new(CREAM, 22.0, 0.24, 22.0)
 	panel.name = "GamePanel"
 	_list.add_child(panel)
 	var col := VBoxContainer.new()
@@ -215,7 +215,7 @@ func _pick(name_: String, value: Variant) -> void:
 		var b: ShadowCard = cards[v]
 		var on: bool = str(v) == str(value)
 		b.color = GOLD if on else CREAM
-		b.tint = 0.28 if on else 0.18
+		b.tint = 0.38 if on else 0.28
 		b.queue_redraw()
 
 
@@ -321,7 +321,7 @@ func _build_player() -> void:
 			_open_edit())
 	row.add_child(_edit_btn)
 	# NAME (with the tag) and HOMETOWN, SAVE / CLOSE.
-	_edit_box = ShadowPanel.new(CREAM, 22.0, 0.14, 22.0)
+	_edit_box = ShadowPanel.new(CREAM, 22.0, 0.24, 22.0)
 	_edit_box.name = "EditBox"
 	_edit_box.visible = false
 	_list.add_child(_edit_box)
@@ -556,7 +556,7 @@ func _toggle_link() -> void:
 
 func _build_dev() -> void:
 	_list.add_child(_section("DEV", "DEV BUILD ONLY"))
-	var panel := ShadowPanel.new(CREAM, 22.0, 0.14, 22.0)
+	var panel := ShadowPanel.new(CREAM, 22.0, 0.24, 22.0)
 	panel.name = "DevPanel"
 	_list.add_child(panel)
 	var col := VBoxContainer.new()
@@ -686,7 +686,7 @@ func _delete_account() -> void:
 		_delete_armed_at = now
 		top.text = "TAP AGAIN TO DELETE EVERYTHING"
 		_set_sub(_delete, "YOUR ACCOUNT AND THIS PHONE'S SAVE · CAN'T BE UNDONE", CREAM)
-		_delete.tint = 0.5
+		_delete.tint = 0.6
 		_delete.queue_redraw()
 		return
 	_delete_armed_at = -1.0
@@ -868,7 +868,7 @@ func _rule() -> ColorRect:
 
 static func _tone(b: ShadowCard, on: bool) -> void:
 	b.color = GOLD if on else CREAM
-	b.tint = 0.35 if on else ShadowStyle.TINT
+	b.tint = 0.45 if on else ShadowStyle.TINT
 	b.queue_redraw()
 
 

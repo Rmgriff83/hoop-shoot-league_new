@@ -1095,7 +1095,7 @@ func _run_cards() -> void:
 	last.add_child(fire_card)
 	faces.push_back(fire_card.face)
 	col.add_child(last)
-	var cap := ShadowPanel.new(LeagueContext.BLUE, 0.0, 0.30, 18.0)
+	var cap := ShadowPanel.new(LeagueContext.BLUE, 0.0, 0.40, 18.0)
 	cap.custom_minimum_size = Vector2(0, 50 + ShadowStyle.OFFSET)
 	cap.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	var crow := HBoxContainer.new()
