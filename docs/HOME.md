@@ -493,6 +493,11 @@ sounds. Levelling up rings heyheytheree's cozy coin (`assets/audio/level_up.wav`
 `Sfx.swish_register` on the SWISH branch of the scoring); a make paid extra on a
 lit streak (`StreakRules.base_points` > 1) that is not a swish plays gavynator's
 coin collect (`assets/audio/streak_coin.wav`, `Sfx.streak_coin`). `tests/test_chimes.gd`.
+Every button clicks (same day): Ross's five clips `assets/audio/click_0..4.wav`
+(baked −7 dB), `Sfx.click` picks one at random with no immediate repeat, and
+`Sfx` hooks `pressed` on every `BaseButton` that enters the tree (SceneTree
+`node_added`) unless it carries the meta `no_click` (PEGGY's DROP is a 3D cap,
+not a button, and keeps its own press sound). `tests/test_click.gd`.
 
 `game/screens/results_screen.gd` over the live court you just played on (the
 area's home-page pan under a half scrim); copy in `game/ui/results_copy.gd`

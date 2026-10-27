@@ -49,6 +49,7 @@ func _ready() -> void:
 		"ice_freeze", "ice_crack_0", "ice_crack_1", "ice_shatter",
 		"peggy_press", "peggy_servo", "peggy_ticket", "peggy_peg_0", "peggy_peg_1", "peggy_peg_2",
 		"peggy_win", "peggy_jackpot", "match_loss", "chime_win", "chime_big", "level_up", "swish_register", "streak_coin",
+		"click_0", "click_1", "click_2", "click_3", "click_4",
 		"fx/fire_burst", "fx/ice_form", "fx/ice_break", "fx/ice_swish", "fx/fire_out",
 	]:
 		_streams[name_] = load("res://assets/audio/%s.wav" % name_)
@@ -56,6 +57,30 @@ func _ready() -> void:
 		var p := AudioStreamPlayer.new()
 		add_child(p)
 		_players.push_back(p)
+	# The generic button click (Ross, 2026-10-26): every BaseButton that enters
+	# the tree clicks on `pressed` unless it carries the meta `no_click`.
+	get_tree().node_added.connect(_on_node_added)
+
+
+func _on_node_added(node: Node) -> void:
+	if node is BaseButton and not node.has_meta(NO_CLICK):
+		(node as BaseButton).pressed.connect(click)
+
+
+## Ross's five click clips (assets/audio/click_0..4.wav, baked −7 dB): one
+## at random per press, never the same twice running.
+const NO_CLICK := "no_click"
+const CLICKS := 5
+var _last_click := -1
+
+
+func click() -> void:
+	_last_click = _pick(CLICKS, _last_click)
+	_play("click_%d" % _last_click, -2.0)
+
+
+func last_click() -> int:
+	return _last_click
 
 
 # ---- cosmetic sets --------------------------------------------------------------
