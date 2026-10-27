@@ -46,3 +46,10 @@ func run(t) -> void:
 	plain.free()
 	var src := FileAccess.get_file_as_string("res://game/autoload/sfx.gd")
 	t.ok(src.find("get_tree().node_added.connect(_on_node_added)") >= 0, "Sfx hooks node_added in _ready")
+	# Credited (Ross, 2026-10-26): TannerSound's pack.
+	var credits: Dictionary = load("res://game/screens/credits_screen.gd").load_credits()
+	var found := false
+	for c in credits["sounds"]:
+		if str(c.get("url", "")) == "https://freesound.org/people/TannerSound/sounds/843597/" and str(c.get("author", "")) == "TannerSound":
+			found = true
+	t.ok(found, "the clicks are credited to TannerSound at Ross's link")

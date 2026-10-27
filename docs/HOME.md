@@ -497,7 +497,7 @@ Every button clicks (same day): Ross's five clips `assets/audio/click_0..4.wav`
 (baked −7 dB), `Sfx.click` picks one at random with no immediate repeat, and
 `Sfx` hooks `pressed` on every `BaseButton` that enters the tree (SceneTree
 `node_added`) unless it carries the meta `no_click` (PEGGY's DROP is a 3D cap,
-not a button, and keeps its own press sound). `tests/test_click.gd`.
+not a button, and keeps its own press sound); credited to TannerSound (freesound 843597). `tests/test_click.gd`.
 
 `game/screens/results_screen.gd` over the live court you just played on (the
 area's home-page pan under a half scrim); copy in `game/ui/results_copy.gd`
