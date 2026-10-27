@@ -1320,6 +1320,8 @@ func _on_outcome(outcome: Dictionary, buzzer_beater: bool) -> void:
 		# The scoring pop rises off the rim (design 5a); the streak story
 		# stays on the LED.
 		_court.rim_pop_from(HudCopy.rim_pop(str(outcome["type"]), pts, buzzer_beater))
+		if is_swish:
+			Sfx.swish_register()   # the till rings on a clean swish (Ross, 2026-10-26)
 		if buzzer_beater:
 			_court.info.flash("BUZZER +%d" % pts, 3, accent)
 		elif is_swish:

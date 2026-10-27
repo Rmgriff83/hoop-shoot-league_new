@@ -488,7 +488,9 @@ a new area (the unlock page, as the lock springs at `T_OPEN`). Losses keep
 the sting; the match-end page no longer borrows PEGGY's win and jackpot
 sounds. Levelling up rings heyheytheree's cozy coin (`assets/audio/level_up.wav`,
 `Sfx.level_up`) once, as the post-match XP meter fills to `LEVEL UP`
-(`XpMeter.step`). `tests/test_chimes.gd`.
+(`XpMeter.step`). A clean swish rings mokasza's old-fashioned cash register
+(`assets/audio/swish_register.wav`: trimmed to the ka-ching, sped up 1.3×,
+`Sfx.swish_register` on the SWISH branch of the scoring). `tests/test_chimes.gd`.
 
 `game/screens/results_screen.gd` over the live court you just played on (the
 area's home-page pan under a half scrim); copy in `game/ui/results_copy.gd`

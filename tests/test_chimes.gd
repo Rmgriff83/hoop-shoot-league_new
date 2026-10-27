@@ -62,3 +62,12 @@ func run(t) -> void:
 	plain.step(XpMeter.FILL_S + 1.0)
 	t.ok(not plain.rang(), "a fill short of a level never rings")
 	plain.free()
+	# A clean swish rings the till (Ross, 2026-10-26): mokasza's cash register,
+	# trimmed and sped up, on the SWISH branch of the scoring; credited.
+	var till: AudioStream = load("res://assets/audio/swish_register.wav")
+	t.ok(till != null and till.get_length() > 1.2 and till.get_length() < 1.7, "swish_register ships trimmed (~1.5 s)")
+	if sfx != null:
+		t.ok(sfx.has_method("swish_register"), "Sfx exposes swish_register()")
+	t.eq(str(urls.get("https://freesound.org/people/mokasza/sounds/810738/", {}).get("author", "")), "mokasza", "the till is credited")
+	var screen := FileAccess.get_file_as_string("res://game/screens/time_trial_screen.gd")
+	t.ok(screen.find("if is_swish:\n\t\t\tSfx.swish_register()") >= 0, "the till rings on a swish")

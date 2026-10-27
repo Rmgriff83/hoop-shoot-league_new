@@ -48,7 +48,7 @@ func _ready() -> void:
 		"swish", "net", "chain_rattle_0", "chain_rattle_1", "score_pop", "score_pop_swish", "buzzer",
 		"ice_freeze", "ice_crack_0", "ice_crack_1", "ice_shatter",
 		"peggy_press", "peggy_servo", "peggy_ticket", "peggy_peg_0", "peggy_peg_1", "peggy_peg_2",
-		"peggy_win", "peggy_jackpot", "match_loss", "chime_win", "chime_big", "level_up",
+		"peggy_win", "peggy_jackpot", "match_loss", "chime_win", "chime_big", "level_up", "swish_register",
 		"fx/fire_burst", "fx/ice_form", "fx/ice_break", "fx/ice_swish", "fx/fire_out",
 	]:
 		_streams[name_] = load("res://assets/audio/%s.wav" % name_)
@@ -504,6 +504,12 @@ func chime_big() -> void:
 ## heyheytheree's cozy coin, data/credits.json).
 func level_up() -> void:
 	_play("level_up", -2.0)
+
+
+## A clean swish rings the till (Ross, 2026-10-26; mokasza's old-fashioned
+## cash register, trimmed to the ka-ching and sped up 1.3×, data/credits.json).
+func swish_register() -> void:
+	_play("swish_register", -4.0)
 
 
 ## The carriage's servo whine, looped while the aim moves.
