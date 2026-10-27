@@ -13,13 +13,22 @@ extends CanvasLayer
 ## docs/LOCKER.md → NETS) and closes. The dim behind it, its X, or the tile
 ## again close it without a change; a tile with one owned option shows no
 ## caret and does not open. Keeps processing while the tree is paused so its
-## buttons work. `resumed`, `quit`, `ball_changed` and `net_changed` are the
-## screen's to wire (the screen swaps the live pool / court).
+## buttons work. `resumed`, `quit`, `ball_changed`, `net_changed` and
+## `hud_side_changed` are the screen's to wire (the screen swaps the live
+## pool / court, moves its music note).
+##
+## 2026-10-27 update of 43a: an info row under PAUSED (your score, theirs
+## and the time left in a match; score, time left and your best in a trial)
+## instead of the wide QUIT bar; QUIT is the small square left of RESUME
+## (two taps: SURE? in orange with TAP AGAIN + what it costs over it); a HUD
+## SIDE row (LEFT / RIGHT, toasts + music note) under the tiles; RESUME
+## carries no sub-line.
 
 signal resumed
 signal quit
 signal ball_changed(id: String)
 signal net_changed(id: String)
+signal hud_side_changed(side: String)
 
 const DIM := Color("#1B1815", 0.78)
 const POP_DIM := Color(14.0 / 255.0, 11.0 / 255.0, 9.0 / 255.0, 0.5)
@@ -33,9 +42,16 @@ const LEFT := 36.0
 const RIGHT := 42.0
 const COL_W := 720.0 - LEFT - RIGHT
 const TITLE_Y := 150.0
-const QUIT_Y := 290.0
-const QUIT_H := 76.0
+const INFO_Y := 282.0
+const INFO_H := 108.0
+const SEP_W := 64.0
 const OPTIONS_Y := 416.0
+const HUD_ROW_Y := 690.0
+const HUD_ROW_H := 88.0
+const SEG_SIZE := Vector2(104, 52)
+const QUIT_SIZE := 150.0
+const QUIT_BOTTOM := 60.0
+const WARN := Color("#FFB08A")
 const TILES_Y := 456.0
 const TILE_H := 210.0
 const TILE_GAP := 20.0
@@ -56,9 +72,10 @@ var _info: Dictionary = {}
 var _context: Label
 var _quit: ShadowCard
 var _quit_top: Label
-var _quit_sub: Label
+var _quit_sub: Label        # the TAP AGAIN warning over the square
 var _quit_armed_at := -1.0
-var _resume_sub: Label
+var _info_row: HBoxContainer
+var _hud_segments: Dictionary = {}   # side → the segment panel
 var _tiles: Dictionary = {}   # kind → {card, icon, value, caret}
 var _pop_kind := ""
 var _pop: Control
@@ -96,27 +113,47 @@ func _ready() -> void:
 	_context.name = "Context"
 	_context.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	head.add_child(_context)
-	# QUIT TO TITLE (two taps).
+	# The info row: where things stand (filled by open()).
+	_info_row = HBoxContainer.new()
+	_info_row.name = "Info"
+	_info_row.position = Vector2(LEFT, INFO_Y)
+	_info_row.size = Vector2(COL_W, INFO_H)
+	_info_row.add_theme_constant_override("separation", 8)
+	_info_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(_info_row)
+	# QUIT: the small square left of RESUME (two taps), the warning over it.
 	_quit = ShadowCard.new(CREAM)
 	_quit.name = "Quit"
-	_quit.position = Vector2(LEFT, QUIT_Y)
-	_quit.size = Vector2(COL_W + ShadowStyle.OFFSET, QUIT_H + ShadowStyle.OFFSET)
+	_quit.position = Vector2(LEFT, 1280.0 - QUIT_BOTTOM - QUIT_SIZE)
+	_quit.size = Vector2(QUIT_SIZE + ShadowStyle.OFFSET, QUIT_SIZE + ShadowStyle.OFFSET)
 	_quit.custom_minimum_size = _quit.size
 	add_child(_quit)
 	var qcol := VBoxContainer.new()
 	qcol.alignment = BoxContainer.ALIGNMENT_CENTER
-	qcol.add_theme_constant_override("separation", 10)
+	qcol.add_theme_constant_override("separation", 14)
 	qcol.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	qcol.position = Vector2(26, 0)
-	qcol.size = Vector2(COL_W - 52, QUIT_H)
+	qcol.position = Vector2(0, 0)
+	qcol.size = Vector2(QUIT_SIZE, QUIT_SIZE)
 	_quit.add_child(qcol)
-	_quit_top = _text("QUIT TO TITLE", 17, CREAM, true)
+	var qmark := _text("<", 40, CREAM, true)
+	qmark.name = "QuitMark"
+	qmark.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	qcol.add_child(qmark)
+	_quit_top = _text("QUIT", 16, CREAM, true)
 	_quit_top.name = "QuitTop"
+	_quit_top.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	qcol.add_child(_quit_top)
-	_quit_sub = _text("", 14, CREAM)
+	# The warning wraps in the column left of RESUME.
+	_quit_sub = _text("", 15, WARN)
 	_quit_sub.name = "QuitSub"
+	_quit_sub.add_theme_constant_override("line_spacing", 6)
+	_quit_sub.autowrap_mode = TextServer.AUTOWRAP_WORD
+	var warn_w := 720.0 - RIGHT - RESUME_W - 16.0 - LEFT
+	_quit_sub.position = Vector2(LEFT, 1280.0 - QUIT_BOTTOM - QUIT_SIZE - 14.0 - 96.0)
+	_quit_sub.size = Vector2(warn_w, 96)
+	_quit_sub.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	_quit_sub.visible = false
-	qcol.add_child(_quit_sub)
+	add_child(_quit_sub)
 	_quit.pressed.connect(_on_quit)
 	# OPTIONS ———— TAP TO CHANGE
 	var opt := HBoxContainer.new()
@@ -146,6 +183,47 @@ func _ready() -> void:
 		t["card"].position = Vector2(LEFT + i * (tile_w + TILE_GAP), TILES_Y)
 		(t["card"] as ShadowCard).pressed.connect(_toggle_pop.bind(k))
 		_tiles[k] = t
+	# HUD SIDE · TOASTS + MUSIC NOTE with LEFT / RIGHT (a tap flips it).
+	var hud := ShadowCard.new(CREAM)
+	hud.name = "HudSide"
+	hud.position = Vector2(LEFT, HUD_ROW_Y)
+	hud.size = Vector2(COL_W - 6.0 + ShadowStyle.OFFSET, HUD_ROW_H + ShadowStyle.OFFSET)
+	hud.custom_minimum_size = hud.size
+	add_child(hud)
+	var hrow := HBoxContainer.new()
+	hrow.add_theme_constant_override("separation", 18)
+	hrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hrow.position = Vector2(24, 0)
+	hrow.size = Vector2(COL_W - 6.0 - 48.0, HUD_ROW_H)
+	hud.add_child(hrow)
+	var hcol := VBoxContainer.new()
+	hcol.alignment = BoxContainer.ALIGNMENT_CENTER
+	hcol.add_theme_constant_override("separation", 10)
+	hcol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hcol.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hrow.add_child(hcol)
+	hcol.add_child(_text("HUD SIDE", 17, MUTED))
+	hcol.add_child(_text("TOASTS + MUSIC NOTE", 14, CREAM))
+	var segs := HBoxContainer.new()
+	segs.add_theme_constant_override("separation", 10)
+	segs.alignment = BoxContainer.ALIGNMENT_CENTER
+	segs.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	segs.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hrow.add_child(segs)
+	for side in [["left", "LEFT"], ["right", "RIGHT"]]:
+		var seg := ShadowPanel.new(CREAM, 0.0, 0.0, 0.0)
+		seg.name = "Seg_%s" % side[0]
+		seg.custom_minimum_size = SEG_SIZE + Vector2.ONE * ShadowStyle.OFFSET
+		seg.shadow = Color(0, 0, 0, 0.01)   # no drop: the segments sit inside the row
+		var sl := _text(str(side[1]), 15, CREAM, true)
+		sl.name = "Text"
+		sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		sl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		seg.add_child(sl)
+		segs.add_child(seg)
+		_hud_segments[str(side[0])] = seg
+	hud.pressed.connect(_on_hud_side)
+	_refresh_hud_side()
 	# RESUME, bottom right.
 	var resume := ShadowCard.new(ORANGE)
 	resume.name = "Resume"
@@ -174,13 +252,79 @@ func _ready() -> void:
 	var rmark := _text(">", 32, CREAM, true)
 	rmark.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	rrow.add_child(rmark)
-	_resume_sub = _text("", 16, CREAM)
-	_resume_sub.name = "ResumeSub"
-	_resume_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_resume_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_resume_sub.add_theme_constant_override("line_spacing", 6)
-	rcol.add_child(_resume_sub)
 	resume.pressed.connect(func() -> void: resumed.emit())
+
+
+## The info row from `stats`: {v, l, gold} cells, a {sep} is the VS. between.
+func _fill_info(stats: Array) -> void:
+	if _info_row == null:
+		return
+	for c in _info_row.get_children():
+		_info_row.remove_child(c)
+		c.queue_free()
+	for m in stats:
+		if bool(Dictionary(m).get("sep", false)):
+			var sep := _text("VS.", 18, MUTED, true)
+			sep.name = "InfoSep"
+			sep.custom_minimum_size = Vector2(SEP_W, INFO_H - 30.0)
+			sep.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			sep.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			sep.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+			_info_row.add_child(sep)
+			continue
+		var cell := VBoxContainer.new()
+		cell.name = "Info_%s" % str(m.get("l", "")).to_lower().replace(" ", "_")
+		cell.alignment = BoxContainer.ALIGNMENT_CENTER
+		cell.add_theme_constant_override("separation", 14)
+		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		cell.custom_minimum_size = Vector2(0, INFO_H)
+		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var v := _text(str(m.get("v", "")), 40, GOLD if bool(m.get("gold", false)) else CREAM, true)
+		v.name = "Value"
+		v.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		v.clip_text = true
+		cell.add_child(v)
+		var l := _text(str(m.get("l", "")), 16, MUTED)
+		l.name = "Label"
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.clip_text = true
+		cell.add_child(l)
+		_info_row.add_child(cell)
+
+
+func info_texts() -> Array:
+	var out := []
+	if _info_row == null:
+		return out
+	for c in _info_row.get_children():
+		if c is Label:
+			out.push_back((c as Label).text)
+		else:
+			out.push_back("%s %s" % [(c.get_node("Value") as Label).text, (c.get_node("Label") as Label).text])
+	return out
+
+
+# ---- HUD SIDE -----------------------------------------------------------------------------
+
+
+func _on_hud_side() -> void:
+	App.cycle_hud_side()
+	_refresh_hud_side()
+	hud_side_changed.emit(App.hud_side)
+
+
+func _refresh_hud_side() -> void:
+	for side in _hud_segments:
+		var seg: ShadowPanel = _hud_segments[side]
+		var on: bool = str(side) == str(App.hud_side)
+		seg.color = GOLD if on else Color(CREAM, 0.5)
+		seg.tint = 0.45 if on else 0.0
+		seg.ground = Color.TRANSPARENT if on else Color(20.0 / 255.0, 16.0 / 255.0, 14.0 / 255.0, 0.4)
+		seg.queue_redraw()
+
+
+func hud_side_text() -> String:
+	return str(App.hud_side).to_upper()
 
 
 ## A tile: the label, the picture, the value with its caret.
@@ -245,7 +389,8 @@ func open(info: Dictionary = {}) -> void:
 	_info = info.duplicate()
 	if _context != null:
 		_context.text = str(info.get("context", ""))
-		_resume_sub.text = str(info.get("resume_sub", HudCopy.pause_resume_sub(-1.0)))
+	_fill_info(Array(info.get("stats", [])))
+	_refresh_hud_side()
 	_disarm()
 	_close_pop()
 	_refresh_values()
@@ -270,12 +415,11 @@ func _process(dt: float) -> void:
 func _on_quit() -> void:
 	if _quit_armed_at < 0.0:
 		_quit_armed_at = _t
-		_quit_top.text = "TAP AGAIN TO QUIT"
-		var note := str(_info.get("quit_note", ""))
-		_quit_sub.text = note
-		_quit_sub.visible = note != ""
+		_quit_top.text = "SURE?"
+		_quit_sub.text = HudCopy.pause_quit_warning(str(_info.get("quit_note", "")))
+		_quit_sub.visible = true
 		_quit.color = ORANGE
-		_quit.tint = 0.4
+		_quit.tint = 0.5
 		_quit.queue_redraw()
 		return
 	_disarm()
@@ -286,7 +430,7 @@ func _disarm() -> void:
 	_quit_armed_at = -1.0
 	if _quit == null:
 		return
-	_quit_top.text = "QUIT TO TITLE"
+	_quit_top.text = "QUIT"
 	_quit_sub.visible = false
 	_quit.color = CREAM
 	_quit.tint = ShadowStyle.TINT

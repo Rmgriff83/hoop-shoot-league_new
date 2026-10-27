@@ -678,11 +678,12 @@ func _pause_info() -> Dictionary:
 		parts.push_back(str(App.league_cfg(lid).get("name", "LEAGUE")).to_upper() if lid != "" else "LEAGUE")
 	else:
 		parts.push_back("MATCH")
-	if heat.ot > 0:
-		parts.push_back("OT%d" % heat.ot)
-	parts.push_back("%.1f LEFT" % heat.player.time_left)
-	parts.push_back("%d-%d" % [heat.player.score, heat.score(Heat.AI)])
-	return {"context": HudCopy.pause_context(parts), "resume_sub": HudCopy.pause_resume_sub(heat.player.time_left),
+	var opp_first := str(Dictionary(_heat_cfg.get("opponent", {})).get("name", "")).to_upper()
+	if opp_first.find(" ") > 0:
+		opp_first = opp_first.substr(0, opp_first.find(" "))
+	var game := str(league.get("game", "")) if league is Dictionary else ""
+	return {"context": HudCopy.pause_context_match(str(parts[0]), game, opp_first, heat.ot),
+		"stats": HudCopy.pause_stats_match(heat.player.score, heat.score(Heat.AI), opp_first, heat.player.time_left),
 		"quit_note": HudCopy.pause_quit_note(kind)}
 
 

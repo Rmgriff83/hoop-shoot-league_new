@@ -655,16 +655,24 @@ the 30S MODE row (`ToggleSwitch`) under PAUSE and, under that, the spot rail
 the spot you stand on in orange, with a 44 × 56 chevron beside the column that
 slides the whole rail 200 px off the left edge and back (`--qa-spots` snaps
 `spots_00..02`). The pause menu is shared (`game/ui/pause_menu.gd`,
-`PauseMenu`; design "Pause Menu" 43a, 2026-10-25): the dim over the frozen
-match, PAUSED in gold over where you are (`ARCADE LEAGUE · OT1 · 41.7 LEFT ·
-12-9`, `TIME TRIAL · 41.7 LEFT · SCORE 12`, `PRACTICE · BEACH` — each
-screen's `_pause_info`), QUIT TO TITLE in two taps (the first arms it for 4 s
-in orange with what it costs: `THE MATCH WON'T BE PLAYED` in a league,
-`THE MATCH COUNTS AS A LOSS` online, `THIS RUN WON'T COUNT` in a trial),
-OPTIONS · TAP TO CHANGE over three tiles — SHOT HELP (its `icon_aim_*`
-icon), BALL and NET (their thumbnails) with the value and a gold caret — and
-the orange RESUME at the bottom right (`BACK TO THE MATCH · THE CLOCK PICKS
-UP AT 41.7`). A tile opens a popover under it, the rest dimmed: the owned
+`PauseMenu`; design "Pause Menu" 43a, 2026-10-25, updated 2026-10-27): the
+dim over the frozen match, PAUSED in gold over where you are (`ARCADE
+LEAGUE · MATCH 5 · VS OLLIE`, a playoff game `… · SEMIFINAL · GAME 2 · VS
+OLLIE · OT1`, `ARCADE CAGE · TIME TRIAL`, `BEACH · PRACTICE` —
+`HudCopy.pause_context_match`, each screen's `_pause_info`), the **info
+row** under it (`12 YOU · VS. · 9 OLLIE · 41.7 TIME LEFT` in a match, `18
+SCORE · 23.4 TIME LEFT · 31 YOUR BEST` in a trial, score and makes in
+practice; yours gold — `HudCopy.pause_stats_*`), OPTIONS · TAP TO CHANGE
+over three tiles — SHOT HELP (its `icon_aim_*` icon), BALL and NET (their
+thumbnails) with the value and a gold caret — the **HUD SIDE** row under
+them (`TOASTS + MUSIC NOTE`, LEFT / RIGHT segments, the active gold; a tap
+flips `App.hud_side` and `hud_side_changed` moves the screen's music note
+and chevron at once, the toasts follow as they show), the orange RESUME at
+the bottom right (no sub-line) and **QUIT** as the small square left of it
+in two taps (the first arms it for 4 s: `SURE?` in orange with `TAP AGAIN`
+and what it costs over it — `THE MATCH WON'T BE PLAYED` in a league, `THE
+MATCH COUNTS AS A LOSS` online, `THIS RUN WON'T COUNT` in a trial). A tile
+opens a popover under it, the rest dimmed: the owned
 balls / nets as a 5-wide grid of thumbnails (scrolling past 250 px) with the
 pick's name, or shot help as three rows; the current pick gold; picking
 equips it (the ball globally, the net on this court — docs/LOCKER.md → NETS)

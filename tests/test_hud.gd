@@ -210,13 +210,29 @@ func _widgets(t) -> void:
 	# you are, a two-tap QUIT, three option tiles with popovers, RESUME.
 	var pm := PauseMenu.new()
 	pm._ready()
-	for nm in ["Resume", "ShotHelp", "Ball", "Net", "Quit"]:
+	for nm in ["Resume", "ShotHelp", "Ball", "Net", "Quit", "HudSide"]:
 		t.ok(pm.find_child(nm, true, false) is ShadowCard, "the pause menu has %s" % nm)
+	t.ok(pm.find_child("ResumeSub", true, false) == null, "RESUME carries no sub-line (43a update, 2026-10-27)")
 	var was: int = app.shot_help
-	pm.open({"context": HudCopy.pause_context(["ARCADE LEAGUE", "", "41.7 LEFT", "12-9"]), "resume_sub": HudCopy.pause_resume_sub(41.7), "quit_note": HudCopy.pause_quit_note("league")})
-	t.eq((pm.find_child("Context", true, false) as Label).text, "ARCADE LEAGUE · 41.7 LEFT · 12-9", "the line under PAUSED says where you are")
-	t.eq((pm.find_child("ResumeSub", true, false) as Label).text, "BACK TO THE MATCH · THE CLOCK PICKS UP AT 41.7", "…and RESUME when the clock picks up")
+	# The line under PAUSED and the info row (43a update, 2026-10-27).
+	t.eq(HudCopy.pause_context_match("ARCADE LEAGUE", "d5", "OLLIE KNOTS"), "ARCADE LEAGUE · MATCH 5 · VS OLLIE KNOTS", "a league match's line")
+	t.eq(HudCopy.pause_context_match("ARCADE LEAGUE", "po-sf-2", "OLLIE", 1), "ARCADE LEAGUE · SEMIFINAL · GAME 2 · VS OLLIE · OT1", "a playoff game in overtime")
+	t.eq(HudCopy.pause_context_match("ONLINE", "", "DRE"), "ONLINE · VS DRE", "an online match")
+	t.eq(HudCopy.pause_stats_trial(18, 23.4, 31), [{"v": "18", "l": "SCORE", "gold": true}, {"v": "23.4", "l": "TIME LEFT", "gold": false}, {"v": "31", "l": "YOUR BEST", "gold": false}], "a trial's row")
+	t.eq(HudCopy.pause_quit_warning("THIS RUN WON'T COUNT"), "TAP AGAIN\nTHIS RUN WON'T COUNT", "the armed QUIT's warning")
+	t.eq(HudCopy.pause_quit_warning(""), "TAP AGAIN", "…alone when quitting costs nothing")
+	pm.open({"context": HudCopy.pause_context_match("ARCADE LEAGUE", "d5", "OLLIE"), "stats": HudCopy.pause_stats_match(12, 9, "OLLIE", 41.7), "quit_note": HudCopy.pause_quit_note("league")})
+	t.eq((pm.find_child("Context", true, false) as Label).text, "ARCADE LEAGUE · MATCH 5 · VS OLLIE", "the line under PAUSED says where you are")
+	t.eq(pm.info_texts(), ["12 YOU", "VS.", "9 OLLIE", "41.7 TIME LEFT"], "the info row: your score, theirs, the time left")
 	t.eq(HudCopy.pause_resume_sub(-1.0), "BACK TO PRACTICE · NO CLOCK", "practice has no clock")
+	# HUD SIDE flips on a tap and tells the screen.
+	var was_hud: String = app.hud_side
+	var sides := []
+	pm.hud_side_changed.connect(func(side: String) -> void: sides.push_back(side))
+	(pm.find_child("HudSide", true, false) as Button).pressed.emit()
+	t.ok(app.hud_side != was_hud and sides == [app.hud_side], "a tap flips HUD SIDE and says so")
+	t.eq(pm.hud_side_text(), app.hud_side.to_upper(), "…the row reads it")
+	app.set_hud_side(was_hud)
 	t.eq(pm.shot_help_text(), HudCopy.shot_help_value(was), "the shot-help tile reads the setting")
 	(pm.find_child("ShotHelp", true, false) as Button).pressed.emit()
 	t.eq(pm.pop_kind(), "help", "a tap on the tile opens its popover")
@@ -231,7 +247,8 @@ func _widgets(t) -> void:
 	pm.quit.connect(func() -> void: quits[0] += 1)
 	(pm.find_child("Quit", true, false) as Button).pressed.emit()
 	t.ok(quits[0] == 0 and pm.quit_armed(), "the first tap only arms QUIT")
-	t.eq((pm.find_child("QuitSub", true, false) as Label).text, "THE MATCH WON'T BE PLAYED", "…saying what it costs")
+	t.eq((pm.find_child("QuitTop", true, false) as Label).text, "SURE?", "…SURE? on the square")
+	t.eq((pm.find_child("QuitSub", true, false) as Label).text, "TAP AGAIN\nTHE MATCH WON'T BE PLAYED", "…saying what it costs over it")
 	(pm.find_child("Quit", true, false) as Button).pressed.emit()
 	t.eq(quits[0], 1, "the second quits")
 	# The BALL and NET tiles (docs/LOCKER.md → NETS): the ball is global, the net per court.

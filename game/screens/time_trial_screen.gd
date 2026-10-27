@@ -442,6 +442,7 @@ func _add_pause_button(layer: CanvasLayer) -> void:
 	_pause_layer.resumed.connect(resume_game)
 	_pause_layer.ball_changed.connect(_on_ball_changed)
 	_pause_layer.net_changed.connect(_on_net_changed)
+	_pause_layer.hud_side_changed.connect(_on_hud_side_changed)
 	_pause_layer.quit.connect(func() -> void:
 		resume_game()
 		App.to_title()
@@ -536,12 +537,25 @@ func pause_game() -> void:
 
 ## The pause menu's words (design 43a): where you are, when the clock picks
 ## up, what QUIT costs. The heat screen tells its own.
+## What the pause page says (design 43a, 2026-10-27): where you are under
+## PAUSED, the info row (score, time left, your best), what QUIT costs.
 func _pause_info() -> Dictionary:
+	var where := str(_arena_set.display_name).to_upper() if _arena_set != null else ""
 	if _practice:
-		var where := str(_arena_set.display_name).to_upper() if _arena_set != null else ""
-		return {"context": HudCopy.pause_context(["PRACTICE", where]), "resume_sub": HudCopy.pause_resume_sub(-1.0), "quit_note": ""}
-	return {"context": HudCopy.pause_context(["TIME TRIAL", "%.1f LEFT" % trial.time_left, "SCORE %d" % trial.score]),
-		"resume_sub": HudCopy.pause_resume_sub(trial.time_left), "quit_note": HudCopy.pause_quit_note("trial")}
+		return {"context": HudCopy.pause_context([where, "PRACTICE"]), "stats": HudCopy.pause_stats_practice(trial.score, trial.makes),
+			"quit_note": ""}
+	return {"context": HudCopy.pause_context([where, "TIME TRIAL"]),
+		"stats": HudCopy.pause_stats_trial(trial.score, trial.time_left, _best_score()), "quit_note": HudCopy.pause_quit_note("trial")}
+
+
+## HUD SIDE flipped on the pause page: the note and the chevron move now;
+## the toasts read App.hud_side as they show.
+func _on_hud_side_changed(side: String) -> void:
+	var at := music_positions(side)
+	if _music_button != null:
+		_music_button.position = UiLayout.hud_pos(at["music"])
+	if _next_button != null:
+		_next_button.position = UiLayout.hud_pos(at["next"])
 
 
 func resume_game() -> void:

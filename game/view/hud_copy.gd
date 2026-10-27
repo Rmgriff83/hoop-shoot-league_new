@@ -99,10 +99,57 @@ static func pause_context(parts: Array) -> String:
 
 
 ## RESUME's line: when the clock picks up (`left` < 0: no clock, practice).
+## (Design 43a's 2026-10-27 update dropped the line from RESUME; kept for
+## the HUD's own copy.)
 static func pause_resume_sub(left: float) -> String:
 	if left < 0.0:
 		return "BACK TO PRACTICE · NO CLOCK"
 	return "BACK TO THE MATCH · THE CLOCK PICKS UP AT %.1f" % maxf(left, 0.0)
+
+
+## The line under PAUSED in a match (design 43a, 2026-10-27): `ARCADE LEAGUE
+## · MATCH 5 · VS OLLIE`, a playoff game `ARCADE LEAGUE · SEMIFINAL · GAME 2
+## · VS OLLIE`, overtime appended as `OT1`. `game` is the league config's
+## game id (`d5`, `po-sf-1`, `po-f-3`).
+static func pause_context_match(where: String, game: String, opp_first: String, ot := 0) -> String:
+	var parts := [where]
+	if game.begins_with("d"):
+		parts.push_back("MATCH %s" % game.substr(1))
+	elif game.begins_with("po-"):
+		var bits := game.substr(3).split("-")
+		parts.push_back("FINAL" if bits[0] == "f" else "SEMIFINAL")
+		if bits.size() > 1:
+			parts.push_back("GAME %s" % bits[1])
+	if opp_first != "":
+		parts.push_back("VS %s" % opp_first.to_upper())
+	if ot > 0:
+		parts.push_back("OT%d" % ot)
+	return pause_context(parts)
+
+
+## The info row under it: a league / online match reads `12 YOU · VS. · 9
+## OLLIE · 41.7 TIME LEFT` (yours gold); cells {v, l, gold} with a {sep}
+## between the scores.
+static func pause_stats_match(you: int, them: int, opp_first: String, left: float) -> Array:
+	return [{"v": str(you), "l": "YOU", "gold": true}, {"sep": true},
+		{"v": str(them), "l": opp_first.to_upper() if opp_first != "" else "THEM", "gold": false},
+		{"v": "%.1f" % maxf(left, 0.0), "l": "TIME LEFT", "gold": false}]
+
+
+## A time trial: `18 SCORE · 23.4 TIME LEFT · 31 YOUR BEST`.
+static func pause_stats_trial(score: int, left: float, best: int) -> Array:
+	return [{"v": str(score), "l": "SCORE", "gold": true}, {"v": "%.1f" % maxf(left, 0.0), "l": "TIME LEFT", "gold": false},
+		{"v": str(best), "l": "YOUR BEST", "gold": false}]
+
+
+## Practice: the score and the makes, no clock.
+static func pause_stats_practice(score: int, makes: int) -> Array:
+	return [{"v": str(score), "l": "SCORE", "gold": true}, {"v": str(makes), "l": "MADE", "gold": false}]
+
+
+## The warning over an armed QUIT: `TAP AGAIN` and what it costs.
+static func pause_quit_warning(note: String) -> String:
+	return "TAP AGAIN" + ("\n" + note if note != "" else "")
 
 
 ## What the second tap of QUIT costs, by kind: trial / league / online / practice.
