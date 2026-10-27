@@ -81,6 +81,7 @@ var _prev: Button
 var _next: Button
 var _ticker: HomeTicker
 var _badge: LevelBadge
+var _wallet: CoinsPill
 var _season_chip: ShadowPanel
 var _chip_a: Label
 var _chip_b: Label
@@ -352,14 +353,15 @@ func rebuild_chrome() -> void:
 	menu.position = Vector2(720 - MARGIN - HamburgerButton.SIZE, float(_lay["top_y"]))
 	menu.pressed.connect(_open_settings)
 	_chrome.add_child(menu)
-	var wallet := CoinsPill.new()   # the pill keeps its old class name; it shows tickets
-	wallet.set_coins(App.tickets())
-	var wallet_icon: PixelIcon = wallet.find_child("Coin", true, false)
+	_wallet = CoinsPill.new()   # the pill keeps its old class name; it shows tickets
+	_wallet.name = "Wallet"
+	_wallet.set_coins(App.tickets())
+	var wallet_icon: PixelIcon = _wallet.find_child("Coin", true, false)
 	if wallet_icon != null:
 		wallet_icon.icon_name = "icon_ticket"
 		wallet_icon.custom_minimum_size = Vector2(22, 14)
-	wallet.position = Vector2(720 - MARGIN - HamburgerButton.SIZE - 16 - 170, float(_lay["top_y"]))
-	_chrome.add_child(wallet)
+	_wallet.position = Vector2(720 - MARGIN - HamburgerButton.SIZE - 16 - 170, float(_lay["top_y"]))
+	_chrome.add_child(_wallet)
 
 	# The area zone: the stars on top, the name big under them with the
 	# ranks and multiplayer icons to its right, chevrons at the screen edges.
@@ -1142,6 +1144,8 @@ func _refresh_ticker() -> void:
 	_ticker.set_items(HomeTicker.items_from(bests, App.league_states(), App.tickets(), next_up, App.xp()))
 	if _badge != null:
 		_badge.set_level(App.level(), Progression.frac_for(App.xp()))
+	if _wallet != null:
+		_wallet.set_coins(App.tickets())
 
 
 # ---- actions ---------------------------------------------------------------------
@@ -1176,6 +1180,7 @@ func _open_locker() -> void:
 		_locker = null
 		_slide_home(false)
 		_refresh_locker_badge()
+		_refresh_ticker()   # the pill and ticker follow a PEGGY play / locker buy (Ross, 2026-10-27)
 	)
 	_locker.peggy_requested.connect(_open_peggy)
 	add_child(_locker)
@@ -1193,6 +1198,7 @@ func _open_peggy() -> void:
 	_peggy.closed.connect(func() -> void:
 		_peggy = null
 		_refresh_locker_badge()
+		_refresh_ticker()
 		if _locker != null:
 			_locker._fill()
 			_locker.slide_in(true)

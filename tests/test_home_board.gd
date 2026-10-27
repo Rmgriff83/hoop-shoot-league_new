@@ -21,6 +21,14 @@ func run(t) -> void:
 	t.ok(src.find("Net.score_accepted.disconnect(_on_score_accepted)") >= 0, "…and lets go on exit")
 	var handler := src.substr(src.find("func _on_score_accepted("), 300)
 	t.ok(handler.find("area == str(CARDS[_index][\"area\"])") >= 0 and handler.find("_refresh_board()") >= 0, "an accepted run for this area re-asks the server")
+	# The tickets pill (Ross, 2026-10-27: it kept the pre-PEGGY amount after a
+	# play; only the locker showed the spend): the ticker refresh re-reads it,
+	# and both the locker and PEGGY run that refresh as they close.
+	var ticker := src.substr(src.find("func _refresh_ticker("), 900)
+	t.ok(ticker.find("_wallet.set_coins(App.tickets())") >= 0, "the ticker refresh re-reads the wallet")
+	for pair in [["the locker", "_locker.closed.connect("], ["PEGGY", "_peggy.closed.connect("]]:
+		var close := src.substr(src.find(str(pair[1])), 260)
+		t.ok(close.find("_refresh_ticker()") >= 0, "%s refreshes the pill and ticker on close" % pair[0])
 	# The preview follows the latest rows it is given.
 	var bp := BoardPreview.new()
 	var rows := []

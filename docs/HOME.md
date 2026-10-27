@@ -364,7 +364,7 @@ chevron (the footer says START INSIDE).
   locked below level 3 (every card disabled with `LOCKED · LEVEL 3`).
 - **Shop** — off the home page by design; to be built into the league view
   with league-scoped cards.
-- **Tickets** (the pill) are real (`App.tickets()`): time trials and league heats award them (docs/ECONOMY.md).
+- **Tickets** (the pill) are real (`App.tickets()`): time trials and league heats award them (docs/ECONOMY.md). `_refresh_ticker()` re-reads the pill with the ticker and level badge; the locker and PEGGY run it as they close, so a PEGGY play or a locker buy shows on the home bar at once (Ross, 2026-10-27).
 - The concept's **social** tab is not built.
 
 ## Adding an area
