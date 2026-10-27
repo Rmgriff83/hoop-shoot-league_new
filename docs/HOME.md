@@ -195,7 +195,8 @@ chevron (the footer says START INSIDE).
   SCROLL_BEGIN cancels the press past the project's 18 px deadzone
   (`gui/common/default_scroll_deadzone`). The sections:
   - **GAME**, one panel: SHOT HELP (OFF / NUMBERS / NUMBERS + ARC, its
-    sub-line what it does), AI DIFFICULTY (EASY / NORMAL / HARD, one
+    sub-line what it does; a fresh game starts on NUMBERS,
+    `App.SHOT_HELP_DEFAULT`, since 2026-10-26), AI DIFFICULTY (EASY / NORMAL / HARD, one
     strength for every AI on every court, `core/ai/ai_difficulty.gd`, the
     synced `aiDifficulty` setting) and HUD SIDE (LEFT / RIGHT) as pickers
     showing every choice, the active one gold. (DARK MODE was removed 2026-10-26.)

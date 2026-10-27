@@ -101,5 +101,7 @@ func run(t) -> void:
 	t.eq(AppScript.shot_help_from_saved(2), AppScript.SHOT_HELP_FULL, "2 is numbers + arc")
 	t.eq(AppScript.shot_help_from_saved(7), AppScript.SHOT_HELP_FULL, "out of range clamps up")
 	t.eq(AppScript.shot_help_from_saved(-3), AppScript.SHOT_HELP_OFF, "out of range clamps down")
-	t.eq(AppScript.shot_help_from_saved("nonsense"), AppScript.SHOT_HELP_OFF, "junk reads as off")
+	t.eq(AppScript.shot_help_from_saved("nonsense"), AppScript.SHOT_HELP_DEFAULT, "junk reads as the default")
+	t.eq(AppScript.SHOT_HELP_DEFAULT, AppScript.SHOT_HELP_NUMBERS, "a fresh game starts on NUMBERS (Ross, 2026-10-26)")
+	t.eq(int(SaveService.default_settings()["shotHelp"]), AppScript.SHOT_HELP_DEFAULT, "…and the seeded settings agree")
 	t.eq(AppScript.SHOT_HELP_LABELS.size(), 3, "every mode has a label")

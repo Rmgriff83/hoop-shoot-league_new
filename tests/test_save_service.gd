@@ -74,7 +74,7 @@ func run(t) -> void:
 
 	# settings: player preferences. Unlike tuning these DO sync, and a save
 	# written before the key existed must fall back rather than break.
-	t.eq(svc.get_settings().get("shotHelp", null), 0, "shot help defaults off")
+	t.eq(svc.get_settings().get("shotHelp", null), 1, "shot help defaults to NUMBERS on a fresh game")
 	var st: Dictionary = svc.get_settings()
 	st["shotHelp"] = 2
 	st["musicOn"] = true

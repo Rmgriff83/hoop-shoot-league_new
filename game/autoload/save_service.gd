@@ -242,9 +242,10 @@ func put_cosmetics(doc: Dictionary) -> void:
 
 
 ## Player preference toggles. New keys need no migration: every read site
-## defaults with .get(), so an older save simply falls back.
+## defaults with .get(), so an older save simply falls back. shotHelp 1 =
+## NUMBERS, the fresh-game default (App.SHOT_HELP_DEFAULT).
 static func default_settings() -> Dictionary:
-	return {"updatedAt": 0, "shotHelp": 0, "newBalls": [], "visitedAreas": [], "unlocksSeen": [], "musicOn": false, "aiDifficulty": "normal", "hudSide": "left", "shotTutorialSeen": false, "playerCreated": false, "hometown": "", "walkthroughsSeen": []}
+	return {"updatedAt": 0, "shotHelp": 1, "newBalls": [], "visitedAreas": [], "unlocksSeen": [], "musicOn": false, "aiDifficulty": "normal", "hudSide": "left", "shotTutorialSeen": false, "playerCreated": false, "hometown": "", "walkthroughsSeen": []}
 
 
 func get_settings() -> Dictionary:

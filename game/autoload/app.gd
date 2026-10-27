@@ -60,14 +60,16 @@ var last_run_was_best := false
 var tuning_mode := false
 
 ## Shot help, in three steps: nothing, just the numbers beside the held ball,
-## or the numbers plus the dotted arc. Persisted in SaveService's "settings"
-## part. Read directly by the views every frame — nothing in this project's
+## or the numbers plus the dotted arc. A fresh game starts on NUMBERS (Ross,
+## 2026-10-26); a save that chose OFF keeps it. Persisted in SaveService's
+## "settings" part. Read directly by the views every frame — nothing in this project's
 ## settings path uses signals.
 const SHOT_HELP_OFF := 0
 const SHOT_HELP_NUMBERS := 1
 const SHOT_HELP_FULL := 2
 const SHOT_HELP_LABELS := ["OFF", "NUMBERS", "NUMBERS + ARC"]
-var shot_help := SHOT_HELP_OFF
+const SHOT_HELP_DEFAULT := SHOT_HELP_NUMBERS
+var shot_help := SHOT_HELP_DEFAULT
 ## The live flick tunables, shared by every time trial in this session and
 ## seeded from the persisted overrides, so adjustments never reset between
 ## runs (the overlay also persists every adjustment as it happens).
@@ -182,7 +184,7 @@ func _ready() -> void:
 	tuning_mode = bool(saved.get("tuningMode", false))
 	if OS.is_debug_build():
 		league_gating = bool(saved.get("gates", false))
-	shot_help = shot_help_from_saved(SaveService.get_settings().get("shotHelp", SHOT_HELP_OFF))
+	shot_help = shot_help_from_saved(SaveService.get_settings().get("shotHelp", SHOT_HELP_DEFAULT))
 	music_on = bool(SaveService.get_settings().get("musicOn", false))
 	ai_difficulty = AiDifficulty.normalize(SaveService.get_settings().get("aiDifficulty", AiDifficulty.DEFAULT))
 	hud_side = hud_side_from_saved(SaveService.get_settings().get("hudSide", "left"))
@@ -198,7 +200,7 @@ func _ready() -> void:
 ## re-read what this autoload caches and let the home page redraw.
 func _on_save_pulled(parts: Array) -> void:
 	if parts.has(SaveService.SETTINGS_PART):
-		shot_help = shot_help_from_saved(SaveService.get_settings().get("shotHelp", SHOT_HELP_OFF))
+		shot_help = shot_help_from_saved(SaveService.get_settings().get("shotHelp", SHOT_HELP_DEFAULT))
 		music_on = bool(SaveService.get_settings().get("musicOn", false))
 		ai_difficulty = AiDifficulty.normalize(SaveService.get_settings().get("aiDifficulty", AiDifficulty.DEFAULT))
 		hud_side = hud_side_from_saved(SaveService.get_settings().get("hudSide", "left"))
@@ -239,13 +241,13 @@ func set_league_gating(on: bool) -> void:
 
 ## Coerce a saved value into a mode. The setting was a BOOL before it grew a
 ## middle step, so an older save reads true as the full treatment rather than
-## silently resetting to off.
+## silently resetting; junk reads as the fresh-game default.
 static func shot_help_from_saved(raw: Variant) -> int:
 	if raw is bool:
 		return SHOT_HELP_FULL if raw else SHOT_HELP_OFF
 	if raw is int or raw is float:
 		return clampi(int(raw), SHOT_HELP_OFF, SHOT_HELP_FULL)
-	return SHOT_HELP_OFF
+	return SHOT_HELP_DEFAULT
 
 
 ## Level music on the courts (the HUD's note): remembered across levels and launches.
