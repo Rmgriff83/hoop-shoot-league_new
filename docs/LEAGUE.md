@@ -95,7 +95,10 @@ SEASON returns to the dashboard. `App.league_gating` is on in release builds (of
 **Dashboard** — `game/ui/league_context.gd` on the home page (2026-09-26, design "Home
 League Context v2"; the full-screen `league_hub_screen` is gone; docs/HOME.md). Tabs MATCH
 (the opponent's shooter card with PLAY — **every game is played live, the SIM DAY / SIM ALL
-buttons are gone** — ADVANCE when out of the playoffs, START SEASON N+1 when done), TABLE
+buttons are gone** — ADVANCE when out of the playoffs, START SEASON N+1 when done; since
+2026-10-27 START SEASON raises `new_season_requested` and the title shows the NEW SEASON
+page, and the season wrap-up opens over the pane when ADVANCE finishes — see Season
+moments below), TABLE
 (standings with the playoff line, or the bracket), SCHED (your 14 games + playoff games,
 today marked), CARDS (spares + shop), STATS (career, best matches, the location's
 time-trial board). The home's LEAGUE card and its floating layer (`LeagueSummary`) show
@@ -268,3 +271,79 @@ A league heat ends with the match-end page (`MatchEndOverlay`, docs/HOME.md
 → Results) before the post-match page: `App.settle_heat` folds the result
 into the campaign, pays out, grants XP, rolls the drop and snapshots the
 before/after standings (`last_heat.league_end`) that the page animates.
+Since 2026-10-27 the snapshot also carries the full table before and after
+(`table_before` / `table_after`), the clinch state, `last_day`, the next
+series and the season's take (`earned`), and the settle notes the match's
+XP and tickets on the season doc (`Campaign.note_earned`) and the best shot
+streak (`season.best.streak`) — the Season moments' data.
+
+
+## Season moments (design "Season Moments" 39a–39f, 2026-10-27)
+
+Four beats around the end of a season (docs/HOME.md → Season wrap-up and new
+season for the pages' recipe; `tests/test_season_moments.gd`,
+`tests/test_league_core.gd` `_season_wrap`, QA `--qa-season`).
+
+- **Data** (core, deterministic): the season doc gains `earned {xp, tickets}`
+  (every league heat's take, title jump included — `Campaign.note_earned`
+  from `App._apply_league_heat`), `best {streak}` (the best shot streak,
+  from each live result) and `wrapSeen`. `Campaign.season_summary` also
+  reports `bestStreak`, `h2h` (`Campaign.head_to_head_all`: the player's
+  record against each opponent, playoffs included), `runnerUpId` and
+  `finalScore`. `Campaign.start_next_season` keeps the finished season's
+  summary (with its earnings) as `doc.lastSeason` and patches it onto
+  `career.seasons[-1]`. `Standings.h2h_record(a, b, games)` is the [w, l]
+  the old diff is built on. `core/league/season_wrap.gd` (`SeasonWrap`)
+  computes the wrap-up's numbers (`stats`: record, finish, high / average
+  points, best streak, swishes, titles, the best game = the biggest-margin
+  win, the toughest opponent = the worst head-to-head, games behind the
+  playoff line, the earnings) and the new season's (`opening_week`: the
+  old and new year, defending, the old record, the first three games with
+  last season's head-to-head). Seasons already in flight when this shipped
+  show `-` for BEST STREAK and +0 earnings once.
+- **39a CLINCHED A PLAYOFF SPOT** (`MatchEndCopy` kind `clinch`): only the
+  regular season's LAST day, when a win puts the player in a semifinal
+  (Ross: the seeds and the matchup are real then). The standings panel
+  rises with the pre-match order; at 1.0 s your record flips, at 1.4 s the
+  rows slide to the post-match order (yours over the others, the ranks
+  renumber), at 2.1 s your row turns gold with an IN chip, at 2.5 s a flash,
+  gold rays and PLAYOFFS slam in over the dimmed panel, then `CLINCHED · NO.
+  3 SEED` (`LOCKED IN` when it was already clinched), the gold matchup card
+  (`SEMIFINAL · BEST OF 3`, `GAME 1 · AWAY`, `NO. 3 YOU VS NO. 2 OLLIE`) and
+  the orange CONTINUE · TO THE POST-MATCH button at 3.6 s (taps only once
+  risen). A mid-season clinch keeps the plain win page with a `· CLINCHED`
+  tag; a last-day loss that still makes it is the loss page with `IN THE
+  PLAYOFFS · NO. n SEED`. No rewards row on this page (the post-match page
+  has it).
+- **39b CHAMPIONS** (kind `champion`, replacing the old trophy block): a
+  flash at 0.05 s, gold rays, 26 confetti, the tag `ARCADE LEAGUE · FINAL ·
+  GAME 3` (the real game number), the trophy sinking in from above (0.3 →
+  0.9 s) and quaking the page at 0.85 s, CHAMPIONS slamming at 1.0 s, the
+  series line `SEASON 2 · BEAT PACO 2-1 · 46-40`, the TITLES row (the new
+  cup pops at 2.2 s), then two cards at 2.5 s: `+N XP` with the level meter
+  filling 2.6 → 3.7 s under CHAMPIONS BONUS (AT THE CAP when the cap left
+  none, MATCH XP when there was no title jump) and the gold tickets card fed
+  by twelve flyers from the cup from 2.7 s; CONTINUE at 3.2 s. Sounds: the
+  big chime with the slam, the ticket shuffle with the stream.
+- **39c / 39e / 39f SEASON WRAP-UP** (`game/ui/season_wrap_page.gd`, words
+  `SeasonCopy.wrap`): owed once per done season (`App.wrap_pending`,
+  `App.mark_wrap_seen`), opened by the title when the league opens after
+  the last game (CONTINUE SEASON) and when ADVANCE plays out the bracket of
+  a missed-playoffs season (Ross kept ADVANCE; `LeagueContext.changed`).
+  Three variants on one layout: CHAMPIONS (gold banner, trophy), OUT IN THE
+  SEMIS / LOST THE FINAL (orange), MISSED THE PLAYOFFS (cream, `7-7 · 5TH ·
+  ONE GAME OUT` / `N GAMES OUT` / `ON THE TIEBREAK`). START SEASON N+1 rolls
+  the season and shows 39d; LATER and X leave the season-over home with its
+  START SEASON card.
+- **39d NEW SEASON** (`game/ui/new_season_page.gd`, `SeasonCopy.new_season`):
+  from the wrap-up's START SEASON and from the MATCH pane's card alike (the
+  title's `_open_new_season` → `App.roll_season`, the pane refreshed under
+  the page). The number rolls, DEFENDING CHAMPS pops for a champion, the old
+  record strikes to 0-0, the opening week's three games deal in (`YOU WENT
+  1-2 VS THEM` / FIRST MEETING, HOME / AWAY), PLAY DAY 1 goes to the
+  pre-match (`App.start_league_heat`); LATER (not in the design) closes to
+  the refreshed home.
+- **Sim-through**: losing a playoff series already sims the rest of the
+  bracket in the same settle (the season is done on return); missing the
+  playoffs leaves ADVANCE. There is no "sim my remaining games" (tests keep
+  the no-sim-buttons rule).

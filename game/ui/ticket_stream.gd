@@ -20,6 +20,7 @@ const ICON := Vector2(52, 33)   # the 22 × 14 ticket at the design's 52 px widt
 const SHADOW := Vector2(3, 3)
 
 var manual := false
+var max_flyers := MAX_FLYERS   # the cap (design 39b: 12)
 var from := Vector2.ZERO
 var to := Vector2.ZERO
 var tickets := 0
@@ -45,6 +46,11 @@ static func count(n: int) -> int:
 	return clampi(ceili(float(n) / float(PER_FLYER)), 0, MAX_FLYERS) if n > 0 else 0
 
 
+## This stream's flyers for `n` tickets (its own cap).
+func flyers_for(n: int) -> int:
+	return clampi(ceili(float(n) / float(PER_FLYER)), 0, max_flyers) if n > 0 else 0
+
+
 func play(p_from: Vector2, p_to: Vector2, p_tickets: int, p_start := 0.0) -> void:
 	from = p_from
 	to = p_to
@@ -53,7 +59,7 @@ func play(p_from: Vector2, p_to: Vector2, p_tickets: int, p_start := 0.0) -> voi
 	_t = 0.0
 	_shown = 0
 	_rang = false
-	_playing = count(tickets) > 0
+	_playing = flyers_for(tickets) > 0
 	visible = true
 	queue_redraw()
 
@@ -85,7 +91,7 @@ func clock() -> float:
 
 ## Flyers landed by second `t`.
 func landed_at(t: float) -> int:
-	var n := count(tickets)
+	var n := flyers_for(tickets)
 	if n == 0:
 		return 0
 	return clampi(int(floor((t - start - DUR) / GAP)) + 1, 0, n)
@@ -93,7 +99,7 @@ func landed_at(t: float) -> int:
 
 ## The count the box reads at second `t`: the haul in proportion to the flyers down.
 func shown_at(t: float) -> int:
-	var n := count(tickets)
+	var n := flyers_for(tickets)
 	if n == 0:
 		return tickets
 	return roundi(float(tickets) * float(landed_at(t)) / float(n))
@@ -108,7 +114,7 @@ func landed() -> int:
 
 
 func done() -> bool:
-	return _t >= start + float(count(tickets)) * GAP + DUR + 0.2
+	return _t >= start + float(flyers_for(tickets)) * GAP + DUR + 0.2
 
 
 func playing() -> bool:
@@ -167,7 +173,7 @@ func _draw() -> void:
 	var tex := PixelIcon.tex("icon_ticket")
 	if tex == null:
 		return
-	for i in count(tickets):
+	for i in flyers_for(tickets):
 		var f := flyer_at(i, _t)
 		if f.is_empty():
 			continue

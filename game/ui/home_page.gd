@@ -188,7 +188,9 @@ func close_button() -> ShadowCard:
 
 ## Slide the frame in (from the right, or back from the left when a page
 ## over this one closes) and fade the wash up.
-func slide_in(from_left := false) -> void:
+## `delay` holds the frame off-screen that long first (the season wrap-up
+## follows the home out by 0.35 s, design 39c).
+func slide_in(from_left := false, delay := 0.0) -> void:
 	visible = true
 	set_view_active(true)
 	if root == null or not is_inside_tree():
@@ -196,7 +198,10 @@ func slide_in(from_left := false) -> void:
 	_stop()
 	root.position.x = FRAME_POS.x + (-SLIDE if from_left else SLIDE)
 	wash.color.a = 0.0
-	_slide = create_tween().set_parallel(true)
+	_slide = create_tween()
+	if delay > 0.0:
+		_slide.tween_interval(delay)
+	_slide.set_parallel(true)
 	_slide.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	_slide.tween_property(root, "position:x", FRAME_POS.x, OPEN_S)
 	_slide.tween_property(wash, "color:a", WASH.a, OPEN_S)

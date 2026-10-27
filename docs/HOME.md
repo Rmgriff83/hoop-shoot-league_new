@@ -93,7 +93,10 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
   AWAY` over the name, nickname / hometown, ACC / ARC segments and PACE beside
   the PLAY button with the equipped cards as chips on its corner, the bio;
   **no SIM DAY / SIM ALL — every game is played live**), plus the START
-  SEASON / ADVANCE cards for a finished season or a lost playoff; TABLE — the
+  SEASON / ADVANCE cards for a finished season or a lost playoff (since
+  2026-10-27 START SEASON asks the title for the NEW SEASON page, and the
+  season wrap-up slides over the pane once a season is done — see Season
+  wrap-up and new season); TABLE — the
   standings (your row orange, the dashed PLAYOFF LINE) or the bracket (the
   semis, a connector, the final); SCHED — every game (today's gold, unplayed
   dim); CARDS — LOADOUT (the **spares**; the equipped slots float above) and
@@ -537,8 +540,16 @@ that leaves the **series** open (the bracket shows `SERIES 1 - 0`, `FIRST
 TO 2`), **advance** (ADVANCE, gold rays, YOU slides into the FINAL box over
 `VS DRE`, `ONE WIN FROM THE TITLE`), **eliminated** (ELIMINATED, your row
 dims and is struck through, they move on, `SEASON 2 OVER · 3RD PLACE`),
-**runner-up** (SO CLOSE) and **champions** (the trophy pops and bobs,
-TITLES with a cup per title and `X2`, `SEASON 2 TITLE`, the most confetti).
+**runner-up** (SO CLOSE) and **champions** (design 39b since 2026-10-27:
+the trophy sinks in and quakes the page, CHAMPIONS slams over it, the
+series line, TITLES with the new cup popping, the CHAMPIONS BONUS XP card
+with its meter and the tickets card fed by twelve flyers, an orange
+CONTINUE button at 3.2 s), plus the last day's **clinch** (design 39a: the
+standings climb over the dashed playoff line, the IN chip, PLAYOFFS, the
+seed and the semifinal matchup, CONTINUE at 3.6 s — docs/LEAGUE.md →
+Season moments). A state may set `ready_s`, `sound {name, at}`, `button`
+(the CONTINUE card instead of the blinking label), `no_score`, `no_rewards`,
+`flash_at` / `rays_at` / `head_at` / `head_y`.
 A tag pill (`DAY 4 · FINAL` / `PLAYOFFS · SEMIFINAL` / `ARCADE LEAGUE ·
 FINAL`), the score with YOU and their first name, the gold tickets box (`TicketBox`, design 15a update 2026-10-24: the icon, `+N` at 26 px over TICKETS) pops in with the NEW CARD tile (tilted animated face) on every state at 2.5 s, then a **stream of tickets** arcs from the score into the box from 2.75 s (`TicketStream`, one per two tickets, fifteen at most, stepped by the page's own clock) while the count ticks up from +0; after 3 s TAP TO
 CONTINUE blinks and a tap goes to the post-match page
@@ -870,6 +881,49 @@ the live card and `+1 CARD`; CONTINUE SEASON and HOME on one 120 px row.
 An online match keeps its rank line (in the score block), its rewards /
 spoils / meter row under the box and REMATCH? / SHOOT AROUND? beside HOME.
 QA: `--qa-heat-result` (`heat_win_stream` mid-flight, `heat_win` settled).
+CONTINUE SEASON after the season's last game lands on the league home with
+the season wrap-up over it (below).
+
+## Season wrap-up and new season (design "Season Moments" 39c/e/f + 39d, 2026-10-27)
+
+Two pages over the league home (`game/ui/season_page.gd` `SeasonPage`, a
+HomePage whose content sits in absolute design coordinates on a 642 × 1440
+sheet — the design's 36 … 678 column — inside a scroll for a short screen,
+with the match-end page's clock: `step(dt)` schedules rise / pop / fade /
+deal / roll / strike / count; a `ShadowPanel` child goes through the
+panel's `Inner` control so absolute positions hold). While either shows the
+rest of the home UI hides (Ross): `TitleScreen._season_cover` slides the
+chrome out and hides the league pane, the float and the season chip; the
+court stays as the backdrop. Buttons take taps only once risen.
+
+- **`SeasonWrapPage`** (`SeasonCopy.wrap(doc, cfg)` over `SeasonWrap.stats`):
+  the dark band with `ARCADE LEAGUE` / `SEASON 2` and the X; the banner
+  (pop 0.5 s; gold with the trophy for champions, orange when out, cream
+  when the playoffs were missed) with the headline and `10-4 · 1ST SEED ·
+  WON THE FINAL 2-1`; CHAMPION · 2-1 / name (gold, trophy) and RUNNER-UP /
+  name at 0.8 s; six stats in three columns popping from 1.2 s (RECORD,
+  FINISH, HIGH PTS, AVG PTS, BEST STREAK, SWISHES); three highlight rows
+  with dashed rules at 1.8 s (BEST GAME `44-31 RIVET`, TOUGHEST `PACO ·
+  1-2`, TITLES); SEASON EARNINGS at 2.1 s, `+1,240 XP` and the gold `+310`
+  tickets box counting up 2.2 → 3.2 s (the ticket shuffle rings at 2.2 s;
+  the big chime at 0.5 s for champions); START SEASON 3 / NEW SCHEDULE and
+  LATER at 2.6 s. The title opens it from `_maybe_open_season_wrap` (the
+  league open and `App.wrap_pending()`), marks it seen at once, slides it
+  in 0.35 s after the chrome leaves (`HomePage.slide_in(false, 0.35)`).
+- **`NewSeasonPage`** (`SeasonCopy.new_season(doc, cfg)` over
+  `SeasonWrap.opening_week`, after `App.roll_season()`): orange rays fading
+  in by 1 s, `ARCADE LEAGUE`, SEASON with the number rolling in its orange
+  box at 1.0 s (the small chime), DEFENDING CHAMPS popping at 1.5 s for a
+  champion, `RECORD 10-4 > 0-0` (the old struck through at 2.0 s, 0-0
+  popping at 2.25 s), OPENING WEEK · `14 DAYS · 8 TEAMS` and three day cards
+  dealing in from the right at 2.6 / 2.8 / 3.0 s (`DAY 1`, the opponent,
+  `YOU WENT 1-2 VS THEM` or FIRST MEETING, HOME / AWAY; the first orange),
+  `+ 11 MORE DAYS · TOP 4 MAKE THE PLAYOFFS`, then PLAY DAY 1 / `VS PACO SAP
+  · HOME` (→ `App.start_league_heat`) and LATER at 3.4 s.
+- QA `--qa-season` (`season_clinch_*`, `season_champs_*`, `season_wrap_{champs,
+  out,missed}_*`, `season_new_*`, `season_after`); tests
+  `tests/test_season_moments.gd`, `tests/test_match_end.gd`,
+  `tests/test_home_ui.gd` (the START SEASON card asks, the title rolls).
 
 ## Loading (design "Loading States" 39a / 39b, 2026-10-25)
 

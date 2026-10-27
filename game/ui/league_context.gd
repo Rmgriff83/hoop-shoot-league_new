@@ -17,6 +17,7 @@ extends Control
 signal closed
 signal changed
 signal tab_changed(tab: String)
+signal new_season_requested   # START SEASON on the MATCH pane: the title rolls it and shows the NEW SEASON page (design 39d)
 
 const TABS := ["HEAT", "TABLE", "SCHED", "CARDS", "STATS"]
 const TAB_LABELS := {"HEAT": "MATCH"}
@@ -347,12 +348,7 @@ func _fill_heat() -> void:
 		var nxt := ModeCards.text_card("START SEASON %d" % (m["year"] + 1), "NEW SCHEDULE · SAME LEAGUE", RetroTheme.c("orange"), 24)
 		nxt.name = "NextSeason"
 		nxt.custom_minimum_size = Vector2(0, 116)
-		nxt.pressed.connect(func() -> void:
-			var d := App.league_doc(league_id)
-			Campaign.start_next_season(d, cfg)
-			App.save_league_doc(d, league_id)
-			refresh()
-		)
+		nxt.pressed.connect(func() -> void: new_season_requested.emit())
 		vb.add_child(nxt)
 		return
 	if opp_id == "":

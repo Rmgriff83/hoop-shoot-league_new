@@ -166,6 +166,14 @@ func put_league_doc(league_id: String, doc: Dictionary) -> void:
 	put_campaign(c)
 
 
+## Forget a league's campaign (QA restores a never-started league this way).
+func remove_league_doc(league_id: String) -> void:
+	var c := get_campaign()
+	if c.has("leagues") and c["leagues"].has(league_id):
+		c["leagues"].erase(league_id)
+		put_campaign(c)
+
+
 ## Heat box scores (the player's live heats), newest first, pruned.
 func put_live_game(doc: Dictionary) -> Dictionary:
 	var d := doc.duplicate(true)

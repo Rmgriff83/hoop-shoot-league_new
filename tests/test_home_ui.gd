@@ -475,9 +475,21 @@ func _widgets(t) -> void:
 	over.setup("cage")
 	var nxt: Button = over.find_child("NextSeason", true, false)
 	t.ok(nxt != null, "a finished season offers START SEASON on the match pane")
+	# Season moments (design 39d, 2026-10-27): the card asks the title for
+	# the NEW SEASON page instead of rolling the season itself.
+	var asked_new := []
+	over.new_season_requested.connect(func() -> void: asked_new.push_back(true))
 	nxt.pressed.emit()
-	t.eq(int(app.league_doc("cage")["year"]), int(kept["year"]) + 1, "pressing it starts the next year")
-	t.ok(over.find_child("NextSeason", true, false) == null or not is_instance_valid(over.find_child("NextSeason", true, false)), "…the START SEASON card is gone")
+	t.eq(asked_new.size(), 1, "pressing it asks for the new season")
+	t.eq(int(app.league_doc("cage")["year"]), int(kept["year"]), "…and leaves the year alone")
+	t.ok(app.wrap_pending("cage"), "a done season owes its wrap-up")
+	app.mark_wrap_seen("cage")
+	t.ok(not app.wrap_pending("cage"), "…until it is seen")
+	var rolled: Dictionary = app.roll_season("cage")
+	t.eq(int(rolled["year"]), int(kept["year"]) + 1, "App.roll_season starts the next year")
+	t.ok(rolled.has("lastSeason") and int(rolled["lastSeason"]["year"]) == int(kept["year"]), "…keeping the old season's summary for the page")
+	over.refresh()
+	t.ok(over.find_child("NextSeason", true, false) == null or not is_instance_valid(over.find_child("NextSeason", true, false)), "…the START SEASON card is gone after the refresh")
 	t.ok(over.find_child("Opponent", true, false) != null and over.find_child("PlayHeat", true, false) != null, "…and the match pane shows the new season's first opponent, not a blank")
 	over.free()
 	app.save_league_doc(kept, "cage")

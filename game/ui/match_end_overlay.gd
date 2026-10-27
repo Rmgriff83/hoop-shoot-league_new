@@ -32,7 +32,11 @@ var _confetti: Confetti
 var _flash: ColorRect
 var _continue: Label
 var _sound_done := false
+var _sound_at := 0.35
+var _ready_s := READY_S
 var _done := false
+var _button: Control          # the CONTINUE button (design 39a/39b), else the blinking label
+var _meter: XpMeter           # 39b's champions-bonus bar
 
 
 func _init() -> void:
@@ -46,6 +50,11 @@ func build(v: Dictionary) -> Control:
 	_v = v
 	_t = 0.0
 	_anims.clear()
+	_rows.clear()
+	_button = null
+	_meter = null
+	_ready_s = float(v.get("ready_s", READY_S))
+	_sound_at = float(Dictionary(v.get("sound", {})).get("at", 0.35)) if v.get("sound", null) is Dictionary else 0.35
 	if _root != null:
 		_root.queue_free()
 	_root = Control.new()
@@ -66,12 +75,14 @@ func build(v: Dictionary) -> Control:
 		_rays.speed_deg = 360.0 / maxf(float(v.get("spin_s", 30.0)), 1.0)
 		_rays.alpha = 0.32
 		_root.add_child(_rays)
-		_anim(_rays, "fadein", 0.3, 0.6)
+		_anim(_rays, "fadein", float(v.get("rays_at", 0.3)), 0.6)
 	_confetti = Confetti.new(int(v.get("confetti_n", 0)), Array(v.get("palette", [])), 7)
 	_root.add_child(_confetti)
 	_tag(str(v.get("tag", "")), v.get("tag_color", CREAM))
-	_head(str(v.get("head", "")), int(v.get("head_size", 64)), v.get("head_color", CREAM), bool(v.get("win_anim", false)))
-	_score(v)
+	_head(str(v.get("head", "")), int(v.get("head_size", 64)), v.get("head_color", CREAM), bool(v.get("win_anim", false)),
+		float(v.get("head_y", 300.0)), float(v.get("head_at", 0.35)))
+	if not bool(v.get("no_score", false)):
+		_score(v)
 	var sub_y := 850.0
 	match str(v.get("block", "record")):
 		"record":
@@ -79,20 +90,26 @@ func build(v: Dictionary) -> Control:
 		"bracket":
 			_bracket_block(Dictionary(v.get("bracket", {})))
 			sub_y = 856.0
-		"trophy":
-			_trophy_block(int(Dictionary(v.get("trophy", {})).get("titles", 1)))
-			sub_y = 856.0
+		"standings":
+			_standings_block(Dictionary(v.get("standings", {})))
+			_matchup_block(Dictionary(v.get("matchup", {})))
+		"champion":
+			_champion_block(v)
 	if str(v.get("sub", "")) != "":
 		var sub := _label(str(v["sub"]), 16, CREAM, false)
 		sub.name = "Sub"
-		_centre(sub, sub_y)
-		_anim(sub, "rise", 2.1, 0.4)
-	_rewards(int(v.get("ticket_count", 0)), str(v.get("drop", "")))
-	_continue = _label("TAP TO CONTINUE", 16, CREAM, true)
-	_continue.name = "Continue"
-	_centre(_continue, 1150.0)
-	_continue.visible = false
-	_anim(_continue, "blink", READY_S, 1.0)
+		_centre(sub, float(v.get("sub_y", sub_y)))
+		_anim(sub, "rise", float(v.get("sub_at", 2.1)), 0.4)
+	if not bool(v.get("no_rewards", false)):
+		_rewards(int(v.get("ticket_count", 0)), str(v.get("drop", "")))
+	if v.get("button", null) is Dictionary:
+		_continue_button(Dictionary(v["button"]))
+	else:
+		_continue = _label("TAP TO CONTINUE", 16, CREAM, true)
+		_continue.name = "Continue"
+		_centre(_continue, 1150.0)
+		_continue.visible = false
+		_anim(_continue, "blink", _ready_s, 1.0)
 	if bool(v.get("flash", false)):
 		_flash = ColorRect.new()
 		_flash.name = "Flash"
@@ -101,7 +118,7 @@ func build(v: Dictionary) -> Control:
 		_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_flash.modulate.a = 0.0
 		_root.add_child(_flash)
-		_anim(_flash, "flash", 0.35, 0.45)
+		_anim(_flash, "flash", float(v.get("flash_at", 0.35)), 0.45)
 	step(0.0)
 	return _root
 
@@ -196,10 +213,10 @@ func _tag(text: String, color: Color) -> void:
 	_anim(holder, "rise", 0.1, 0.4)
 
 
-func _head(text: String, size_: int, color: Color, win: bool) -> void:
+func _head(text: String, size_: int, color: Color, win: bool, y := 300.0, at := 0.35) -> void:
 	var box := Control.new()
 	box.name = "HeadBox"
-	box.position = Vector2(0, 300)
+	box.position = Vector2(0, y)
 	box.size = Vector2(W, 80)
 	box.pivot_offset = Vector2(W * 0.5, 40)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -210,10 +227,10 @@ func _head(text: String, size_: int, color: Color, win: bool) -> void:
 	box.add_child(l)
 	_root.add_child(box)
 	if win:
-		_anim(box, "slam", 0.35, 0.6)
+		_anim(box, "slam", at, 0.6)
 	else:
-		_anim(box, "sink", 0.35, 0.55)
-		_anim(box, "shake", 0.95, 0.4)
+		_anim(box, "sink", at, 0.55)
+		_anim(box, "shake", at + 0.6, 0.4)
 
 
 func _score(v: Dictionary) -> void:
@@ -405,58 +422,388 @@ func _bracket_block(b: Dictionary) -> void:
 	_anim(block, "rise", 1.3, 0.45)
 
 
-func _trophy_block(titles: int) -> void:
-	var block := Control.new()
-	block.name = "Trophy"
-	block.position = Vector2(0, 560)
-	block.size = Vector2(W, 280)
-	block.mouse_filter = Control.MOUSE_FILTER_IGNORE
+# ---- 39a CLINCHED: the standings climb, the matchup card ----------------------------
+
+const ROW_H := 50.0
+const PANEL_X := 60.0
+const PANEL_W := 600.0
+
+var _rows := {}   # team id → its row Control (the clinch standings)
+
+
+## The standings panel: 8 rows at their pre-match order; at 1.0 s your
+## record flips, at 1.4 s the rows slide to the post-match order (yours on
+## top of the others), at 2.1 s your row turns gold and the IN chip pops.
+## A dashed gold line under the last playoff spot.
+func _standings_block(st: Dictionary) -> void:
+	var before: Array = st.get("rows_before", [])
+	var after: Array = st.get("rows_after", [])
+	var n := before.size()
+	var pad := 16.0
+	var head_h := 36.0
+	var panel := PanelContainer.new()
+	panel.name = "Standings"
+	panel.position = Vector2(PANEL_X, 284)
+	panel.size = Vector2(PANEL_W, pad * 2.0 + head_h + 10.0 + ROW_H * n)
+	panel.add_theme_stylebox_override("panel", _box(CREAM, Color(CREAM, 0.12)))
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var inner := Control.new()
+	inner.name = "Inner"
+	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(inner)
+	var hd := _label(str(st.get("head", "STANDINGS")), 18, CREAM, true)
+	hd.name = "StandingsHead"
+	hd.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	hd.position = Vector2(0, 0)
+	hd.size = Vector2(300, head_h)
+	inner.add_child(hd)
+	var note := _label(str(st.get("note", "")), 16, CREAM, false)
+	note.name = "StandingsNote"
+	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	note.position = Vector2(PANEL_W - 32.0 - 300.0, 0)
+	note.size = Vector2(300, head_h)
+	inner.add_child(note)
+	var rows := Control.new()
+	rows.name = "Rows"
+	rows.position = Vector2(-12.0, head_h + 10.0)
+	rows.size = Vector2(PANEL_W - 32.0 + 24.0, ROW_H * n)
+	rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	inner.add_child(rows)
+	var after_index := {}
+	for i in after.size():
+		after_index[str(after[i]["id"])] = i
+	for i in n:
+		var r: Dictionary = before[i]
+		var id := str(r["id"])
+		var you := bool(r.get("you", false))
+		var row := Control.new()
+		row.name = "Row_%s" % id
+		row.position = Vector2(0, ROW_H * i)
+		row.size = Vector2(rows.size.x, ROW_H)
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if i % 2 == 1 and not you:
+			var stripe := ColorRect.new()
+			stripe.color = Color(CREAM, 0.05)
+			UiLayout.full_rect(stripe)
+			stripe.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			row.add_child(stripe)
+		if you:
+			var orange := Panel.new()
+			orange.name = "RowOrange"
+			orange.add_theme_stylebox_override("panel", _box(ORANGE, Color(ORANGE, 0.3), false))
+			UiLayout.full_rect(orange)
+			orange.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			row.add_child(orange)
+			var gold := Panel.new()
+			gold.name = "RowGold"
+			gold.add_theme_stylebox_override("panel", _box(GOLD, Color(GOLD, 0.35), false))
+			UiLayout.full_rect(gold)
+			gold.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			row.add_child(gold)
+			_anim(gold, "fadein", 2.1, 0.2)
+		var rank := _label(str(i + 1), 16, CREAM, true)
+		rank.name = "Rank"
+		rank.position = Vector2(12, 0)
+		rank.size = Vector2(40, ROW_H)
+		rank.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		row.add_child(rank)
+		var after_i: int = int(after_index.get(id, i))
+		if after_i != i:
+			# The rank renumbers as the rows move.
+			var rank2 := _label(str(after_i + 1), 16, CREAM, true)
+			rank2.name = "RankAfter"
+			rank2.position = Vector2(12, 0)
+			rank2.size = Vector2(40, ROW_H)
+			rank2.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+			rank2.modulate.a = 0.0
+			row.add_child(rank2)
+			_anim(rank, "hide", 1.4, 0.01)
+			_anim(rank2, "show", 1.4, 0.01)
+		var nm := _label(str(r.get("name", "")), 16, GOLD if you else CREAM, true)
+		nm.name = "Name"
+		nm.position = Vector2(64, 0)
+		nm.size = Vector2(300, ROW_H)
+		nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		row.add_child(nm)
+		if you:
+			var chip := PanelContainer.new()
+			chip.name = "In"
+			chip.add_theme_stylebox_override("panel", _box(GOLD, GOLD, true))
+			chip.position = Vector2(64.0 + 8.0 + str(r.get("name", "")).length() * 16.0 + 12.0, 10)
+			chip.size = Vector2(60, 30)
+			chip.pivot_offset = Vector2(30, 15)
+			chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			var cl := UiFont.label(str(st.get("chip", "IN")), 14, INK, UiFont.display())
+			cl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			cl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			chip.add_child(cl)
+			row.add_child(chip)
+			_anim(chip, "pop", 2.1, 0.35)
+		# The record: yours flips from before to after at 1.0 s in a clip.
+		var rec_w := 110.0
+		var clip := Control.new()
+		clip.name = "RecordClip"
+		clip.position = Vector2(rows.size.x - 12.0 - rec_w, 0)
+		clip.size = Vector2(rec_w, ROW_H)
+		clip.clip_contents = true
+		clip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(clip)
+		var rec := _label(str(r.get("record", "")), 16, CREAM, true)
+		rec.name = "Record"
+		rec.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		rec.position = Vector2.ZERO
+		rec.size = Vector2(rec_w, ROW_H)
+		clip.add_child(rec)
+		if you:
+			var rec2 := _label(str(st.get("record_after", "")), 16, CREAM, true)
+			rec2.name = "RecordAfter"
+			rec2.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			rec2.position = Vector2(0, ROW_H)
+			rec2.size = Vector2(rec_w, ROW_H)
+			clip.add_child(rec2)
+			_anim(rec, "outup", 1.0, 0.35, ROW_H)
+			_anim(rec2, "infrom", 1.0, 0.35, ROW_H)
+		rows.add_child(row)
+		_rows[id] = row
+		var target: int = int(after_index.get(id, i))
+		if target != i:
+			_anim(row, "moveto", 1.4, 0.55, ROW_H * target)
+		if you:
+			rows.move_child(row, -1)   # yours passes over the others
+	var spots := int(st.get("spots", 4))
+	var label_w := 12.0 * str(st.get("line_label", "PLAYOFF LINE")).length() * 0.62 + 8.0
+	var line := DashLine.new(GOLD)
+	line.name = "PlayoffLine"
+	line.position = Vector2(0, ROW_H * spots - 2.0)
+	line.size = Vector2(rows.size.x - 12.0 - label_w - 8.0, 4)
+	rows.add_child(line)
+	rows.move_child(line, -1)
+	# The label at the line's right end, centred on it (between the rows'
+	# records, which sit mid-row).
+	var ll := _label(str(st.get("line_label", "PLAYOFF LINE")), 12, GOLD, false)
+	ll.name = "PlayoffLineLabel"
+	ll.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	ll.position = Vector2(rows.size.x - 12.0 - label_w, ROW_H * spots - 8.0)
+	ll.size = Vector2(label_w, 16)
+	rows.add_child(ll)
+	_root.add_child(panel)
+	_anim(panel, "rise", 0.3, 0.45)
+	_anim(panel, "dim", 2.5, 0.4)
+
+
+## The gold matchup card: SEMIFINAL · BEST OF 3 / GAME 1 · AWAY, NO. 3 YOU
+## VS NO. 2 OLLIE.
+func _matchup_block(m: Dictionary) -> void:
+	var panel := PanelContainer.new()
+	panel.name = "Matchup"
+	panel.position = Vector2(PANEL_X, 920)
+	panel.size = Vector2(PANEL_W, 150)
+	panel.add_theme_stylebox_override("panel", _box(GOLD, Color(GOLD, 0.2)))
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var inner := Control.new()
+	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(inner)
+	var w := PANEL_W - 32.0
+	for spec in [["MatchupTitle", m.get("title", ""), 0.0, 20.0, HORIZONTAL_ALIGNMENT_LEFT, false],
+			["MatchupLine", m.get("line", ""), 0.0, 20.0, HORIZONTAL_ALIGNMENT_RIGHT, false],
+			["MatchupYou", m.get("you", ""), 44.0, 16.0, HORIZONTAL_ALIGNMENT_LEFT, false],
+			["MatchupYouName", m.get("you_name", "YOU"), 70.0, 26.0, HORIZONTAL_ALIGNMENT_LEFT, true],
+			["MatchupVs", m.get("vs", "VS"), 60.0, 24.0, HORIZONTAL_ALIGNMENT_CENTER, true],
+			["MatchupOpp", m.get("opp", ""), 44.0, 16.0, HORIZONTAL_ALIGNMENT_RIGHT, false],
+			["MatchupOppName", m.get("opp_name", ""), 70.0, 26.0, HORIZONTAL_ALIGNMENT_RIGHT, true]]:
+		var gold: bool = spec[0] == "MatchupYouName"
+		var l := _label(str(spec[1]), int(spec[3]) if bool(spec[5]) else 16, GOLD if gold else CREAM, bool(spec[5]))
+		l.name = spec[0]
+		l.horizontal_alignment = spec[4]
+		l.position = Vector2(0, float(spec[2]))
+		l.size = Vector2(w, 26.0 if bool(spec[5]) else 20.0)
+		inner.add_child(l)
+	_root.add_child(panel)
+	_anim(panel, "rise", 3.2, 0.4)
+
+
+# ---- 39b CHAMPIONS: the trophy drops, the titles row, the bonus cards -------------
+
+const CUP_PX := 240.0
+const CUP_Y := 250.0
+
+
+func _champion_block(v: Dictionary) -> void:
+	# The trophy sinks in from above (0.3–0.9 s) and the whole page quakes.
 	var holder := Control.new()
 	holder.name = "Cup"
-	holder.position = Vector2((W - 176.0) * 0.5, 0)
-	holder.size = Vector2(176, 176)
-	holder.pivot_offset = Vector2(88, 88)
+	holder.position = Vector2((W - CUP_PX) * 0.5, CUP_Y)
+	holder.size = Vector2(CUP_PX, CUP_PX)
+	holder.pivot_offset = Vector2(CUP_PX * 0.5, CUP_PX * 0.5)
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var cup := PixelIcon.new("icon_trophy", Vector2(176, 176), 8.0)
+	var cup := PixelIcon.new("icon_trophy", Vector2(CUP_PX, CUP_PX), 10.0)
 	cup.name = "CupIcon"
-	cup.size = Vector2(176, 176)
+	cup.size = Vector2(CUP_PX, CUP_PX)
 	holder.add_child(cup)
-	block.add_child(holder)
-	_anim(holder, "pop", 1.3, 0.5)
-	_anim(holder, "bob", 2.0, 1.6)
+	_root.add_child(holder)
+	_anim(holder, "sinkfrom", 0.3, 0.6, 320.0)
+	_anim(holder, "bob", 1.6, 1.6)
+	_anim(_root, "quake", 0.85, 0.4)
+	var line := _label(str(v.get("line", "")), 16, CREAM, false)
+	line.name = "Line"
+	_centre(line, 612.0)
+	_anim(line, "rise", 1.4, 0.4)
+	_titles_row(int(Dictionary(v.get("trophy", {})).get("titles", 1)), 660.0, 1.7, 2.2)
+	# The two cards: the champions bonus XP with its bar, the ticket haul.
+	var cards: Dictionary = v.get("cards", {}) if v.get("cards", null) is Dictionary else {}
+	var xp: Dictionary = cards.get("xp", {}) if cards.get("xp", null) is Dictionary else {}
+	var card_w := 316.0
+	var card_h := 150.0
+	var xp_card := PanelContainer.new()
+	xp_card.name = "XpCard"
+	xp_card.position = Vector2(36, 760)
+	xp_card.size = Vector2(card_w, card_h)
+	xp_card.pivot_offset = Vector2(card_w * 0.5, card_h * 0.5)
+	xp_card.add_theme_stylebox_override("panel", _box(CREAM, Color(CREAM, 0.12)))
+	xp_card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var col := VBoxContainer.new()
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.add_theme_constant_override("separation", 10)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	xp_card.add_child(col)
+	var amount := _label(str(xp.get("label", "")), 24, GOLD, true)
+	amount.name = "XpAmount"
+	amount.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	col.add_child(amount)
+	var m: Dictionary = xp.get("meter", {}) if xp.get("meter", null) is Dictionary else {}
+	if not m.is_empty():
+		_meter = XpMeter.new(m, card_w - 32.0)
+		_meter.manual = true
+		_meter.fill_s = 1.1
+		var row: Control = _meter.get_node_or_null("Row")
+		if row != null:
+			row.visible = false   # the card says it in words; the bar is the meter
+		var bar: Control = _meter.get_node_or_null("Bar")
+		if bar != null:
+			bar.position.y = 0.0
+		_meter.custom_minimum_size = Vector2(card_w - 32.0, XpMeter.BAR_H + 4.0)
+		_meter.size = _meter.custom_minimum_size
+		_meter.play(2.6)
+		col.add_child(_meter)
+	var sub := _label(str(xp.get("sub", "")), 14, CREAM, false)
+	sub.name = "XpSub"
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	col.add_child(sub)
+	_root.add_child(xp_card)
+	_anim(xp_card, "pop", 2.5, 0.4)
+	var tickets := int(cards.get("tickets_n", 0))
+	_ticket_box = TicketBox.new(card_h - ShadowStyle.OFFSET, 64.0, 32, 14, 18.0, 14.0, 60.0, 0.0, card_w - ShadowStyle.OFFSET)
+	_ticket_box.name = "TicketsCard"
+	_ticket_box.position = Vector2(368, 760)
+	_ticket_box.pivot_offset = Vector2(card_w * 0.5, card_h * 0.5)
+	_ticket_box.set_count(0)
+	_root.add_child(_ticket_box)
+	var amt: Label = _ticket_box.find_child("TicketsBig", true, false)
+	if amt != null:
+		amt.name = "TicketsText"
+	_anim(_ticket_box, "pop", 2.5, 0.4)
+	_stream = TicketStream.new()
+	_stream.name = "Stream"
+	_stream.manual = true
+	_stream.max_flyers = 12
+	_stream.spread = Vector2(160, 60)
+	_stream.lift = 120.0
+	_stream.wobble = 30.0
+	_stream.count_changed.connect(func(n: int) -> void:
+		_ticket_box.set_count(n)
+		_ticket_box.bump()
+	)
+	_root.add_child(_stream)
+	var from := Vector2(W * 0.5, CUP_Y + CUP_PX * 0.5)
+	_stream.play(from, from, tickets, 2.7)
+
+
+## TITLES · cups · xN: the newest cup pops in at `pop_at`.
+func _titles_row(titles: int, y: float, at: float, pop_at: float) -> void:
 	var row := HBoxContainer.new()
 	row.name = "Titles"
-	row.position = Vector2(0, 202)
-	row.size = Vector2(W, 40)
+	row.position = Vector2(0, y)
+	row.size = Vector2(W, 44)
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
-	row.add_theme_constant_override("separation", 16)
+	row.add_theme_constant_override("separation", 18)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var tl := _label("TITLES", 16, CREAM, false)
+	var tl := _label("TITLES", 18, CREAM, false)
 	row.add_child(tl)
 	var cups := HBoxContainer.new()
 	cups.add_theme_constant_override("separation", 8)
 	cups.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for i in mini(titles, 8):
+	for i in mini(titles, 6):
 		var small := Control.new()
 		small.name = "Title%d" % i
-		small.custom_minimum_size = Vector2(32, 32)
-		small.pivot_offset = Vector2(16, 16)
+		small.custom_minimum_size = Vector2(44, 44)
+		small.pivot_offset = Vector2(22, 22)
 		small.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var ic := PixelIcon.new("icon_trophy", Vector2(32, 32), 3.0)
-		ic.size = Vector2(32, 32)
+		var ic := PixelIcon.new("icon_trophy", Vector2(44, 44), 3.0)
+		ic.size = Vector2(44, 44)
 		small.add_child(ic)
 		cups.add_child(small)
-		if i == titles - 1:
-			_anim(small, "pop", 2.3, 0.35)
+		if i == mini(titles, 6) - 1:
+			_anim(small, "pop", pop_at, 0.45)
 	row.add_child(cups)
-	var count := _label("X%d" % titles, 20, GOLD, true)
+	var count := _label("X%d" % titles, 24, GOLD, true)
 	count.name = "TitleCount"
-	count.pivot_offset = Vector2(20, 12)
+	count.pivot_offset = Vector2(24, 14)
 	row.add_child(count)
-	_anim(count, "pop", 2.3, 0.35)
-	block.add_child(row)
-	_root.add_child(block)
-	_anim(row, "rise", 1.8, 0.4)
+	_anim(count, "pop", pop_at, 0.35)
+	_root.add_child(row)
+	_anim(row, "rise", at, 0.4)
+
+
+## The orange CONTINUE · TO THE POST-MATCH button (design 39a/39b): rises at
+## `at`, takes taps only once risen.
+func _continue_button(b: Dictionary) -> void:
+	var card := ShadowCard.new(RetroTheme.c("orange"))
+	card.name = "ContinueButton"
+	card.position = Vector2(36, 1100)
+	card.size = Vector2(648, 120)
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var inner := Control.new()
+	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	UiLayout.full_rect(inner)
+	card.add_child(inner)
+	var title := _label(str(b.get("title", "CONTINUE")), 28, CREAM, true)
+	title.name = "ButtonTitle"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	title.position = Vector2(30, 24)
+	title.size = Vector2(500, 32)
+	inner.add_child(title)
+	var sub := _label(str(b.get("sub", "")), 16, CREAM, false)
+	sub.name = "ButtonSub"
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	sub.position = Vector2(30, 70)
+	sub.size = Vector2(500, 20)
+	inner.add_child(sub)
+	var chev := _label(">", 32, CREAM, true)
+	chev.position = Vector2(648 - 30 - 40, 40)
+	chev.size = Vector2(40, 40)
+	inner.add_child(chev)
+	card.pressed.connect(skip)
+	_root.add_child(card)
+	_button = card
+	_anim(card, "rise", float(b.get("at", _ready_s)), 0.4)
+
+
+func continue_button() -> Control:
+	return _button
+
+
+## The clinch standings: a row's current y (tests).
+func row_y(id: String) -> float:
+	var row: Control = _rows.get(id, null)
+	return row.position.y if row != null else -1.0
+
+
+func meter_frac() -> float:
+	return _meter.fill_frac() if _meter != null else 0.0
+
+
+func ready_s() -> float:
+	return _ready_s
 
 
 ## The tickets box (design 15a, 2026-10-24: the gold box with the ticket icon,
@@ -557,7 +904,7 @@ func _anim(node: CanvasItem, kind: String, delay: float, dur: float, extra := 0.
 	if node is Control:
 		base = (node as Control).position
 	_anims.push_back({"node": node, "kind": kind, "delay": delay, "dur": dur, "base": base, "extra": extra})
-	if kind in ["rise", "pop", "slam", "sink", "fadein", "slidein", "infrom"]:
+	if kind in ["rise", "pop", "slam", "sink", "fadein", "slidein", "infrom", "sinkfrom"]:
 		node.modulate.a = 0.0
 
 
@@ -572,9 +919,13 @@ static func _ease_in(p: float) -> float:
 ## Advance the page by dt and lay every animated element where it belongs.
 func step(dt: float) -> void:
 	_t += dt
-	if not _sound_done and _t >= 0.35:
+	if not _sound_done and _t >= _sound_at:
 		_sound_done = true
 		_play_sound()
+	if _meter != null:
+		_meter.step(dt)
+	if _button != null:
+		_button.mouse_filter = Control.MOUSE_FILTER_STOP if ready_to_continue() else Control.MOUSE_FILTER_IGNORE
 	if _stream != null:
 		if not _stream_aimed and _t >= 2.5 and _ticket_box != null and _ticket_box.is_inside_tree():
 			_stream.to = _ticket_box.icon_center()
@@ -648,6 +999,22 @@ func step(dt: float) -> void:
 			"bob":
 				if c != null and _t >= delay:
 					c.position = base + Vector2(0, -10.0 * (0.5 - 0.5 * cos(TAU * (_t - delay) / dur)))
+			"moveto":
+				if c != null:
+					c.position = Vector2(base.x, lerpf(base.y, float(a["extra"]), _ease_out(p)))
+			"sinkfrom":
+				node.modulate.a = minf(1.0, p * 3.0) if p > 0.0 else 0.0
+				if c != null:
+					var y := lerpf(-float(a["extra"]), 10.0, _ease_in(p / 0.8)) if p < 0.8 else lerpf(10.0, 0.0, (p - 0.8) / 0.2)
+					c.position = Vector2(c.position.x, base.y + y)
+			"quake":
+				if c != null:
+					var k := (1.0 - p) if (_t >= delay and p < 1.0) else 0.0
+					c.position = base + Vector2(sin(p * TAU * 4.0) * 10.0 * k, cos(p * TAU * 3.0) * 6.0 * k)
+			"hide":
+				node.modulate.a = 0.0 if _t >= delay else 1.0
+			"show":
+				node.modulate.a = 1.0 if _t >= delay else 0.0
 			"dim":
 				node.modulate = Color.WHITE.lerp(Color(0.55, 0.55, 0.55), p)
 			"blink":
@@ -663,6 +1030,14 @@ func _process(delta: float) -> void:
 ## A match won chimes (the small chime); the championship gets the big one
 ## (Ross, 2026-10-26); every loss is the loss sting.
 func _play_sound() -> void:
+	if _v.get("sound", null) is Dictionary:
+		match str(Dictionary(_v["sound"]).get("name", "")):
+			"chime_win":
+				Sfx.chime_win()
+				return
+			"chime_big":
+				Sfx.chime_big()
+				return
 	match str(_v.get("kind", "")):
 		"win", "advance":
 			Sfx.chime_win()
@@ -678,7 +1053,7 @@ func _play_sound() -> void:
 
 
 func ready_to_continue() -> bool:
-	return _t >= READY_S
+	return _t >= _ready_s
 
 
 func _on_input(ev: InputEvent) -> void:
@@ -708,6 +1083,21 @@ func confetti_count() -> int:
 
 func has_rays() -> bool:
 	return _rays != null
+
+
+## A dashed horizontal rule (the playoff line).
+class DashLine extends Control:
+	var colour := Color.WHITE
+
+	func _init(p_colour: Color) -> void:
+		colour = p_colour
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		var x := 0.0
+		while x < size.x:
+			draw_rect(Rect2(x, 0, minf(14.0, size.x - x), size.y), colour)
+			x += 22.0
 
 
 ## The bracket's connector: a stub from each semifinal row, a riser, a stub

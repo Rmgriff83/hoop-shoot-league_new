@@ -60,7 +60,7 @@ func _ready() -> void:
 		App.loader.instant = _has_prefixed(args, "--qa") and not args.has("--qa-loading")
 		App.loader.force_show = args.has("--qa-loading")
 		PeggyMachine.threaded = not App.loader.instant
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# The splash is the main scene now: every other pass starts from the title.
@@ -103,6 +103,8 @@ func _ready() -> void:
 		_run_peggy.call_deferred()
 	elif args.has("--qa-match-end"):
 		_run_match_end.call_deferred()
+	elif args.has("--qa-season"):
+		_run_season.call_deferred()
 	elif args.has("--qa-area-snaps"):
 		_run_area_snaps.call_deferred()
 	elif args.has("--qa-credits"):
@@ -1827,6 +1829,134 @@ func _pick_area(id: String) -> void:
 ## and the city: the lock on the veiled picture, the shackle sprung on the lit
 ## picture, NEW AREA with the chips, the buttons.
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-unlock
+## Season moments (design 39a–39f, docs/LEAGUE.md → Season moments): the
+## CLINCHED and CHAMPIONS match-end pages from staged heats, then the three
+## wrap-ups and the NEW SEASON page over the league home, from seasons played
+## through on a fixed seed. Snaps at each page's beats.
+##   Godot --path hoop_shoot --resolution 360x780 -- --qa-season
+func _run_season() -> void:
+	await _sleep(1.0)
+	await _close_archive()
+	# (1) The match-end pages.
+	var ids := ["brickport", "dustplain", "sunnyvale-flex", "maple-falls", "cactus-flats", "goldgulch", "pinewick"]
+	var tables := {}
+	for you in [5, 3]:
+		var rows := []
+		var pool := ids.duplicate()
+		for i in 8:
+			if i == you - 1:
+				rows.push_back({"teamId": "player", "w": 9, "l": 5, "seed": i + 1})
+			else:
+				rows.push_back({"teamId": pool.pop_front(), "w": 12 - i, "l": 2 + i, "seed": i + 1})
+		tables[you] = rows
+	var base := {"year": 2, "league_name": "ARCADE LEAGUE", "record_before": [8, 5], "record_after": [9, 5],
+		"place_before": 5, "place_after": 3, "titles_before": 1, "titles_after": 1, "playoff": false, "round": "",
+		"series_id": "", "best_of": 3, "series_before": [0, 0], "series_after": [0, 0], "decided": false,
+		"series_won": false, "other_semi": [], "final_opp": "", "teams": 8,
+		"table_before": tables[5], "table_after": tables[3], "clinch_before": false, "clinch_after": true,
+		"last_day": true, "day": 14, "seed_after": 3, "in_playoffs_after": true, "spots": 4,
+		"next_series": {"round": "semifinal", "id": "sf-2v3", "opp": "dustplain", "home": false, "best_of": 3, "seed_you": 3, "seed_opp": 2},
+		"series_game_no": 0, "earned": {"xp": 600, "tickets": 300}}
+	var opp := LeagueData.shooter("brickport")
+	var cases := [
+		["clinch", 41, 36, {}, [0.6, 1.2, 1.9, 2.7, 3.8]],
+		["champs", 46, 40, {"playoff": true, "round": "final", "series_after": [3, 1], "decided": true, "series_won": true, "titles_after": 2, "series_game_no": 4}, [0.5, 0.95, 1.3, 2.9, 3.6]],
+	]
+	for c in cases:
+		var e: Dictionary = base.duplicate(true)
+		e.merge(c[3], true)
+		var heat := {"won": true, "player_score": c[1], "ai_score": c[2], "ot": 0, "opponent": opp, "mode": "heat", "location": "cage",
+			"league": {"id": "cage", "game": "po-f-4" if bool(e["playoff"]) else "d14", "playoff": e["playoff"]},
+			"tickets": 186 if bool(e["playoff"]) else 36, "card_drop": "", "league_end": e,
+			"xp": {"gained": 180, "title_gained": 120, "level_before": 2, "level_after": 3, "capped": false, "title": bool(e["playoff"])},
+			"xp_now": App.xp()}
+		var o := MatchEndOverlay.new()
+		o.name = "MatchEnd"
+		o.build(MatchEndCopy.state(heat))
+		add_child(o)
+		var at := 0.0
+		for i in Array(c[4]).size():
+			await _sleep(float(c[4][i]) - at)
+			at = float(c[4][i])
+			await _snap("season_%s_%02d" % [c[0], i])
+		o.queue_free()
+		await _sleep(0.3)
+	# (2) The wrap-ups over the league home, from seasons played through.
+	var cfg := LeagueData.league("cage")
+	var kept: Dictionary = App.league_doc("cage").duplicate(true)
+	var ts := get_tree().current_scene
+	var champs_doc := {}
+	for variant in [["champs", 7, true], ["out", 7, false], ["missed", 11, false]]:
+		var doc := _qa_done_doc(cfg, int(variant[1]), bool(variant[2]))
+		if str(variant[0]) == "missed":
+			var others := []
+			for sr in doc["season"]["series"]:
+				if sr["highSeedId"] != "player" and sr["lowSeedId"] != "player":
+					others.push_back(sr)
+			doc["season"]["series"] = others
+		if str(variant[0]) == "champs":
+			champs_doc = doc.duplicate(true)
+		App.save_league_doc(doc, "cage")
+		App.enter_league("cage")
+		if not bool(ts.call("is_league_open")):
+			ts.call("_open_league", true)
+			await _sleep(0.5)
+		ts.call("_open_season_wrap")
+		var at := 0.0
+		for i in 4:
+			var mark: float = [0.5, 1.4, 2.4, 3.4][i]
+			await _sleep(float(mark) - at)
+			at = float(mark)
+			await _snap("season_wrap_%s_%02d" % [variant[0], i])
+		var page = ts.call("season_wrap")
+		if page != null:
+			page.close()
+		await _sleep(0.6)
+	# (3) The NEW SEASON page after the champions' season.
+	App.save_league_doc(champs_doc, "cage")
+	ts.call("_open_new_season")
+	var at2 := 0.0
+	for i in 5:
+		var mark: float = [0.3, 1.2, 2.1, 3.1, 3.6][i]
+		await _sleep(float(mark) - at2)
+		at2 = float(mark)
+		await _snap("season_new_%02d" % i)
+	var np = ts.call("new_season_page")
+	if np != null:
+		np.close()
+	await _sleep(0.6)
+	await _snap("season_after")
+	if kept.has("season"):
+		App.save_league_doc(kept, "cage")
+	else:
+		SaveService.remove_league_doc("cage")   # never started before this run
+	print("QA season: done")
+	get_tree().quit(0)
+
+
+## A season played to the end on a fixed seed: the live games won (and the
+## playoffs won or lost), with a stand-in season take.
+func _qa_done_doc(cfg: Dictionary, seed_value: int, win_playoffs: bool) -> Dictionary:
+	var doc := Campaign.new_doc(cfg, seed_value, 1000)
+	var win := {"won": true, "player_score": 30, "ai_score": 18, "ot": 0,
+		"sides": {"player": {"score": 30, "makes": 20, "swishes": 6, "attempts": 28, "bestStreak": 9, "bonus": 4, "iced": 0},
+			"ai": {"score": 18, "makes": 12, "swishes": 2, "attempts": 25, "bestStreak": 3, "bonus": 0, "iced": 0}}}
+	var loss := {"won": false, "player_score": 20, "ai_score": 29, "ot": 0,
+		"sides": {"player": {"score": 20, "makes": 14, "swishes": 3, "attempts": 26, "bestStreak": 4, "bonus": 0, "iced": 0},
+			"ai": {"score": 29, "makes": 19, "swishes": 5, "attempts": 27, "bestStreak": 6, "bonus": 2, "iced": 0}}}
+	Campaign.apply_live_result(doc, cfg, win, 2000)
+	Campaign.sim_to_playoffs(doc, cfg)
+	var guard := 0
+	while doc["season"]["phase"] == "playoffs" and guard < 20:
+		guard += 1
+		if Campaign.player_alive(doc):
+			Campaign.apply_live_result(doc, cfg, win if win_playoffs else loss, 3000)
+		else:
+			Campaign.sim_step(doc, cfg)
+	Campaign.note_earned(doc, 1240 if win_playoffs else 760, 310 if win_playoffs else 150)
+	return doc
+
+
 func _run_unlock() -> void:
 	await _sleep(0.8)
 	for pair in [["beach", 3], ["park", 4], ["city", 5]]:

@@ -39,8 +39,8 @@ static func winner_of(g: Dictionary) -> String:
 	return str(g["homeId"]) if int(g["homeScore"]) > int(g["awayScore"]) else str(g["awayId"])
 
 
-## Negative → a ahead on head-to-head, positive → b ahead, 0 → level.
-static func head_to_head(a: String, b: String, games: Array) -> int:
+## [a's wins, b's wins] over their played meetings.
+static func h2h_record(a: String, b: String, games: Array) -> Array:
 	var a_wins := 0
 	var b_wins := 0
 	for g in games:
@@ -53,7 +53,13 @@ static func head_to_head(a: String, b: String, games: Array) -> int:
 			a_wins += 1
 		else:
 			b_wins += 1
-	return b_wins - a_wins
+	return [a_wins, b_wins]
+
+
+## Negative → a ahead on head-to-head, positive → b ahead, 0 → level.
+static func head_to_head(a: String, b: String, games: Array) -> int:
+	var r := h2h_record(a, b, games)
+	return int(r[1]) - int(r[0])
 
 
 ## Sorted table with seeds (1 = best).

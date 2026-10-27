@@ -134,6 +134,7 @@ func _ready() -> void:
 	_build_court(_index)
 	if deep != "" and App.enter_league(deep):
 		_open_league(true)
+		_maybe_open_season_wrap()   # CONTINUE SEASON after the season's last game (design 39c/e)
 	elif App.show_archive or stale:
 		App.show_archive = false
 		_open_archive(true)
@@ -326,7 +327,7 @@ func rebuild_chrome() -> void:
 	_chrome.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ui.add_child(_chrome)
 	_ui.move_child(_chrome, 0)
-	if _locker != null or _peggy != null or _settings != null:
+	if _locker != null or _peggy != null or _wrap != null or _new_season != null or _settings != null:
 		_chrome.position.x = _chrome_x0 - HomePage.SLIDE   # a page is open: the home UI stays out
 
 	# The scrim over the court.
@@ -631,7 +632,9 @@ func _make_league(tab := "HEAT", sub := "YOUR CARDS") -> LeagueContext:
 		_update_zone()
 		_refresh_ticker()
 		_rebuild_float()
+		_maybe_open_season_wrap.call_deferred()   # ADVANCE just finished a season (design 39f)
 	)
+	lc.new_season_requested.connect(_open_new_season)
 	lc.tab_changed.connect(func(_tab: String) -> void: _rebuild_float())
 	_area.add_child(lc)
 	return lc
@@ -1166,13 +1169,15 @@ func _pick(mode: String) -> void:
 
 var _locker: LockerPanel
 var _peggy: PeggyPage
+var _wrap: SeasonWrapPage      # the season wrap-up (design 39c/e/f)
+var _new_season: NewSeasonPage   # the NEW SEASON page (design 39d)
 var _home_slide: Tween
 
 
 ## The locker page (docs/LOCKER.md): the home chrome slides out left, the
 ## page in from the right — the ENTER LEAGUE move, over the area.
 func _open_locker() -> void:
-	if _locker != null or _peggy != null or _settings != null or _ranks != null or _lobby != null or _switching:
+	if _locker != null or _peggy != null or _wrap != null or _new_season != null or _settings != null or _ranks != null or _lobby != null or _switching:
 		return
 	_locker = LockerPanel.new()
 	_locker.name = "LockerPanel"
@@ -1243,8 +1248,94 @@ func peggy() -> PeggyPage:
 	return _peggy
 
 
+# ---- season moments (design 39c/e/f + 39d, docs/HOME.md → Season wrap-up) ----
+
+
+## The wrap-up is owed once a season is done (App.wrap_pending): when the
+## league opens after the last game, or when ADVANCE plays the bracket out.
+func _maybe_open_season_wrap() -> void:
+	if not _open or _wrap != null or _new_season != null or _switching or not is_inside_tree():
+		return
+	if App.wrap_pending():
+		_open_season_wrap()
+
+
+## Hide the rest of the home UI while a season page shows (Ross): the chrome
+## slides out, the league pane, the float and the season chip hide; the
+## court stays as the backdrop. Off restores the open league's layout.
+func _season_cover(on: bool) -> void:
+	_slide_home(on)
+	if on:
+		if _league != null:
+			_league.visible = false
+		if _float != null:
+			_float.visible = false
+		if _season_chip != null:
+			_season_chip.visible = false
+	else:
+		if _league != null:
+			_league.visible = true
+		_apply_area(_open_frac)
+
+
+func _open_season_wrap() -> void:
+	if _wrap != null or _new_season != null or _switching:
+		return
+	App.mark_wrap_seen()
+	_wrap = SeasonWrapPage.new()
+	_wrap.name = "SeasonWrap"
+	_wrap.build(SeasonCopy.wrap(App.league_doc(), App.league_cfg()))
+	_wrap.closed.connect(func() -> void:
+		_wrap = null
+		if _new_season == null:
+			_season_cover(false)
+	)
+	_wrap.start_season.connect(func() -> void:
+		_open_new_season()
+		if _wrap != null:
+			_wrap.slide_out(true, true)
+	)
+	add_child(_wrap)
+	_season_cover(true)
+	_wrap.slide_in(false, 0.35)
+
+
+## START SEASON (the wrap-up's or the MATCH pane's card): roll the season,
+## refresh the pane under the page, show the roll.
+func _open_new_season() -> void:
+	if _new_season != null or _switching or not _open:
+		return
+	var d := App.roll_season()
+	if d.is_empty():
+		return
+	if _league != null:
+		_league.refresh()
+	_new_season = NewSeasonPage.new()
+	_new_season.name = "NewSeason"
+	_new_season.build(SeasonCopy.new_season(d, App.league_cfg()))
+	_new_season.play.connect(func() -> void: App.start_league_heat())
+	_new_season.closed.connect(func() -> void:
+		_new_season = null
+		_season_cover(false)
+		_update_zone()
+		_refresh_ticker()
+		_rebuild_float()
+	)
+	add_child(_new_season)
+	_season_cover(true)
+	_new_season.slide_in()
+
+
+func season_wrap() -> SeasonWrapPage:
+	return _wrap
+
+
+func new_season_page() -> NewSeasonPage:
+	return _new_season
+
+
 func _open_settings() -> void:
-	if _locker != null or _peggy != null or _settings != null or _ranks != null or _lobby != null or _switching:
+	if _locker != null or _peggy != null or _wrap != null or _new_season != null or _settings != null or _ranks != null or _lobby != null or _switching:
 		return
 	_settings = SettingsPanel.new()
 	_settings.name = "SettingsPanel"
@@ -1267,7 +1358,7 @@ func _archive_rows() -> Array:
 ## The page before an area's home (docs/HOME.md → Area archive). `instant`
 ## on a cold launch: no slide, and no `<` when the area behind is locked.
 func _open_archive(instant := false) -> void:
-	if _archive != null or _locker != null or _settings != null or _ranks != null or _lobby != null or _peggy != null or _switching:
+	if _archive != null or _locker != null or _settings != null or _ranks != null or _lobby != null or _peggy != null or _wrap != null or _new_season != null or _switching:
 		return
 	var rows := _archive_rows()
 	_archive = AreaArchivePage.new()
@@ -1302,7 +1393,7 @@ func archive() -> AreaArchivePage:
 ## lobby's ALL RANKS > (`tab` RANKED, over the lobby, which slides out left
 ## under it and comes back on close).
 func _open_ranks(tab := "") -> void:
-	if _ranks != null or _archive != null or _locker != null or _settings != null or _peggy != null or _switching:
+	if _ranks != null or _archive != null or _locker != null or _settings != null or _peggy != null or _wrap != null or _new_season != null or _switching:
 		return
 	var over_lobby := _lobby != null
 	_ranks = RanksPage.new()
@@ -1364,7 +1455,7 @@ func ranks() -> RanksPage:
 ## The lobby for this area: quick match, a code for a friend, or a friend's
 ## code. App arranges the room and starts the heat; the page shows the way.
 func _open_lobby() -> void:
-	if _lobby != null or _ranks != null or _archive != null or _locker != null or _settings != null or _peggy != null or _rewards != null or _switching:
+	if _lobby != null or _ranks != null or _archive != null or _locker != null or _settings != null or _peggy != null or _wrap != null or _new_season != null or _rewards != null or _switching:
 		return
 	_lobby = MatchLobbyPage.new()
 	_lobby.name = "MatchLobby"

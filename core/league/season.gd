@@ -22,6 +22,11 @@ static func create(league: Dictionary, team_ids: Array, year: int, seed_value: i
 		"playoffTeams": int(league.get("playoff_teams", 4)),
 		"semisBestOf": int(league.get("semis_best_of", 3)), "finalBestOf": int(league.get("final_best_of", 5)),
 		"cardHands": CardRewards.ai_hands(league, QuickSim.seed_from([seed_value, year, "cards"])),
+		# Season moments (design 39, 2026-10-27): what the wrap-up and the new
+		# season page read — this season's XP and tickets, the best shot
+		# streak, and whether the wrap-up has been shown. Older seasons lack
+		# them: every reader defaults.
+		"earned": {"xp": 0, "tickets": 0}, "best": {"streak": 0}, "wrapSeen": false,
 	}
 
 

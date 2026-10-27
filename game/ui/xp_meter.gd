@@ -15,6 +15,7 @@ const HI := Color("#FFE45C")
 const CREAM := RetroTheme.SCENE_TEXT
 
 var manual := false
+var fill_s := FILL_S   # the fill time (design 39b: 1.1 s)
 var _m: Dictionary = {}
 var _start := 0.0
 var _t := 0.0
@@ -90,7 +91,7 @@ func step(dt: float) -> void:
 		if not _rang:
 			_rang = true
 			Sfx.level_up()
-		_line.modulate.a = 0.775 + 0.225 * cos(TAU * (_t - _start - FILL_S))   # the design's 1 s glow
+		_line.modulate.a = 0.775 + 0.225 * cos(TAU * (_t - _start - fill_s))   # the design's 1 s glow
 
 
 ## Whether the level-up sound has rung (tests, QA).
@@ -100,7 +101,7 @@ func rang() -> bool:
 
 ## The fill fraction at second `t` (ease-out cubic after the start).
 func progress_at(t: float) -> float:
-	var k := clampf((t - _start) / FILL_S, 0.0, 1.0)
+	var k := clampf((t - _start) / fill_s, 0.0, 1.0)
 	return 1.0 - pow(1.0 - k, 3.0)
 
 

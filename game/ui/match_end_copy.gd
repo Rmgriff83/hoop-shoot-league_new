@@ -40,6 +40,11 @@ static func kind(heat: Dictionary) -> String:
 	var won := bool(heat.get("won", false))
 	var e := _end(heat)
 	if not bool(e.get("playoff", false)):
+		# Season moments (design 39a, Ross 2026-10-27): the last day's win that
+		# puts the player in the playoffs is the CLINCHED page; a mid-season
+		# clinch keeps the plain win with a CLINCHED tag.
+		if won and bool(e.get("last_day", false)) and bool(e.get("in_playoffs_after", false)):
+			return "clinch"
 		return "win" if won else "loss"
 	if not bool(e.get("decided", false)):
 		return "series"
@@ -91,12 +96,20 @@ static func state(heat: Dictionary) -> Dictionary:
 	var playoff := bool(e.get("playoff", false))
 	var round_ := str(e.get("round", ""))
 	# The tag pill.
-	if not playoff:
+	if k == "clinch":
+		v["tag"] = "DAY %d · FINAL · W %d-%d" % [int(e.get("day", 0)), int(heat.get("player_score", 0)), int(heat.get("ai_score", 0))]
+		v["tag_color"] = CREAM
+	elif not playoff:
 		var tag := str(league.get("game", ""))
 		v["tag"] = "%s · FINAL" % ("DAY %s" % tag.substr(1) if tag.begins_with("d") else tag.to_upper())
+		if won and bool(e.get("clinch_after", false)) and not bool(e.get("clinch_before", false)):
+			v["tag"] += " · CLINCHED"
 		v["tag_color"] = CREAM
 	elif k == "champion":
-		v["tag"] = "%s · FINAL" % str(e.get("league_name", "LEAGUE"))
+		var game_no := int(e.get("series_game_no", 0))
+		if game_no <= 0:
+			game_no = int(Array(e.get("series_after", [0, 0]))[0]) + int(Array(e.get("series_after", [0, 0]))[1])
+		v["tag"] = "%s · FINAL · GAME %d" % [str(e.get("league_name", "LEAGUE")), maxi(game_no, 1)]
 		v["tag_color"] = GOLD
 	else:
 		v["tag"] = "PLAYOFFS · %s" % ("FINAL" if round_ == "final" else "SEMIFINAL")
@@ -109,6 +122,16 @@ static func state(heat: Dictionary) -> Dictionary:
 		"loss":
 			v.merge({"head": "THEY TOOK IT", "head_color": CREAM, "win_anim": false, "rays": Color.TRANSPARENT, "spin_s": 30.0,
 				"flash": false, "scrim": 0.8, "confetti_n": 0, "palette": [], "sub": ""})
+			if bool(e.get("last_day", false)) and bool(e.get("in_playoffs_after", false)):
+				v["sub"] = "IN THE PLAYOFFS · NO. %d SEED" % int(e.get("seed_after", 0))
+		"clinch":
+			# 39a: PLAYOFFS slams at 2.5 s over the standings that just climbed.
+			v.merge({"head": "PLAYOFFS", "head_color": GOLD, "win_anim": true, "rays": GOLD, "spin_s": 22.0,
+				"flash": true, "flash_at": 2.5, "rays_at": 2.5, "head_at": 2.5, "head_y": 790.0, "scrim": 0.62,
+				"confetti_n": 0, "palette": [], "no_score": true, "no_rewards": true,
+				"sub": "%s · NO. %d SEED" % ["LOCKED IN" if bool(e.get("clinch_before", false)) else "CLINCHED", int(e.get("seed_after", 0))],
+				"sub_at": 2.9, "sub_y": 884.0, "ready_s": 3.6, "sound": {"name": "chime_win", "at": 2.5},
+				"button": {"title": "CONTINUE", "sub": "TO THE POST-MATCH", "at": 3.6}})
 		"series":
 			v.merge({"head": "YOU WIN" if won else "THEY TOOK IT", "head_color": GOLD if won else CREAM, "win_anim": won,
 				"rays": GOLD if won else Color.TRANSPARENT, "spin_s": 22.0, "flash": won, "scrim": 0.55 if won else 0.8,
@@ -126,11 +149,39 @@ static func state(heat: Dictionary) -> Dictionary:
 				"flash": false, "scrim": 0.8, "confetti_n": 0, "palette": [],
 				"sub": "SEASON %d OVER · RUNNER-UP" % year})
 		"champion":
+			# 39b: the trophy drops and shakes the page, CHAMPIONS slams over it.
+			var sa: Array = e.get("series_after", [0, 0])
 			v.merge({"head": "CHAMPIONS", "head_color": GOLD, "win_anim": true, "rays": GOLD, "spin_s": 14.0,
-				"flash": true, "scrim": 0.5, "confetti_n": 80, "palette": PALETTE_CHAMP, "sub": "SEASON %d TITLE" % year})
-	v["head_size"] = mini(64, int(620.0 / maxi(str(v["head"]).length(), 1)))
+				"flash": true, "flash_at": 0.05, "rays_at": 0.2, "head_at": 1.0, "head_y": 520.0, "scrim": 0.5,
+				"confetti_n": 26, "palette": PALETTE_CHAMP, "no_score": true, "no_rewards": true, "sub": "",
+				"line": "SEASON %d · BEAT %s %d-%d · %d-%d" % [year, opp_first, int(sa[0]) if sa.size() > 0 else 0,
+					int(sa[1]) if sa.size() > 1 else 0, int(heat.get("player_score", 0)), int(heat.get("ai_score", 0))],
+				"ready_s": 3.2, "sound": {"name": "chime_big", "at": 1.0},
+				"button": {"title": "CONTINUE", "sub": "TO THE POST-MATCH", "at": 3.2}})
+	v["head_size"] = 72 if k == "clinch" else mini(64, int(620.0 / maxi(str(v["head"]).length(), 1)))
 	# The middle block.
-	if not playoff:
+	if k == "clinch":
+		v["block"] = "standings"
+		var rows := {}
+		for key in ["table_before", "table_after"]:
+			var list := []
+			for row in e.get(key, []):
+				var id := str(row["teamId"])
+				list.push_back({"id": id, "name": LeagueSummary.short_name(id), "record": "%d-%d" % [int(row["w"]), int(row["l"])],
+					"you": id == Campaign.PLAYER})
+			rows[key] = list
+		v["standings"] = {"rows_before": rows["table_before"], "rows_after": rows["table_after"],
+			"spots": int(e.get("spots", 4)), "record_before": record_text(Array(e.get("record_before", [0, 0]))),
+			"record_after": record_text(Array(e.get("record_after", [0, 0]))), "seed": int(e.get("seed_after", 0)),
+			"head": "STANDINGS", "note": "TOP %d MAKE IT" % int(e.get("spots", 4)), "line_label": "PLAYOFF LINE", "chip": "IN"}
+		var ns: Dictionary = e.get("next_series", {}) if e.get("next_series", null) is Dictionary else {}
+		v["matchup"] = {
+			"title": "%s · BEST OF %d" % ["FINAL" if str(ns.get("round", "")) == "final" else "SEMIFINAL", int(ns.get("best_of", 3))],
+			"line": "GAME 1 · %s" % ("HOME" if bool(ns.get("home", false)) else "AWAY"),
+			"you": "NO. %d" % int(ns.get("seed_you", 0)), "you_name": "YOU", "vs": "VS",
+			"opp": "NO. %d" % int(ns.get("seed_opp", 0)), "opp_name": LeagueSummary.short_name(str(ns.get("opp", ""))),
+		}
+	elif not playoff:
 		v["block"] = "record"
 		v["record"] = {
 			"label": "SEASON %d RECORD" % year,
@@ -140,8 +191,16 @@ static func state(heat: Dictionary) -> Dictionary:
 			"gold": won,
 		}
 	elif k == "champion":
-		v["block"] = "trophy"
+		v["block"] = "champion"
 		v["trophy"] = {"titles": maxi(int(e.get("titles_after", 1)), 1)}
+		var xp: Dictionary = heat.get("xp", {}) if heat.get("xp", null) is Dictionary else {}
+		var gained := int(xp.get("gained", 0))
+		var bonus := int(xp.get("title_gained", 0))
+		v["cards"] = {
+			"xp": {"label": "+%d XP" % gained, "sub": "CHAMPIONS BONUS" if bonus > 0 else ("AT THE CAP" if gained <= 0 else "MATCH XP"),
+				"meter": HeatCopy.level_meter(heat, int(heat.get("xp_now", 0)))},
+			"tickets_n": int(heat.get("tickets", 0)),
+		}
 	else:
 		v["block"] = "bracket"
 		var others: Array = e.get("other_semi", [])
@@ -170,10 +229,18 @@ static func state(heat: Dictionary) -> Dictionary:
 ## Every string on the page, for the glyph check.
 static func strings(v: Dictionary) -> Array:
 	var out := [str(v.get("tag", "")), str(v.get("head", "")), str(v.get("sub", "")), str(v.get("tickets", "")),
-		str(v.get("opp_first", "")), "YOU", "TAP TO CONTINUE", "NEW CARD", "TITLES"]
-	for key in ["record", "bracket"]:
+		str(v.get("opp_first", "")), str(v.get("line", "")), "YOU", "TAP TO CONTINUE", "NEW CARD", "TITLES"]
+	for key in ["record", "bracket", "matchup", "standings", "button"]:
 		if v.has(key):
 			for val in Dictionary(v[key]).values():
 				if val is String:
 					out.push_back(val)
+				elif val is Array:
+					for row in val:
+						if row is Dictionary:
+							out.push_back(str(row.get("name", "")))
+							out.push_back(str(row.get("record", "")))
+	if v.has("cards"):
+		out.push_back(str(Dictionary(Dictionary(v["cards"]).get("xp", {})).get("label", "")))
+		out.push_back(str(Dictionary(Dictionary(v["cards"]).get("xp", {})).get("sub", "")))
 	return out

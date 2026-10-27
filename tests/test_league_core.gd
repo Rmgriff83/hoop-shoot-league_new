@@ -301,12 +301,110 @@ func _campaign(t) -> void:
 	t.ok(int(summary["finish"]) >= 1 and int(summary["finish"]) <= 8, "finish recorded (%d)" % summary["finish"])
 	t.ok(summary["playoffResult"] in ["missed", "semifinal", "runner_up", "champion"], "playoff result recorded")
 	var titles_before := int(doc["career"]["championships"])
+	# Season moments (design 39, 2026-10-27): what the wrap-up reads.
+	_season_wrap(t, doc, league, result)
 	Campaign.start_next_season(doc, league)
 	t.eq(int(doc["year"]), 2, "year 2")
 	t.eq(doc["season"]["phase"], "regular", "fresh season")
 	t.eq(int(doc["career"]["championships"]), titles_before, "career persists across seasons")
+	_new_season_data(t, doc, league)
 	# Unlock rule: by level (docs/PROGRESSION.md).
 	var beach := LeagueData.league("beach")
 	t.ok(not Progression.league_unlocked(2, beach), "the beach is locked at level 2")
 	t.ok(Progression.league_unlocked(3, beach), "and opens at 3")
 	t.ok(Progression.league_unlocked(1, league), "no rule → open")
+
+
+## The per-season data behind the SEASON WRAP-UP (design 39c/e/f): the
+## best shot streak, the season's take, head-to-head with the playoffs
+## counted, the wrap-up flag, and SeasonWrap.stats.
+func _season_wrap(t, doc: Dictionary, league: Dictionary, result: Dictionary) -> void:
+	var games := [_g("a", "b", 20, 10, true, 1), _g("b", "a", 15, 12, true, 2), _g("a", "b", 9, 8, true, 3), _g("a", "c", 9, 8, false, 4)]
+	t.eq(Standings.h2h_record("a", "b", games), [2, 1], "h2h record counts played meetings")
+	t.eq(Standings.head_to_head("a", "b", games), -1, "…and the old diff still reads b minus a")
+	var s: Dictionary = doc["season"]
+	t.eq(int(s["best"]["streak"]), 7, "the season's best shot streak follows the live results")
+	t.eq(s["phase"], "done", "a done season")
+	t.ok(Campaign.wrap_pending(doc), "the wrap-up is owed once the season is done")
+	var e0 := Campaign.earned(doc)
+	Campaign.note_earned(doc, 30, 36)
+	Campaign.note_earned(doc, 30, 36)
+	t.eq(Campaign.earned(doc), {"xp": e0["xp"] + 60, "tickets": e0["tickets"] + 72}, "note_earned accumulates the season's take")
+	var h2h := Campaign.head_to_head_all(s, "player")
+	var met := 0
+	for id in h2h:
+		met += int(h2h[id]["w"]) + int(h2h[id]["l"])
+	var played := SeasonWrap.player_games(s).size()
+	t.eq(met, played, "head-to-head counts every game, playoffs included (%d)" % played)
+	t.ok(played > 14, "…and the playoffs added games past the 14")
+	var summary := Campaign.season_summary(doc, league)
+	t.eq(int(summary["bestStreak"]), 7, "the summary carries the best streak")
+	t.ok(summary["h2h"] is Dictionary and not summary["h2h"].is_empty(), "…and the head-to-head")
+	t.ok(summary["runnerUpId"] != "" and summary["runnerUpId"] != "player", "…and the final's loser (%s)" % summary["runnerUpId"])
+	t.ok(int(summary["finalScore"][0]) > int(summary["finalScore"][1]), "…and the final's score, champion first")
+	var w := SeasonWrap.stats(doc, league)
+	t.eq(w["w"] + w["l"], 14, "the wrap-up's record is the regular season")
+	t.ok(w["finish"] >= 1 and w["finish"] <= 8, "a finish")
+	t.eq(w["playoffResult"], "champion", "the player won every live playoff game: champion")
+	t.eq(w["championId"], "player", "…so the champion is the player")
+	t.ok(w["highPts"] >= 28, "high points at least the live 28 (%d)" % w["highPts"])
+	t.ok(w["avgPts"] > 0.0 and w["avgPts"] <= float(w["highPts"]), "an average under the high")
+	t.ok(w["swishes"] >= 6, "swishes count the live games (%d)" % w["swishes"])
+	t.ok(int(w["bestGame"]["margin"]) >= 13, "the best game is the biggest-margin win: at least the live 28-15 (%d)" % w["bestGame"]["margin"])
+	t.eq(int(w["bestGame"]["you"]) - int(w["bestGame"]["them"]), int(w["bestGame"]["margin"]), "…with its score")
+	t.ok(w["toughest"].has("oppId") and int(w["toughest"]["w"]) + int(w["toughest"]["l"]) >= 1, "a toughest opponent with games")
+	t.eq(w["gamesOut"], 0.0, "in the playoffs: not out")
+	t.eq(w["earned"], Campaign.earned(doc), "earnings echo the season's take")
+	t.eq(w["titles"], int(doc["career"]["championships"]), "titles are the career's")
+	t.ok(w["yourFinal"].size() == 2 and int(w["yourFinal"][0]) > int(w["yourFinal"][1]), "your final series, you first")
+	# The same seed twice → the same numbers.
+	var again := Campaign.new_doc(league, 7, 1000)
+	Campaign.apply_live_result(again, league, result, 2000)
+	Campaign.sim_to_playoffs(again, league)
+	var guard := 0
+	while again["season"]["phase"] == "playoffs" and guard < 20:
+		guard += 1
+		if Campaign.player_alive(again):
+			Campaign.apply_live_result(again, league, result, 3000)
+		else:
+			Campaign.sim_step(again, league)
+	var w2 := SeasonWrap.stats(again, league)
+	t.eq(w2["w"], w["w"], "deterministic: the same seed gives the same wrap-up (%d-%d)" % [w2["w"], w2["l"]])
+	t.eq(w2["swishes"], w["swishes"], "…down to the swishes")
+	Campaign.mark_wrap_seen(doc)
+	t.ok(not Campaign.wrap_pending(doc), "seen: no longer owed")
+	# A mid-season doc reports so far.
+	var fresh := Campaign.new_doc(league, 9, 1000)
+	var mid := SeasonWrap.stats(fresh, league)
+	t.eq(mid["w"] + mid["l"], 0, "a fresh season: nothing played")
+	t.ok(mid["bestGame"].is_empty() and mid["toughest"].is_empty(), "…no best game, no toughest")
+
+
+## After the rollover: lastSeason and the opening week (design 39d).
+func _new_season_data(t, doc: Dictionary, league: Dictionary) -> void:
+	var last: Dictionary = doc["lastSeason"]
+	t.eq(int(last["year"]), 1, "lastSeason is the season that ended")
+	t.ok(not last["h2h"].is_empty(), "…with the head-to-head")
+	t.eq(last["earned"], Dictionary(doc["career"]["seasons"][0])["earned"], "…and the earnings, also patched onto the career's entry")
+	t.eq(Campaign.earned(doc), {"xp": 0, "tickets": 0}, "the new season starts with nothing earned")
+	t.eq(int(doc["season"]["best"]["streak"]), 0, "…no streak")
+	t.ok(not bool(doc["season"]["wrapSeen"]) and not Campaign.wrap_pending(doc), "…its wrap-up unseen but not owed")
+	var o := SeasonWrap.opening_week(doc, league)
+	t.eq(o["games"].size(), 3, "three opening games")
+	for i in 3:
+		var g: Dictionary = o["games"][i]
+		t.eq(int(g["day"]), i + 1, "day %d" % (i + 1))
+		t.ok(g["oppId"] != "player" and g["oppId"] != "", "an opponent")
+		t.ok(g["h2h"].has("w") and int(g["h2h"]["w"]) + int(g["h2h"]["l"]) >= 2, "last season's record against them (every pair met twice)")
+	t.eq(o["days"], 14, "14 days")
+	t.eq(o["teams"], 8, "8 teams")
+	t.eq(o["more_days"], 11, "11 more days")
+	t.eq(o["oldYear"], 1, "old year")
+	t.eq(o["newYear"], 2, "new year")
+	t.eq(o["oldRecord"], [int(last["w"]), int(last["l"])], "the old record to strike out")
+	t.eq(o["defending"], str(last["championId"]) == "player", "defending champs follows the title")
+	# A first season has no lastSeason: first meetings.
+	var fresh := Campaign.new_doc(league, 3, 1000)
+	var o1 := SeasonWrap.opening_week(fresh, league)
+	t.eq(o1["games"].size(), 3, "a first season still lists its opening week")
+	t.ok(o1["games"][0]["h2h"].is_empty() and o1["oldRecord"].is_empty() and not o1["defending"], "…with no history")

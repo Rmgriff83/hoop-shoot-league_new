@@ -1730,13 +1730,19 @@ func _apply_league_heat(result: Dictionary) -> void:
 	# the title straight to its cap.
 	var prog := progress()
 	var xp_info := Progression.apply_match(prog, result, cfg, int(doc.get("year", 1)))
+	xp_info["title_gained"] = 0
 	if title:
 		var jump := Progression.apply_title(prog, cfg)
 		xp_info["gained"] = int(xp_info["gained"]) + int(jump["gained"])
+		xp_info["title_gained"] = int(jump["gained"])
 		xp_info["level_after"] = int(jump["level_after"])
 		xp_info["title"] = true
 	SaveService.put_progress(prog)
 	last_heat["xp"] = xp_info
+	last_heat["xp_now"] = xp()
+	# The season's take (design 39: SEASON EARNINGS), on the league doc.
+	Campaign.note_earned(doc, int(xp_info["gained"]), int(pay["tickets"]))
+	league_end["earned"] = Campaign.earned(doc)
 	# A level that opens an area queues the Area Unlock page (docs/HOME.md →
 	# Area unlock); the heat screen shows it after the match-end page.
 	if int(xp_info["level_after"]) > int(xp_info["level_before"]):
@@ -1781,6 +1787,15 @@ func _league_end_before(doc: Dictionary, cfg: Dictionary, result: Dictionary) ->
 		"playoff": bool(league.get("playoff", false)), "round": "", "series_id": "", "best_of": 0,
 		"series_before": [0, 0], "series_after": [0, 0], "decided": false, "series_won": false,
 		"other_semi": [], "final_opp": "", "teams": LeagueData.team_ids(cfg).size(),
+		# Season moments (design 39a): the table before and after, whether a
+		# playoff spot was already clinched, and whether this is the regular
+		# season's last day (the only day the CLINCHED page shows).
+		"table_before": _standings_rows(cfg, season), "clinch_before": _clinched(cfg, season),
+		"last_day": str(season.get("phase", "")) == Season.PHASE_REGULAR and int(season.get("currentDay", 0)) >= Season.days(season),
+		"day": int(season.get("currentDay", 0)),
+		"table_after": [], "clinch_after": false, "seed_after": 0, "in_playoffs_after": false,
+		"next_series": {}, "series_game_no": 0, "earned": {"xp": 0, "tickets": 0},
+		"spots": int(season.get("playoffTeams", int(cfg.get("playoff_teams", 4)))),
 	}
 	if out["playoff"]:
 		var mine := Season.player_series(season, Campaign.PLAYER)
@@ -1802,6 +1817,23 @@ func _league_end_after(out: Dictionary, doc: Dictionary, cfg: Dictionary) -> voi
 	out["place_after"] = LeagueSummary.place(cfg, season)
 	out["titles_after"] = int(Dictionary(doc.get("career", {})).get("championships", 0))
 	out["phase"] = str(season.get("phase", ""))
+	out["table_after"] = _standings_rows(cfg, season)
+	out["clinch_after"] = _clinched(cfg, season) or str(season.get("phase", "")) != Season.PHASE_REGULAR
+	for row in out["table_after"]:
+		if row["teamId"] == Campaign.PLAYER:
+			out["seed_after"] = int(row["seed"])
+	var next := Season.player_series(season, Campaign.PLAYER) if str(season.get("phase", "")) == Season.PHASE_PLAYOFFS else {}
+	out["in_playoffs_after"] = not next.is_empty()
+	if not next.is_empty():
+		var high: bool = next["highSeedId"] == Campaign.PLAYER
+		var opp := str(next["lowSeedId"] if high else next["highSeedId"])
+		var seed_of := func(id: String) -> int:
+			for row in out["table_after"]:
+				if row["teamId"] == id:
+					return int(row["seed"])
+			return 0
+		out["next_series"] = {"round": str(next.get("round", "")), "id": str(next.get("id", "")), "opp": opp, "home": high,
+			"best_of": int(next.get("bestOf", 0)), "seed_you": seed_of.call(Campaign.PLAYER), "seed_opp": seed_of.call(opp)}
 	if not bool(out["playoff"]):
 		return
 	for s in season.get("series", []):
@@ -1809,9 +1841,55 @@ func _league_end_after(out: Dictionary, doc: Dictionary, cfg: Dictionary) -> voi
 			out["series_after"] = LeagueSummary.series_record(s)
 			out["decided"] = str(s.get("winnerId", "")) != ""
 			out["series_won"] = str(s.get("winnerId", "")) == Campaign.PLAYER
+			out["series_game_no"] = int(s.get("highWins", 0)) + int(s.get("lowWins", 0))
 		elif str(s.get("round", "")) == "final" and out["round"] != "final":
 			if s["highSeedId"] == Campaign.PLAYER or s["lowSeedId"] == Campaign.PLAYER:
 				out["final_opp"] = LeagueSummary.opponent_in(s)
+
+
+## The standings as the match-end page draws them: [{teamId, w, l, seed}].
+func _standings_rows(cfg: Dictionary, season: Dictionary) -> Array:
+	var out := []
+	if not season.has("schedule"):
+		return out
+	for row in Standings.table(LeagueData.team_ids(cfg), season["schedule"], int(season.get("seed", 0))):
+		out.push_back({"teamId": str(row["teamId"]), "w": int(row["w"]), "l": int(row["l"]), "seed": int(row["seed"])})
+	return out
+
+
+## Has the player clinched a playoff spot (the regular season only)?
+func _clinched(cfg: Dictionary, season: Dictionary) -> bool:
+	if str(season.get("phase", "")) != Season.PHASE_REGULAR or not season.has("schedule"):
+		return false
+	var spots := int(season.get("playoffTeams", int(cfg.get("playoff_teams", 4))))
+	var c := Standings.compute_clinches(LeagueData.team_ids(cfg), season["schedule"], spots)
+	return bool(Dictionary(c.get(Campaign.PLAYER, {})).get("playoffs", false))
+
+
+## Season moments (design 39): roll a done season over (the MATCH pane's
+## START SEASON or the wrap-up's) and hand back the rolled doc; the wrap-up
+## is owed once per done season.
+func roll_season(id := "") -> Dictionary:
+	var d := league_doc(id)
+	var cfg := league_cfg(id)
+	if d.is_empty() or cfg.is_empty():
+		return {}
+	Campaign.start_next_season(d, cfg)
+	save_league_doc(d, id)
+	return d
+
+
+func wrap_pending(id := "") -> bool:
+	var d := league_doc(id)
+	return not d.is_empty() and Campaign.wrap_pending(d)
+
+
+func mark_wrap_seen(id := "") -> void:
+	var d := league_doc(id)
+	if d.is_empty():
+		return
+	Campaign.mark_wrap_seen(d)
+	save_league_doc(d, id)
 
 
 ## The title's two-step pick: mode, then area. A locked area is refused.

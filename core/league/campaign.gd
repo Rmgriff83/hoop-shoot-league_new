@@ -87,9 +87,60 @@ static func apply_live_result(doc: Dictionary, league: Dictionary, result: Dicti
 	highs["points"] = maxi(int(highs["points"]), int(you.get("score", 0)))
 	highs["swishes"] = maxi(int(highs["swishes"]), int(you.get("swishes", 0)))
 	highs["streak"] = maxi(int(highs["streak"]), int(you.get("bestStreak", 0)))
+	var best: Dictionary = s.get("best", {"streak": 0})
+	best["streak"] = maxi(int(best.get("streak", 0)), int(you.get("bestStreak", 0)))
+	s["best"] = best
 	PlayerRatings.update_self(doc["selfRatings"], {"makes": you.get("makes", 0), "swishes": you.get("swishes", 0), "shots": you.get("attempts", 0)})
 	doc["lastPlayedAt"] = now_ms
 	maybe_finish_season(doc, league)
+
+
+## This season's take (design 39: the wrap-up's SEASON EARNINGS): the
+## match's XP (title jump included) and tickets, kept on the season doc.
+static func note_earned(doc: Dictionary, xp: int, tickets: int) -> void:
+	var s: Dictionary = doc["season"]
+	var e: Dictionary = s.get("earned", {"xp": 0, "tickets": 0})
+	e["xp"] = int(e.get("xp", 0)) + xp
+	e["tickets"] = int(e.get("tickets", 0)) + tickets
+	s["earned"] = e
+
+
+static func earned(doc: Dictionary) -> Dictionary:
+	var e: Dictionary = Dictionary(doc.get("season", {})).get("earned", {})
+	return {"xp": int(e.get("xp", 0)), "tickets": int(e.get("tickets", 0))}
+
+
+## The player's record against every opponent this season, regular season
+## and playoffs: {opp_id: {w, l}} (opponents never met are absent).
+static func head_to_head_all(season: Dictionary, player_id: String) -> Dictionary:
+	var out := {}
+	var games: Array = Array(season.get("schedule", [])).duplicate()
+	for series in season.get("series", []):
+		if series["highSeedId"] == player_id or series["lowSeedId"] == player_id:
+			games.append_array(series.get("games", []))
+	for g in games:
+		if not g.get("played", false):
+			continue
+		if g["homeId"] != player_id and g["awayId"] != player_id:
+			continue
+		var opp: String = str(g["awayId"] if g["homeId"] == player_id else g["homeId"])
+		var r: Dictionary = out.get(opp, {"w": 0, "l": 0})
+		if Standings.winner_of(g) == player_id:
+			r["w"] += 1
+		else:
+			r["l"] += 1
+		out[opp] = r
+	return out
+
+
+## The wrap-up (design 39c/e/f) is owed once a season is done, until shown.
+static func wrap_pending(doc: Dictionary) -> bool:
+	var s: Dictionary = doc.get("season", {})
+	return s.get("phase", "") == Season.PHASE_DONE and not bool(s.get("wrapSeen", false))
+
+
+static func mark_wrap_seen(doc: Dictionary) -> void:
+	doc["season"]["wrapSeen"] = true
 
 
 ## Sim the current regular-season day (the player's game from self-ratings),
@@ -141,8 +192,17 @@ static func season_summary(doc: Dictionary, league: Dictionary) -> Dictionary:
 				playoff_result = "champion" if series["winnerId"] == PLAYER else "runner_up"
 			elif playoff_result == "missed":
 				playoff_result = "semifinal"
+	# The final's loser and score (design 39: CHAMPION · 2-1 / RUNNER-UP).
+	var runner_up := ""
+	var final_score := [0, 0]
+	var final_ := Playoffs.find(s["series"], "final")
+	if not final_.is_empty() and str(final_.get("winnerId", "")) != "":
+		var champ_high: bool = final_["winnerId"] == final_["highSeedId"]
+		runner_up = str(final_["lowSeedId"] if champ_high else final_["highSeedId"])
+		final_score = [int(final_["highWins"]), int(final_["lowWins"])] if champ_high else [int(final_["lowWins"]), int(final_["highWins"])]
 	return {"year": int(s["year"]), "w": w, "l": l, "finish": finish, "playoffResult": playoff_result,
-		"championId": s["championId"]}
+		"championId": s["championId"], "runnerUpId": runner_up, "finalScore": final_score,
+		"bestStreak": int(Dictionary(s.get("best", {})).get("streak", 0)), "h2h": head_to_head_all(s, PLAYER)}
 
 
 ## When the season is done, fold it into the career and every shooter's record.
@@ -168,10 +228,20 @@ static func maybe_finish_season(doc: Dictionary, league: Dictionary) -> void:
 	s["folded"] = true
 
 
+## Roll to the next season. The old season's summary (with its earnings)
+## stays on the doc as `lastSeason` for the NEW SEASON page (design 39d:
+## "YOU WENT 1-2 VS THEM", DEFENDING CHAMPS, the struck-out record) and on
+## the career's entry.
 static func start_next_season(doc: Dictionary, league: Dictionary) -> void:
 	var s: Dictionary = doc["season"]
 	if s["phase"] != Season.PHASE_DONE:
 		return
+	var last := season_summary(doc, league)
+	last["earned"] = earned(doc)
+	doc["lastSeason"] = last
+	var seasons: Array = doc["career"]["seasons"]
+	if not seasons.is_empty() and int(Dictionary(seasons[-1]).get("year", 0)) == int(s["year"]):
+		seasons[-1]["earned"] = earned(doc)
 	doc["year"] = int(doc["year"]) + 1
 	doc["season"] = Season.create(league, LeagueData.team_ids(league), int(doc["year"]),
 		QuickSim.seed_from([s["seed"], "next", doc["year"]]))
