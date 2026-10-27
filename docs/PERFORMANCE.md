@@ -217,7 +217,7 @@ mesh name plus the ground-plane rule — any mesh thinner than 15 cm and wider
 than 4 m — applied in `_build_arena_model`; `apply_caster_rules()` returns the
 count, `caster_count()` what still casts), the **A/B levers**
 (`CourtGeometry.ab`, QA only: `--qa-perf-ab=casters,no_shadows,shadow1024,
-no_fill,fill_light,no_omni,no_sky,no_fog,scale85`, and `--qa-ab=<levers>` on
+no_fill,fill_light,no_omni,no_sky,no_fog,scale85,no_sway` (the park's tree sway off), and `--qa-ab=<levers>` on
 any snap pass for the look check), the **sim column** (`sim` = the rules tick
 alone), the **spike tags** (what was on screen in a spiking frame, `first:x` on
 a debut) and `tools/arena_meshes.gd` (an arena's casters, tris and distances).

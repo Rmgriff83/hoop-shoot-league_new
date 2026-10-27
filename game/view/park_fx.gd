@@ -98,7 +98,8 @@ func _build_trees(path: String) -> void:
 	var doc = JSON.parse_string(FileAccess.get_file_as_string(path))
 	if not (doc is Dictionary) or not doc.has("rows"):
 		return
-	var swaying := sway_rows(doc["rows"])
+	# --qa-perf-ab=no_sway (docs/PERFORMANCE.md): every tree still, for the A/B.
+	var swaying := sway_rows(doc["rows"]) if not CourtGeometry.ab.has("no_sway") else []
 	_swayers = swaying.size()
 	var by_model := {}
 	for row in doc["rows"]:
