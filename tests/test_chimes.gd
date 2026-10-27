@@ -78,7 +78,12 @@ func run(t) -> void:
 	if sfx != null:
 		t.ok(sfx.has_method("streak_coin"), "Sfx exposes streak_coin()")
 	t.eq(str(urls.get("https://freesound.org/people/gavynator/sounds/691965/", {}).get("author", "")), "gavynator", "the coin is credited")
-	t.ok(screen.find("Sfx.swish_register()") < screen.find("elif lit and tier > 1:\n\t\t\tSfx.streak_coin()"), "the coin rings on a lit, extra-points make that is not a swish; a swish keeps the till")
+	t.ok(screen.find("Sfx.swish_register()") < screen.find("elif lit and tier > 1:\n\t\t\tSfx.streak_coins(tier - 1)"), "a coin per extra point on a lit make that is not a swish; a swish keeps the till")
+	if sfx != null:
+		sfx.streak_coins(3)
+		t.eq(sfx.last_coin_burst(), 3, "a 4-point make rings three coins")
+		sfx.streak_coins(0)
+		t.eq(sfx.last_coin_burst(), 0, "no extra, no coins")
 	t.eq(StreakRules.base_points(StreakRules.FIRE_AT), 1, "(at FIRE_AT itself a make pays 1: no coin until the first tier)")
 	t.ok(StreakRules.base_points(int(StreakRules.TIERS[0][0])) > 1, "…the first tier pays extra")
 	# Losing a match (Ross, 2026-10-26): tommasomotteran's defeat stinger behind

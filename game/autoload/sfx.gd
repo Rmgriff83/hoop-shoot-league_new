@@ -540,9 +540,27 @@ func swish_register() -> void:
 
 
 ## A make that pays extra on a lit streak (tier 2+, not a swish — the till
-## takes a swish): gavynator's coin collect (Ross, 2026-10-26, data/credits.json).
+## takes a swish): gavynator's coin collect (Ross, 2026-10-26, data/credits.json),
+## once per extra point, COIN_GAP_S apart (a 3-point make rings twice).
+const COIN_GAP_S := 0.13
+var _last_coin_burst := 0
+
+
 func streak_coin() -> void:
 	_play("streak_coin", -3.0)
+
+
+func streak_coins(extra: int) -> void:
+	_last_coin_burst = maxi(extra, 0)
+	for i in maxi(extra, 0):
+		if i == 0 or not is_inside_tree():
+			streak_coin()
+		else:
+			get_tree().create_timer(COIN_GAP_S * i).timeout.connect(streak_coin)
+
+
+func last_coin_burst() -> int:
+	return _last_coin_burst
 
 
 ## The tickets gained on an end page (Ross, 2026-10-26): breviceps's card

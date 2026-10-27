@@ -492,7 +492,7 @@ sounds. Levelling up rings heyheytheree's cozy coin (`assets/audio/level_up.wav`
 (`assets/audio/swish_register.wav`: trimmed to the ka-ching, sped up 1.3×,
 `Sfx.swish_register` on the SWISH branch of the scoring); a make paid extra on a
 lit streak (`StreakRules.base_points` > 1) that is not a swish plays gavynator's
-coin collect (`assets/audio/streak_coin.wav`, `Sfx.streak_coin`). The tickets
+coin collect (`assets/audio/streak_coin.wav`, `Sfx.streak_coins(tier − 1)`: one coin per extra point, 0.13 s apart). The tickets
 gained on either end page ring breviceps's card shuffle
 (`assets/audio/ticket_shuffle.wav`, `Sfx.ticket_shuffle`) once, as the
 ticket stream's flyers launch (`TicketStream.step`). `tests/test_chimes.gd`.

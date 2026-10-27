@@ -1335,7 +1335,7 @@ func _on_outcome(outcome: Dictionary, buzzer_beater: bool) -> void:
 		if is_swish:
 			Sfx.swish_register()   # the till rings on a clean swish (Ross, 2026-10-26)
 		elif lit and tier > 1:
-			Sfx.streak_coin()   # on fire and paid extra: the coin (Ross, 2026-10-26)
+			Sfx.streak_coins(tier - 1)   # on fire and paid extra: a coin per extra point (Ross, 2026-10-26)
 		if buzzer_beater:
 			_court.info.flash("BUZZER +%d" % pts, 3, accent)
 		elif is_swish:
