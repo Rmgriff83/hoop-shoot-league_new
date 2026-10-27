@@ -48,11 +48,12 @@ var rim_log_impact: float = 0.4
 ## Cold streak: the rim is iced over (ShotSim catches would-be makes). Off by
 ## default so every preset and the golden fixtures are unaffected.
 var ice := false
-## Card MAGNET (docs/CARDS.md): a miss that would reach the rim within
-## `magnet_pull_m` of its centre is zapped in (ShotSim decides at release).
+## Card MAGNET (docs/CARDS.md): a miss whose free arc would land within
+## `magnet_pull_m` of the rim centre — the same ring short, long or to the
+## side — is zapped in (ShotSim decides at release).
 ## Off by default, so no preset or fixture sees it.
 var magnet := false
-var magnet_pull_m: float = 0.35
+var magnet_pull_m: float = 0.5
 ## Net material. Regulation / arcade / beach keep SimConstants exactly (the
 ## golden fixtures run the nylon numbers); the city's CHAIN net is lighter on
 ## the ball and stiffer at the wall — see CHAIN_NET_DRAG.

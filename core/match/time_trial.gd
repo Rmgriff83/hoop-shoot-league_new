@@ -93,7 +93,7 @@ var _fire_loan := 0
 ## not grown); a real miss still breaks it. Ice ends the window; a miss does not.
 var magnet_card := false
 var magnet_until := -1.0
-var magnet_pull_m := 0.35
+var magnet_pull_m := 0.5
 
 # Each flight: { "state": BallState, "seen_events": int, "scored": bool }
 var _flights: Array[Dictionary] = []
@@ -170,10 +170,11 @@ func _end_card_fire(reason: String) -> void:
 
 
 ## Hang the magnet over the rim from a power-up card for `seconds` of the
-## trial clock: a miss within `pull_m` of the rim centre is zapped in
+## trial clock: a miss whose free arc lands within `pull_m` of the rim centre
+## (any direction) is zapped in
 ## (ShotSim decides at release). Refused during the countdown, while iced,
 ## while already magnetised. Emits magnet_on.
-func magnetize_rim(seconds: float, pull_m := 0.35, reason := "card") -> bool:
+func magnetize_rim(seconds: float, pull_m := 0.5, reason := "card") -> bool:
 	if magnet_card or iced or phase != PHASE_RUNNING:
 		return false
 	magnet_card = true

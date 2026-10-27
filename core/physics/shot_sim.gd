@@ -28,9 +28,12 @@ const ICE_SEAT_H := 0.07
 const ICE_POP_VX := -1.6
 const ICE_POP_VY := 3.0
 ## Card MAGNET (design "Magnet Card FX" 38b, 2026-10-23): decided at release.
-## The shot is replayed once without the magnet; if it misses and would reach
-## the rim (iron, board or the rim plane) within `geo.magnet_pull_m` of the
-## rim centre, the bolt strikes at MAGNET_GRAB_FRAC of that time and drags
+## The shot is replayed once without the magnet; if it misses and its free
+## arc would land (cross rim height on the way down) within
+## `geo.magnet_pull_m` of the rim centre — a full circle, short, long or to
+## the side (2026-10-26; the old first-contact distance favoured board
+## misses) — the bolt strikes at MAGNET_GRAB_FRAC of the time the unpulled
+## ball first reaches the rim and drags
 ## the ball in MAGNET_JERKS stepped jerks to a hover just above the rim
 ## (slightly off-centre: never a swish), holds it a beat, then releases it
 ## straight down so the normal stepper fires "enter" and made. A ball that
@@ -94,17 +97,39 @@ static func _create_shot_raw(launch: Dictionary, geo: SimGeometry = null) -> Bal
 
 
 ## The magnet's call, made at release: replay the launch without the magnet
-## (the geometry of this moment; the pull itself reads the live geo) and find
-## where the unpulled ball first reaches the rim. A make is left alone.
+## (the geometry of this moment; the pull itself reads the live geo). A make
+## is left alone. A miss is pulled when the free arc lands within
+## `magnet_pull_m` of the rim centre (`free_landing`: the same ring in every
+## direction); the bolt strikes before the unpulled ball's first iron/board.
 static func _magnet_predict(s: BallState, launch: Dictionary) -> void:
 	var geo := s.geo
 	var p := run_shot(launch, true, geo.with_magnet(false))
 	if p.made:
 		return
-	var reach := first_reach(p)
-	if float(reach["t"]) < 0.0 or float(reach["hd"]) > geo.magnet_pull_m:
+	var land := free_landing(launch, geo)
+	if float(land["t"]) < 0.0 or float(land["hd"]) > geo.magnet_pull_m:
 		return
-	s.magnet_grab_t = float(reach["t"]) * MAGNET_GRAB_FRAC
+	var reach := first_reach(p)
+	var t_hit: float = float(reach["t"]) if float(reach["t"]) >= 0.0 else float(land["t"])
+	s.magnet_grab_t = minf(t_hit, float(land["t"])) * MAGNET_GRAB_FRAC
+
+
+## Where the launch's free arc (no collisions) crosses rim height on the way
+## down and how far its centre is from the rim axis then: {t, hd}, both -1
+## when the arc never gets up to the rim. The magnet's "close miss" measure.
+static func free_landing(launch: Dictionary, geo: SimGeometry = null) -> Dictionary:
+	var s := _create_shot_raw(launch, geo)
+	var g := s.geo
+	var vy := s.vel.y
+	var disc := vy * vy + 2.0 * SimConstants.G * (s.pos.y - g.hoop_y)
+	if disc < 0.0:
+		return {"t": -1.0, "hd": -1.0}
+	var t := (vy + sqrt(disc)) / SimConstants.G
+	if t <= 0.0:
+		return {"t": -1.0, "hd": -1.0}
+	var x := s.pos.x + s.vel.x * t
+	var z := s.pos.z + s.vel.z * t
+	return {"t": t, "hd": _horiz_dist_to_axis(x, z, g.hoop_x, g.hoop_z)}
 
 
 ## When a (finished) shot first reached the rim — iron, board or the rim

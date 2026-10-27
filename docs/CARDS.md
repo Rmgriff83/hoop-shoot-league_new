@@ -244,20 +244,27 @@ changed with it:
 
 - **The pull is decided at release.** With `SimGeometry.magnet` on,
   `ShotSim.create_shot` replays the launch once without the magnet
-  (`_magnet_predict`, deterministic, ~one extra sim per shot) and asks
-  `first_reach`: when the unpulled ball first reaches the rim — iron, board
-  or the downward crossing of the rim plane, whichever is first — and how far
-  its centre is from the rim axis then. A **make is left alone** (a swish
-  stays a swish, a rattle-in is the same shot). A **miss within
-  `effect.pull_m`** (0.35 m, data) is pulled: at 2/3 of that time the bolt
-  strikes (`magnet_pull` event, before any iron), the ball is dragged in 4
-  stepped jerks over 0.36 s to a hover 20 cm above the rim (3 cm toward the
+  (`_magnet_predict`, deterministic, ~one extra sim per shot). A **make is
+  left alone** (a swish stays a swish, a rattle-in is the same shot). A miss
+  is measured by `ShotSim.free_landing`: where the launch's collision-free
+  arc would cross rim height on the way down, and how far that point is
+  from the rim centre — **a full circle**, the same ring short, long or to
+  the side (Ross, 2026-10-26). A **miss landing within `effect.pull_m`**
+  (0.5 m from the centre, data — about one ball-width beyond the iron) is
+  pulled: at 2/3 of the time the unpulled ball would first reach the rim
+  (`first_reach`: iron, board or the rim plane) the bolt strikes
+  (`magnet_pull` event, before any iron), the ball is dragged in 4 stepped
+  jerks over 0.36 s to a hover 20 cm above the rim (3 cm toward the
   shooter, 2 cm aside), held 0.12 s, then released straight down so the
   normal stepper fires `enter` and the make. `ShotClassify` downgrades a
   pulled entry to MAKE: **never a swish, 1 point** (+ the streak tier). A
-  wide miss or an airball (never reaches rim height) is untouched. The
-  prediction uses the geometry of the moment; the drag reads the live geo,
-  so the moving board keeps the ball.
+  wide miss or an airball (never reaches rim height) is untouched, and so
+  is a hard board miss whose arc would land past the ring — before
+  2026-10-26 the measure was the distance at first contact, which sat at
+  ~0.26 m for every board hit (the board is 0.38 m behind the centre) and
+  ~0.35 m for a front-iron clank, so long misses were always pulled and
+  short ones almost never. The prediction uses the geometry of the moment;
+  the drag reads the live geo, so the moving board keeps the ball.
 - **The streak freezes.** A shot released under the magnet (`flight.magnet`)
   that scores pays `StreakRules.points_for` at the streak you already had
   (`outcome.streak_frozen`) and does not grow it; the counter you had is

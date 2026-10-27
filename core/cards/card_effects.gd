@@ -18,10 +18,10 @@ static func apply(kind: String, params: Dictionary, heat: Heat, target: String) 
 			# streak from FIRE_AT; a miss or the clock puts it out.
 			return side.light_rim(float(params.get("seconds", 0.0)), "card")
 		"magnet":
-			# A magnet over the target's own rim for `seconds`: a miss within
-			# `pull_m` of the rim centre is zapped in. Only the clock (or ice)
+			# A magnet over the target's own rim for `seconds`: a miss whose free
+			# arc lands within `pull_m` of the rim centre is zapped in. Only the clock (or ice)
 			# ends it; makes under it never build the streak.
-			return side.magnetize_rim(float(params.get("seconds", 0.0)), float(params.get("pull_m", 0.35)), "card")
+			return side.magnetize_rim(float(params.get("seconds", 0.0)), float(params.get("pull_m", 0.5)), "card")
 		_:
 			return false
 

@@ -145,15 +145,16 @@ func _endless_trial(t) -> void:
 	t.close(tt.geo.hoop_x, SimGeometry.CITY_DIST, 1e-12, "city hoop stayed put")
 
 
-## The Magnet card on the city rim: a miss that would reach the rim within
-## pull_m of its centre is zapped in — a 1-point make through one
+## The Magnet card on the city rim: a miss whose free arc would land within
+## pull_m of the rim centre — the same ring short, long or to the side
+## (2026-10-26) — is zapped in — a 1-point make through one
 ## `magnet_pull` before the entry, never a swish; a clean swish stays a swish;
 ## a make left alone is the same shot; a wide miss and an airball are
 ## untouched; the ice rule wins; nothing tunnels; all of it deterministic.
 func _magnet(t) -> void:
 	var g := SimGeometry.city()
-	var m := g.with_magnet(true, 0.35)
-	t.ok(m.magnet and not g.magnet and m.magnet_pull_m == 0.35, "with_magnet clones the city geometry with the threshold")
+	var m := g.with_magnet(true, 0.5)
+	t.ok(m.magnet and not g.magnet and m.magnet_pull_m == 0.5, "with_magnet clones the city geometry with the threshold")
 	var pulled := 0
 	var swishes := 0
 	var wide := 0
@@ -165,13 +166,14 @@ func _magnet(t) -> void:
 			var p := ShotSim.run_shot(launch, false, g)
 			var plain := ShotClassify.classify_shot(p)
 			var reach := ShotSim.first_reach(p)
+			var land := ShotSim.free_landing(launch, g)
 			var out := ShotSim.simulate_shot(launch, false, m)
 			if plain["made"]:
 				t.eq(JSON.stringify(out), JSON.stringify(plain), "a make at %d° x%.2f is left alone (%s)" % [a, 1.0 + 0.02 * k, plain["type"]])
 				if plain["type"] == ShotClassify.SWISH:
 					swishes += 1
 					t.ok(int(out["points"]) == 2 and not out["magnet"], "a clean swish is still a swish under the magnet")
-			elif float(reach["t"]) >= 0.0 and float(reach["hd"]) <= 0.35:
+			elif float(land["t"]) >= 0.0 and float(land["hd"]) <= 0.5:
 				pulled += 1
 				pen = maxf(pen, out["max_penetration"])
 				var kinds := []
@@ -180,14 +182,14 @@ func _magnet(t) -> void:
 				var pull_i: int = kinds.find("magnet_pull")
 				var enter_i: int = kinds.rfind("enter")
 				t.ok(out["made"] and out["magnet"] and int(out["points"]) == 1 and out["type"] != ShotClassify.SWISH,
-					"a near miss (%.2f m) at %d° x%.2f is zapped in for 1 (%s)" % [reach["hd"], a, 1.0 + 0.02 * k, out["type"]])
+					"a near miss (lands %.2f m off) at %d° x%.2f is zapped in for 1 (%s)" % [land["hd"], a, 1.0 + 0.02 * k, out["type"]])
 				t.ok(pull_i == 0 and kinds.count("magnet_pull") == 1 and enter_i > pull_i, "the bolt first (before any iron), then the entry")
-				t.ok(float(out["events"][0]["t"]) < float(reach["t"]), "grabbed before the ball reached the rim")
+				t.ok(float(reach["t"]) < 0.0 or float(out["events"][0]["t"]) < float(reach["t"]), "grabbed before the ball reached the rim")
 				if pulled == 1:
 					t.eq(JSON.stringify(out), JSON.stringify(ShotSim.simulate_shot(launch, false, m)), "the pull is deterministic")
 			else:
 				wide += 1
-				t.eq(JSON.stringify(out), JSON.stringify(plain), "a wide miss (%.2f m) at %d° x%.2f is untouched" % [reach["hd"], a, 1.0 + 0.02 * k])
+				t.eq(JSON.stringify(out), JSON.stringify(plain), "a wide miss (lands %.2f m off) at %d° x%.2f is untouched" % [land["hd"], a, 1.0 + 0.02 * k])
 	t.ok(pulled >= 3, "the sweep found near misses to pull (%d)" % pulled)
 	t.ok(swishes >= 1, "and clean swishes to leave alone (%d)" % swishes)
 	t.ok(wide >= 1, "and wide misses to ignore (%d)" % wide)
@@ -204,7 +206,8 @@ func _magnet(t) -> void:
 		for k in range(-8, 9):
 			if ShotSim.simulate_shot({"angle_deg": float(a), "speed": ideal * (1.0 + 0.02 * k)}, false, tight)["magnet"]:
 				tight_pulled += 1
-	t.ok(tight_pulled < pulled, "a 5 cm threshold pulls fewer than 35 cm (%d < %d)" % [tight_pulled, pulled])
+	t.ok(tight_pulled < pulled, "a 5 cm threshold pulls fewer than 50 cm (%d < %d)" % [tight_pulled, pulled])
+	_magnet_ring(t, g, m)
 	# The ice rule wins: iced and magnetised, nothing is pulled.
 	var both := m.with_ice(true)
 	var caught := 0
@@ -216,3 +219,51 @@ func _magnet(t) -> void:
 			if out["type"] == ShotClassify.ICE_CAUGHT:
 				caught += 1
 	t.ok(caught >= 1, "the ice caught touched balls instead (%d)" % caught)
+
+
+## The ring is a full circle (Ross, 2026-10-26: his short near misses were
+## never pulled while board misses always were): a short miss landing a
+## ball-width in front of the iron is pulled, a hard board miss whose arc
+## lands well past the rim is not, and a miss to the side counts the same.
+func _magnet_ring(t, g: SimGeometry, m: SimGeometry) -> void:
+	var ideal: float = Ballistics.speed_for_angle(50.0, g.hoop_x, g.rise)
+	# An under-speed step that misses with its arc landing outside the iron
+	# but inside the ring (the exact step depends on the rim distance).
+	var short := {}
+	var sl := {}
+	var sp: BallState = null
+	for k in range(1, 10):
+		var cand := {"angle_deg": 50.0, "speed": ideal * (1.0 - 0.01 * k)}
+		var cp := ShotSim.run_shot(cand, false, g)
+		var cl := ShotSim.free_landing(cand, g)
+		if not cp.made and float(cl["hd"]) > SimConstants.R_RIM and float(cl["hd"]) <= 0.5:
+			short = cand
+			sl = ShotSim.free_landing(cand, g)
+			sp = cp
+			break
+	t.ok(sp != null and float(sl["t"]) >= 0.0 and float(sl["hd"]) > SimConstants.R_RIM and float(sl["hd"]) <= 0.5,
+		"50° x%.2f is a short miss landing %.2f m from the centre" % [float(short.get("speed", 0.0)) / ideal, float(sl.get("hd", -1.0))])
+	var so := ShotSim.simulate_shot(short, false, m)
+	t.ok(so["made"] and so["magnet"], "…and the magnet pulls it in")
+	var long := {"angle_deg": 50.0, "speed": ideal * 1.16}
+	var ll := ShotSim.free_landing(long, g)
+	var lp := ShotSim.run_shot(long, false, g)
+	var hit_board := false
+	for ev in lp.events:
+		if ev["kind"] == Colliders.KIND_BOARD:
+			hit_board = true
+			break
+	t.ok(not lp.made and hit_board and float(ll["hd"]) > 0.5,
+		"50° x1.16 smacks the board and would land %.2f m past (a real miss)" % ll["hd"])
+	var lo := ShotSim.simulate_shot(long, false, m)
+	t.ok(not lo["made"] and not lo["magnet"], "…and the magnet leaves it alone")
+	t.ok(float(ShotSim.first_reach(lp)["hd"]) < 0.5, "(its first contact was closer than the ring — the old rule would have pulled it)")
+	# To the side: the ideal arc pushed 0.4 m across lands 0.4 m from the centre.
+	var tl := float(ShotSim.free_landing({"angle_deg": 50.0, "speed": ideal}, g)["t"])
+	var side := {"angle_deg": 50.0, "speed": ideal, "vz": 0.4 / tl}
+	var dl := ShotSim.free_landing(side, g)
+	t.close(float(dl["hd"]), 0.4, 0.01, "the side launch lands 0.4 m across")
+	var sdp := ShotSim.run_shot(side, false, g)
+	t.ok(not sdp.made, "…and misses without the magnet")
+	var sdo := ShotSim.simulate_shot(side, false, m)
+	t.ok(sdo["made"] and sdo["magnet"], "…and the magnet pulls it in: the ring is direction-blind")

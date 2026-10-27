@@ -330,8 +330,8 @@ func _run_heat() -> void:
 	get_tree().quit(0)
 
 
-## A launch the magnet pulls: a miss that reaches the rim within 0.35 m of
-## its centre on this geometry (the sweep the tests use).
+## A launch the magnet pulls: a miss whose free arc lands within 0.5 m of
+## the rim centre on this geometry (the sweep the tests use).
 func _near_miss_launch(g: SimGeometry) -> Dictionary:
 	var plain := g.with_magnet(false)
 	for a in range(48, 57, 2):
@@ -339,8 +339,8 @@ func _near_miss_launch(g: SimGeometry) -> Dictionary:
 		for k in range(-8, 9):
 			var launch := {"angle_deg": float(a), "speed": ideal * (1.0 + 0.02 * k)}
 			var p := ShotSim.run_shot(launch, true, plain)
-			var reach := ShotSim.first_reach(p)
-			if not p.made and float(reach["t"]) >= 0.0 and float(reach["hd"]) <= 0.35:
+			var land := ShotSim.free_landing(launch, plain)
+			if not p.made and float(land["t"]) >= 0.0 and float(land["hd"]) <= 0.5:
 				return launch
 	return {}
 

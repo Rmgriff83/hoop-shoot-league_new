@@ -21,7 +21,7 @@ func run(t) -> void:
 	t.eq(Progression.card_level(CardDefs.get_card("fire7")), 3, "Heat Check is level 3")
 	t.eq(Progression.card_level(CardDefs.get_card("magnet6")), 5, "Magnet is level 5 (opens with the city)")
 	t.eq(CardDefs.target_of("magnet6"), "self", "the magnet is a self card")
-	t.close(float(CardDefs.get_card("magnet6")["effect"]["pull_m"]), 0.35, 1e-9, "the pull threshold is data")
+	t.close(float(CardDefs.get_card("magnet6")["effect"]["pull_m"]), 0.5, 1e-9, "the pull threshold is data")
 	_run_magnet(t)
 	_run_art(t)
 	# The save doc: one bucket per league (docs/ECONOMY.md).
@@ -328,7 +328,7 @@ func _run_magnet(t) -> void:
 	t.ok(h.can_play(Heat.PLAYER, "magnet6"), "magnet playable once running")
 	t.ok(h.play_card(Heat.PLAYER, "magnet6"), "magnet applied to the player")
 	t.ok(h.player.magnet_card and h.player.geo.magnet, "the player's rim is magnetised")
-	t.close(h.player.geo.magnet_pull_m, 0.35, 1e-9, "…with the card's threshold")
+	t.close(h.player.geo.magnet_pull_m, 0.5, 1e-9, "…with the card's threshold")
 	t.ok(not h.ai.magnet_card, "the AI's is not")
 	t.eq(h.hands[Heat.PLAYER].size(), 0, "the card is spent")
 	t.ok(not h.can_play(Heat.PLAYER, "magnet6"), "cannot play it twice")

@@ -479,11 +479,11 @@ func run_endless(t) -> void:
 func _card_magnet(t) -> void:
 	var g := SimGeometry.city()
 	var tt := TimeTrial.new(g)
-	t.ok(not tt.magnetize_rim(6.0, 0.35), "no magnet during the countdown")
+	t.ok(not tt.magnetize_rim(6.0, 0.5), "no magnet during the countdown")
 	_tick_seconds(tt, TimeTrial.COUNTDOWN_SECONDS + 0.05)
 	tt.drain_events()
-	t.ok(tt.magnetize_rim(6.0, 0.35), "the card magnetises the rim")
-	t.ok(tt.magnet_card and tt.geo.magnet and tt.geo.magnet_pull_m == 0.35, "magnet on, on the live geometry, with the threshold")
+	t.ok(tt.magnetize_rim(6.0, 0.5), "the card magnetises the rim")
+	t.ok(tt.magnet_card and tt.geo.magnet and tt.geo.magnet_pull_m == 0.5, "magnet on, on the live geometry, with the threshold")
 	t.close(tt.magnet_left(), 6.0, 0.01, "six seconds on the card")
 	t.ok(_has_kind(tt.drain_events(), "magnet_on"), "magnet_on event")
 	t.ok(not tt.magnetize_rim(6.0), "no second card while it hangs")
@@ -536,17 +536,17 @@ func _find_launch(g: SimGeometry, want: String) -> Dictionary:
 		for k in range(-8, 9):
 			var launch := {"angle_deg": float(a), "speed": ideal * (1.0 + 0.02 * k)}
 			var p := ShotSim.run_shot(launch, false, g)
-			var reach := ShotSim.first_reach(p)
+			var land := ShotSim.free_landing(launch, g)
 			var type := str(ShotClassify.classify_shot(p)["type"])
 			match want:
 				"swish":
 					if type == ShotClassify.SWISH:
 						return launch
 				"near":
-					if not p.made and float(reach["t"]) >= 0.0 and float(reach["hd"]) <= 0.35:
+					if not p.made and float(land["t"]) >= 0.0 and float(land["hd"]) <= 0.5:
 						return launch
 				"wide":
-					if not p.made and (float(reach["t"]) < 0.0 or float(reach["hd"]) > 0.35):
+					if not p.made and (float(land["t"]) < 0.0 or float(land["hd"]) > 0.5):
 						return launch
 	return {}
 
@@ -573,7 +573,7 @@ func _magnet_streak(t, g: SimGeometry) -> void:
 	_shoot(tt, swish)
 	_shoot(tt, swish)
 	t.eq(tt.streak, 2, "two makes: streak 2")
-	t.ok(tt.magnetize_rim(30.0, 0.35), "play the magnet at streak 2")
+	t.ok(tt.magnetize_rim(30.0, 0.5), "play the magnet at streak 2")
 	tt.drain_events()
 	var o1 := _shoot(tt, swish)
 	t.ok(bool(o1["made"]) and o1["type"] == ShotClassify.SWISH and not o1["magnet"], "a swish under the magnet still swishes")
@@ -598,7 +598,7 @@ func _magnet_streak(t, g: SimGeometry) -> void:
 	_tick_seconds(tt2, TimeTrial.COUNTDOWN_SECONDS + 0.05)
 	_shoot(tt2, swish)
 	_shoot(tt2, swish)
-	t.ok(tt2.magnetize_rim(1.0, 0.35), "a short magnet at streak 2")
+	t.ok(tt2.magnetize_rim(1.0, 0.5), "a short magnet at streak 2")
 	_shoot(tt2, swish)
 	_tick_seconds(tt2, 1.5)
 	t.ok(not tt2.magnet_card, "the window closed")
@@ -611,7 +611,7 @@ func _magnet_streak(t, g: SimGeometry) -> void:
 	_tick_seconds(tt3, TimeTrial.COUNTDOWN_SECONDS + 0.05)
 	t.ok(tt3.light_rim(30.0), "fire lit")
 	t.eq(tt3.streak, StreakRules.FIRE_AT, "the fire lends FIRE_AT")
-	t.ok(tt3.magnetize_rim(30.0, 0.35), "then the magnet")
+	t.ok(tt3.magnetize_rim(30.0, 0.5), "then the magnet")
 	var o5 := _shoot(tt3, swish)
 	t.eq(int(o5["points"]), StreakRules.points_for(StreakRules.FIRE_AT, true), "a make pays at the fire's tier")
 	t.eq(tt3.streak, StreakRules.FIRE_AT, "…but the streak does not climb under the magnet")

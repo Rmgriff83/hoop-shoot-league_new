@@ -70,7 +70,7 @@
       "effect": {
         "kind": "magnet",
         "seconds": 6,
-        "pull_m": 0.35
+        "pull_m": 0.5
       },
       "art": "res://assets/textures/cards/card_magnet6.png",
       "fx": {
