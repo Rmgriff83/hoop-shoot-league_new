@@ -76,7 +76,7 @@ var _last_click := -1
 
 func click() -> void:
 	_last_click = _pick(CLICKS, _last_click)
-	_play("click_%d" % _last_click, -8.0)   # Ross, 2026-10-26: a bit more down than -2
+	_play("click_%d" % _last_click, -14.0)   # Ross, 2026-10-26: down from -2, then -8
 
 
 func last_click() -> int:
