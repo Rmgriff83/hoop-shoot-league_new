@@ -56,6 +56,11 @@ draws / triangles):
     1024 vs 2048 shadow atlas                 ~0
     75k triangles vs 14k                      ~0.5 ms
     area fx scripts (birds, pigeons, snow…)   script 1–2 ms a frame in a trial — fine
+    tree sway in the vertex shader (park: the 7 trees in the key view,
+      game/court/park_tree_sway.gdshader, 2026-10-26)  a few ALU per vertex,
+      no script, no buffer upload; expected well under 0.1 ms — not yet read
+      on the phone (run tools/perf_ledger.gd on the park when it is back).
+      Never sway by moving instance transforms from a script.
 
 
 3. THE RULES FOR A NEW AREA'S ASSETS

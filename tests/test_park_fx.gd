@@ -68,7 +68,8 @@ func run(t) -> void:
 	var fx := ParkFx.new()
 	t.ok(fx.setup(inst, arena), "ParkFx dresses the park")
 	t.eq(fx.instance_count(), rows.size(), "every layout row is instanced")
-	t.ok(fx.draw_count() >= models.size() and fx.draw_count() <= models.size() * 6, "a draw per model surface and near/far split (%d draws for %d models)" % [fx.draw_count(), models.size()])
+	t.ok(fx.draw_count() >= models.size() and fx.draw_count() <= models.size() * 8, "a draw per model surface and near/far, sway/still split (%d draws for %d models)" % [fx.draw_count(), models.size()])
+	_sway(t, fx, inst, rows)
 	t.ok(fx.shadow_caster_count() >= 2 and fx.shadow_caster_count() <= 5, "only the trees by the court cast shadows (%d)" % fx.shadow_caster_count())
 	var split_ok := true
 	for mmi in inst.find_children("*", "MultiMeshInstance3D", true, false):
@@ -123,3 +124,61 @@ func run(t) -> void:
 	inst.free()
 	# Snow is visual only: the park geometry has no weather.
 	t.ok(SimGeometry.park().props.size() == 1, "the sim knows one drift and no flakes")
+
+
+## The sway (Ross, 2026-10-26): a third of the trees, the ones in the key
+## camera's view, on the sway shader with the conformed material's texture,
+## tint and cut; the rest untouched; no script moves anything.
+func _sway(t, fx: ParkFx, inst: Node3D, rows: Array) -> void:
+	var trees := 0
+	for row in rows:
+		if ParkFx.is_tree_model(str(row.get("model", ""))):
+			trees += 1
+	var chosen := ParkFx.sway_rows(rows)
+	t.eq(fx.sway_count(), chosen.size(), "the swaying trees are the layout's pick")
+	t.ok(chosen.size() >= 5 and chosen.size() <= ceili(trees / 3.0), "about a third sway (%d of %d trees)" % [chosen.size(), trees])
+	var in_view := true
+	for row in chosen:
+		var rel := Vector2(float(row["x"]), float(row["z"])) - ParkFx.KEY_CAM_XZ
+		if rel.x <= 0.0 or absf(rad_to_deg(atan2(rel.y, rel.x))) > ParkFx.SWAY_HALF_DEG:
+			in_view = false
+	t.ok(in_view, "…every one of them ahead of the key camera, inside its cone")
+	t.eq(JSON.stringify(ParkFx.sway_rows(rows).map(func(r: Dictionary) -> Array: return [r["x"], r["z"]])), JSON.stringify(chosen.map(func(r: Dictionary) -> Array: return [r["x"], r["z"]])), "…deterministic")
+	var sway_draws := 0
+	var still_draws := 0
+	var counted := 0
+	var textured := 0   # aspen_tree_02 has no texture even today: tint only
+	var ok := true
+	for mmi in inst.find_children("*", "MultiMeshInstance3D", true, false):
+		var mm: MultiMesh = (mmi as MultiMeshInstance3D).multimesh
+		var sway := String(mmi.name).ends_with("_sway")
+		if sway:
+			sway_draws += 1
+			if String(mmi.name).find("_0_") >= 0:
+				counted += mm.instance_count
+		else:
+			still_draws += 1
+		for s in mm.mesh.get_surface_count():
+			var mat := mm.mesh.surface_get_material(s)
+			if sway:
+				var sm := mat as ShaderMaterial
+				if sm == null or sm.shader != ParkFx.SWAY_SHADER:
+					ok = false
+				elif sm.get_shader_parameter("albedo") != null:
+					textured += 1
+			elif mat is ShaderMaterial:
+				ok = false
+	t.ok(ok and textured >= 3, "sway draws carry the sway shader (with the texture where the model has one: %d); still draws keep their material" % textured)
+	t.ok(sway_draws >= 2 and still_draws >= 2, "sway and still draws (%d / %d)" % [sway_draws, still_draws])
+	t.eq(counted, chosen.size(), "the sway multimeshes hold exactly the chosen trees")
+	# The leaf cut carried over: some sway surface is alpha-cut, some is opaque.
+	var cuts := []
+	for mmi in inst.find_children("*_sway", "MultiMeshInstance3D", true, false):
+		var mm: MultiMesh = (mmi as MultiMeshInstance3D).multimesh
+		for s in mm.mesh.get_surface_count():
+			cuts.push_back(float((mm.mesh.surface_get_material(s) as ShaderMaterial).get_shader_parameter("cut")))
+	var has_cut := false
+	for c in cuts:
+		if absf(float(c) - 0.45) < 0.01:
+			has_cut = true
+	t.ok(has_cut and cuts.has(0.0), "leaves keep their 0.45 cut, trunks stay opaque")

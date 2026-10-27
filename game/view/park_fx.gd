@@ -4,7 +4,9 @@ extends Node
 ## "Park Area Concept" 2026-10-15): the PSX pack's trees and litter
 ## instanced from data/park_layout.json (one MultiMeshInstance3D per model
 ## surface — 35 trees in a couple of dozen draws, leaves alpha-cut, only the
-## trees casting shadows), three parked cars from the vehicle pool with a
+## trees casting shadows; a third of them, the ones in view from the key,
+## sway a few centimetres under park_tree_sway.gdshader — Ross, 2026-10-26),
+## three parked cars from the vehicle pool with a
 ## snow cap each, the falling snow (one points mesh under park_snow.gdshader,
 ## every flake's motion in the vertex shader, the box following the camera)
 ## and the sky: the design's sky shader (a line-for-line port of the
@@ -19,6 +21,7 @@ extends Node
 const TREES_DIR := "res://assets/arena/park/trees/%s.glb"
 const VEHICLE := "res://assets/vehicles/%s.glb"
 const SNOW_SHADER := preload("res://game/court/park_snow.gdshader")
+const SWAY_SHADER := preload("res://game/court/park_tree_sway.gdshader")
 ## The sky is AreaSky's (shared with the city since 2026-10-16); the
 ## palette and the sun are the ArenaSet's sky_* exports.
 const CLOUD_T0 := AreaSky.CLOUD_T0
@@ -32,12 +35,22 @@ const RNG_SEED := 0x9A7C_5E0F
 ## halves the shadow pass (2026-10-16, the park running lighter).
 const SHADOW_R := 16.0
 const HOOP_XZ := Vector2(3.7, 0.0)
+## The swaying trees (Ross, 2026-10-26: "a very slight sway, a third of the
+## trees, the ones you'd see shooting from the key"): the camera stands
+## KEY_CAM_XZ looking down +x at the hoop; the trees within SWAY_HALF_DEG of
+## that line, nearest the line first, up to SWAY_SHARE of the trees, run the
+## sway shader (its own multimesh draws; no script per frame).
+const KEY_CAM_XZ := Vector2(-0.3, 0.0)
+const SWAY_HALF_DEG := 20.0
+const SWAY_SHARE := 1.0 / 3.0
 
 var _rng := RandomNumberGenerator.new()
 var _root: Node3D
 var _multis: Array[MultiMeshInstance3D] = []
 var _instances := 0
 var _casters := 0
+var _swayers := 0
+var _sway_meshes := {}   # mesh → its copy under the sway shader
 var _cars: Array[Node3D] = []
 var _snow: MeshInstance3D
 var _snow_mat: ShaderMaterial
@@ -74,9 +87,10 @@ func setup(arena: Node, set: ArenaSet) -> bool:
 # ---- the trees and the litter ---------------------------------------------------------
 
 
-## One multimesh per (model, surface, near|far): every placement of that
-## model in one draw, the near trees (within SHADOW_R of the hoop) casting
-## shadows and the far ones not.
+## One multimesh per (model, surface, near|far, sway|still): every placement
+## of that model in one draw, the near trees (within SHADOW_R of the hoop)
+## casting shadows and the far ones not, the swaying trees on the sway
+## shader's copy of the mesh.
 func _build_trees(path: String) -> void:
 	if not FileAccess.file_exists(path):
 		push_warning("ParkFx: no layout at %s" % path)
@@ -84,6 +98,8 @@ func _build_trees(path: String) -> void:
 	var doc = JSON.parse_string(FileAccess.get_file_as_string(path))
 	if not (doc is Dictionary) or not doc.has("rows"):
 		return
+	var swaying := sway_rows(doc["rows"])
+	_swayers = swaying.size()
 	var by_model := {}
 	for row in doc["rows"]:
 		var m := str(row.get("model", ""))
@@ -94,37 +110,85 @@ func _build_trees(path: String) -> void:
 	models.sort()
 	for m in models:
 		var rows: Array = by_model[m]
-		var is_tree := str(m).find("tree_0") >= 0 and str(m).find("stump") < 0 and str(m).find("fallen") < 0
-		var near: Array = []
-		var far: Array = []
+		var is_tree := is_tree_model(str(m))
+		var groups := {"near": [], "far": [], "near_sway": [], "far_sway": []}
 		for row in rows:
 			var d := Vector2(float(row.get("x", 0.0)), float(row.get("z", 0.0))).distance_to(HOOP_XZ)
-			if is_tree and d <= SHADOW_R:
-				near.push_back(row)
-			else:
-				far.push_back(row)
-		_casters += near.size()
+			var key := "near" if is_tree and d <= SHADOW_R else "far"
+			if swaying.has(row):
+				key += "_sway"
+			groups[key].push_back(row)
+		_casters += groups["near"].size() + groups["near_sway"].size()
 		var parts := _model_parts(str(m))
 		for part in parts:
 			var mesh: Mesh = part["mesh"]
 			var local: Transform3D = part["xform"]
-			for group in [["near", near], ["far", far]]:
-				var grows: Array = group[1]
+			for key in ["near", "far", "near_sway", "far_sway"]:
+				var grows: Array = groups[key]
 				if grows.is_empty():
 					continue
 				var mmi := MultiMeshInstance3D.new()
-				mmi.name = "%s_%d_%s" % [m, part["index"], group[0]]
+				mmi.name = "%s_%d_%s" % [m, part["index"], key]
 				var mm := MultiMesh.new()
 				mm.transform_format = MultiMesh.TRANSFORM_3D
-				mm.mesh = mesh
+				mm.mesh = _sway_mesh(mesh) if key.ends_with("_sway") else mesh
 				mm.instance_count = grows.size()
 				for i in grows.size():
 					mm.set_instance_transform(i, _placement(grows[i]) * local)
 				mmi.multimesh = mm
-				mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if group[0] == "near" else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+				mmi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_ON if key.begins_with("near") else GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 				_root.add_child(mmi)
 				_multis.push_back(mmi)
 		_instances += rows.size()
+
+
+static func is_tree_model(m: String) -> bool:
+	return m.find("tree_0") >= 0 and m.find("stump") < 0 and m.find("fallen") < 0
+
+
+## The layout rows that sway: the trees inside the key camera's view cone
+## (within SWAY_HALF_DEG of the line to the hoop, ahead of the camera),
+## nearest the line first, capped at SWAY_SHARE of the trees. Deterministic
+## from the layout; the rows come back by reference.
+static func sway_rows(rows: Array) -> Array:
+	var trees := 0
+	var cone: Array = []
+	for row in rows:
+		if not is_tree_model(str(row.get("model", ""))):
+			continue
+		trees += 1
+		var rel := Vector2(float(row.get("x", 0.0)), float(row.get("z", 0.0))) - KEY_CAM_XZ
+		if rel.x <= 0.0:
+			continue
+		var off := absf(rad_to_deg(atan2(rel.y, rel.x)))
+		if off <= SWAY_HALF_DEG:
+			cone.push_back([off, row])
+	cone.sort_custom(func(a: Array, b: Array) -> bool: return float(a[0]) < float(b[0]))
+	var out: Array = []
+	var cap := ceili(trees * SWAY_SHARE)
+	for i in mini(cone.size(), cap):
+		out.push_back(cone[i][1])
+	return out
+
+
+## The mesh again with every surface's conformed StandardMaterial swapped
+## for the sway shader carrying the same texture, tint and alpha cut.
+func _sway_mesh(mesh: Mesh) -> Mesh:
+	if _sway_meshes.has(mesh):
+		return _sway_meshes[mesh]
+	var copy: Mesh = mesh.duplicate()
+	for s in copy.get_surface_count():
+		var bm := copy.surface_get_material(s) as BaseMaterial3D
+		var sm := ShaderMaterial.new()
+		sm.shader = SWAY_SHADER
+		if bm != null:
+			sm.set_shader_parameter("albedo", bm.albedo_texture)
+			sm.set_shader_parameter("tint", bm.albedo_color)
+			sm.set_shader_parameter("vertex_tint", bm.vertex_color_use_as_albedo)
+			sm.set_shader_parameter("cut", bm.alpha_scissor_threshold if bm.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR else 0.0)
+		copy.surface_set_material(s, sm)
+	_sway_meshes[mesh] = copy
+	return copy
 
 
 ## A pack model's meshes with their transforms inside the glb, materials
@@ -319,6 +383,11 @@ func draw_count() -> int:
 ## The trees that cast shadows (within SHADOW_R of the hoop).
 func shadow_caster_count() -> int:
 	return _casters
+
+
+## The trees that sway (the key view's third).
+func sway_count() -> int:
+	return _swayers
 
 
 func car_count() -> int:
