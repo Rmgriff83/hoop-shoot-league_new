@@ -88,3 +88,26 @@ func run(t) -> void:
 	t.eq(str(urls.get("https://freesound.org/people/tommasomotteran/sounds/856516/", {}).get("author", "")), "tommasomotteran", "the defeat stinger is credited")
 	var sfx_src := FileAccess.get_file_as_string("res://game/autoload/sfx.gd")
 	t.ok(sfx_src.find("func match_loss() -> void:\n\t_play(\"match_defeat\"") >= 0, "match_loss plays the stinger")
+	# The tickets gained (Ross, 2026-10-26): breviceps's card shuffle rings once
+	# as the ticket stream's flyers launch on either end page; never with none.
+	var shuf: AudioStream = load("res://assets/audio/ticket_shuffle.wav")
+	t.ok(shuf != null and shuf.get_length() > 0.5 and shuf.get_length() < 0.8, "ticket_shuffle ships (~0.6 s)")
+	if sfx != null:
+		t.ok(sfx.has_method("ticket_shuffle"), "Sfx exposes ticket_shuffle()")
+	t.eq(str(urls.get("https://freesound.org/people/breviceps/sounds/447918/", {}).get("author", "")), "breviceps", "the shuffle is credited")
+	var stream := TicketStream.new()
+	stream.manual = true
+	stream.play(Vector2.ZERO, Vector2(100, 100), 12, 0.5)
+	stream.step(0.2)
+	t.ok(not stream.rang(), "quiet before the flyers launch")
+	stream.step(0.4)
+	t.ok(stream.rang(), "the shuffle rings as they launch")
+	stream.step(3.0)
+	t.ok(stream.rang(), "…once")
+	stream.free()
+	var none := TicketStream.new()
+	none.manual = true
+	none.play(Vector2.ZERO, Vector2(100, 100), 0, 0.0)
+	none.step(1.0)
+	t.ok(not none.rang(), "no tickets, no shuffle")
+	none.free()

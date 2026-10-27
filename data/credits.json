@@ -153,6 +153,13 @@
       "url": "https://freesound.org/people/tommasomotteran/sounds/856516/",
       "license": "see the source page",
       "used_for": "Losing a match (the match-end page)"
+    },
+    {
+      "title": "Shuffle cards",
+      "author": "breviceps",
+      "url": "https://freesound.org/people/breviceps/sounds/447918/",
+      "license": "see the source page",
+      "used_for": "The tickets gained on the end pages (the ticket stream's shuffle)"
     }
   ],
   "fonts": [

@@ -492,7 +492,10 @@ sounds. Levelling up rings heyheytheree's cozy coin (`assets/audio/level_up.wav`
 (`assets/audio/swish_register.wav`: trimmed to the ka-ching, sped up 1.3×,
 `Sfx.swish_register` on the SWISH branch of the scoring); a make paid extra on a
 lit streak (`StreakRules.base_points` > 1) that is not a swish plays gavynator's
-coin collect (`assets/audio/streak_coin.wav`, `Sfx.streak_coin`). `tests/test_chimes.gd`.
+coin collect (`assets/audio/streak_coin.wav`, `Sfx.streak_coin`). The tickets
+gained on either end page ring breviceps's card shuffle
+(`assets/audio/ticket_shuffle.wav`, `Sfx.ticket_shuffle`) once, as the
+ticket stream's flyers launch (`TicketStream.step`). `tests/test_chimes.gd`.
 Every button clicks (same day): Ross's five clips `assets/audio/click_0..4.wav`
 (baked −7 dB), `Sfx.click` picks one at random with no immediate repeat, and
 `Sfx` hooks `pressed` on every `BaseButton` that enters the tree (SceneTree

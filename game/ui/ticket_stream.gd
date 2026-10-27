@@ -32,6 +32,7 @@ var wobble := 0.0
 var _t := 0.0
 var _playing := false
 var _shown := 0
+var _rang := false   # the shuffle sound, once per play, as the flyers launch
 
 
 func _init() -> void:
@@ -51,6 +52,7 @@ func play(p_from: Vector2, p_to: Vector2, p_tickets: int, p_start := 0.0) -> voi
 	start = p_start
 	_t = 0.0
 	_shown = 0
+	_rang = false
 	_playing = count(tickets) > 0
 	visible = true
 	queue_redraw()
@@ -65,6 +67,9 @@ func step(dt: float) -> void:
 	if not _playing:
 		return
 	_t += dt
+	if not _rang and _t >= start:
+		_rang = true
+		Sfx.ticket_shuffle()   # the tickets gained (Ross, 2026-10-26)
 	var was := _shown
 	_shown = shown_at(_t)
 	if _shown != was:
@@ -171,3 +176,8 @@ func _draw() -> void:
 		draw_texture_rect(tex, Rect2(-size_ * 0.5 + SHADOW, size_), false, Color(RetroTheme.SCENE_OUTLINE, float(f["alpha"])))
 		draw_texture_rect(tex, Rect2(-size_ * 0.5, size_), false, Color(1, 1, 1, float(f["alpha"])))
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+## Whether the shuffle has rung this play (tests).
+func rang() -> bool:
+	return _rang

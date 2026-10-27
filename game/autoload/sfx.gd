@@ -48,7 +48,7 @@ func _ready() -> void:
 		"swish", "net", "chain_rattle_0", "chain_rattle_1", "score_pop", "score_pop_swish", "buzzer",
 		"ice_freeze", "ice_crack_0", "ice_crack_1", "ice_shatter",
 		"peggy_press", "peggy_servo", "peggy_ticket", "peggy_peg_0", "peggy_peg_1", "peggy_peg_2",
-		"peggy_win", "peggy_jackpot", "match_loss", "chime_win", "chime_big", "level_up", "swish_register", "streak_coin", "match_defeat",
+		"peggy_win", "peggy_jackpot", "match_loss", "chime_win", "chime_big", "level_up", "swish_register", "streak_coin", "match_defeat", "ticket_shuffle",
 		"click_0", "click_1", "click_2", "click_3", "click_4",
 		"fx/fire_burst", "fx/ice_form", "fx/ice_break", "fx/ice_swish", "fx/fire_out",
 	]:
@@ -543,6 +543,12 @@ func swish_register() -> void:
 ## takes a swish): gavynator's coin collect (Ross, 2026-10-26, data/credits.json).
 func streak_coin() -> void:
 	_play("streak_coin", -3.0)
+
+
+## The tickets gained on an end page (Ross, 2026-10-26): breviceps's card
+## shuffle as the ticket stream launches (TicketStream.step, once a run).
+func ticket_shuffle() -> void:
+	_play("ticket_shuffle", -3.0)
 
 
 ## The carriage's servo whine, looped while the aim moves.
