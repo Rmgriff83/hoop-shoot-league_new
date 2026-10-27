@@ -408,6 +408,7 @@ func _add_back_button() -> void:
 	var layer := CanvasLayer.new()
 	layer.name = "TopUi"
 	layer.layer = 11
+	UiLayout.anchor_layer(layer)   # the chrome pins to the real screen (UiLayout.hud_pos)
 	add_child(layer)
 	_add_pause_button(layer)
 	_add_music_button(layer)
@@ -423,7 +424,7 @@ var _pause_layer: PauseMenu
 func _add_pause_button(layer: CanvasLayer) -> void:
 	var b := IconButton.new("pause")
 	b.name = "PauseButton"
-	b.position = Vector2(36, 32)
+	b.position = UiLayout.hud_pos(Vector2(36, 32))
 	b.pressed.connect(pause_game)
 	layer.add_child(b)
 	_pause_layer = PauseMenu.new()
@@ -472,13 +473,13 @@ func _add_music_button(layer: CanvasLayer) -> void:
 	var at := music_positions(Hud.toast_side())
 	_music_button = IconButton.new("music")
 	_music_button.name = "MusicButton"
-	_music_button.position = at["music"]
+	_music_button.position = UiLayout.hud_pos(at["music"])
 	_music_button.active = App.music_on
 	_music_button.pressed.connect(toggle_music)
 	layer.add_child(_music_button)
 	_next_button = IconButton.new("next", NEXT_SIZE)
 	_next_button.name = "NextTrackButton"
-	_next_button.position = at["next"]
+	_next_button.position = UiLayout.hud_pos(at["next"])
 	_next_button.pressed.connect(next_track)
 	layer.add_child(_next_button)
 
@@ -857,11 +858,12 @@ func _add_thirty_button() -> void:
 	var layer := CanvasLayer.new()
 	layer.name = "ThirtyUi"
 	layer.layer = 11
+	UiLayout.anchor_layer(layer)
 	add_child(layer)
 	var y := 330.0 if App.tuning_mode else 104.0
 	_thirty_btn = ShadowCard.new(RetroTheme.SCENE_TEXT)
 	_thirty_btn.name = "ThirtyButton"
-	_thirty_btn.position = Vector2(36, y)
+	_thirty_btn.position = UiLayout.hud_pos(Vector2(36, y))
 	_thirty_btn.size = Vector2(284 + ShadowStyle.OFFSET, 60 + ShadowStyle.OFFSET)
 	var m := MarginContainer.new()
 	UiLayout.full_rect(m)
@@ -963,10 +965,11 @@ func _add_spot_picker() -> void:
 	var layer := CanvasLayer.new()
 	layer.name = "SpotUi"
 	layer.layer = 11
+	UiLayout.anchor_layer(layer)
 	add_child(layer)
 	var rail := HBoxContainer.new()
 	rail.name = "SpotRail"
-	rail.position = Vector2(SPOT_RAIL_X, 330.0 if App.tuning_mode else (SPOT_RAIL_Y if _practice else 84.0))
+	rail.position = UiLayout.hud_pos(Vector2(SPOT_RAIL_X, 330.0 if App.tuning_mode else (SPOT_RAIL_Y if _practice else 84.0)))
 	rail.add_theme_constant_override("separation", 14)
 	rail.alignment = BoxContainer.ALIGNMENT_BEGIN
 	layer.add_child(rail)

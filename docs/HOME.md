@@ -531,6 +531,22 @@ and gets only HOME.
 
 ## HUD (design "Solo Modes HUD", 2026-09-26)
 
+**Pinned to the phone (designs 5a / 4a, Ross's 2026-10-26 pass).** The HUD
+was drawn in the 720×1280 band: the top row 32 px from the top, the music
+note's row ending 32 px from the bottom. Its layers are ANCHORED now (the
+`Hud` layer, the pause / music chrome, `ThirtyUi`, `SpotUi`, the heat's
+`CardUi`, `PipUi` and `ToastUi` — not the pause menu, tutorial, shot help,
+results or match end) and every band position goes through
+`UiLayout.hud_pos` / `hud_y` (`hud_map`, pure, `tests/test_ui_layout.gd`):
+the top row sits 6 px under the top safe area (`max(32, inset + 6)`), the
+music row 6 px above the bottom one, and everything between keeps its size
+and spreads to the same proportions — on the design's iPhone (1560, insets
+108 / 62) the top row lands at 114, the opponent window at 210, the tray
+centred at 506 (slots 330 / 450 / 570), the toasts at 1050, the note at
+1436; a 9:16 screen with no insets maps every y to itself. Score pops stay
+on the rim. Deal points (`_hoop_point`, `_pip_point`) are raw screen px.
+QA: `--qa-safe-top=108 --qa-safe-bottom=62` at 360x780 plays that iPhone.
+
 `game/view/hud.gd` (`Hud`, a CanvasLayer over the live game; copy in
 `game/view/hud_copy.gd`, `tests/test_hud.gd`): the top row — PAUSE
 (`IconButton("pause")`; and since 2026-10-16 the MUSIC note, `IconButton("music")`, at the
@@ -757,7 +773,8 @@ in absolute 1234-tall coordinates — the pre-match page, the new-player page
 — returns `_anchored()` false and keeps the band frame); the locker, settings,
 rewards and the lobby fill it through their EXPAND rows, PEGGY's PLAY sits at
 34 % of the frame and its prize card is centred on the screen, the ranks
-and archive pages size their lists from `screen_height()`. The match HUD,
+and archive pages size their lists from `screen_height()`. The match HUD's
+chrome anchors too since 2026-10-26 (→ HUD, "Pinned to the phone");
 results and match end stay on the centred band until their redesigns land.
 
 ## The flick (2026-10-25)

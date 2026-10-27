@@ -487,6 +487,7 @@ func _build_tray() -> void:
 	var layer := CanvasLayer.new()
 	layer.name = "CardUi"
 	layer.layer = 11
+	UiLayout.anchor_layer(layer)   # pinned to the real screen with the HUD (UiLayout.hud_y)
 	add_child(layer)
 	var slots: Array = _heat_cfg.get("player_slots", [])
 	if slots.is_empty():
@@ -543,7 +544,7 @@ static func tray_layout(slots: int, centre_y := TRAY_CENTRE_Y, card_h := TRAY_CA
 func _layout_tray(animate: bool) -> void:
 	var shown := _tray_shown()
 	var n := shown.size()
-	var spots := tray_layout(CardDefs.SLOTS)
+	var spots := tray_layout(CardDefs.SLOTS, UiLayout.hud_y(TRAY_CENTRE_Y))
 	if _tray_tween != null:
 		_tray_tween.kill()
 	_tray_tween = create_tween().set_parallel(true) if animate else null
@@ -771,6 +772,7 @@ func _build_toast() -> void:
 	var layer := CanvasLayer.new()
 	layer.name = "ToastUi"
 	layer.layer = 12
+	UiLayout.anchor_layer(layer)   # the deal flies between anchored layers: screen px
 	add_child(layer)
 	_deal = DealCard.new()
 	_deal.name = "Deal"
@@ -789,12 +791,13 @@ static func _card_marquee(card_id: String, against_me: bool) -> String:
 	return "OPP %s" % str(card.get("name", card_id)).to_upper()
 
 
-## Screen point of the player's hoop (where a self card flies to).
+## Screen point of the player's hoop (where a self card flies to) — raw
+## screen px: the deal layer is anchored.
 func _hoop_point() -> Vector2:
 	var cam := get_viewport().get_camera_3d()
 	if cam == null or _court == null or not _court.rim_pivot.is_inside_tree():
-		return Vector2(360, 560)
-	return UiLayout.from_screen(cam.unproject_position(_court.rim_pivot.global_position))
+		return UiLayout.to_screen(Vector2(360, 560))
+	return cam.unproject_position(_court.rim_pivot.global_position)
 
 
 ## Screen point of the opponent's window (the PiP, or its chip when minimized).
@@ -803,7 +806,7 @@ func _pip_point() -> Vector2:
 		return _pip_pos + Vector2(_pip_size) * 0.5
 	if _pip_chip != null:
 		return _pip_chip.position + _pip_chip.size * 0.5
-	return Vector2(640, 100)
+	return UiLayout.hud_pos(Vector2(640, 100))
 
 
 func _show_card_play(card_id: String, by_ai: bool, target: String) -> void:
@@ -829,7 +832,7 @@ func _deal_card(card: Dictionary, from: Rect2, to: Vector2) -> void:
 	_deal_tween = create_tween()
 	_deal_tween.set_parallel(true)
 	# Out of the slot and up to size in the middle.
-	_deal_tween.tween_property(_deal, "position", DEAL_CENTRE - DEAL_BIG * 0.5, DEAL_OUT_S).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	_deal_tween.tween_property(_deal, "position", UiLayout.to_screen(DEAL_CENTRE) - DEAL_BIG * 0.5, DEAL_OUT_S).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	_deal_tween.tween_property(_deal, "size", DEAL_BIG, DEAL_OUT_S).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	# Hold, then fly to the target while shrinking and fading.
 	_deal_tween.chain().tween_interval(DEAL_HOLD_S)
@@ -859,12 +862,13 @@ func _build_pip() -> void:
 	_pip_layer = CanvasLayer.new()
 	_pip_layer.name = "PipUi"
 	_pip_layer.layer = 11
+	UiLayout.anchor_layer(_pip_layer)
 	add_child(_pip_layer)
 
 	if _heat_cfg.get("league", null) != null:
 		_pip_size = PIP_SIZE_LEAGUE
 	var frame_size := Vector2(_pip_size) + Vector2.ONE * 2.0 * PIP_FRAME
-	var frame_pos := Vector2(720 - 36 - frame_size.x, PIP_Y)
+	var frame_pos := Vector2(720 - 36 - frame_size.x, UiLayout.hud_y(PIP_Y))
 	if _spots.size() > 1 and _picker_free:
 		frame_pos += Vector2(0, 56)   # clear of the picker row when it is shown
 	_pip_pos = frame_pos + Vector2.ONE * PIP_FRAME

@@ -40,6 +40,21 @@ static var _root: Window
 ## `safe_override` when set (QA: --qa-safe-top=118 plays an iPhone).
 static var _safe_top := 0.0
 static var safe_override := -1.0
+## The bottom inset (the home indicator bar) the same way; QA: --qa-safe-bottom=62.
+static var _safe_bottom := 0.0
+static var safe_bottom_override := -1.0
+## The match HUD's band (designs "Solo Modes HUD" 5a / "League Match HUD"
+## 4a, Ross's 2026-10-26 pass): the HUD was drawn in the 720×1280 band with
+## its top row 32 px from the top and the music note's row ending 32 px from
+## the bottom (the note at 1192, 56 tall). On the phone it pins to the real
+## screen instead of the centred band: the top row 6 px under the top safe
+## area, the music row 6 px above the bottom one, and everything between
+## keeps its size and spreads to the same proportions (hud_y). A 9:16 screen
+## with no insets maps every y to itself.
+const HUD_TOP := 32.0
+const HUD_BOTTOM := 32.0
+const HUD_GAP := 6.0
+const HUD_NOTE_Y := 1192.0
 
 
 ## App._ready: follow the window from now on, and every layer that enters the tree.
@@ -58,6 +73,7 @@ static func _apply() -> void:
 	_canvas = _root.get_visible_rect().size
 	_offset = offset_for(_canvas)
 	_safe_top = _measure_safe_top()
+	_safe_bottom = _measure_safe_bottom()
 	_root.global_canvas_transform = Transform2D.IDENTITY
 	_root.canvas_transform = Transform2D(0.0, _offset)
 	for layer in _root.find_children("*", "CanvasLayer", true, false):
@@ -88,6 +104,58 @@ static func _measure_safe_top() -> float:
 
 static func safe_top() -> float:
 	return _safe_top
+
+
+## The display's bottom inset, in design px: the window's bottom edge over
+## the safe area's, scaled to the canvas.
+static func _measure_safe_bottom() -> float:
+	if safe_bottom_override >= 0.0:
+		return safe_bottom_override
+	var win := Vector2(DisplayServer.window_get_size())
+	if win.y <= 0.0:
+		return 0.0
+	var safe := DisplayServer.get_display_safe_area()
+	var inset := float(DisplayServer.window_get_position().y) + win.y - float(safe.position.y + safe.size.y)
+	return maxf(0.0, roundf(inset * _canvas.y / win.y))
+
+
+static func safe_bottom() -> float:
+	return _safe_bottom
+
+
+## QA / tests: pretend the display has this bottom inset (design px); < 0 = measure.
+static func set_safe_bottom_override(v: float) -> void:
+	safe_bottom_override = v
+	if _root != null:
+		_apply()
+	else:
+		_safe_bottom = maxf(v, 0.0)
+
+
+## The match HUD's rows on this screen (anchored layers, screen px): the top
+## row's y, the margin under the music row, and a band y mapped between them.
+static func hud_top() -> float:
+	return hud_map(HUD_TOP, _canvas.y, _safe_top, _safe_bottom)
+
+
+static func hud_y(y: float) -> float:
+	return hud_map(y, _canvas.y, _safe_top, _safe_bottom)
+
+
+static func hud_pos(p: Vector2) -> Vector2:
+	return Vector2(p.x, hud_y(p.y))
+
+
+## Pure: a HUD band y on a `canvas_h`-tall screen with these insets. The top
+## row sits at max(32, top inset + 6); the music row's foot at
+## max(32, bottom inset + 6) above the bottom edge; the rest is linear
+## between the two (whole pixels).
+static func hud_map(y: float, canvas_h: float, top_inset: float, bottom_inset: float) -> float:
+	var top := maxf(HUD_TOP, top_inset + HUD_GAP)
+	var foot := maxf(HUD_BOTTOM, bottom_inset + HUD_GAP)
+	var note_h := DESIGN.y - HUD_BOTTOM - HUD_NOTE_Y
+	var k := (canvas_h - foot - note_h - top) / (HUD_NOTE_Y - HUD_TOP)
+	return roundf(top + (y - HUD_TOP) * k)
 
 
 ## QA / tests: pretend the display has this top inset (design px); < 0 = measure.

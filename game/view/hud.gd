@@ -17,6 +17,9 @@ extends CanvasLayer
 ## a gold OT tag in the clock card in overtime, and shows the ball-return
 ## wait as the mini toast (the ball and `0.8S`, 2026-10-25). Every toast
 ## leaves by fading where it is (design 4a's latest pass). Copy from HudCopy (pure).
+## An ANCHORED layer since Ross's 2026-10-26 pass: every position here is a
+## band design position mapped through UiLayout.hud_pos — the top row under
+## the notch, the toasts and the rest spread to the real screen.
 
 const CREAM := RetroTheme.SCENE_TEXT
 const GOLD := Color("#F0B84A")
@@ -63,6 +66,10 @@ var _best := -1
 var _top_wash: TextureRect
 
 
+func _init() -> void:
+	UiLayout.anchor_layer(self)
+
+
 ## A bright sky (ArenaSet.top_wash): an ink gradient behind the top cards.
 func set_top_wash(alpha: float) -> void:
 	if _top_wash != null:
@@ -71,12 +78,11 @@ func set_top_wash(alpha: float) -> void:
 	if alpha <= 0.0:
 		return
 	_top_wash = ShadowStyle.top_wash(alpha)
-	# The HUD is a centred layer: its y 0 is the 1280 band's top, which on a
-	# tall phone sits under the notch. The wash starts at the screen's very
-	# top edge and keeps its depth below the band's top (Ross, 2026-10-25: the
-	# park's gradient began just under the safe area).
+	# An anchored layer: the wash starts at the screen's very top edge and
+	# keeps its depth below where the band's top would be (Ross, 2026-10-25:
+	# the park's gradient began just under the safe area).
 	var lift := UiLayout.offset().y
-	_top_wash.position = Vector2(-UiLayout.offset().x, -lift)
+	_top_wash.position = Vector2.ZERO
 	_top_wash.size = Vector2(UiLayout.canvas().x, ShadowStyle.TOP_WASH_H + lift)
 	add_child(_top_wash)
 	move_child(_top_wash, 0)
@@ -145,10 +151,10 @@ func _ready() -> void:
 	_best_chip.add_child(br)
 	# The toasts (designs 4a / 5a): the countdown / GO chip and the notice
 	# chip, from the side the setting says (read once: settings change at home).
-	_toast_big = Toast.new(CREAM, TOAST_Y, Toast.Mode.SIDE, toast_side())
+	_toast_big = Toast.new(CREAM, UiLayout.hud_y(TOAST_Y), Toast.Mode.SIDE, toast_side())
 	_toast_big.name = "CountdownToast"
 	add_child(_toast_big)
-	_toast_small = Toast.new(GOLD, TOAST_Y, Toast.Mode.SIDE, toast_side())
+	_toast_small = Toast.new(GOLD, UiLayout.hud_y(TOAST_Y), Toast.Mode.SIDE, toast_side())
 	_toast_small.name = "Toast"
 	add_child(_toast_small)
 
@@ -405,7 +411,7 @@ func best_text() -> String:
 
 func _card(color: Color, pos: Vector2, size_: Vector2, tint: float, pad_h: float) -> ShadowPanel:
 	var p := ShadowPanel.new(color, 0.0, tint, pad_h)
-	p.position = pos
+	p.position = UiLayout.hud_pos(pos)
 	p.size = size_ + Vector2.ONE * ShadowStyle.OFFSET
 	p.custom_minimum_size = p.size
 	add_child(p)

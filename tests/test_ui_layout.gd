@@ -85,6 +85,22 @@ func run(t) -> void:
 	t.eq(UiLayout.header_top(32.0), 32.0, "…and comes back when it is gone")
 	# Round trips.
 	t.eq(UiLayout.from_screen(UiLayout.to_screen(Vector2(10, 20))), Vector2(10, 20), "to_screen / from_screen invert")
+	# The match HUD pinned to the screen (designs 5a / 4a, Ross 2026-10-26):
+	# on a 9:16 screen with no insets every band y is itself…
+	for y in [32.0, 116.0, 376.0, 853.0, 1192.0]:
+		t.eq(UiLayout.hud_map(y, 1280.0, 0.0, 0.0), y, "a 9:16 screen keeps the HUD's y %d" % int(y))
+	# …on the design's iPhone (1560 tall, 108 over, 62 under) the rows pin and the rest spreads.
+	t.eq(UiLayout.hud_map(32.0, 1560.0, 108.0, 62.0), 114.0, "the top row 6 px under the top safe area")
+	t.eq(UiLayout.hud_map(116.0, 1560.0, 108.0, 62.0), 210.0, "the opponent window at 210")
+	t.eq(UiLayout.hud_map(376.0, 1560.0, 108.0, 62.0), 506.0, "the tray centred at 506")
+	t.eq(UiLayout.hud_map(853.0, 1560.0, 108.0, 62.0), 1050.0, "the toasts centred at 1050")
+	t.eq(UiLayout.hud_map(1192.0, 1560.0, 108.0, 62.0) + 56.0, 1492.0, "the music row ends 6 px over the bottom inset")
+	t.eq(UiLayout.hud_map(32.0, 1560.0, 0.0, 0.0), 32.0, "a tall screen without insets keeps the 32 px margins…")
+	t.eq(UiLayout.hud_map(1192.0, 1560.0, 0.0, 0.0), 1472.0, "…and spreads the rest to the bottom")
+	UiLayout.set_safe_bottom_override(62.0)
+	t.eq(UiLayout.safe_bottom(), 62.0, "a pretend home bar")
+	UiLayout.set_safe_bottom_override(-1.0)
+	t.ok(UiLayout.hud_top() >= 32.0 and UiLayout.hud_y(32.0) == UiLayout.hud_top(), "hud_top is the top row's y on this screen")
 	# No raw full-rect preset left in game/: every one goes through the helper.
 	var raw := 0
 	for dir_ in ["res://game/ui", "res://game/screens", "res://game/view", "res://game/court", "res://game/input"]:
