@@ -71,3 +71,13 @@ func run(t) -> void:
 	t.eq(str(urls.get("https://freesound.org/people/mokasza/sounds/810738/", {}).get("author", "")), "mokasza", "the till is credited")
 	var screen := FileAccess.get_file_as_string("res://game/screens/time_trial_screen.gd")
 	t.ok(screen.find("if is_swish:\n\t\t\tSfx.swish_register()") >= 0, "the till rings on a swish")
+	# On fire and paid extra (Ross, 2026-10-26): gavynator's coin on a make at
+	# tier 2+ that is not a swish — a swish keeps the till; credited.
+	var coin2: AudioStream = load("res://assets/audio/streak_coin.wav")
+	t.ok(coin2 != null and coin2.get_length() > 0.15 and coin2.get_length() < 0.3, "streak_coin ships (~0.2 s)")
+	if sfx != null:
+		t.ok(sfx.has_method("streak_coin"), "Sfx exposes streak_coin()")
+	t.eq(str(urls.get("https://freesound.org/people/gavynator/sounds/691965/", {}).get("author", "")), "gavynator", "the coin is credited")
+	t.ok(screen.find("Sfx.swish_register()") < screen.find("elif lit and tier > 1:\n\t\t\tSfx.streak_coin()"), "the coin rings on a lit, extra-points make that is not a swish; a swish keeps the till")
+	t.eq(StreakRules.base_points(StreakRules.FIRE_AT), 1, "(at FIRE_AT itself a make pays 1: no coin until the first tier)")
+	t.ok(StreakRules.base_points(int(StreakRules.TIERS[0][0])) > 1, "…the first tier pays extra")

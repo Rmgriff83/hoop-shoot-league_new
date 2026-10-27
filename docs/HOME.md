@@ -490,7 +490,9 @@ sounds. Levelling up rings heyheytheree's cozy coin (`assets/audio/level_up.wav`
 `Sfx.level_up`) once, as the post-match XP meter fills to `LEVEL UP`
 (`XpMeter.step`). A clean swish rings mokasza's old-fashioned cash register
 (`assets/audio/swish_register.wav`: trimmed to the ka-ching, sped up 1.3×,
-`Sfx.swish_register` on the SWISH branch of the scoring). `tests/test_chimes.gd`.
+`Sfx.swish_register` on the SWISH branch of the scoring); a make paid extra on a
+lit streak (`StreakRules.base_points` > 1) that is not a swish plays gavynator's
+coin collect (`assets/audio/streak_coin.wav`, `Sfx.streak_coin`). `tests/test_chimes.gd`.
 
 `game/screens/results_screen.gd` over the live court you just played on (the
 area's home-page pan under a half scrim); copy in `game/ui/results_copy.gd`
