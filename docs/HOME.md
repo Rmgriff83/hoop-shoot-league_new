@@ -940,3 +940,10 @@ secondary highlight moved from peach `#FFCE8A` to butter `#FFE45C` (THIS RUN,
 your loadout count, small accent labels). Not changed: the light theme's
 paper `bg` (still cream), the REVIEW tones (bright cream `#FFF3D0`, muted
 `#A89E94`), the `#E6D9B8` sub-line tone, and 3D scene and shooter colours.
+
+**Home board refresh (2026-10-26).** The mid-court TIME TRIAL board re-renders
+and re-asks the server on every area switch (the chevrons and the archive's
+GO THERE call `_refresh_board()` after the cards) and when the server accepts
+a run (`Net.score_accepted` → `_on_score_accepted`, the cache already cleared
+by NetClient), so it no longer sits on the previous area's list or on the
+pre-run list after a trial. `tests/test_home_board.gd`.

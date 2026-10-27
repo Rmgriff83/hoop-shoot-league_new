@@ -127,6 +127,7 @@ func _ready() -> void:
 				break
 		App.home_card = _index
 	Net.board_loaded.connect(_on_board_for_preview)
+	Net.score_accepted.connect(_on_score_accepted)
 	rebuild_chrome()
 	_ui.add_child(_cover)
 	_build_court(_index)
@@ -151,8 +152,10 @@ var _board: BoardPreview
 ## (Ross, 2026-10-24: the home shows the forever list, not the week's) —
 ## else the device's own runs (also while the server's board is still
 ## empty, so a fresh server never blanks the runs on this phone). `fetch`
-## asks the server once when the chrome builds; the board_loaded handler
-## below only re-renders — asking again from it would loop (a cached board
+## asks the server when the chrome builds, on every area switch and when
+## the server accepts a run (Ross, 2026-10-26: the board sat on the old
+## area's list and on the pre-run list); the board_loaded handler below
+## only re-renders — asking again from it would loop (a cached board
 ## answers on a deferred emit).
 const BOARD_PERIOD := "all"
 
@@ -174,6 +177,13 @@ func _refresh_board(fetch := true) -> void:
 func _on_board_for_preview(area: String, period: String, _data: Dictionary) -> void:
 	if period == BOARD_PERIOD and _board != null and area == str(CARDS[_index]["area"]):
 		_refresh_board(false)
+
+
+## The server took a run of ours (NetClient clears its board cache first):
+## ask for this area's list again so the home shows the run at once.
+func _on_score_accepted(area: String, _reply: Dictionary) -> void:
+	if _board != null and area == str(CARDS[_index]["area"]):
+		_refresh_board()
 
 
 ## A walkthrough over the home (design 36a): the overlay dims everything but
@@ -259,6 +269,8 @@ func _welcome() -> void:
 func _exit_tree() -> void:
 	if Net.board_loaded.is_connected(_on_board_for_preview):
 		Net.board_loaded.disconnect(_on_board_for_preview)
+	if Net.score_accepted.is_connected(_on_score_accepted):
+		Net.score_accepted.disconnect(_on_score_accepted)
 
 
 func _process(dt: float) -> void:
@@ -729,6 +741,7 @@ func _switch(dir: int) -> void:
 	_build_court(_index)
 	_update_zone()
 	_fill_cards()
+	_refresh_board()   # the new area's list (Ross, 2026-10-26)
 	_refresh_ticker()
 	held.clear()
 	if is_instance_valid(chip):
@@ -1491,6 +1504,7 @@ func _go_area(id: String) -> void:
 		_build_court(_index)
 		_update_zone()
 		_fill_cards()
+		_refresh_board()   # the new area's list (Ross, 2026-10-26)
 		_refresh_ticker()
 	var back := create_tween()
 	back.tween_property(_cover, "color:a", 0.0, FADE_S * 1.4).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
