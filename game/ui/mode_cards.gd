@@ -286,9 +286,11 @@ static func art(card: Dictionary, size_: Vector2, shadow := 6.0, button := false
 	return holder
 
 
-## An empty loadout slot: a dashed cream border over ink, a "+" in the display face.
-static func empty_slot(size_: Vector2, font := 16, border := 2.0, shadow := 0.0) -> Control:
-	var d := Dashed.new(size_, border, shadow)
+## An empty loadout slot: a dashed cream border over an ink ground (the
+## design's 40 % on the loadout; the 40 px chip row's slot sits at 60 %), a
+## "+" in the display face.
+static func empty_slot(size_: Vector2, font := 16, border := 2.0, shadow := 0.0, ground := Dashed.GROUND) -> Control:
+	var d := Dashed.new(size_, border, shadow, ground)
 	var plus := _label("+", font, CREAM, true)
 	UiLayout.full_rect(plus)
 	plus.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -301,7 +303,7 @@ static func empty_slot(size_: Vector2, font := 16, border := 2.0, shadow := 0.0)
 ## an ink frame with a 3 px shadow; an empty slot is the dashed "+".
 static func chip(card: Dictionary) -> Control:
 	if card.is_empty():
-		return empty_slot(Vector2(CHIP, CHIP), 16, 2.0, 3.0)
+		return empty_slot(Vector2(CHIP, CHIP), 16, 2.0, 3.0, 0.6)
 	return Chip.new(card)
 
 
@@ -360,11 +362,14 @@ class DashedRule extends Control:
 
 ## An empty slot's box: ink at 40 % with a dashed cream border, optional ink shadow.
 class Dashed extends Control:
+	const GROUND := 0.4
 	var border := 2.0
 	var shadow := 0.0
-	func _init(size_: Vector2, p_border := 2.0, p_shadow := 0.0) -> void:
+	var ground := GROUND   # the ink ground's alpha (design: 0.4 loadout slots, 0.6 chip slots)
+	func _init(size_: Vector2, p_border := 2.0, p_shadow := 0.0, p_ground := GROUND) -> void:
 		border = p_border
 		shadow = p_shadow
+		ground = p_ground
 		custom_minimum_size = size_ + Vector2.ONE * shadow
 		size = custom_minimum_size
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -372,7 +377,7 @@ class Dashed extends Control:
 		var box := Rect2(Vector2.ZERO, size - Vector2.ONE * shadow)
 		if shadow > 0.0:
 			draw_rect(Rect2(Vector2.ONE * shadow, box.size), RetroTheme.SCENE_OUTLINE)
-		draw_rect(box, Color(RetroTheme.SCENE_OUTLINE, 0.4))
+		draw_rect(box, Color(RetroTheme.SCENE_OUTLINE, ground))
 		var h := border / 2.0
 		var pts := [Vector2(h, h), Vector2(box.size.x - h, h), Vector2(box.size.x - h, box.size.y - h), Vector2(h, box.size.y - h), Vector2(h, h)]
 		for i in 4:
