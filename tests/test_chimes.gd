@@ -65,7 +65,7 @@ func run(t) -> void:
 	# A clean swish rings the till (Ross, 2026-10-26): mokasza's cash register,
 	# trimmed and sped up, on the SWISH branch of the scoring; credited.
 	var till: AudioStream = load("res://assets/audio/swish_register.wav")
-	t.ok(till != null and till.get_length() > 1.2 and till.get_length() < 1.7, "swish_register ships trimmed (~1.5 s)")
+	t.ok(till != null and till.get_length() > 1.0 and till.get_length() < 1.4, "swish_register ships trimmed (~1.2 s at 1.6×)")
 	if sfx != null:
 		t.ok(sfx.has_method("swish_register"), "Sfx exposes swish_register()")
 	t.eq(str(urls.get("https://freesound.org/people/mokasza/sounds/810738/", {}).get("author", "")), "mokasza", "the till is credited")

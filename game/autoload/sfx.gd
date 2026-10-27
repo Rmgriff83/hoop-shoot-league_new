@@ -534,9 +534,9 @@ func level_up() -> void:
 
 
 ## A clean swish rings the till (Ross, 2026-10-26; mokasza's old-fashioned
-## cash register, trimmed to the ka-ching and sped up 1.3×, data/credits.json).
+## cash register, trimmed to the ka-ching and sped up 1.6×, data/credits.json).
 func swish_register() -> void:
-	_play("swish_register", -12.0)   # Ross, 2026-10-26: the till was too loud at -4
+	_play("swish_register", -17.0)   # Ross, 2026-10-26: down from -4, then -12; the clip at 1.6× tempo
 
 
 ## A make that pays extra on a lit streak (tier 2+, not a swish — the till
