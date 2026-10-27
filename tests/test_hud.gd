@@ -195,6 +195,14 @@ func _widgets(t) -> void:
 	var at: Dictionary = screen_script.music_positions("right")
 	t.ok(absf(float(at["music"].x) - (720.0 - 36.0 - IconButton.SIZE)) < 0.5 and float(at["next"].x) < float(at["music"].x), "the note at the bottom-right with the chevron on its left")
 	t.eq(screen_script.music_positions("left")["music"], screen_script.MUSIC_POS, "LEFT is the note where it always was")
+	# The practice spot rail mirrors too (Ross, 2026-10-27): 36 in from the right edge, the chevron on its left.
+	var rl: Dictionary = screen_script.spot_rail_layout("right", false)
+	t.ok(absf(float(rl["x"]) - (720.0 - 36.0 - screen_script.SPOT_RAIL_W)) < 0.5 and str(rl["chevron"]) == ">" and bool(rl["chevron_first"]), "the practice spot rail sits 36 in from the right edge with the chevron on its left, pointing right")
+	var rh2: Dictionary = screen_script.spot_rail_layout("right", true)
+	t.ok(float(rh2["x"]) > float(rl["x"]) + 100.0 and str(rh2["chevron"]) == "<", "…hidden it slides off the right edge and the chevron points back")
+	t.ok(absf(float(screen_script.spot_rail_layout("right", true, 230.0, 60.0)["x"]) - 660.0) < 0.5, "…a wider chevron still sits flush with the right edge")
+	var ll: Dictionary = screen_script.spot_rail_layout("left", false)
+	t.ok(absf(float(ll["x"]) - screen_script.SPOT_RAIL_X) < 0.5 and str(ll["chevron"]) == "<" and not bool(ll["chevron_first"]), "LEFT is the rail where it always was")
 	# The guard box around the note and the chevron (Ross, 2026-10-25): a near miss starts no grab.
 	var note := Rect2(screen_script.MUSIC_POS, Vector2.ONE * IconButton.SIZE)
 	var chev := Rect2(screen_script.NEXT_POS, Vector2.ONE * screen_script.NEXT_SIZE)

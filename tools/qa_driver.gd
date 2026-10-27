@@ -801,6 +801,18 @@ func _run_hud_side() -> void:
 		(sc_t.get("_hud") as Hud).banner("NEXT: L ELBOW IN 3", Color.WHITE)
 		await _sleep(0.6)
 		await _snap("hud_right_toast")
+	# The beach practice: the spot rail mirrored to the right edge, then slid off it.
+	App.start_mode("beach")
+	await _sleep(1.6)
+	await _snap("hud_right_spots_00")
+	var chev: Button = get_tree().root.find_child("SpotChevron", true, false)
+	if chev != null:
+		var c2 := _win_of(chev)
+		_mouse_button(c2, true)
+		await _sleep(0.08)
+		_mouse_button(c2, false)
+		await _sleep(0.5)
+		await _snap("hud_right_spots_01")
 	App.set_hud_side("left")
 	print("QA hud-side: done")
 	get_tree().quit(0)

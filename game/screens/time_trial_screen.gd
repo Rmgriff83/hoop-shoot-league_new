@@ -548,14 +548,15 @@ func _pause_info() -> Dictionary:
 		"stats": HudCopy.pause_stats_trial(trial.score, trial.time_left, _best_score()), "quit_note": HudCopy.pause_quit_note("trial")}
 
 
-## HUD SIDE flipped on the pause page: the note and the chevron move now;
-## the toasts read App.hud_side as they show.
+## HUD SIDE flipped on the pause page: the note, the chevron and the
+## practice spot rail move now; the toasts read App.hud_side as they show.
 func _on_hud_side_changed(side: String) -> void:
 	var at := music_positions(side)
 	if _music_button != null:
 		_music_button.position = UiLayout.hud_pos(at["music"])
 	if _next_button != null:
 		_next_button.position = UiLayout.hud_pos(at["next"])
+	_place_spot_rail(side)
 
 
 func resume_game() -> void:
@@ -714,6 +715,21 @@ const SPOT_CHEVRON := Vector2(44, 56)
 var _spot_rail: HBoxContainer
 var _spot_chevron: ShadowCard
 var _spots_hidden := false
+var _spot_side := "left"
+const SPOT_RAIL_W := 150.0 + 14.0 + 44.0   # chip + gap + chevron
+
+
+## Where the rail sits for a HUD side (App.hud_side, Ross 2026-10-27): LEFT
+## is the column at x 36 with the chevron on its right, sliding off the left
+## edge; RIGHT mirrors it — the column 36 in from the right edge, the chevron
+## on its left, sliding off the right edge. The chevron points the way the
+## rail will go. {x, chevron, chevron_first}. `rail_w` / `chevron_w` are the
+## built rail's real widths (the chevron button is wider than its minimum):
+## hidden on the right, the chevron stays flush with the right edge.
+static func spot_rail_layout(side: String, hidden: bool, rail_w := SPOT_RAIL_W, chevron_w := SPOT_CHEVRON.x) -> Dictionary:
+	if side == "right":
+		return {"x": (720.0 - chevron_w) if hidden else (720.0 - SPOT_RAIL_X - rail_w), "chevron": "<" if hidden else ">", "chevron_first": true}
+	return {"x": SPOT_RAIL_X + (SPOT_RAIL_HIDE if hidden else 0.0), "chevron": ">" if hidden else "<", "chevron_first": false}
 
 ## Spot shuffle (the beach's "last 30 s"): with SHUFFLE_MARKS seconds left the
 ## game walks the shooter to a random other spot, each move announced for
@@ -804,14 +820,15 @@ func _pick_spot(k: int) -> void:
 		_set_spot(k)
 
 
-## Slide the rail off the left edge (the chevron turns into `>`) and back.
+## Slide the rail off its edge (the chevron turns around) and back.
 func _toggle_spot_rail() -> void:
 	_spots_hidden = not _spots_hidden
+	var lay := _spot_rail_layout_now(_spot_side, _spots_hidden)
 	if _spot_chevron != null:
-		_spot_chevron.text = ">" if _spots_hidden else "<"
+		_spot_chevron.text = str(lay["chevron"])
 	if _spot_rail != null:
 		var tw := create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-		tw.tween_property(_spot_rail, "position:x", SPOT_RAIL_X + (SPOT_RAIL_HIDE if _spots_hidden else 0.0), SPOT_RAIL_SLIDE)
+		tw.tween_property(_spot_rail, "position:x", float(lay["x"]), SPOT_RAIL_SLIDE)
 
 
 func spots_hidden() -> bool:
@@ -1017,7 +1034,32 @@ func _add_spot_picker() -> void:
 	chev.pressed.connect(_toggle_spot_rail)
 	rail.add_child(chev)
 	_spot_chevron = chev
+	_place_spot_rail(Hud.toast_side())
 	_refresh_picker()
+
+
+## Put the rail on its HUD side: the x, the chevron's side of the column and
+## the way it points (also on a live HUD SIDE flip from the pause page).
+func _place_spot_rail(side: String) -> void:
+	_spot_side = side
+	if _spot_rail == null:
+		return
+	var lay := _spot_rail_layout_now(side, _spots_hidden)
+	_spot_rail.position.x = float(lay["x"])
+	if _spot_chevron != null:
+		_spot_chevron.text = str(lay["chevron"])
+		_spot_rail.move_child(_spot_chevron, 0 if bool(lay["chevron_first"]) else _spot_rail.get_child_count() - 1)
+
+
+func spot_rail_side() -> String:
+	return _spot_side
+
+
+## The layout with the built rail's own widths.
+func _spot_rail_layout_now(side: String, hidden: bool) -> Dictionary:
+	var rail_w := _spot_rail.get_combined_minimum_size().x if _spot_rail != null else SPOT_RAIL_W
+	var chev_w := _spot_chevron.get_combined_minimum_size().x if _spot_chevron != null else SPOT_CHEVRON.x
+	return spot_rail_layout(side, hidden, maxf(rail_w, SPOT_RAIL_W), maxf(chev_w, SPOT_CHEVRON.x))
 
 
 func _spot_chip(text: String, font_size: int, min_size: Vector2) -> ShadowCard:

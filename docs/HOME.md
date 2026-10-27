@@ -632,8 +632,10 @@ while you shoot. `Hud.banner(text, color)` keeps its name; the mapping is
 the copy. **HUD SIDE** (Ross, 2026-10-24; the last GAME settings row,
 `App.hud_side`, the `hudSide` setting): `LEFT` is the design's layout;
 `RIGHT` mirrors the toasts to the right edge and moves the note to the
-bottom-right with the chevron on its left (`music_positions(side)`); the
-screens read it when they build. The cage hoop starting to move (`heat_up`:
+bottom-right with the chevron on its left (`music_positions(side)`) and
+mirrors the practice spot rail to the right edge (`spot_rail_layout`, Ross
+2026-10-27); the screens read it when they build and follow a flip on the
+pause page at once. The cage hoop starting to move (`heat_up`:
 the trial's last 30 s, or 30S MODE in practice) keeps its `HEATING UP` LED
 marquee and the light flare but pops nothing at the rim any more (Ross,
 2026-10-24); the practice toggle has its toast.
@@ -657,7 +659,10 @@ the 30S MODE row (`ToggleSwitch`) under PAUSE and, under that, the spot rail
 (design 5a, 2026-10-05): a column of 150 × 56 `ShadowCard` chips at x 36 / y 200,
 the spot you stand on in orange, with a 44 × 56 chevron beside the column that
 slides the whole rail 200 px off the left edge and back (`--qa-spots` snaps
-`spots_00..02`). The pause menu is shared (`game/ui/pause_menu.gd`,
+`spots_00..02`). With HUD SIDE: RIGHT the rail mirrors (Ross, 2026-10-27:
+`spot_rail_layout(side, hidden)`): the column 36 in from the right edge, the
+chevron on its left pointing `>`, the slide off the right edge; a flip on the
+pause page moves it at once (`hud_right_spots_00/01`). The pause menu is shared (`game/ui/pause_menu.gd`,
 `PauseMenu`; design "Pause Menu" 43a, 2026-10-25, updated 2026-10-27): the
 dim over the frozen match, PAUSED in gold over where you are (`ARCADE
 LEAGUE · MATCH 5 · VS OLLIE`, a playoff game `… · SEMIFINAL · GAME 2 · VS
