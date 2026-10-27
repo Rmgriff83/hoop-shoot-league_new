@@ -54,10 +54,13 @@ func _draw() -> void:
 		"multi":
 			_icon("icon_multiplayer", c, Vector2(30, 23), 2.0)
 		"pause":
+			# The bars grow with the button: 6×20 on the 56 px face, 12×40 on
+			# the match HUD's 120 px pause (design 5a / 4a, 2026-10-26).
+			var k := maxf(1.0, roundf((size.x - ShadowStyle.OFFSET) / 50.0))
 			for i in 2:
-				var at := Vector2(c.x - 9 + i * 12, c.y - 10)
-				draw_rect(Rect2(at + Vector2(2, 2), Vector2(6, 20)), RetroTheme.SCENE_OUTLINE)
-				draw_rect(Rect2(at, Vector2(6, 20)), COLOR)
+				var at := Vector2(c.x - 9 * k + i * 12 * k, c.y - 10 * k)
+				draw_rect(Rect2(at + Vector2.ONE * (1.0 + k), Vector2(6, 20) * k), RetroTheme.SCENE_OUTLINE)
+				draw_rect(Rect2(at, Vector2(6, 20) * k), COLOR)
 		"next":
 			# A right chevron (the next song): two bars meeting at the point.
 			for sgn in [-1.0, 1.0]:

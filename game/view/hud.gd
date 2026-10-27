@@ -23,15 +23,23 @@ extends CanvasLayer
 
 const CREAM := RetroTheme.SCENE_TEXT
 const GOLD := Color("#F0B84A")
-const CLOCK_POS := Vector2(106, 32)
-const CLOCK_SIZE := Vector2(214, 50)
+## The top row (designs 5a / 4a, Ross's 2026-10-26 pass): a 120-tall row —
+## the 120 px pause, the 150×120 clock / PRACTICE card (icon over the
+## figure), the 164×120 SCORE card or the two 162×60 side cards — with, in
+## a trial, the 164×60 BEST and TOP chips stacked under the score card
+## (22 and 14 px gaps, hung off the top row: they never scale away from it).
+const ROW_H := 120.0
+const CLOCK_POS := Vector2(172, 32)
+const CLOCK_SIZE := Vector2(150, 120)
 const SCORE_POS := Vector2(520, 32)
-const SCORE_SIZE := Vector2(164, 132)
-const BEST_POS := Vector2(520, 186)
-const BEST_SIZE := Vector2(164, 40)
+const SCORE_SIZE := Vector2(164, 120)
+const BEST_POS := Vector2(520, 32 + 120 + 22)
+const BEST_SIZE := Vector2(164, 60)
+const TOP_POS := Vector2(520, 32 + 120 + 22 + 60 + 14)
+const TOP_SIZE := Vector2(164, 60)
 const YOU_POS := Vector2(340, 32)
 const OPP_POS := Vector2(522, 32)
-const SIDE_SIZE := Vector2(162, 50)
+const SIDE_SIZE := Vector2(162, 60)
 ## The toasts (designs 4a / 5a, 2026-10-24): the countdown chip and the
 ## notice chip both hang off the screen's edge (App.hud_side) with their
 ## centre a third of the way up — clear of the opponent window and the hoop.
@@ -52,6 +60,10 @@ var _score_caps: Label
 var _best_chip: ShadowPanel
 var _best_label: Label
 var _best_val: Label
+## The TOP chip (5a, 2026-10-26): the area's all-time global top score under BEST.
+var _top_chip: ShadowPanel
+var _top_val: Label
+var _top := -1
 ## The NEXT BALL toast is up (it yields the slot to any other notice and
 ## comes back when the screen asks again).
 var _wait_shown := false
@@ -95,27 +107,31 @@ func has_top_wash() -> bool:
 func _ready() -> void:
 	layer = 5
 	# The clock card (a trial / heat) and the PRACTICE card share the slot.
-	_clock_card = _card(CREAM, CLOCK_POS, CLOCK_SIZE, 0.22, 14.0)
+	_clock_card = _card(CREAM, CLOCK_POS, CLOCK_SIZE, 0.22, 12.0)
 	_clock_card.name = "Clock"
+	var ccol := _vbox(16)
 	var cr := _hbox(10)
-	cr.add_child(_icon("icon_stopwatch"))
+	cr.alignment = BoxContainer.ALIGNMENT_CENTER
+	cr.custom_minimum_size = Vector2(0, 28)
+	cr.add_child(_icon("icon_stopwatch", 28))
 	_ot_tag = _text("OT1", 16, GOLD, true)
 	_ot_tag.name = "OtTag"
 	_ot_tag.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	_ot_tag.visible = false
 	cr.add_child(_ot_tag)
-	_clock = _text("60.0", 24, CREAM, true)
-	_clock.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	cr.add_child(_clock)
-	_clock_card.add_child(cr)
-	_practice_card = _card(RetroTheme.c("teal"), CLOCK_POS, CLOCK_SIZE, 0.22, 14.0)
+	ccol.add_child(cr)
+	_clock = _text("60.0", 28, CREAM, true)
+	_clock.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ccol.add_child(_clock)
+	_clock_card.add_child(ccol)
+	_practice_card = _card(RetroTheme.c("teal"), CLOCK_POS, CLOCK_SIZE, 0.22, 12.0)
 	_practice_card.name = "Practice"
 	_practice_card.visible = false
-	var pr := _hbox(12)
-	pr.add_child(_icon("icon_jersey"))
+	var pr := _vbox(16)
+	pr.add_child(_icon("icon_jersey", 32))
 	var pl := _text("PRACTICE", 16, CREAM, true)
 	pl.name = "PracticeLabel"
-	pl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	pl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pr.add_child(pl)
 	_practice_card.add_child(pr)
 	# The score card.
@@ -126,29 +142,44 @@ func _ready() -> void:
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.add_theme_constant_override("separation", 16)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_score_caps = _text("SCORE")
+	_score_caps = _text("SCORE", 20)
 	_score_caps.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(_score_caps)
-	_score = _text("0", 48, CREAM, true)
+	_score = _text("0", 52, CREAM, true)
 	_score.name = "Score"
 	_score.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(_score)
 	sc.add_child(col)
 	# The BEST chip (trials: shown by set_best).
-	_best_chip = _card(GOLD, BEST_POS, BEST_SIZE, 0.30, 12.0)
+	_best_chip = _card(GOLD, BEST_POS, BEST_SIZE, 0.30, 12.0, true)
 	_best_chip.name = "BestChip"
 	_best_chip.visible = false
 	var br := _hbox(10)
 	br.alignment = BoxContainer.ALIGNMENT_CENTER
-	_best_label = _text("BEST")
+	_best_label = _text("BEST", 20)
 	_best_label.name = "BestLabel"
 	_best_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	br.add_child(_best_label)
-	_best_val = _text("-", 16, CREAM, true)
+	_best_val = _text("-", 24, CREAM, true)
 	_best_val.name = "BestVal"
 	_best_val.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	br.add_child(_best_val)
 	_best_chip.add_child(br)
+	# The TOP chip (trials, with BEST): the area's all-time global top score.
+	_top_chip = _card(CREAM, TOP_POS, TOP_SIZE, 0.20, 12.0, true)
+	_top_chip.name = "TopChip"
+	_top_chip.visible = false
+	var tr := _hbox(10)
+	tr.alignment = BoxContainer.ALIGNMENT_CENTER
+	var tl := _text("TOP", 20)
+	tl.name = "TopLabel"
+	tl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	tr.add_child(tl)
+	_top_val = _text("-", 24, CREAM, true)
+	_top_val.name = "TopVal"
+	_top_val.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	tr.add_child(_top_val)
+	_top_chip.add_child(tr)
 	# The toasts (designs 4a / 5a): the countdown / GO chip and the notice
 	# chip, from the side the setting says (read once: settings change at home).
 	_toast_big = Toast.new(CREAM, UiLayout.hud_y(TOAST_Y), Toast.Mode.SIDE, toast_side())
@@ -185,6 +216,7 @@ func set_heat(on: bool, opp_label := "OPP", opp_color := LeagueContext.PINE) -> 
 		return
 	_score_card.visible = false
 	_best_chip.visible = false
+	_top_chip.visible = false
 	var you := _card(RetroTheme.c("orange"), YOU_POS, SIDE_SIZE, 0.22, 14.0)
 	you.name = "YouCard"
 	_you_score = _side(you, "YOU")
@@ -195,12 +227,12 @@ func set_heat(on: bool, opp_label := "OPP", opp_color := LeagueContext.PINE) -> 
 
 func _side(card: ShadowPanel, label: String) -> Label:
 	var row := _hbox(8)
-	var l := _text(label)
+	var l := _text(label, 20)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.clip_text = true
 	row.add_child(l)
-	var v := _text("0", 24, CREAM, true)
+	var v := _text("0", 30, CREAM, true)
 	v.name = "Value"
 	v.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(v)
@@ -261,6 +293,18 @@ func set_best(best: int) -> void:
 	_best = best
 	_best_chip.visible = best >= 0
 	_refresh_best()
+
+
+## The area's all-time global top score (the TOP chip under BEST, 5a
+## 2026-10-26): shown with the BEST chip; -1 reads "-" (no board in hand).
+func set_top(top: int) -> void:
+	_top = top
+	_top_chip.visible = _best_chip.visible
+	_top_val.text = str(top) if top >= 0 else "-"
+
+
+func top_text() -> String:
+	return "TOP %s" % _top_val.text if _top_chip.visible else ""
 
 
 func _refresh_best() -> void:
@@ -409,18 +453,22 @@ func best_text() -> String:
 # ---- pieces ----------------------------------------------------------------------
 
 
-func _card(color: Color, pos: Vector2, size_: Vector2, tint: float, pad_h: float) -> ShadowPanel:
+## A card at a band design position, on the real screen: through hud_pos,
+## or (under_row) hung off the top row at the design's gap — the chip stack
+## under the score card keeps its spacing on every screen.
+func _card(color: Color, pos: Vector2, size_: Vector2, tint: float, pad_h: float, under_row := false) -> ShadowPanel:
 	var p := ShadowPanel.new(color, 0.0, tint, pad_h)
-	p.position = UiLayout.hud_pos(pos)
+	p.position = Vector2(pos.x, UiLayout.hud_top() + (pos.y - UiLayout.HUD_TOP)) if under_row else UiLayout.hud_pos(pos)
 	p.size = size_ + Vector2.ONE * ShadowStyle.OFFSET
 	p.custom_minimum_size = p.size
 	add_child(p)
 	return p
 
 
-func _icon(name_: String) -> PixelIcon:
-	var i := PixelIcon.new(name_, Vector2(20, 20))
+func _icon(name_: String, px := 20) -> PixelIcon:
+	var i := PixelIcon.new(name_, Vector2(px, px))
 	i.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	i.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	return i
 
 
@@ -429,6 +477,14 @@ func _hbox(gap: int) -> HBoxContainer:
 	h.add_theme_constant_override("separation", gap)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return h
+
+
+func _vbox(gap: int) -> VBoxContainer:
+	var v := VBoxContainer.new()
+	v.alignment = BoxContainer.ALIGNMENT_CENTER
+	v.add_theme_constant_override("separation", gap)
+	v.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return v
 
 
 func _text(text: String, size_ := 16, color := CREAM, display := false) -> Label:

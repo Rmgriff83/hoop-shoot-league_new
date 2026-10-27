@@ -102,6 +102,7 @@ func _ready() -> void:
 		_hud.set_practice(true, _mode["hud_label"])
 	elif not bool(_mode.get("heat", false)):
 		_hud.set_best(_best_score())
+		_hud.set_top(_top_score())
 	_add_back_button()
 	_spots = _arena_set.spots() if _arena_set != null else [{"name": "KEY", "pos": Vector3.ZERO}]
 	_set_spot(0)
@@ -395,6 +396,16 @@ func _best_score() -> int:
 	return int(top[0].get("score", 0)) if not top.is_empty() else 0
 
 
+## The area's all-time global top score for the HUD's TOP chip (design 5a,
+## 2026-10-26): the cached board's first row, -1 with no board in hand.
+func _top_score() -> int:
+	var board := Net.cached_board(str(_mode.get("location", "")), "all")
+	var rows: Array = board.get("rows", []) if board.get("rows") is Array else []
+	if rows.is_empty() or not (rows[0] is Dictionary):
+		return -1
+	return int(rows[0].get("score", -1))
+
+
 ## Hook for subclasses once every view exists (the heat screen adds its PiP).
 func _after_ready() -> void:
 	pass
@@ -422,7 +433,7 @@ var _pause_layer: PauseMenu
 
 
 func _add_pause_button(layer: CanvasLayer) -> void:
-	var b := IconButton.new("pause")
+	var b := IconButton.new("pause", Hud.ROW_H)   # the 120 px pause (5a / 4a, 2026-10-26)
 	b.name = "PauseButton"
 	b.position = UiLayout.hud_pos(Vector2(36, 32))
 	b.pressed.connect(pause_game)
@@ -679,7 +690,8 @@ var _spot_buttons: Array[Button] = []
 ## of chips under the 30S MODE row with a chevron beside it that slides the
 ## rail off the left edge and back.
 const SPOT_RAIL_X := 36.0
-const SPOT_RAIL_Y := 200.0
+const SPOT_RAIL_Y := 266.0   # under the 30S row (design 5a, 2026-10-26: 381 on the 1560 frame)
+const SPOT_RAIL_Y_HEAT := 172.0   # a court picker in a heat: under the 120 px top row
 const SPOT_RAIL_HIDE := -200.0
 const SPOT_RAIL_SLIDE := 0.28
 const SPOT_CHIP := Vector2(150, 56)
@@ -860,10 +872,10 @@ func _add_thirty_button() -> void:
 	layer.layer = 11
 	UiLayout.anchor_layer(layer)
 	add_child(layer)
-	var y := 330.0 if App.tuning_mode else 104.0
+	# 20 px under the 120 px pause (design 5a, 2026-10-26: hung off the top row).
 	_thirty_btn = ShadowCard.new(RetroTheme.SCENE_TEXT)
 	_thirty_btn.name = "ThirtyButton"
-	_thirty_btn.position = UiLayout.hud_pos(Vector2(36, y))
+	_thirty_btn.position = UiLayout.hud_pos(Vector2(36, 330.0)) if App.tuning_mode else Vector2(36, UiLayout.hud_top() + Hud.ROW_H + 20.0)
 	_thirty_btn.size = Vector2(284 + ShadowStyle.OFFSET, 60 + ShadowStyle.OFFSET)
 	var m := MarginContainer.new()
 	UiLayout.full_rect(m)
@@ -969,7 +981,7 @@ func _add_spot_picker() -> void:
 	add_child(layer)
 	var rail := HBoxContainer.new()
 	rail.name = "SpotRail"
-	rail.position = UiLayout.hud_pos(Vector2(SPOT_RAIL_X, 330.0 if App.tuning_mode else (SPOT_RAIL_Y if _practice else 84.0)))
+	rail.position = UiLayout.hud_pos(Vector2(SPOT_RAIL_X, 330.0 if App.tuning_mode else (SPOT_RAIL_Y if _practice else SPOT_RAIL_Y_HEAT)))
 	rail.add_theme_constant_override("separation", 14)
 	rail.alignment = BoxContainer.ALIGNMENT_BEGIN
 	layer.add_child(rail)

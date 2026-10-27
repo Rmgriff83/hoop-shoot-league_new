@@ -571,6 +571,18 @@ centred at 506 (slots 330 / 450 / 570), the toasts at 1050, the note at
 1436; a 9:16 screen with no insets maps every y to itself. Score pops stay
 on the rim. Deal points (`_hoop_point`, `_pip_point`) are raw screen px.
 QA: `--qa-safe-top=108 --qa-safe-bottom=62` at 360x780 plays that iPhone.
+**The 120-tall top row (same pass):** the pause is a 120 px `IconButton`
+(its bars grow to 12×40), the clock / PRACTICE card is 150×120 with the
+stopwatch (28 px, the gold OT tag beside it in a heat) or the jersey (32
+px) over the figure, SCORE is 164×120 (`SCORE` 20 over the 52 px count),
+a heat's YOU / opponent cards are 162×60 (label 20, value 30). In a trial
+the 164×60 BEST chip hangs 22 px under the score card and a new cream
+**TOP** chip 14 px under that (`Hud.set_top`, the area's all-time global
+top score from `Net.cached_board(area, "all")`, `-` with no board in hand;
+`TimeTrialScreen._top_score`) — both hung off the top row (`_card(…,
+under_row)`), never scaled away from it. The 30S MODE row sits 20 px under
+the pause; the practice spot rail at band 266 (381 on the 1560 frame), a
+heat's court picker at 172, clear of the row. `tests/test_hud_tall.gd`.
 
 `game/view/hud.gd` (`Hud`, a CanvasLayer over the live game; copy in
 `game/view/hud_copy.gd`, `tests/test_hud.gd`): the top row — PAUSE
