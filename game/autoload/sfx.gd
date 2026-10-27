@@ -48,7 +48,7 @@ func _ready() -> void:
 		"swish", "net", "chain_rattle_0", "chain_rattle_1", "score_pop", "score_pop_swish", "buzzer",
 		"ice_freeze", "ice_crack_0", "ice_crack_1", "ice_shatter",
 		"peggy_press", "peggy_servo", "peggy_ticket", "peggy_peg_0", "peggy_peg_1", "peggy_peg_2",
-		"peggy_win", "peggy_jackpot", "match_loss", "chime_win", "chime_big",
+		"peggy_win", "peggy_jackpot", "match_loss", "chime_win", "chime_big", "level_up",
 		"fx/fire_burst", "fx/ice_form", "fx/ice_break", "fx/ice_swish", "fx/fire_out",
 	]:
 		_streams[name_] = load("res://assets/audio/%s.wav" % name_)
@@ -498,6 +498,12 @@ func chime_win() -> void:
 
 func chime_big() -> void:
 	_play("chime_big", -2.0)
+
+
+## The post-match XP meter filling to a LEVEL UP (Ross, 2026-10-26;
+## heyheytheree's cozy coin, data/credits.json).
+func level_up() -> void:
+	_play("level_up", -2.0)
 
 
 ## The carriage's servo whine, looped while the aim moves.

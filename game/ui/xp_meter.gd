@@ -4,8 +4,9 @@ extends Control
 ## the level line with the XP just earned beside it, over a 12 px bar that
 ## fills from where the player was to where they are once the ticket stream
 ## has landed (0.8 s, ease-out). A level up fills to the end and the line
-## turns gold and pulses; at the cap the bar sits full. Driven by `step(dt)`
-## (`_process` unless `manual`), so QA snaps are deterministic.
+## turns gold and pulses (and Sfx.level_up rings once, Ross 2026-10-26); at
+## the cap the bar sits full. Driven by `step(dt)` (`_process` unless
+## `manual`), so QA snaps are deterministic.
 
 const FILL_S := 0.8
 const BAR_H := 12.0
@@ -21,6 +22,7 @@ var _line: Label
 var _gain: Label
 var _fill: ColorRect
 var _bar: Control
+var _rang := false   # the level-up sound, once
 
 
 func _init(m: Dictionary, width: float) -> void:
@@ -85,7 +87,15 @@ func step(dt: float) -> void:
 	_t += dt
 	_apply(progress_at(_t))
 	if bool(_m.get("up", false)) and progress_at(_t) >= 1.0:
+		if not _rang:
+			_rang = true
+			Sfx.level_up()
 		_line.modulate.a = 0.775 + 0.225 * cos(TAU * (_t - _start - FILL_S))   # the design's 1 s glow
+
+
+## Whether the level-up sound has rung (tests, QA).
+func rang() -> bool:
+	return _rang
 
 
 ## The fill fraction at second `t` (ease-out cubic after the start).

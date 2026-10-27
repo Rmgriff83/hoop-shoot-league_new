@@ -486,7 +486,9 @@ all-time board, `Net.cached_board(area, "all")`, decided in
 `App.finish_run` before the run is queued — no board in hand, no claim) and
 a new area (the unlock page, as the lock springs at `T_OPEN`). Losses keep
 the sting; the match-end page no longer borrows PEGGY's win and jackpot
-sounds. `tests/test_chimes.gd`.
+sounds. Levelling up rings heyheytheree's cozy coin (`assets/audio/level_up.wav`,
+`Sfx.level_up`) once, as the post-match XP meter fills to `LEVEL UP`
+(`XpMeter.step`). `tests/test_chimes.gd`.
 
 `game/screens/results_screen.gd` over the live court you just played on (the
 area's home-page pan under a half scrim); copy in `game/ui/results_copy.gd`

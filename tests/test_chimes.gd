@@ -39,3 +39,26 @@ func run(t) -> void:
 	# The unlock page chimes big as the lock springs.
 	var unlock := FileAccess.get_file_as_string("res://game/ui/area_unlock_page.gd")
 	t.ok(unlock.find("Sfx.chime_big()") >= 0 and unlock.find("Sfx.score_pop(true)") < 0, "the area unlock page plays the big chime at the lock")
+	# Levelling up (Ross, 2026-10-26): heyheytheree's coin rings once as the
+	# post-match XP meter fills to LEVEL UP; a plain fill never rings.
+	var coin: AudioStream = load("res://assets/audio/level_up.wav")
+	t.ok(coin != null and coin.get_length() > 0.9 and coin.get_length() < 1.4, "level_up ships (~1.1 s)")
+	if sfx != null:
+		t.ok(sfx.has_method("level_up"), "Sfx exposes level_up()")
+	t.eq(str(urls.get("https://freesound.org/people/heyheytheree/sounds/872480/", {}).get("author", "")), "heyheytheree", "the coin is credited at Ross's link")
+	var up := XpMeter.new({"level": 3, "level_before": 2, "need": 100, "gained": 40, "up": true, "cap": false, "from": 70, "to": 100}, 300.0)
+	up.manual = true
+	up.play(0.0)
+	up.step(0.3)
+	t.ok(not up.rang(), "no ring while the bar is still filling")
+	up.step(XpMeter.FILL_S)
+	t.ok(up.rang() and up.text() == "LEVEL UP · LEVEL 3", "the coin rings as the bar fills to LEVEL UP")
+	up.step(1.0)
+	t.ok(up.rang(), "…once (the flag holds)")
+	up.free()
+	var plain := XpMeter.new({"level": 2, "level_before": 2, "need": 100, "gained": 20, "up": false, "cap": false, "from": 30, "to": 50}, 300.0)
+	plain.manual = true
+	plain.play(0.0)
+	plain.step(XpMeter.FILL_S + 1.0)
+	t.ok(not plain.rang(), "a fill short of a level never rings")
+	plain.free()
