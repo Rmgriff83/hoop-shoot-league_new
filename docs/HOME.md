@@ -322,9 +322,10 @@ chevron (the footer says START INSIDE).
   here; the league CARDS tab is the shop only.
   - **Top**, the OPPONENT tab on a cream panel: their name (+ `#tag` online)
     and town (online) or `ARCADE LEAGUE · SUNSHINE` (league) beside the
-    jersey in a dark box, three stats under a rule — league `RECORD · SEED ·
+    jersey in a dark box, three stats under a rule in centred columns, the
+    value over its label (37a, 2026-10-26) — league `RECORD · SEED ·
     AVG PTS` from the table, online `RANK · RATING · RECORD` from the room's
-    `matched.stats` — and a **streak tag** over RECORD at 2+ (a green W or
+    `matched.stats` — and a **streak tag** off the value's corner at 2+ (a green W or
     red L square, the arrow, the length: league `Standings.current_streak`,
     online the ratings' `win_streak` / `loss_streak`, sent in `matched.stats`
     — needs the Worker deploy). THEIR LOADOUT under a divider, three 72×96
@@ -344,8 +345,9 @@ chevron (the footer says START INSIDE).
     it into the first open slot; a card above the cap is dim with its `LVL n`
     tag and refuses; everything dims while you are READY, and your gold
     READY chip sits on the panel's top-right corner.
-  - **READY**, a 428×216 block at the bottom right (orange, a shine sweeping
+  - **READY**, a 428×184 block at the bottom right (orange, a shine sweeping
     it: `READY >` over `n OF 3 CARDS SET`) locks the loadout and turns gold
+    (your panel takes a slow light sweep while you are ready)
     (`WAITING FOR GLASS WIZARD · TAP TO UNLOCK` — tap again to unlock while
     they are still deciding); both ready → the button becomes `MATCH STARTS
     IN` over the big 5 s count (`data/ranked.json → prematch.countdown_s`;

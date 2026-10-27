@@ -21,8 +21,10 @@ extends FaceOffPage
 ## the one under the card fills gold with ARM; let go to arm it, drop
 ## anywhere else and it snaps back; a plain tap arms it into the first open
 ## slot. A spare above the cap wears its level and refuses. READY (a 428 ×
-## 216 block, bottom right, a shine sweeping the orange face) locks the
-## loadout; tap again to unlock while the other side is still deciding.
+## 184 block, bottom right, a shine sweeping the orange face) locks the
+## loadout (your gold panel takes a slow light sweep while you are ready);
+## tap again to unlock while the other side is still deciding. The stats
+## stand in three centred columns, the value over its label (2026-10-26).
 ## Both ready → the button turns gold into MATCH STARTS IN over the big
 ## count (data: prematch.countdown_s), then GO and `go`. The room's deadline
 ## (`seconds`) still readies the page silently at zero, so both phones agree.
@@ -61,7 +63,7 @@ const VS_GAP := 46.0
 const VS_H := 110.0
 const YOU_TAB_UP := 17.0
 const READY_W := 428.0
-const READY_H := 216.0
+const READY_H := 184.0
 const READY_RIGHT := 42.0
 const READY_GAP := 82.0
 const TOP_MIN := 44.0
@@ -119,6 +121,7 @@ var _row_right: Control
 var _you_ready_chip: Control
 var _ready_btn: ShadowCard
 var _shine: Shine
+var _you_shine: Shine   # the slow sweep over your panel while you are ready
 var _ready_top: Label
 var _ready_sub: Label
 var _ready_mark: Label
@@ -212,7 +215,9 @@ func _fit() -> void:
 		_opp_ready_chip.position = Vector2(PANEL_X + PANEL_W + 8.0 - _opp_ready_chip.size.x, opp_end - 28.0)
 	if _you_ready_chip != null:
 		_you_ready_chip.reset_size()
-		_you_ready_chip.position = Vector2(PANEL_X + PANEL_W + 8.0 - _you_ready_chip.size.x, _you_panel.position.y - 18.0)
+		_you_ready_chip.position = Vector2(PANEL_X + PANEL_W + 8.0 - _you_ready_chip.size.x, _you_panel.position.y - 23.0)
+	if _you_shine != null:
+		_you_shine.size = Vector2(PANEL_W, _you_panel.size.y - ShadowStyle.OFFSET)
 
 
 ## The column's scale on this screen (tests, QA).
@@ -298,7 +303,9 @@ func _panel(name_: String, colour: Color, tint: float) -> Array:
 	return [panel, col]
 
 
-## Who: the jersey, the name over the town in a dark box, the three stats under a rule.
+## Who: the jersey, the name over the town in a dark box, the three stats
+## under a rule in equal centred columns — the value over its label, the
+## streak tag hung off the value's top-right corner.
 func _who_box(name_: String, town: String, stats: Array, colour: Color, name_size: int) -> PanelContainer:
 	var box := PanelContainer.new()
 	box.name = "Who"
@@ -347,40 +354,31 @@ func _who_box(name_: String, town: String, stats: Array, colour: Color, name_siz
 	st.name = "Stats"
 	st.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(st)
+	st.add_theme_constant_override("separation", 16)
 	for i in stats.size():
-		if i > 0:
-			st.add_child(_spacer_h())
-		# A cell holds the value + label pair, and the streak tag over it.
-		var cell := Control.new()
+		# A column: the value over its label, both centred; the tag rides the value.
+		var cell := VBoxContainer.new()
 		cell.name = "StatCell%d" % i
+		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		cell.alignment = BoxContainer.ALIGNMENT_CENTER
+		cell.add_theme_constant_override("separation", 10)
 		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var pair := HBoxContainer.new()
-		pair.add_theme_constant_override("separation", 10)
-		pair.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		cell.add_child(pair)
-		var v := words(str(stats[i][0]), 16, true)
+		var v := words(str(stats[i][0]), 18, true)
 		v.name = "Stat_" + str(stats[i][1]).replace(" ", "_")
-		v.size_flags_vertical = Control.SIZE_SHRINK_END
-		pair.add_child(v)
+		v.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		cell.add_child(v)
 		var l := words(str(stats[i][1]), 13)
 		l.add_theme_color_override("font_color", MUTED)
-		l.size_flags_vertical = Control.SIZE_SHRINK_END
-		pair.add_child(l)
-		var tag: Control = null
+		l.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		cell.add_child(l)
 		if (stats[i] as Array).size() > 2 and str(stats[i][2]) != "":
-			tag = _streak_tag(str(stats[i][2]))
-			cell.add_child(tag)
-		var last := i == stats.size() - 1
-		var fit := func() -> void:
-			var m := pair.get_combined_minimum_size()
-			pair.size = m
-			cell.custom_minimum_size = m
-			if tag != null:
-				var tag_w := tag.get_combined_minimum_size().x
+			var tag := _streak_tag(str(stats[i][2]))
+			v.add_child(tag)
+			var fit := func() -> void:
 				tag.size = tag.get_combined_minimum_size()
-				tag.position = Vector2(m.x + 12.0 - tag_w if last else m.x - 8.0, -20.0)
-		pair.minimum_size_changed.connect(fit)
-		fit.call()
+				tag.position = Vector2(v.size.x - 6.0, -24.0)
+			v.resized.connect(fit)
+			fit.call()
 		st.add_child(cell)
 	return box
 
@@ -612,6 +610,13 @@ func _build_you() -> void:
 	_you_ready_chip.visible = false
 	_you_ready_chip.z_index = 3
 	_stage.add_child(_you_ready_chip)
+	# Ready: a slow band of light sweeps your panel (the design's dotWavePanel).
+	_you_shine = Shine.new(2.4, 260.0, 0.35)
+	_you_shine.name = "PanelShine"
+	_you_shine.position = Vector2.ZERO
+	_you_shine.visible = false
+	_you_panel.add_child(_you_shine)
+	_you_panel.move_child(_you_shine, 0)
 	_you_slots = HBoxContainer.new()
 	_you_slots.name = "Slots"
 	_you_slots.alignment = BoxContainer.ALIGNMENT_CENTER
@@ -786,21 +791,26 @@ func _build_ready() -> void:
 ## The orange READY's shine (the design's dotWave): a band of light sweeping
 ## left to right every 2 s, clipped to the face.
 class Shine extends Control:
-	const PERIOD := 2.0
-	const BAND := 200.0
+	var period := 2.0
+	var band := 200.0
+	var peak := 0.55
 	var _t := 0.0
 
-	func _init() -> void:
+	func _init(p_period := 2.0, p_band := 200.0, p_peak := 0.55) -> void:
+		period = p_period
+		band = p_band
+		peak = p_peak
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	func _process(dt: float) -> void:
 		if not visible:
 			return
-		_t = fposmod(_t + dt, PERIOD)
+		_t = fposmod(_t + dt, period)
 		queue_redraw()
 
 	func _draw() -> void:
-		var k := clampf(_t / (PERIOD * 0.7), 0.0, 1.0)
+		var BAND := band
+		var k := clampf(_t / (period * 0.7), 0.0, 1.0)
 		var cx := -BAND + (size.x + 2.0 * BAND) * k
 		var step := 6.0
 		var y := 3.0
@@ -810,7 +820,7 @@ class Shine extends Control:
 			while x < minf(size.x, cx + BAND * 0.5):
 				var a := 1.0 - absf(x - cx) / (BAND * 0.5)
 				if a > 0.0:
-					draw_rect(Rect2(x, y, 2, 2), Color(1.0, 0.95, 0.85, 0.55 * a))
+					draw_rect(Rect2(x, y, 2, 2), Color(1.0, 0.95, 0.85, peak * a))
 				x += step
 			y += step
 
@@ -1264,6 +1274,8 @@ func _refresh_ready() -> void:
 	_ready_btn.queue_redraw()
 	if _you_ready_chip != null:
 		_you_ready_chip.visible = _ready_sent
+	if _you_shine != null:
+		_you_shine.visible = _ready_sent
 	if _load_count != null:
 		_load_count.text = MatchCopy.load_count(set_count)
 
