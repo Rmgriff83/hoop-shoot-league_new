@@ -125,6 +125,9 @@ describe("cards in a room", () => {
     expect(await B.until((m) => m.t === "settled")).toEqual({ t: "settled", won: false, reason: "played", ranked: false });
     const ledgerA = await env.DB.prepare("SELECT kind, card_id, coins FROM online_ledger WHERE player_id = ?1 ORDER BY id").bind(a.playerId).all<any>();
     expect(ledgerA.results).toEqual([{ kind: "play", card_id: "ice", coins: 0 }, { kind: "play", card_id: "ice", coins: 0 }]);
+    // The winner's own played cards never come back (Ross, 2026-10-26): the route the phone re-reads after the settle agrees.
+    expect((await cards(a)).json).toEqual({ inventory: {}, level: 1 });
+    expect((await cards(b)).json).toEqual({ inventory: { fire7: 1 }, level: 9 });
   });
   it("settles a void without an error and the stayer wins a forfeit", async () => {
     // A void: the leaver goes in the first seconds.

@@ -276,7 +276,7 @@ func _on_online_message(msg: Dictionary) -> void:
 			if not _pending_card.is_empty() and str(_pending_card["id"]) == str(msg["id"]):
 				var slot := int(_pending_card["slot"])
 				_pending_card = {}
-				_deploy(slot, str(msg["id"]))
+				_deploy(slot, str(msg["id"]), true)   # receipted: the ledger has spent it
 		MatchProtocol.ERROR:
 			if str(msg.get("code", "")) == "card" and not _pending_card.is_empty():
 				var slot := int(_pending_card["slot"])
@@ -624,8 +624,12 @@ func _on_card_tapped(i: int) -> void:
 	_deploy(i, id)
 
 
-## The card leaves the tray and takes effect (or comes back if the effect refused).
-func _deploy(i: int, id: String) -> void:
+## The card leaves the tray and takes effect (or comes back if the effect
+## refused). `receipted` (online, after the room's card_ok): the ledger has
+## already spent the copy, so a refusal here never puts it back — the slot
+## stays used and the LED says so (Ross, 2026-10-26: a played card must
+## never return to the player who played it).
+func _deploy(i: int, id: String, receipted := false) -> void:
 	_dealt_slot = i
 	_dealt_from = Rect2(_tray[i].position, TRAY_CARD)
 	if heat.play_card(Heat.PLAYER, id):
@@ -637,12 +641,18 @@ func _deploy(i: int, id: String) -> void:
 			_magnet_slot = i   # stays in the tray while it hangs over the rim
 		else:
 			_remove_from_tray(i)
+	elif receipted:
+		_tray_ids[i] = "used"
+		_remove_from_tray(i)
+		_court.info.flash("CARD SPENT", 2, _court.info.accent_color)
+		print("HeatScreen: %s refused after the room's receipt: spent, not restored" % id)
 	else:
 		_restore_slot(i, id)
 
 
 ## The copy back in its slot (the effect refused, or the room did).
 func _restore_slot(i: int, id: String) -> void:
+	print("HeatScreen: restoring %s to slot %d of the %s bucket" % [id, i, _bucket()])
 	var d := App.cards_doc()
 	var b := CardDefs.league_doc(d, _bucket())
 	CardDefs.add(b, id)

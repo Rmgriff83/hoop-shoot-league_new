@@ -1122,6 +1122,10 @@ func settled_online(msg: Dictionary) -> void:
 	if msg.has("tickets") and int(msg["tickets"]) > 0:
 		grant_tickets(int(msg["tickets"]))
 	_merge_online_settle()
+	# The ledger's word after every online match, casual or rated (Ross,
+	# 2026-10-26: a played card must never come back to its player): the
+	# mirror re-reads, a rematch's pre-match page and the lobby follow it.
+	Net.refresh_cards()
 	if bool(msg.get("ranked", false)):
 		if msg.get("rank") is Dictionary:
 			# The decision's rank carries the tier; the record follows from

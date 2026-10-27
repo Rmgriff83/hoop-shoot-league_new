@@ -294,7 +294,12 @@ other phone must trust what hits its rim.
   that side's dealt hand, removes it, decrements `online_cards` (ledger
   `play`), relays `card {from, id}` and echoes `card_ok {id}`; a card not in
   hand → `error {code: card}`. The tray marks the slot `...` until the receipt
-  (then `Heat.play_card`, the deal animation), or restores it on a refusal.
+  (then `Heat.play_card`, the deal animation), or restores it on a refusal
+  — the room's `error` only: a play the room receipted is spent even if
+  the phone's sim then refuses it (the slot stays used, `CARD SPENT`), and
+  every settle re-reads the ledger (`App.settled_online` →
+  `Net.refresh_cards`), so a played card never returns to its player
+  (Ross, 2026-10-26).
   The other phone's `card` lands through `Heat.remote_card` — their ice
   freezes *our* rim in our sim (we own our side and report it), their fire
   or magnet lights our replay of theirs (their magnet pulls in our sim of

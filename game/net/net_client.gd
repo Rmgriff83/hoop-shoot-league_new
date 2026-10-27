@@ -421,6 +421,7 @@ func _apply_cards(json: Dictionary) -> void:
 		if int(left.get(id, 0)) > 0:
 			left[id] = int(left[id]) - 1
 		else:
+			print("Net: the ledger no longer covers %s in online slot %d: emptied" % [id, i])
 			loadout[i] = null
 	var inv := {}
 	for id in left:
