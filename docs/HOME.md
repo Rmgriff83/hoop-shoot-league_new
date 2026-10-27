@@ -540,7 +540,7 @@ A tag pill (`DAY 4 · FINAL` / `PLAYOFFS · SEMIFINAL` / `ARCADE LEAGUE ·
 FINAL`), the score with YOU and their first name, the gold tickets box (`TicketBox`, design 15a update 2026-10-24: the icon, `+N` at 26 px over TICKETS) pops in with the NEW CARD tile (tilted animated face) on every state at 2.5 s, then a **stream of tickets** arcs from the score into the box from 2.75 s (`TicketStream`, one per two tickets, fifteen at most, stepped by the page's own clock) while the count ticks up from +0; after 3 s TAP TO
 CONTINUE blinks and a tap goes to the post-match page
 (`App.to_heat_result`). Sounds: `peggy_win` on a win, `peggy_jackpot` on
-advance/champions, `match_loss` otherwise. Confetti is
+advance/champions, `match_loss` otherwise (since 2026-10-26 the chimes on wins — see Results — and tommasomotteran's orchestral defeat stinger, `assets/audio/match_defeat.wav`, on every loss). Confetti is
 `game/ui/confetti.gd` (seeded, pure `_draw`); the rays are `PrizeRays`.
 
 **League post-match** (`game/screens/heat_result_screen.gd`, design "League

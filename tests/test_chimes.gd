@@ -81,3 +81,10 @@ func run(t) -> void:
 	t.ok(screen.find("Sfx.swish_register()") < screen.find("elif lit and tier > 1:\n\t\t\tSfx.streak_coin()"), "the coin rings on a lit, extra-points make that is not a swish; a swish keeps the till")
 	t.eq(StreakRules.base_points(StreakRules.FIRE_AT), 1, "(at FIRE_AT itself a make pays 1: no coin until the first tier)")
 	t.ok(StreakRules.base_points(int(StreakRules.TIERS[0][0])) > 1, "…the first tier pays extra")
+	# Losing a match (Ross, 2026-10-26): tommasomotteran's defeat stinger behind
+	# Sfx.match_loss (the API the match-end page already calls); credited.
+	var defeat: AudioStream = load("res://assets/audio/match_defeat.wav")
+	t.ok(defeat != null and defeat.get_length() > 2.5 and defeat.get_length() < 3.1, "match_defeat ships (~2.8 s)")
+	t.eq(str(urls.get("https://freesound.org/people/tommasomotteran/sounds/856516/", {}).get("author", "")), "tommasomotteran", "the defeat stinger is credited")
+	var sfx_src := FileAccess.get_file_as_string("res://game/autoload/sfx.gd")
+	t.ok(sfx_src.find("func match_loss() -> void:\n\t_play(\"match_defeat\"") >= 0, "match_loss plays the stinger")

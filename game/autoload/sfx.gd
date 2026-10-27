@@ -48,7 +48,7 @@ func _ready() -> void:
 		"swish", "net", "chain_rattle_0", "chain_rattle_1", "score_pop", "score_pop_swish", "buzzer",
 		"ice_freeze", "ice_crack_0", "ice_crack_1", "ice_shatter",
 		"peggy_press", "peggy_servo", "peggy_ticket", "peggy_peg_0", "peggy_peg_1", "peggy_peg_2",
-		"peggy_win", "peggy_jackpot", "match_loss", "chime_win", "chime_big", "level_up", "swish_register", "streak_coin",
+		"peggy_win", "peggy_jackpot", "match_loss", "chime_win", "chime_big", "level_up", "swish_register", "streak_coin", "match_defeat",
 		"click_0", "click_1", "click_2", "click_3", "click_4",
 		"fx/fire_burst", "fx/ice_form", "fx/ice_break", "fx/ice_swish", "fx/fire_out",
 	]:
@@ -76,7 +76,7 @@ var _last_click := -1
 
 func click() -> void:
 	_last_click = _pick(CLICKS, _last_click)
-	_play("click_%d" % _last_click, -2.0)
+	_play("click_%d" % _last_click, -8.0)   # Ross, 2026-10-26: a bit more down than -2
 
 
 func last_click() -> int:
@@ -508,9 +508,11 @@ func peggy_jackpot() -> void:
 	_play("peggy_jackpot", -1.0)
 
 
-## The match-end page's loss sting.
+## The match-end page's loss sting: tommasomotteran's orchestral defeat
+## stinger (Ross, 2026-10-26, data/credits.json; the synthetic match_loss
+## from tools/gen_sfx.gd stays on disk, unused).
 func match_loss() -> void:
-	_play("match_loss", -3.0)
+	_play("match_defeat", -3.0)
 
 
 ## The end pages' chimes (Ross, 2026-10-26; canberries4's retro chimes,
