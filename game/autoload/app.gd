@@ -54,6 +54,9 @@ var pending_walkthrough := ""
 ## Stats of the run that just ended, for the results screen.
 var last_run: Dictionary = {}
 var last_run_was_best := false
+## …and beat the area's all-time global board as cached at the time (the
+## results page's big chime; ResultsCopy.global_best).
+var last_run_was_global_best := false
 
 ## Tuning mode: shows the on-device touch tuning strip in the time trial.
 ## Persisted in SaveService's "tuning" part (device-local).
@@ -1831,6 +1834,7 @@ func start_beach() -> void:
 
 func finish_run(run: Dictionary) -> void:
 	last_run_was_best = SaveService.is_best(run["score"], run.get("location", "cage"))
+	last_run_was_global_best = ResultsCopy.global_best(int(run["score"]), Net.cached_board(str(run.get("location", "cage")), "all"))
 	last_run = SaveService.put_score(run)
 	# Tickets for the run (docs/ECONOMY.md). Practice never gets here: endless
 	# modes have no clock to run out.

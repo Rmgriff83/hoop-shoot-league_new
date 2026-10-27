@@ -383,7 +383,7 @@ func step(dt: float) -> void:
 	_t += dt
 	if not _sound_done and _t >= T_OPEN:
 		_sound_done = true
-		Sfx.score_pop(true)
+		Sfx.chime_big()   # a new area: the big chime as the lock springs (Ross, 2026-10-26)
 	for a in _anims:
 		var node: CanvasItem = a["node"]
 		if not is_instance_valid(node):

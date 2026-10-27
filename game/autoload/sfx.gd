@@ -48,7 +48,7 @@ func _ready() -> void:
 		"swish", "net", "chain_rattle_0", "chain_rattle_1", "score_pop", "score_pop_swish", "buzzer",
 		"ice_freeze", "ice_crack_0", "ice_crack_1", "ice_shatter",
 		"peggy_press", "peggy_servo", "peggy_ticket", "peggy_peg_0", "peggy_peg_1", "peggy_peg_2",
-		"peggy_win", "peggy_jackpot", "match_loss",
+		"peggy_win", "peggy_jackpot", "match_loss", "chime_win", "chime_big",
 		"fx/fire_burst", "fx/ice_form", "fx/ice_break", "fx/ice_swish", "fx/fire_out",
 	]:
 		_streams[name_] = load("res://assets/audio/%s.wav" % name_)
@@ -486,6 +486,18 @@ func peggy_jackpot() -> void:
 ## The match-end page's loss sting.
 func match_loss() -> void:
 	_play("match_loss", -3.0)
+
+
+## The end pages' chimes (Ross, 2026-10-26; canberries4's retro chimes,
+## data/credits.json): the small one for a match won or a time-trial
+## personal best; the big one instead for the championship, an all-time
+## global best or a new area (on the unlock page).
+func chime_win() -> void:
+	_play("chime_win", -2.0)
+
+
+func chime_big() -> void:
+	_play("chime_big", -2.0)
 
 
 ## The carriage's servo whine, looped while the aim moves.

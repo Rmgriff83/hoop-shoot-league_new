@@ -474,6 +474,20 @@ changes**, and commit the PNGs. The areas' page order is
 
 ## Results (design "Time Trial Results" 7a, 2026-10-24)
 
+**The end-page chimes (Ross, 2026-10-26; canberries4's two retro chimes,
+`assets/audio/chime_win.wav` / `chime_big.wav`, credited in
+data/credits.json).** A match won — a league heat, an online match, a
+playoff advance — or a time-trial personal best plays `Sfx.chime_win` on
+its end page (the match-end page at its 0.35 s beat, the results page as
+it opens). The big chime `Sfx.chime_big` plays instead for the
+championship (match-end kind `champion`), an all-time global best
+(`ResultsCopy.global_best`: the run beats every row of the area's cached
+all-time board, `Net.cached_board(area, "all")`, decided in
+`App.finish_run` before the run is queued — no board in hand, no claim) and
+a new area (the unlock page, as the lock springs at `T_OPEN`). Losses keep
+the sting; the match-end page no longer borrows PEGGY's win and jackpot
+sounds. `tests/test_chimes.gd`.
+
 `game/screens/results_screen.gd` over the live court you just played on (the
 area's home-page pan under a half scrim); copy in `game/ui/results_copy.gd`
 (`ResultsCopy`), `tests/test_results.gd`. The area name is the page title

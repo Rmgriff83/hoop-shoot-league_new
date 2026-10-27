@@ -47,6 +47,12 @@ func _ready() -> void:
 	ui.layer = 10
 	add_child(ui)
 	ui.add_child(build_chrome(run, App.last_run_was_best))
+	# The chime (Ross, 2026-10-26): the big one for an all-time global best,
+	# the small one for a personal best; nothing otherwise.
+	if App.last_run_was_global_best:
+		Sfx.chime_big()
+	elif App.last_run_was_best:
+		Sfx.chime_win()
 	_start_stream.call_deferred()
 
 

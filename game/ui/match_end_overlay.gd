@@ -660,15 +660,17 @@ func _process(delta: float) -> void:
 	step(delta)
 
 
+## A match won chimes (the small chime); the championship gets the big one
+## (Ross, 2026-10-26); every loss is the loss sting.
 func _play_sound() -> void:
 	match str(_v.get("kind", "")):
-		"win":
-			Sfx.peggy_win()
-		"advance", "champion":
-			Sfx.peggy_jackpot()
+		"win", "advance":
+			Sfx.chime_win()
+		"champion":
+			Sfx.chime_big()
 		"series":
 			if bool(_v.get("won", false)):
-				Sfx.peggy_win()
+				Sfx.chime_win()
 			else:
 				Sfx.match_loss()
 		_:

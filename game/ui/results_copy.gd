@@ -97,6 +97,21 @@ static func board_rows(top: Array, run_id: String) -> Dictionary:
 
 ## The tickets box: {n, big: "+30", sub: "TICKETS · BEST BONUS IN"}; with nothing
 ## earned it still reads (`+0`, dimmed on the page — `none`), no stream.
+## An all-time global best (the big chime, Ross 2026-10-26): the run beats
+## every row of the area's cached all-time board (Net.cached_board(area,
+## "all"), the server's `rows` with `score`). No board in hand — offline, or
+## never fetched — claims nothing; a tie is not a new best.
+static func global_best(score: int, board: Dictionary) -> bool:
+	var rows: Array = board.get("rows", []) if board.get("rows") is Array else []
+	if rows.is_empty():
+		return false
+	var top := 0
+	for r in rows:
+		if r is Dictionary:
+			top = maxi(top, int(r.get("score", 0)))
+	return score > top
+
+
 static func tickets(run: Dictionary, is_best: bool) -> Dictionary:
 	var n := int(run.get("tickets", 0))
 	if n <= 0:
