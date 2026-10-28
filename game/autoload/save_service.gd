@@ -253,7 +253,7 @@ func put_cosmetics(doc: Dictionary) -> void:
 ## defaults with .get(), so an older save simply falls back. shotHelp 1 =
 ## NUMBERS, the fresh-game default (App.SHOT_HELP_DEFAULT).
 static func default_settings() -> Dictionary:
-	return {"updatedAt": 0, "shotHelp": 1, "newBalls": [], "visitedAreas": [], "unlocksSeen": [], "musicOn": false, "aiDifficulty": "normal", "hudSide": "left", "shotTutorialSeen": false, "playerCreated": false, "hometown": "", "walkthroughsSeen": []}
+	return {"updatedAt": 0, "shotHelp": 1, "newBalls": [], "visitedAreas": [], "unlocksSeen": [], "musicOn": false, "musicSound": true, "sfxSound": true, "aiDifficulty": "normal", "hudSide": "left", "shotTutorialSeen": false, "playerCreated": false, "hometown": "", "walkthroughsSeen": []}
 
 
 func get_settings() -> Dictionary:

@@ -23,6 +23,12 @@ extends CanvasLayer
 ## (two taps: SURE? in orange with TAP AGAIN + what it costs over it); a HUD
 ## SIDE row (LEFT / RIGHT, toasts + music note) under the tiles; RESUME
 ## carries no sub-line.
+##
+## Later on 2026-10-27: HUD SIDE and SOUND share that row, half width each,
+## and each opens a small menu ABOVE it like the tiles' popovers: HUD SIDE
+## picks LEFT / RIGHT and closes; SOUND turns MUSIC and SOUND FX on or off
+## (App.set_music_sound / set_sfx_sound, gold = on) and stays open, the row
+## summing it up (ALL ON, MUSIC ONLY, FX ONLY, ALL OFF).
 
 signal resumed
 signal quit
@@ -48,7 +54,9 @@ const SEP_W := 64.0
 const OPTIONS_Y := 416.0
 const HUD_ROW_Y := 690.0
 const HUD_ROW_H := 88.0
-const SEG_SIZE := Vector2(104, 52)
+const ROW2_GAP := 20.0
+const POP2_BOTTOM := 604.0   # the small menu's foot, from the frame's bottom
+const POP2_NOTCH := {"hud": 138.0, "sound": 466.0}   # its notch's left, from LEFT
 const QUIT_SIZE := 150.0
 const QUIT_BOTTOM := 60.0
 const WARN := Color("#FFB08A")
@@ -75,7 +83,8 @@ var _quit_top: Label
 var _quit_sub: Label        # the TAP AGAIN warning over the square
 var _quit_armed_at := -1.0
 var _info_row: HBoxContainer
-var _hud_segments: Dictionary = {}   # side → the segment panel
+var _rows2: Dictionary = {}   # "hud" / "sound" → {card, value}
+var _pop_rows: Dictionary = {}   # the open small menu's rows: key → {card, tag}
 var _tiles: Dictionary = {}   # kind → {card, icon, value, caret}
 var _pop_kind := ""
 var _pop: Control
@@ -183,47 +192,16 @@ func _ready() -> void:
 		t["card"].position = Vector2(LEFT + i * (tile_w + TILE_GAP), TILES_Y)
 		(t["card"] as ShadowCard).pressed.connect(_toggle_pop.bind(k))
 		_tiles[k] = t
-	# HUD SIDE · TOASTS + MUSIC NOTE with LEFT / RIGHT (a tap flips it).
-	var hud := ShadowCard.new(CREAM)
-	hud.name = "HudSide"
-	hud.position = Vector2(LEFT, HUD_ROW_Y)
-	hud.size = Vector2(COL_W - 6.0 + ShadowStyle.OFFSET, HUD_ROW_H + ShadowStyle.OFFSET)
-	hud.custom_minimum_size = hud.size
-	add_child(hud)
-	var hrow := HBoxContainer.new()
-	hrow.add_theme_constant_override("separation", 18)
-	hrow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hrow.position = Vector2(24, 0)
-	hrow.size = Vector2(COL_W - 6.0 - 48.0, HUD_ROW_H)
-	hud.add_child(hrow)
-	var hcol := VBoxContainer.new()
-	hcol.alignment = BoxContainer.ALIGNMENT_CENTER
-	hcol.add_theme_constant_override("separation", 10)
-	hcol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hcol.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hrow.add_child(hcol)
-	hcol.add_child(_text("HUD SIDE", 17, MUTED))
-	hcol.add_child(_text("TOASTS + MUSIC NOTE", 14, CREAM))
-	var segs := HBoxContainer.new()
-	segs.add_theme_constant_override("separation", 10)
-	segs.alignment = BoxContainer.ALIGNMENT_CENTER
-	segs.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	segs.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	hrow.add_child(segs)
-	for side in [["left", "LEFT"], ["right", "RIGHT"]]:
-		var seg := ShadowPanel.new(CREAM, 0.0, 0.0, 0.0)
-		seg.name = "Seg_%s" % side[0]
-		seg.custom_minimum_size = SEG_SIZE + Vector2.ONE * ShadowStyle.OFFSET
-		seg.shadow = Color(0, 0, 0, 0.01)   # no drop: the segments sit inside the row
-		var sl := _text(str(side[1]), 15, CREAM, true)
-		sl.name = "Text"
-		sl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		sl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		seg.add_child(sl)
-		segs.add_child(seg)
-		_hud_segments[str(side[0])] = seg
-	hud.pressed.connect(_on_hud_side)
-	_refresh_hud_side()
+	# HUD SIDE and SOUND: half-width rows under the tiles, each opening a
+	# small menu above it.
+	var row_w := (COL_W - ROW2_GAP) / 2.0 - 6.0
+	var r2 := [["hud", "HudSide", "HUD SIDE"], ["sound", "Sound", "SOUND"]]
+	for i in r2.size():
+		var k: String = r2[i][0]
+		var r := _row2(str(r2[i][1]), str(r2[i][2]), row_w)
+		(r["card"] as ShadowCard).position = Vector2(LEFT + i * (row_w + 6.0 + ROW2_GAP), HUD_ROW_Y)
+		(r["card"] as ShadowCard).pressed.connect(_toggle_pop.bind(k))
+		_rows2[k] = r
 	# RESUME, bottom right.
 	var resume := ShadowCard.new(ORANGE)
 	resume.name = "Resume"
@@ -307,24 +285,51 @@ func info_texts() -> Array:
 # ---- HUD SIDE -----------------------------------------------------------------------------
 
 
-func _on_hud_side() -> void:
-	App.cycle_hud_side()
-	_refresh_hud_side()
-	hud_side_changed.emit(App.hud_side)
-
-
-func _refresh_hud_side() -> void:
-	for side in _hud_segments:
-		var seg: ShadowPanel = _hud_segments[side]
-		var on: bool = str(side) == str(App.hud_side)
-		seg.color = GOLD if on else Color(CREAM, 0.5)
-		seg.tint = 0.45 if on else 0.0
-		seg.ground = Color.TRANSPARENT if on else Color(20.0 / 255.0, 16.0 / 255.0, 14.0 / 255.0, 0.4)
-		seg.queue_redraw()
-
-
 func hud_side_text() -> String:
 	return str(App.hud_side).to_upper()
+
+
+## The SOUND row's summary of the two settings switches.
+func sound_text() -> String:
+	if App.music_sound and App.sfx_sound:
+		return "ALL ON"
+	if App.music_sound:
+		return "MUSIC ONLY"
+	if App.sfx_sound:
+		return "FX ONLY"
+	return "ALL OFF"
+
+
+## A half-width row: the label over the value, a gold caret on the right.
+func _row2(name_: String, label: String, face_w: float) -> Dictionary:
+	var card := ShadowCard.new(CREAM)
+	card.name = name_
+	card.size = Vector2(face_w + ShadowStyle.OFFSET, HUD_ROW_H + ShadowStyle.OFFSET)
+	card.custom_minimum_size = card.size
+	add_child(card)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 12)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.position = Vector2(18, 0)
+	row.size = Vector2(face_w - 36, HUD_ROW_H)
+	card.add_child(row)
+	var col := VBoxContainer.new()
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.add_theme_constant_override("separation", 10)
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(col)
+	col.add_child(_text(label, 17, MUTED))
+	var value := _text("", 14, CREAM, true)
+	value.name = name_ + "Value"
+	value.clip_text = true
+	value.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	col.add_child(value)
+	var caret := Caret.new()
+	caret.name = name_ + "Chevron"
+	caret.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(caret)
+	return {"card": card, "value": value}
 
 
 ## A tile: the label, the picture, the value with its caret.
@@ -390,7 +395,6 @@ func open(info: Dictionary = {}) -> void:
 	if _context != null:
 		_context.text = str(info.get("context", ""))
 	_fill_info(Array(info.get("stats", [])))
-	_refresh_hud_side()
 	_disarm()
 	_close_pop()
 	_refresh_values()
@@ -488,6 +492,13 @@ func _refresh_values() -> void:
 		(t["card"] as ShadowCard).color = GOLD if on else CREAM
 		(t["card"] as ShadowCard).tint = 0.40 if on else 0.28
 		(t["card"] as ShadowCard).queue_redraw()
+	for k in _rows2:
+		var r: Dictionary = _rows2[k]
+		(r["value"] as Label).text = hud_side_text() if str(k) == "hud" else sound_text()
+		var on2: bool = str(k) == _pop_kind
+		(r["card"] as ShadowCard).color = GOLD if on2 else CREAM
+		(r["card"] as ShadowCard).tint = 0.38 if on2 else 0.28
+		(r["card"] as ShadowCard).queue_redraw()
 
 
 static func _thumb(kind: String, id: String) -> Texture2D:
@@ -529,6 +540,7 @@ func _close_pop() -> void:
 	if _pop != null:
 		_pop.queue_free()
 		_pop = null
+	_pop_rows.clear()
 	_pop_kind = ""
 	_refresh_values()
 
@@ -553,10 +565,13 @@ func _open_pop(kind: String) -> void:
 	shade.size = UiLayout.canvas()
 	shade.pressed.connect(_close_pop)
 	_pop.add_child(shade)
-	# The open tile stays bright above the shade, in gold.
-	var tile: ShadowCard = _tiles[kind]["card"]
-	move_child(tile, get_child_count() - 1)
+	# The open tile (or row) stays bright above the shade, in gold.
+	var opener: ShadowCard = _tiles[kind]["card"] if _tiles.has(kind) else _rows2[kind]["card"]
+	move_child(opener, get_child_count() - 1)
 	_refresh_values()
+	if _rows2.has(kind):
+		_open_pop2(kind)
+		return
 	# The notch over the tile and the panel.
 	var col := ["help", "ball", "net"].find(kind)
 	var tile_w := (COL_W - 2.0 * TILE_GAP) / 3.0
@@ -675,20 +690,146 @@ func _open_pop(kind: String) -> void:
 	body.add_child(sel)
 
 
-## The notch over the popover, pointing up at its tile.
+## The small menu above HUD SIDE / SOUND (its notch under it points down at
+## the row). HUD SIDE's rows pick and close; SOUND's flip a switch and stay,
+## their ON / OFF tags and the row's summary following.
+func _open_pop2(kind: String) -> void:
+	var items: Array = [["left", "LEFT", "ON THE LEFT"], ["right", "RIGHT", "ON THE RIGHT"]] if kind == "hud" \
+		else [["music", "MUSIC", "BACKGROUND TRACKS"], ["sfx", "SOUND FX", "SHOTS + CROWD"]]
+	var h := 18.0 + 36.0 + ShadowStyle.OFFSET + 16.0 + items.size() * (64.0 + ShadowStyle.OFFSET) + (items.size() - 1) * 12.0 + 20.0 + ShadowStyle.OFFSET
+	var top := 1280.0 - POP2_BOTTOM - h
+	var panel := ShadowPanel.new(GOLD, 0.0, 0.0, 0.0)
+	panel.name = "PopPanel"
+	panel.position = Vector2(LEFT, top)
+	panel.custom_minimum_size = Vector2(COL_W + ShadowStyle.OFFSET, h)
+	panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_pop.add_child(panel)
+	var bg := ColorRect.new()
+	bg.color = POP_BG
+	bg.show_behind_parent = true
+	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(bg)
+	var notch := Notch.new(true)
+	notch.position = Vector2(LEFT + float(POP2_NOTCH[kind]), 1280.0 - POP2_BOTTOM)
+	_pop.add_child(notch)
+	var m := MarginContainer.new()
+	m.add_theme_constant_override("margin_left", 20)
+	m.add_theme_constant_override("margin_right", 20 + int(ShadowStyle.OFFSET))
+	m.add_theme_constant_override("margin_top", 18)
+	m.add_theme_constant_override("margin_bottom", 20 + int(ShadowStyle.OFFSET))
+	m.mouse_filter = Control.MOUSE_FILTER_PASS
+	panel.add_child(m)
+	var body := VBoxContainer.new()
+	body.add_theme_constant_override("separation", 16)
+	body.mouse_filter = Control.MOUSE_FILTER_PASS
+	m.add_child(body)
+	# HUD SIDE ........ TOASTS + MUSIC NOTE [X]
+	var head := HBoxContainer.new()
+	head.add_theme_constant_override("separation", 12)
+	head.mouse_filter = Control.MOUSE_FILTER_PASS
+	body.add_child(head)
+	head.add_child(_text("HUD SIDE" if kind == "hud" else "SOUND", 15, GOLD, true))
+	var sp := Control.new()
+	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	sp.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.add_child(sp)
+	head.add_child(_text("TOASTS + MUSIC NOTE" if kind == "hud" else "TAP TO TURN ON / OFF", 14, MUTED))
+	var x := HomePage.button("X", CREAM, 14, 36.0)
+	x.name = "PopClose"
+	x.custom_minimum_size = Vector2(36 + ShadowStyle.OFFSET, 36 + ShadowStyle.OFFSET)
+	x.pressed.connect(_close_pop)
+	head.add_child(x)
+	var rows := VBoxContainer.new()
+	rows.add_theme_constant_override("separation", 12)
+	rows.mouse_filter = Control.MOUSE_FILTER_PASS
+	body.add_child(rows)
+	for it in items:
+		var key := str(it[0])
+		var row := ShadowCard.new(CREAM)
+		row.name = ("Hud_" if kind == "hud" else "Sound_") + key
+		row.custom_minimum_size = Vector2(0, 64 + ShadowStyle.OFFSET)
+		var hb := HBoxContainer.new()
+		hb.add_theme_constant_override("separation", 14)
+		hb.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hb.position = Vector2(18, 0)
+		hb.size = Vector2(COL_W - 40 - 36 - ShadowStyle.OFFSET, 64)
+		row.add_child(hb)
+		var n := _text(str(it[1]), 15, CREAM, true)
+		n.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		n.size_flags_vertical = Control.SIZE_FILL
+		hb.add_child(n)
+		var sp2 := Control.new()
+		sp2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		sp2.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		hb.add_child(sp2)
+		var d := _text(str(it[2]), 14, MUTED)
+		d.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		d.size_flags_vertical = Control.SIZE_FILL
+		hb.add_child(d)
+		var tag := _text("", 14, GOLD, true)
+		tag.name = "Tag"
+		tag.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		tag.size_flags_vertical = Control.SIZE_FILL
+		hb.add_child(tag)
+		row.pressed.connect(pick.bind(kind, key))
+		rows.add_child(row)
+		_pop_rows[key] = {"card": row, "tag": tag}
+	_refresh_pop2()
+
+
+## The small menu's rows as the settings stand: the active side / an ON
+## switch gold, the SOUND tags ON / OFF; the row under it follows.
+func _refresh_pop2() -> void:
+	for key in _pop_rows:
+		var on := false
+		match str(key):
+			"left", "right": on = str(App.hud_side) == str(key)
+			"music": on = App.music_sound
+			"sfx": on = App.sfx_sound
+		var card := _pop_rows[key]["card"] as ShadowCard
+		card.color = GOLD if on else CREAM
+		card.tint = 0.38 if on else 0.28
+		card.queue_redraw()
+		var tag := _pop_rows[key]["tag"] as Label
+		if str(key) == "music" or str(key) == "sfx":
+			tag.text = "ON" if on else "OFF"
+			tag.add_theme_color_override("font_color", GOLD if on else CREAM)
+	_refresh_values()
+
+
+## The notch over a popover pointing up at its tile, or (`down`) under the
+## small menu pointing at its row.
 class Notch extends Control:
-	func _init() -> void:
+	var _down := false
+
+	func _init(down := false) -> void:
+		_down = down
 		size = Vector2(28, 14)
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	func _draw() -> void:
-		draw_colored_polygon(PackedVector2Array([Vector2(0, 14), Vector2(14, 0), Vector2(28, 14)]), GOLD)
+		if _down:
+			draw_colored_polygon(PackedVector2Array([Vector2(0, 0), Vector2(28, 0), Vector2(14, 14)]), GOLD)
+		else:
+			draw_colored_polygon(PackedVector2Array([Vector2(0, 14), Vector2(14, 0), Vector2(28, 14)]), GOLD)
 
 
 ## Pick from the open popover: equip it (the ball globally, the net on this
-## court, shot help as a setting) and close.
+## court, shot help and HUD SIDE as settings) and close; a SOUND switch flips
+## and the menu stays.
 func pick(kind: String, value: String) -> void:
 	match kind:
+		"hud":
+			if value != str(App.hud_side):
+				App.set_hud_side(value)
+				hud_side_changed.emit(value)
+		"sound":
+			if value == "music":
+				App.set_music_sound(not App.music_sound)
+			else:
+				App.set_sfx_sound(not App.sfx_sound)
+			_refresh_pop2()
+			return
 		"help":
 			App.set_shot_help(int(value))
 		"ball":

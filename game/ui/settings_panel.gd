@@ -8,6 +8,10 @@ extends HomePage
 ##  • GAME, one panel: SHOT HELP (OFF / NUMBERS / NUMBERS + ARC), AI
 ##    DIFFICULTY (EASY / NORMAL / HARD) and HUD SIDE (LEFT / RIGHT) as
 ##    pickers showing every choice, the active one gold. (DARK MODE is gone: the game is dark everywhere, 2026-10-26.)
+##  • SOUND (2026-10-27): MUSIC and SOUND EFFECTS as switches, both on by
+##    default, each the mute of its bus (Sfx.MUSIC_BUS: the title loop and the
+##    level tracks; Sfx.SFX_BUS: shots, swishes, clicks, the crowd). The
+##    HUD's note still picks whether a court plays a track.
 ##  • PLAYER (the cloud line on the right): a gold card — how you appear in
 ##    leagues and online — whose pencil opens NAME (with your tag) and
 ##    HOMETOWN, the card following as you type; SAVE checks both and closes,
@@ -38,6 +42,8 @@ const DELETE_ARM_S := 8.0
 
 var _pickers: Dictionary = {}     # name → {value: ShadowCard}
 var _shot_sub: Label
+var _music_switch: PixelSwitch
+var _sfx_switch: PixelSwitch
 var _tuning_switch: PixelSwitch
 var _gates_switch: PixelSwitch
 var _card_name: Label
@@ -101,6 +107,8 @@ func _build() -> void:
 	_list.mouse_filter = Control.MOUSE_FILTER_PASS
 	pad.add_child(_list)
 	_build_game()
+	_list.add_child(_spacer(8))
+	_build_sound()
 	_list.add_child(_spacer(8))
 	_build_player()
 	if OS.is_debug_build():
@@ -262,6 +270,41 @@ func _switch_row(name_: String, title: String, sub: String, on: bool) -> Button:
 	row.add_child(sw)
 	b.custom_minimum_size.y = maxf(b.custom_minimum_size.y, 10.0 + 18.0 + 14.0 * (2.0 if sub.length() > 30 else 1.0) + 8.0)
 	return b
+
+
+# ---- SOUND ----------------------------------------------------------------------------
+
+
+## MUSIC and SOUND EFFECTS (Ross, 2026-10-27): each switch mutes its bus. The
+## row's handler is connected before the button enters the tree, so it runs
+## before the generic click — SFX going off silences that tap's click, SFX
+## coming on lets it sound.
+func _build_sound() -> void:
+	_list.add_child(_section("SOUND"))
+	var panel := ShadowPanel.new(CREAM, 22.0, 0.24, 22.0)
+	panel.name = "SoundPanel"
+	_list.add_child(panel)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 22)
+	col.mouse_filter = Control.MOUSE_FILTER_PASS
+	panel.add_child(col)
+	var music := _switch_row("Music", "MUSIC", "THE BACKGROUND TRACKS", App.music_sound)
+	_music_switch = music.find_child("Switch", true, false)
+	music.pressed.connect(func() -> void:
+		App.set_music_sound(not App.music_sound)
+		_music_switch.set_on(App.music_sound))
+	col.add_child(music)
+	col.add_child(_rule())
+	var sfx := _switch_row("Sfx", "SOUND EFFECTS", "SHOTS, SWISHES, CROWD + MENUS", App.sfx_sound)
+	_sfx_switch = sfx.find_child("Switch", true, false)
+	sfx.pressed.connect(func() -> void:
+		App.set_sfx_sound(not App.sfx_sound)
+		_sfx_switch.set_on(App.sfx_sound))
+	col.add_child(sfx)
+
+
+func has_sound() -> bool:
+	return _music_switch != null and _sfx_switch != null
 
 
 # ---- PLAYER ---------------------------------------------------------------------------

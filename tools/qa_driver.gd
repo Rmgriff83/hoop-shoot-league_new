@@ -325,6 +325,9 @@ func _run_heat() -> void:
 		pmenu.call("_open_pop", "help")
 		await _sleep(0.3)
 		await _snap("heat_pause_help")
+		pmenu.call("_open_pop", "sound")   # the small menu above the SOUND row
+		await _sleep(0.3)
+		await _snap("heat_pause_sound")
 		pmenu.call("_close_pop")
 		await _sleep(0.2)
 	await _click_named("Quit")

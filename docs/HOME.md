@@ -206,6 +206,15 @@ chevron (the footer says START INSIDE).
     strength for every AI on every court, `core/ai/ai_difficulty.gd`, the
     synced `aiDifficulty` setting) and HUD SIDE (LEFT / RIGHT) as pickers
     showing every choice, the active one gold. (DARK MODE was removed 2026-10-26.)
+  - **SOUND** (2026-10-27): MUSIC ("THE BACKGROUND TRACKS") and SOUND
+    EFFECTS ("SHOTS, SWISHES, CROWD + MENUS") as switches, both on by
+    default, each the mute of its bus (`Sfx.MUSIC_BUS`: the title loop and
+    the level tracks; `Sfx.SFX_BUS`: the clip pool, the button clicks, the
+    PEGGY servo and an area's ambience). The synced `musicSound` /
+    `sfxSound` settings (`App.set_music_sound` / `set_sfx_sound`). They sit
+    above the HUD's note, which still picks whether a court plays a track:
+    the note is dark while MUSIC is off, and a tap on it (or the chevron)
+    turns MUSIC back on.
   - **PLAYER** (the cloud line on the right): a gold card with how you
     appear in leagues and online. Its pencil opens NAME (with your tag) and
     HOMETOWN, tidied as you type, the card following; SAVE checks both
@@ -607,6 +616,7 @@ heat's court picker at 172, clear of the row. `tests/test_hud_tall.gd`.
 bottom (36, 1192) on every court: a tap toggles the shared level playlist
 (`App.LEVEL_MUSIC` → `Sfx.start_level_music`, a random track, looping, beside the ambience),
 struck through in gold while off; remembered as the `musicOn` setting, off on a fresh install;
+dark too while the settings MUSIC switch is off, a tap turning that switch back on (2026-10-27);
 a smaller chevron beside it, `IconButton("next", 44)`, skips to the next song in the
 playlist, turning the music on first if it was off), the clock card (stopwatch + seconds, gold in the last
 ten; `OT1 12.3` in overtime) or the teal PRACTICE card, the orange SCORE card
@@ -672,10 +682,14 @@ row** under it (`12 YOU · VS. · 9 OLLIE · 41.7 TIME LEFT` in a match, `18
 SCORE · 23.4 TIME LEFT · 31 YOUR BEST` in a trial, score and makes in
 practice; yours gold — `HudCopy.pause_stats_*`), OPTIONS · TAP TO CHANGE
 over three tiles — SHOT HELP (its `icon_aim_*` icon), BALL and NET (their
-thumbnails) with the value and a gold caret — the **HUD SIDE** row under
-them (`TOASTS + MUSIC NOTE`, LEFT / RIGHT segments, the active gold; a tap
-flips `App.hud_side` and `hud_side_changed` moves the screen's music note
-and chevron at once, the toasts follow as they show), the orange RESUME at
+thumbnails) with the value and a gold caret — **HUD SIDE** and **SOUND**
+sharing the row under them, half width each (the value and a gold caret;
+each opens a small menu above it, its notch pointing down at the row: HUD
+SIDE picks LEFT / RIGHT and closes, `hud_side_changed` moving the screen's
+music note and chevron at once, the toasts following as they show; SOUND's
+MUSIC and SOUND FX rows flip the settings switches in place, gold = on, the
+menu staying and the row summing them up — ALL ON, MUSIC ONLY, FX ONLY,
+ALL OFF; `heat_pause_sound`), the orange RESUME at
 the bottom right (no sub-line) and **QUIT** as the small square left of it
 in two taps (the first arms it for 4 s: `SURE?` in orange with `TAP AGAIN`
 and what it costs over it — `THE MATCH WON'T BE PLAYED` in a league, `THE

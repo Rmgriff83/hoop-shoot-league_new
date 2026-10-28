@@ -553,6 +553,24 @@ func _widgets(t) -> void:
 	t.eq(str(SaveService.get_settings().get("hudSide", "")), "right", "…and the settings part remembers")
 	_app().set_hud_side(was_side)
 	t.ok(panel.find_child("DarkMode", true, false) == null, "no DARK MODE row")
+	# SOUND (2026-10-27): MUSIC and SOUND EFFECTS switches, each a bus mute.
+	t.ok(panel.has_sound() and panel.find_child("SoundPanel", true, false) != null, "settings has the SOUND panel")
+	var was_music: bool = _app().music_sound
+	var was_sfx: bool = _app().sfx_sound
+	_app().set_music_sound(true)
+	_app().set_sfx_sound(true)
+	(panel.find_child("Music", true, false) as Button).pressed.emit()
+	t.ok(not _app().music_sound and not panel.switch_on("Music"), "a tap on MUSIC turns it off, the switch following")
+	t.eq(SaveService.get_settings().get("musicSound", null), false, "…the settings part remembers")
+	t.ok(not Sfx.music_sound() and Sfx.sfx_sound(), "…the music bus is muted, the sfx bus is not")
+	(panel.find_child("Sfx", true, false) as Button).pressed.emit()
+	t.ok(not _app().sfx_sound and not panel.switch_on("Sfx"), "a tap on SOUND EFFECTS turns it off")
+	t.eq(SaveService.get_settings().get("sfxSound", null), false, "…the settings part remembers")
+	t.ok(not Sfx.sfx_sound(), "…and the sfx bus is muted")
+	(panel.find_child("Music", true, false) as Button).pressed.emit()
+	t.ok(_app().music_sound and panel.switch_on("Music") and Sfx.music_sound(), "a second tap on MUSIC turns it back on")
+	_app().set_music_sound(was_music)
+	_app().set_sfx_sound(was_sfx)
 	t.eq(panel.has_tuning(), OS.is_debug_build(), "tuning switch only in a debug build")
 	t.eq(panel.has_gates(), OS.is_debug_build(), "the LEVEL GATES switch only in a debug build")
 	if OS.is_debug_build():

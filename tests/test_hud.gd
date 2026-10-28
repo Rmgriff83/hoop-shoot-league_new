@@ -120,6 +120,15 @@ func _widgets(t) -> void:
 	t.ok(hud.find_child("YouCard", true, false) is ShadowPanel and hud.find_child("OppCard", true, false) is ShadowPanel, "a heat shows the two side cards")
 	t.ok(not hud.find_child("ScoreCard", true, false).visible and not hud.find_child("BestChip", true, false).visible, "and hides the score card and chip")
 	t.eq((hud.find_child("OppCard", true, false) as ShadowPanel).color, Color("#3E7C4F"), "the opponent's card in their colour")
+	# Restaged (an online room's real config, a rematch; Ross 2026-10-27): one
+	# pair of cards, not a stale "0" showing through the new faces.
+	hud.set_heat(true, "GLASS", Color("#2E5C8A"))
+	var pairs := 0
+	for c in hud.find_children("*", "ShadowPanel", true, false):
+		if c.name == "YouCard" or c.name == "OppCard":
+			pairs += 1
+	t.eq(pairs, 2, "a second set_heat replaces the side cards")
+	t.eq((hud.find_child("OppCard", true, false).find_child("Side", true, false) as Label).text, "GLASS", "…with the new opponent")
 	hud.set_score(12)
 	hud.set_opponent_score(9)
 	for i in 120:
@@ -233,14 +242,36 @@ func _widgets(t) -> void:
 	t.eq((pm.find_child("Context", true, false) as Label).text, "ARCADE LEAGUE · MATCH 5 · VS OLLIE", "the line under PAUSED says where you are")
 	t.eq(pm.info_texts(), ["12 YOU", "VS.", "9 OLLIE", "41.7 TIME LEFT"], "the info row: your score, theirs, the time left")
 	t.eq(HudCopy.pause_resume_sub(-1.0), "BACK TO PRACTICE · NO CLOCK", "practice has no clock")
-	# HUD SIDE flips on a tap and tells the screen.
+	# HUD SIDE (43a, later 2026-10-27): its row opens LEFT / RIGHT above it; a pick sets it, says so and closes.
 	var was_hud: String = app.hud_side
+	app.set_hud_side("left")
 	var sides := []
 	pm.hud_side_changed.connect(func(side: String) -> void: sides.push_back(side))
 	(pm.find_child("HudSide", true, false) as Button).pressed.emit()
-	t.ok(app.hud_side != was_hud and sides == [app.hud_side], "a tap flips HUD SIDE and says so")
-	t.eq(pm.hud_side_text(), app.hud_side.to_upper(), "…the row reads it")
+	t.ok(pm.pop_kind() == "hud" and pm.find_child("Hud_right", true, false) != null, "a tap on HUD SIDE opens LEFT / RIGHT above it")
+	(pm.find_child("Hud_right", true, false) as Button).pressed.emit()
+	t.ok(app.hud_side == "right" and sides == ["right"] and pm.pop_kind() == "", "picking RIGHT sets it, says so and closes")
+	t.eq(pm.hud_side_text(), "RIGHT", "…the row reads it")
 	app.set_hud_side(was_hud)
+	# SOUND: MUSIC and SOUND FX flip in place, the menu staying; the row sums them up.
+	var was_music: bool = app.music_sound
+	var was_sfx: bool = app.sfx_sound
+	app.set_music_sound(true)
+	app.set_sfx_sound(true)
+	t.eq(pm.sound_text(), "ALL ON", "the SOUND row reads both switches")
+	(pm.find_child("Sound", true, false) as Button).pressed.emit()
+	t.ok(pm.pop_kind() == "sound" and pm.find_child("Sound_music", true, false) != null, "a tap on SOUND opens its switches")
+	(pm.find_child("Sound_music", true, false) as Button).pressed.emit()
+	t.ok(not app.music_sound and pm.pop_kind() == "sound", "MUSIC flips off and the menu stays")
+	t.eq([(pm.find_child("Sound_music", true, false).find_child("Tag", true, false) as Label).text, pm.sound_text()], ["OFF", "FX ONLY"], "…its tag and the row follow")
+	(pm.find_child("Sound_sfx", true, false) as Button).pressed.emit()
+	t.eq(pm.sound_text(), "ALL OFF", "SOUND FX off too: ALL OFF")
+	(pm.find_child("Sound_music", true, false) as Button).pressed.emit()
+	t.eq(pm.sound_text(), "MUSIC ONLY", "MUSIC back: MUSIC ONLY")
+	(pm.find_child("Sound", true, false) as Button).pressed.emit()
+	t.eq(pm.pop_kind(), "", "the row again closes it")
+	app.set_music_sound(was_music)
+	app.set_sfx_sound(was_sfx)
 	t.eq(pm.shot_help_text(), HudCopy.shot_help_value(was), "the shot-help tile reads the setting")
 	(pm.find_child("ShotHelp", true, false) as Button).pressed.emit()
 	t.eq(pm.pop_kind(), "help", "a tap on the tile opens its popover")

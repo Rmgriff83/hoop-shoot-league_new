@@ -7,8 +7,17 @@ extends Node
 ##    floor bounces (and later pickup / release). Selecting a set loads its
 ##    clips and releases the previous set's, so only the active bundles are in
 ##    memory. Picks never repeat the previous clip. Presentation-only RNG.
+## Two buses under Master, made at start (Ross, 2026-10-27; settings SOUND):
+##  • MUSIC_BUS — the title / credits loop (start_music) and the track channel
+##    (level music, the parked radio kind).
+##  • SFX_BUS — the clip pool (shots, swishes, scores, clicks), the PEGGY servo
+##    and an area's ambient layers (crowd, waves).
+## The SOUND switches mute a bus (set_music_sound / set_sfx_sound); the HUD's
+## note still decides whether a court plays a track at all (App.music_on).
 
 const POOL := 8
+const MUSIC_BUS := "Music"
+const SFX_BUS := "SFX"
 ## Recorded clips peak around −10 dBFS; lift them toward the synthetic set.
 const MAKE_GAIN_DB := 0.0
 const MISS_GAIN_DB := -1.0
@@ -41,6 +50,10 @@ var _last_miss_usec := -1_000_000
 
 func _ready() -> void:
 	_rng.randomize()
+	# Made here, not in _init: adding buses while the autoloads are still being
+	# built stalled the title (the --qa-title pass never drew a second frame).
+	_ensure_buses()
+	apply_sound_settings()   # the saved switches, whichever autoload came first
 	for name_ in [
 		"rim_clang_0", "rim_clang_1", "rim_clang_2",
 		"board_thud_0", "board_thud_1", "board_thud_2",
@@ -55,11 +68,66 @@ func _ready() -> void:
 		_streams[name_] = load("res://assets/audio/%s.wav" % name_)
 	for i in POOL:
 		var p := AudioStreamPlayer.new()
+		p.bus = SFX_BUS
 		add_child(p)
 		_players.push_back(p)
 	# The generic button click (Ross, 2026-10-26): every BaseButton that enters
 	# the tree clicks on `pressed` unless it carries the meta `no_click`.
 	get_tree().node_added.connect(_on_node_added)
+
+
+## The two buses, once per launch (a headless test run makes them too).
+func _ensure_buses() -> void:
+	for name_ in [MUSIC_BUS, SFX_BUS]:
+		if AudioServer.get_bus_index(name_) >= 0:
+			continue
+		var idx := AudioServer.bus_count
+		AudioServer.add_bus(idx)
+		AudioServer.set_bus_name(idx, name_)
+		AudioServer.set_bus_send(idx, "Master")
+
+
+## A headless test's Sfx never enters the tree (no _ready): its buses come
+## on first use instead. In the game they exist before anything plays.
+func _bus_index(name_: String) -> int:
+	if not is_inside_tree():
+		_ensure_buses()
+	return AudioServer.get_bus_index(name_)
+
+
+func _set_bus_sound(name_: String, on: bool) -> void:
+	var idx := _bus_index(name_)
+	if idx >= 0:
+		AudioServer.set_bus_mute(idx, not on)
+
+
+func _bus_sound(name_: String) -> bool:
+	var idx := _bus_index(name_)
+	return idx >= 0 and not AudioServer.is_bus_mute(idx)
+
+
+## The settings SOUND switches: MUSIC mutes the music bus, SOUND EFFECTS the
+## sfx bus. Nothing stops; an unmuted track carries on where it was.
+func set_music_sound(on: bool) -> void:
+	_set_bus_sound(MUSIC_BUS, on)
+
+
+func set_sfx_sound(on: bool) -> void:
+	_set_bus_sound(SFX_BUS, on)
+
+
+func music_sound() -> bool:
+	return _bus_sound(MUSIC_BUS)
+
+
+func sfx_sound() -> bool:
+	return _bus_sound(SFX_BUS)
+
+
+## Push both switches from the settings (App._ready, a cloud pull).
+func apply_sound_settings() -> void:
+	set_music_sound(App.music_sound)
+	set_sfx_sound(App.sfx_sound)
 
 
 func _on_node_added(node: Node) -> void:
@@ -260,11 +328,12 @@ func start_ambience(set: ArenaSet) -> void:
 
 ## A music loop on the same channel (the title): an area's ambience replaces it.
 func start_music(id: String, clip: String, gain_db: float, fade_s := 1.0) -> void:
-	start_layers(id, PackedStringArray([clip]), PackedFloat32Array([gain_db]), fade_s)
+	start_layers(id, PackedStringArray([clip]), PackedFloat32Array([gain_db]), fade_s, MUSIC_BUS)
 
 
-## The generic entry point: looping layers keyed by `id`.
-func start_layers(id: String, clips: PackedStringArray, gains_db: PackedFloat32Array, fade_s: float) -> void:
+## The generic entry point: looping layers keyed by `id`, on `bus` (an area's
+## ambience is a sound effect; the title loop rides the music bus).
+func start_layers(id: String, clips: PackedStringArray, gains_db: PackedFloat32Array, fade_s: float, bus := SFX_BUS) -> void:
 	if clips.is_empty():
 		stop_ambience()
 		return
@@ -292,6 +361,7 @@ func start_layers(id: String, clips: PackedStringArray, gains_db: PackedFloat32A
 		var p := AudioStreamPlayer.new()
 		p.name = "Layer%d" % i
 		p.stream = stream
+		p.bus = bus
 		p.volume_db = -60.0
 		root.add_child(p)
 		var length := stream.get_length()
@@ -361,6 +431,7 @@ func play_track(id: String, clip: String, gain_db: float, fade_s := 0.6) -> void
 	var p := AudioStreamPlayer.new()
 	p.name = "Track"
 	p.stream = stream
+	p.bus = MUSIC_BUS
 	p.volume_db = -60.0
 	_amb_root().add_child(p)
 	p.play()
@@ -581,6 +652,7 @@ func peggy_servo_start() -> void:
 		_servo = AudioStreamPlayer.new()
 		_servo.name = "PeggyServo"
 		_servo.stream = stream
+		_servo.bus = SFX_BUS
 		add_child(_servo)
 	if _servo_tween != null:
 		_servo_tween.kill()

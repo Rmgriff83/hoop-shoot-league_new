@@ -463,6 +463,8 @@ const NEXT_GAP := 10.0
 const NEXT_POS := Vector2(36 + IconButton.SIZE + NEXT_GAP, 1192 + (IconButton.SIZE - NEXT_SIZE))
 var _music_button: IconButton
 var _next_button: IconButton
+## App.music_on as this screen last acted on it (_follow_music_setting).
+var _music_on_seen := false
 ## A guard box around the note and the chevron (Ross, 2026-10-25): a press
 ## that just misses them would start a grab and pop the ball into the hand.
 ## A press inside this margin around the pair is swallowed (with its
@@ -486,7 +488,8 @@ func _add_music_button(layer: CanvasLayer) -> void:
 	_music_button = IconButton.new("music")
 	_music_button.name = "MusicButton"
 	_music_button.position = UiLayout.hud_pos(at["music"])
-	_music_button.active = App.music_on
+	_music_button.active = _music_lit()
+	_music_on_seen = App.music_on
 	_music_button.pressed.connect(toggle_music)
 	layer.add_child(_music_button)
 	_next_button = IconButton.new("next", NEXT_SIZE)
@@ -496,36 +499,56 @@ func _add_music_button(layer: CanvasLayer) -> void:
 	layer.add_child(_next_button)
 
 
+## The note is lit only when a track plays AND the settings MUSIC switch is
+## on (App.music_sound, 2026-10-27): it never glows over silence.
+func _music_lit() -> bool:
+	return App.music_on and App.music_sound
+
+
+## A tap on the note or the chevron wants music: it turns the settings MUSIC
+## switch back on if it was off.
+func _want_music_sound() -> void:
+	if not App.music_sound:
+		App.set_music_sound(true)
+
+
 ## The chevron: the next song in the playlist; with the music off it turns
 ## it on (and remembers that) and starts from the first song.
 func next_track() -> void:
+	_want_music_sound()
 	if not App.music_on:
 		App.set_music_on(true)
+		_music_on_seen = true
 		if _music_button != null:
 			_music_button.active = true
 	Sfx.next_level_music()
 
 
-## The setting can change under a running screen (a cloud pull of the
-## settings part, App._on_save_pulled): keep the note and the channel on it.
+## The settings can change under a running screen (a cloud pull of the
+## settings part, App._on_save_pulled; the MUSIC switch on the pause page's
+## settings): keep the note and the channel on them.
 func _follow_music_setting() -> void:
-	if _music_button == null or _music_button.active == App.music_on:
+	if _music_button == null:
 		return
-	_music_button.active = App.music_on
-	if App.music_on:
-		Sfx.start_level_music()
-	else:
-		Sfx.stop_level_music()
+	if App.music_on != _music_on_seen:
+		_music_on_seen = App.music_on
+		if App.music_on:
+			Sfx.start_level_music()
+		else:
+			Sfx.stop_level_music()
+	_music_button.active = _music_lit()
 
 
 func toggle_music() -> void:
+	_want_music_sound()
 	App.set_music_on(not App.music_on)
+	_music_on_seen = App.music_on
 	if App.music_on:
 		Sfx.start_level_music()
 	else:
 		Sfx.stop_level_music()
 	if _music_button != null:
-		_music_button.active = App.music_on
+		_music_button.active = _music_lit()
 
 
 func pause_game() -> void:

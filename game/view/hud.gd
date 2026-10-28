@@ -52,6 +52,8 @@ var _toast_small: Toast
 var _clock: Label
 var _ot_tag: Label
 var _score_card: ShadowPanel
+var _you_card: ShadowPanel
+var _opp_card: ShadowPanel
 var _you_score: Label
 var _opp_score: Label
 var _practice_card: ShadowPanel
@@ -209,7 +211,10 @@ func _process(dt: float) -> void:
 
 
 ## A heat: two score cards on the row — YOU (orange) and the opponent's first
-## name in their shooter colour — in place of the SCORE card.
+## name in their shooter colour — in place of the SCORE card. Called again
+## when the heat is restaged (an online room's real config after the
+## pre-match page, a rematch): the old pair goes first, or its stale "0"
+## would show through the new see-through faces (Ross, 2026-10-27).
 func set_heat(on: bool, opp_label := "OPP", opp_color := LeagueContext.PINE) -> void:
 	_heat = on
 	if not on:
@@ -217,17 +222,21 @@ func set_heat(on: bool, opp_label := "OPP", opp_color := LeagueContext.PINE) -> 
 	_score_card.visible = false
 	_best_chip.visible = false
 	_top_chip.visible = false
-	var you := _card(RetroTheme.c("orange"), YOU_POS, SIDE_SIZE, 0.32, 14.0)
-	you.name = "YouCard"
-	_you_score = _side(you, "YOU")
-	var opp := _card(opp_color, OPP_POS, SIDE_SIZE, 0.42, 14.0)
-	opp.name = "OppCard"
-	_opp_score = _side(opp, opp_label.to_upper())
+	for old in [_you_card, _opp_card]:
+		if is_instance_valid(old):
+			old.free()
+	_you_card = _card(RetroTheme.c("orange"), YOU_POS, SIDE_SIZE, 0.32, 14.0)
+	_you_card.name = "YouCard"
+	_you_score = _side(_you_card, "YOU")
+	_opp_card = _card(opp_color, OPP_POS, SIDE_SIZE, 0.42, 14.0)
+	_opp_card.name = "OppCard"
+	_opp_score = _side(_opp_card, opp_label.to_upper())
 
 
 func _side(card: ShadowPanel, label: String) -> Label:
 	var row := _hbox(8)
 	var l := _text(label, 20)
+	l.name = "Side"
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.clip_text = true

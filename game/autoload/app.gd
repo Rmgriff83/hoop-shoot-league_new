@@ -16,7 +16,10 @@ const TITLE_MUSIC := {"id": "title", "clip": "res://assets/music/title_moog.ogg"
 ## Level music (2026-10-16): one shared playlist on every court, toggled by
 ## the HUD's bottom-left note (Sfx.start_level_music / stop_level_music),
 ## remembered as the `musicOn` setting — off on a fresh install. The in-world
-## radios (the beach boombox, the city speaker) came out with it.
+## radios (the beach boombox, the city speaker) came out with it. Above the
+## note sit the settings SOUND switches (2026-10-27): `musicSound` mutes the
+## music bus (this loop and the level tracks), `sfxSound` the sfx bus; both
+## on by default.
 const LEVEL_MUSIC := {"gain_db": -14.0, "tracks": [
 	"res://assets/music/title_moog.ogg", "res://assets/music/zero_mass.ogg", "res://assets/music/scarpeta.ogg",
 	"res://assets/music/footloose.ogg", "res://assets/music/synthwave_beat.ogg", "res://assets/music/anabell.ogg"]}
@@ -189,6 +192,7 @@ func _ready() -> void:
 		league_gating = bool(saved.get("gates", false))
 	shot_help = shot_help_from_saved(SaveService.get_settings().get("shotHelp", SHOT_HELP_DEFAULT))
 	music_on = bool(SaveService.get_settings().get("musicOn", false))
+	_read_sound_settings()
 	ai_difficulty = AiDifficulty.normalize(SaveService.get_settings().get("aiDifficulty", AiDifficulty.DEFAULT))
 	hud_side = hud_side_from_saved(SaveService.get_settings().get("hudSide", "left"))
 	tuning.apply_dict(saved.get("fields", {}))
@@ -205,6 +209,7 @@ func _on_save_pulled(parts: Array) -> void:
 	if parts.has(SaveService.SETTINGS_PART):
 		shot_help = shot_help_from_saved(SaveService.get_settings().get("shotHelp", SHOT_HELP_DEFAULT))
 		music_on = bool(SaveService.get_settings().get("musicOn", false))
+		_read_sound_settings()
 		ai_difficulty = AiDifficulty.normalize(SaveService.get_settings().get("aiDifficulty", AiDifficulty.DEFAULT))
 		hud_side = hud_side_from_saved(SaveService.get_settings().get("hudSide", "left"))
 	if parts.has(SaveService.COSMETICS_PART):
@@ -262,6 +267,37 @@ func set_music_on(on: bool) -> void:
 	var s := SaveService.get_settings()
 	s["musicOn"] = on
 	SaveService.put_settings(s)
+
+
+## The settings SOUND switches (Ross, 2026-10-27; design 42a): MUSIC and
+## SOUND EFFECTS, each the mute of its bus (Sfx.MUSIC_BUS / SFX_BUS), both on
+## by default and synced like the rest of the settings part. The note above
+## still picks whether a court plays a track.
+var music_sound := true
+var sfx_sound := true
+
+
+func _read_sound_settings() -> void:
+	var s := SaveService.get_settings()
+	music_sound = bool(s.get("musicSound", true))
+	sfx_sound = bool(s.get("sfxSound", true))
+	Sfx.apply_sound_settings()
+
+
+func set_music_sound(on: bool) -> void:
+	music_sound = on
+	var s := SaveService.get_settings()
+	s["musicSound"] = on
+	SaveService.put_settings(s)
+	Sfx.set_music_sound(on)
+
+
+func set_sfx_sound(on: bool) -> void:
+	sfx_sound = on
+	var s := SaveService.get_settings()
+	s["sfxSound"] = on
+	SaveService.put_settings(s)
+	Sfx.set_sfx_sound(on)
 
 
 ## AI DIFFICULTY (Ross, 2026-10-19; core/ai/ai_difficulty.gd): one strength on
