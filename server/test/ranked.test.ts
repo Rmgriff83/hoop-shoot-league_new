@@ -1,7 +1,8 @@
-import { SELF, env } from "cloudflare:test";
+import { SELF, env, runDurableObjectAlarm } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { app, resetBoardCache } from "../src/index";
 import { resetMemoryLimits } from "../src/limits";
+import { DROP_GRACE_MS } from "../src/match_room";
 import { bandOf, conservative, defaultRow, type RatingRow } from "../src/rank";
 import { QUEUE, TIERS } from "../src/ranked_data";
 
@@ -339,8 +340,12 @@ describe("ranked rooms", () => {
   it("a void changes neither row", async () => {
     const a = await register();
     const b = await register();
-    const { A, B } = await rankedPair(a, b);
+    const { room, A, B } = await rankedPair(a, b);
     B.ws.close(1000, "bye"); // seconds in: void
+    await new Promise((r) => setTimeout(r, 80));
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + DROP_GRACE_MS + 1); // the grace to come back runs out
+    expect(await runDurableObjectAlarm(env.ROOM.get(env.ROOM.idFromName(room)))).toBe(true);
     const sa = await A.until((m) => m.t === "settled");
     expect(sa).toEqual({ t: "settled", won: false, reason: "void", ranked: true });
     expect(await ratingRow(a)).toMatchObject({ games: 0, mu: 1500 });

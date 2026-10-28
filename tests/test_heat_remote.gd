@@ -154,3 +154,40 @@ func run(t) -> void:
 	t.eq(late.forfeit_reason(), "forfeit", "they left after 30 s: a forfeit")
 	t.ok(bool(late.result()["won"]), "…a win")
 	t.eq(str(late.result()["reason"]), "forfeit", "the result says why")
+	# Our own line gone: a void, never a win — ahead or not, early or late (Ross, 2026-10-27).
+	var lost := Heat.new(_cfg({"remote": true, "seconds": 60.0}))
+	for i in 60 * 40:
+		lost.tick(1.0 / 60.0)
+	lost.drain_events()
+	lost.remote_lost()
+	t.ok(lost.done and lost.forfeit_reason() == "void", "our line lost after 30 s: a void")
+	t.ok(not bool(lost.result()["won"]), "…never a win on our own say-so")
+	t.eq(str(lost.result()["reason"]), "void", "…and the result says void")
+	var ended := false
+	for ev in lost.drain_events():
+		if ev["kind"] == "heat_done":
+			ended = true
+	t.ok(ended, "…heat_done so the screen moves on")
+	lost.remote_lost()
+	t.ok(lost.done, "a second call is nothing")
+	# The timeout past our buzzer: without their report a void; with it, a
+	# replay that never scored is dropped and the reports decide.
+	var silent := Heat.new(_cfg({"remote": true, "seconds": 4.0}))
+	silent.remote_timeout()
+	t.ok(not silent.done, "before our buzzer the timeout is nothing")
+	for i in 60 * 12:
+		silent.tick(1.0 / 60.0)
+		silent.drain_events()
+	silent.remote_timeout()
+	t.ok(silent.done and str(silent.result()["reason"]) == "void" and not bool(silent.result()["won"]), "no report by the wait: a void, no win")
+	var stuck := Heat.new(_cfg({"remote": true, "seconds": 4.0}))
+	for i in 60 * 12:
+		stuck.tick(1.0 / 60.0)
+		stuck.drain_events()
+	stuck.remote_period_end(0, 2, {"score": 2, "makes": 1, "swishes": 0, "attempts": 1, "bestStreak": 1, "bonus": 0, "iced": 0})
+	stuck.ai.phase = TimeTrial.PHASE_FINISHING   # stand in for a replayed ball that never scored: their clock never finishes
+	t.ok(stuck.player.phase == TimeTrial.PHASE_DONE and stuck.remote_reported() and not stuck.done, "their report is in, our clock is done, their replay is not")
+	stuck.remote_timeout()
+	t.ok(stuck.ai.phase == TimeTrial.PHASE_DONE, "the timeout abandons the replay")
+	t.ok(stuck.done and str(stuck.result().get("reason", "")) == "" and not bool(stuck.result()["won"]), "…and decides on the reports: 0–2, a plain loss, not a void")
+	t.eq(int(stuck.result()["ai_score"]), 2, "…their reported score")

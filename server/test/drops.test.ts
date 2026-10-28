@@ -4,11 +4,12 @@
  * tickets, the kill switch, rated rematches — plus the pure rules against
  * tests/fixtures/online_drops_cases.json (shared with the game).
  */
-import { SELF, env } from "cloudflare:test";
+import { SELF, env, runDurableObjectAlarm } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import fixture from "../../tests/fixtures/online_drops_cases.json";
 import { resetBoardCache } from "../src/index";
 import { resetMemoryLimits } from "../src/limits";
+import { DROP_GRACE_MS } from "../src/match_room";
 import { DROPS, METER_SIZE, derive, meterGain, milestonesReached, nextLossStreak, rarityOdds, rollCard, rng, settleSpoils } from "../src/online_drops";
 import { bandOf, conservative, defaultRow, type RatingRow } from "../src/rank";
 import { QUEUE, TICKETS } from "../src/ranked_data";
@@ -322,13 +323,16 @@ describe("the decision pays (room)", () => {
     const b = await register(3);
     await give(b, "ice", 1);
     await setProgress(b, { loss_streak_played: 1 });
-    const { A, B } = await rankedPair(a, b, ",,", "ice,,");
+    const { room, A, B } = await rankedPair(a, b, ",,", "ice,,");
     await nextSecond();
     B.send({ t: "card", id: "ice" });
     await B.until((m) => m.t === "card_ok");
     vi.useFakeTimers({ toFake: ["Date"] });
     vi.setSystemTime(Date.now() + 31_000);
     B.ws.close(1000, "bye");
+    await new Promise((r) => setTimeout(r, 80));
+    vi.setSystemTime(Date.now() + DROP_GRACE_MS + 1); // the grace to come back runs out
+    expect(await runDurableObjectAlarm(env.ROOM.get(env.ROOM.idFromName(room)))).toBe(true);
     const sa = await A.until((m) => m.t === "settled", 3000);
     expect(sa.reason).toBe("forfeit");
     expect(sa.won).toBe(true);
@@ -341,8 +345,12 @@ describe("the decision pays (room)", () => {
   it("a void writes no spoils, no meter, no tickets", async () => {
     const a = await register(3);
     const b = await register(3);
-    const { A, B } = await rankedPair(a, b);
+    const { room, A, B } = await rankedPair(a, b);
     B.ws.close(1000, "bye"); // under 30 s played
+    await new Promise((r) => setTimeout(r, 80));
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + DROP_GRACE_MS + 1);
+    expect(await runDurableObjectAlarm(env.ROOM.get(env.ROOM.idFromName(room)))).toBe(true);
     const sa = await A.until((m) => m.t === "settled", 3000);
     expect(sa.reason).toBe("void");
     expect(sa.spoils).toBeUndefined();

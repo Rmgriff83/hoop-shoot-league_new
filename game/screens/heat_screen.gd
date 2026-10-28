@@ -257,6 +257,9 @@ func _wire_online() -> void:
 	if not _online.message.is_connected(_on_online_message):   # a restaged heat wires once
 		_online.message.connect(_on_online_message)
 		_online.closed.connect(_on_online_closed)
+		if _online.has_signal("dropped"):   # a MatchClient; the QA fake peer has no line to lose
+			_online.dropped.connect(_on_online_dropped)
+			_online.restored.connect(_on_online_restored)
 
 
 func _on_online_message(msg: Dictionary) -> void:
@@ -293,17 +296,55 @@ func _on_online_message(msg: Dictionary) -> void:
 				_court.info.marquee("THEY LEFT", 24.0, _court.info.accent_color)
 				heat.remote_forfeit()
 		MatchProtocol.EXPIRED:
+			# The room timed the match out (idle, or too long): it records a void.
 			if not heat.done:
 				_court.info.marquee("ROOM CLOSED", 24.0, _court.info.accent_color)
-				heat.remote_forfeit()
+				heat.remote_lost()
 
 
-## Our own socket died: the match cannot go on. A void unless it was far
-## enough along to stand as a forfeit in our favour.
+## Our own line died and MatchClient could not get it back: the match ends
+## here as a VOID — never a win on our own say-so (Ross, 2026-10-27: a phone
+## that dropped while behind 15–30 was told it had won). The room decides
+## what the match became; a forfeit in OUR favour only ever comes as its
+## peer_left.
 func _on_online_closed(_reason: String) -> void:
+	_online = null
 	if heat != null and heat.remote and not heat.done:
 		_court.info.marquee("CONNECTION LOST", 24.0, _court.info.accent_color)
-		heat.remote_forfeit()
+		heat.remote_lost()
+
+
+## The line dropped mid-match; the client is opening the room again.
+func _on_online_dropped() -> void:
+	if heat != null and heat.remote and not heat.done:
+		_court.info.marquee("RECONNECTING", 24.0, _court.info.accent_color)
+
+
+func _on_online_restored() -> void:
+	if heat != null and heat.remote and not heat.done:
+		_court.info.flash("BACK ON", 2, _court.info.accent_color)
+
+
+## Our buzzer went and the heat still has not decided REPORT_WAIT_S later —
+## their report never reached us, or our replay of their last ball never
+## scored: Heat.remote_timeout decides on the reports or voids it, so nobody
+## stays on a court they cannot leave (Ross, 2026-10-27: the winner of a
+## quick-match rematch stuck at the hoop). The room's peer_left (a forfeit
+## win, after its 20 s grace) beats this wait when they really dropped.
+const REPORT_WAIT_S := 30.0
+var _report_wait := 0.0
+
+
+func _watch_report(dt: float) -> void:
+	if heat == null or not heat.remote or heat.done or heat.player.phase != TimeTrial.PHASE_DONE:
+		_report_wait = 0.0
+		return
+	_report_wait += dt
+	if _report_wait >= REPORT_WAIT_S:
+		_report_wait = 0.0
+		if not heat.remote_reported():
+			_court.info.marquee("NO REPLY", 24.0, _court.info.accent_color)
+		heat.remote_timeout()
 
 
 func _online_send(msg: Dictionary) -> void:
@@ -1265,6 +1306,7 @@ func _process(dt: float) -> void:
 	_refresh_opp_chips()
 	_refresh_tray()
 	_hud.set_ball_wait(heat.ball_wait() if heat.player.phase == TimeTrial.PHASE_RUNNING and not heat.player.holding else 0.0)
+	_watch_report(dt)
 
 
 func _finish() -> void:

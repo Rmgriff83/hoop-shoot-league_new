@@ -1,7 +1,7 @@
 import { SELF, env, runDurableObjectAlarm } from "cloudflare:test";
-import { beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetMemoryLimits } from "../src/limits";
-import { MAX_PER_S } from "../src/match_room";
+import { BURST, DROP_GRACE_MS, MAX_PER_S } from "../src/match_room";
 import { cleanTown, TOWN_MAX } from "../src/towns";
 
 const uuid = () => crypto.randomUUID();
@@ -62,6 +62,16 @@ async function join(p: Player, room: string, area = "cage", town?: string) {
 }
 
 beforeEach(() => resetMemoryLimits());
+afterEach(() => vi.useRealTimers());
+
+/** Jump the clock (Date only; the sockets stay real) and fire the room's pending alarm. */
+async function lapse(room: string, ms: number) {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(Date.now() + ms);
+  const ran = await runDurableObjectAlarm(env.ROOM.get(env.ROOM.idFromName(room)));
+  expect(ran).toBe(true);
+  await new Promise((r) => setTimeout(r, 50));
+}
 
 /** The room allows MAX_PER_S messages a second and the loadout is one of them: step into the next second. */
 const nextSecond = () => new Promise((r) => setTimeout(r, 1005 - (Date.now() % 1000)));
@@ -252,11 +262,35 @@ describe("match room", () => {
     A.send({ t: "outcome", n: 1, score: 3 });
     await B.until((m) => m.t === "outcome");
     B.ws.close(1000, "bye"); // gone before any report
+    await A.settle();
+    expect(A.inbox.filter((m) => m.t === "peer_left")).toHaveLength(0); // the grace: they may be reconnecting
+    await lapse(room, DROP_GRACE_MS + 1);
     const left = await A.until((m) => m.t === "peer_left");
     expect(left.side).toBe("b");
-    await A.settle();
     const row = await env.DB.prepare("SELECT * FROM matches WHERE a_id = ?1").bind(a.playerId).first<any>();
     expect(row).toMatchObject({ reason: "void", a_score: 0, b_score: 0 }); // seconds in → void
+  });
+  it("a phone back inside the grace resumes: start again, their buzzer report again, no forfeit", async () => {
+    const a = await register();
+    const b = await register();
+    const room = uuid();
+    const A = await join(a, room);
+    const B = await join(b, room);
+    await A.until((m) => m.t === "start");
+    A.send({ t: "period_end", period: 0, score: 7, totals: { score: 7, makes: 3 } });
+    await B.until((m) => m.t === "period_end");
+    B.ws.close(1001, "radio"); // the carrier cut it, mid-match
+    await new Promise((r) => setTimeout(r, 80));
+    const B2 = await join(b, room);
+    const again = await B2.until((m) => m.t === "start");
+    expect(again.resumed).toBe(true);
+    const theirs = await B2.until((m) => m.t === "period_end");
+    expect(theirs).toMatchObject({ period: 0, score: 7, totals: { score: 7, makes: 3 }, from: "a" });
+    await lapse(room, DROP_GRACE_MS + 1); // the alarm finds b seated again
+    expect(A.inbox.filter((m) => m.t === "peer_left")).toHaveLength(0);
+    B2.send({ t: "period_end", period: 0, score: 4, totals: {} });
+    expect(await B2.until((m) => m.t === "settled")).toMatchObject({ won: false, reason: "played" });
+    expect(await A.until((m) => m.t === "settled")).toMatchObject({ won: true, reason: "played" });
   });
   it("a phone that reported its buzzer and then left is finished, not a forfeit", async () => {
     const a = await register();
@@ -355,10 +389,15 @@ describe("match room", () => {
     const A = await join(a, room);
     await join(b, room);
     await A.until((m) => m.t === "start");
-    for (let i = 0; i <= MAX_PER_S; i++) A.send({ t: "ping" });
+    // A burst is not a flood: a phone's queue landing at once (MAX_PER_S + a few) is answered.
+    for (let i = 0; i < MAX_PER_S + 5; i++) A.send({ t: "ping" });
+    await new Promise((r) => setTimeout(r, 150));
+    expect(A.closes).toEqual([]);
+    expect(A.inbox.filter((m) => m.t === "pong").length).toBe(MAX_PER_S + 5);
+    for (let i = 0; i <= BURST; i++) A.send({ t: "ping" });
     await new Promise((r) => setTimeout(r, 100));
     expect(A.closes).toEqual([{ code: 1008, reason: "too fast" }]);
-    // The flood ended that match (a dropped phone forfeits); a fresh pair for the size cap.
+    // The flood ended that match (a dropped phone forfeits once its grace runs out); a fresh pair for the size cap.
     const room2 = uuid();
     const C = await join(a, room2);
     await join(b, room2);

@@ -171,10 +171,18 @@ build at any server.
 
 - **Transport**: `MatchClient` (`game/net/match_client.gd`) holds a
   `WebSocketPeer` to `wss://…/v1/match/room/{id}?area=`, bearer in the
-  handshake, polled every frame, outgoing messages gated to 5 a second, a
-  ping every 30 s. The room is a `MatchRoom` Durable Object
+  handshake, polled every frame, outgoing messages (pings too) gated to 4 a
+  second, a ping every 30 s. The room is a `MatchRoom` Durable Object
   (`server/src/match_room.ts`, WebSocket Hibernation); the Worker
-  authenticates the upgrade and hands the player on in headers.
+  authenticates the upgrade and hands the player on in headers. A line that
+  drops once the match is on is got back (2026-10-27): the client reopens
+  the room for up to 15 s (`dropped` / `restored`; RECONNECTING on the
+  board), the room keeps the seat for `DROP_GRACE_MS` (20 s) and answers a
+  reconnect with `start` again (`resumed`, which App ignores: the heat
+  already runs) plus the other side's `period_end` reports, so a buzzer
+  missed while away still lands. The room's cap is a token bucket (5/s
+  sustained, a burst of 20): a queue arriving in one go after a radio stall
+  is not a flood.
 - **Matchmaking**: one `Lobby` Durable Object (`server/src/lobby.ts`).
   `POST /v1/match/quick {area}` pairs the next two players in an area into one
   room id (a 60 s wait, `leave` to step out); `POST /v1/match/code {area}`
@@ -207,9 +215,17 @@ build at any server.
   differ. A disagreement between the replay and their report flags `desync`
   on the result (recorded on the match). `tests/test_heat_remote.gd` proves a
   seeded bot's run replays to the identical score.
-- **Leaving**: a dropped socket tells the other phone `peer_left`; a match 30 s
-  in is a forfeit win for them, earlier a void (`Heat.remote_forfeit`). Quitting
-  the heat screen closes the room. Rooms that nobody joins expire after 60 s;
+- **Leaving**: a socket gone past the 20 s grace tells the other phone
+  `peer_left`; a match 30 s in is a forfeit win for them, earlier a void
+  (`Heat.remote_forfeit`). Our OWN line lost for good, or the room timing
+  the match out (`expired`), is a void on this phone and never a win
+  (`Heat.remote_lost`): the room decides what the match became (2026-10-27,
+  a phone that dropped while behind was told it had won). A court nobody
+  can leave is impossible too: 30 s past our buzzer with no decision
+  (`REPORT_WAIT_S`), `Heat.remote_timeout` drops a replay that never scored
+  and decides on the reports, or voids it without theirs (the room's
+  `peer_left` beats the wait when they really dropped). Quitting the heat
+  screen closes the room. Rooms that nobody joins expire after 60 s;
   idle rooms after 2 min; every room after 10 min; a finished room closes
   60 s after the decision.
 - **Throttles**: `/v1/match/*` 20/min per player + 200/day, `FEATURE_MATCH`

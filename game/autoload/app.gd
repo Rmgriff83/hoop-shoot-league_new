@@ -801,7 +801,7 @@ func start_online(area: String, how: String, code: String, on_state: Callable) -
 	match_how = how
 	match_area = area
 	if not Net.enabled or not Net.registered():
-		on_state.call("failed", "offline")
+		_tell(on_state, "failed", "offline")
 		return
 	if how == "ranked":
 		_search_ranked(on_state)
@@ -822,15 +822,15 @@ func start_online(area: String, how: String, code: String, on_state: Callable) -
 			why = "own_code"
 		elif r["code"] == 429:
 			why = "throttled"
-		on_state.call("failed", why)
+		_tell(on_state, "failed", why)
 		return
 	# A joiner is told the court the Lobby paired on; an any-court host learns it from the room.
 	var court := str(r["json"].get("area", area))
 	match_area = court
 	if _open_room(str(r["json"].get("room", "")), court, on_state):
-		on_state.call("waiting", how, str(r["json"].get("code", "")))
+		_tell(on_state, "waiting", how, str(r["json"].get("code", "")))
 	else:
-		on_state.call("failed", "offline")
+		_tell(on_state, "failed", "offline")
 
 
 ## RANKED (docs/BACKEND.md → Ranked): one global rated queue. The Lobby pairs
@@ -841,7 +841,7 @@ func _search_ranked(on_state: Callable) -> void:
 	_ranked_search += 1
 	var my_search := _ranked_search
 	match_area = "any"
-	on_state.call("waiting", "ranked", "")
+	_tell(on_state, "waiting", "ranked", "")
 	var poll_s := float(RankedRules.queue_cfg().get("poll_s", 4))
 	while match_how == "ranked" and my_search == _ranked_search:
 		var r: Dictionary = await Net.request_json("match", HTTPClient.METHOD_POST, "/v1/match/ranked", {})
@@ -849,7 +849,7 @@ func _search_ranked(on_state: Callable) -> void:
 			return
 		if not r["ok"]:
 			if r["code"] != -1 and r["code"] != 0:
-				on_state.call("failed", "throttled" if r["code"] == 429 else "offline")
+				_tell(on_state, "failed", "throttled" if r["code"] == 429 else "offline")
 				match_how = ""
 				return
 		elif bool(r["json"].get("paired", false)):
@@ -858,7 +858,7 @@ func _search_ranked(on_state: Callable) -> void:
 			var court := str(r["json"].get("area", "cage"))
 			match_area = court
 			if not _open_room(str(r["json"].get("room", "")), court, on_state):
-				on_state.call("failed", "offline")
+				_tell(on_state, "failed", "offline")
 			return
 		await (Engine.get_main_loop() as SceneTree).create_timer(poll_s).timeout
 
@@ -900,21 +900,23 @@ func _open_room(room_id: String, area: String, on_state: Callable) -> bool:
 			return
 		match str(msg["t"]):
 			MatchProtocol.PEER:
-				on_state.call("found", _with_area(Dictionary(msg.get("peer", {})), msg))
+				_tell(on_state, "found", _with_area(Dictionary(msg.get("peer", {})), msg))
 			MatchProtocol.JOINED:
 				if msg.get("peer", null) is Dictionary:
-					on_state.call("found", _with_area(Dictionary(msg["peer"]), msg))
+					_tell(on_state, "found", _with_area(Dictionary(msg["peer"]), msg))
 			MatchProtocol.MATCHED:
 				pre_match = msg.duplicate(true)
 				pre_match["side"] = client.side
-				on_state.call("matched", pre_match)
+				_tell(on_state, "matched", pre_match)
 				_stage_online(client)
 			MatchProtocol.PEER_LOADOUT:
 				if _prematch_routed:
 					_to_prematch("peer_loadout", msg)
 				else:
-					on_state.call("peer_loadout", msg)
+					_tell(on_state, "peer_loadout", msg)
 			MatchProtocol.START:
+				if bool(msg.get("resumed", false)):
+					return   # the line came back mid-match (MatchClient): the heat already runs on the first start
 				if _prematch_routed and not bool(msg.get("resumed", false)):
 					# The match scene is up behind the pre-match page (design 37a,
 					# 2026-10-25): it re-makes the heat from this and counts down.
@@ -923,11 +925,11 @@ func _open_room(room_id: String, area: String, on_state: Callable) -> bool:
 				elif not pre_match.is_empty() and not bool(msg.get("resumed", false)):
 					# The pre-match page runs the count (design "Pre Match" 37a), then tip_off_now().
 					pending_start = msg.duplicate(true)
-					on_state.call("court", str(msg.get("area", match_area)))
-					on_state.call("start", pending_start)
+					_tell(on_state, "court", str(msg.get("area", match_area)))
+					_tell(on_state, "start", pending_start)
 				elif match_how in ["ranked", "quick", "create", "join"] and not bool(msg.get("resumed", false)):
 					pre_match = {}
-					on_state.call("court", str(msg.get("area", match_area)))
+					_tell(on_state, "court", str(msg.get("area", match_area)))
 					_hold_tip_off(client, msg)
 				else:
 					pre_match = {}
@@ -944,7 +946,7 @@ func _open_room(room_id: String, area: String, on_state: Callable) -> bool:
 				if routed:
 					_to_prematch("failed", "expired")
 				else:
-					on_state.call("failed", "expired")
+					_tell(on_state, "failed", "expired")
 			MatchProtocol.PEER_LEFT:
 				if client.start.is_empty():   # they left before the tip-off
 					var routed := _prematch_routed
@@ -952,20 +954,39 @@ func _open_room(room_id: String, area: String, on_state: Callable) -> bool:
 					if routed:
 						_to_prematch("failed", "peer_left")
 					else:
-						on_state.call("failed", "peer_left")
+						_tell(on_state, "failed", "peer_left")
 				else:
 					_set_rematch("gone")
 	)
 	client.closed.connect(func(reason: String) -> void:
-		if room == client and client.start.is_empty():
+		if room != client:
+			return
+		if client.start.is_empty():
 			var routed := _prematch_routed
 			cancel_online()
 			if routed:
 				_to_prematch("failed", "offline")
 			else:
-				on_state.call("failed", "expired" if reason == "expired" else "offline")
+				_tell(on_state, "failed", "expired" if reason == "expired" else "offline")
+		else:
+			# Mid-match or after it, and the client could not get the line
+			# back: the room is gone for us (the heat screen voids a match
+			# still on); the post-match REMATCH card reads THEY LEFT.
+			room = null
+			_set_rematch("gone")
 	)
 	return true
+
+
+## The lobby's `on_state`, if the page that gave it is still around (a
+## rematch's room reports to the lobby callable of the first match).
+func _tell(cb: Callable, kind: String, v: Variant, extra: Variant = null) -> void:
+	if not cb.is_valid():
+		return
+	if kind == "waiting":
+		cb.call(kind, v, extra)
+	else:
+		cb.call(kind, v)
 
 
 # ---- rematch (docs/BACKEND.md → Phase 3, Rematch) ----------------------------------------------------

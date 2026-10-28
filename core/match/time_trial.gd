@@ -311,6 +311,15 @@ func release(launch: Dictionary) -> bool:
 	return true
 
 
+## Forget every ball still in the air and, past the buzzer, finish: the
+## remote replay's way out when a flight never scores (Heat.remote_timeout).
+func abandon_flights() -> void:
+	_flights.clear()
+	if phase == PHASE_FINISHING:
+		phase = PHASE_DONE
+		_events.push_back({"kind": "done"})
+
+
 func tick(dt: float) -> void:
 	# Keeps stepping after 'done' too, so the last balls finish bouncing
 	# behind the results overlay instead of freezing midair.

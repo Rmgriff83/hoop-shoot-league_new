@@ -1,6 +1,7 @@
-import { SELF, env } from "cloudflare:test";
-import { beforeEach, describe, expect, it } from "vitest";
+import { SELF, env, runDurableObjectAlarm } from "cloudflare:test";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetMemoryLimits } from "../src/limits";
+import { DROP_GRACE_MS } from "../src/match_room";
 import { CARDS, validHand } from "../src/cards";
 
 const uuid = () => crypto.randomUUID();
@@ -53,6 +54,7 @@ async function join(p: Player, room: string, slots = "") {
 }
 
 beforeEach(() => resetMemoryLimits());
+afterEach(() => vi.useRealTimers());
 
 /** The room allows MAX_PER_S messages a second and the loadout is one of them: step into the next second. */
 const nextSecond = () => new Promise((r) => setTimeout(r, 1005 - (Date.now() % 1000)));
@@ -138,7 +140,12 @@ describe("cards in a room", () => {
     const D = await join(d, room);
     await C.until((m) => m.t === "start");
     D.ws.close(1000, "bye");
+    await new Promise((r) => setTimeout(r, 80));
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(Date.now() + DROP_GRACE_MS + 1); // the grace to come back runs out
+    expect(await runDurableObjectAlarm(env.ROOM.get(env.ROOM.idFromName(room)))).toBe(true);
     expect(await C.until((m) => m.t === "settled")).toMatchObject({ won: false, reason: "void" });
+    vi.useRealTimers();
     expect(C.inbox.some((m) => m.t === "error")).toBe(false);
     // A forfeit: the reporter leaves a tie, the stayer takes it.
     const e = await register(2);

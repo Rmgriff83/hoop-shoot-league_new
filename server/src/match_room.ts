@@ -9,9 +9,13 @@
  * moves both ratings — then tears itself down. It never simulates anything:
  * each phone owns its own shots.
  *
- * Throttling, layer 5: ≤ MAX_PER_S messages/s and ≤ MAX_BYTES each per
- * socket (over → close 1008), WAIT_MS for a peer to arrive, IDLE_MS of
- * silence, LIFETIME_MS hard cap, CLOSE_AFTER_MS once decided.
+ * Throttling, layer 5: a token bucket per socket — MAX_PER_S messages/s
+ * sustained with a burst of BURST (a phone's queue arriving in one go after
+ * a radio stall is not a flood; Ross, 2026-10-27) — and ≤ MAX_BYTES each
+ * (over → close 1008), WAIT_MS for a peer to arrive, IDLE_MS of silence,
+ * LIFETIME_MS hard cap, CLOSE_AFTER_MS once decided. A socket that drops
+ * mid-match has DROP_GRACE_MS to come back (the phone reconnects and gets
+ * `start` again, resumed) before the match is a forfeit.
  */
 import { DurableObject } from "cloudflare:workers";
 import type { Env } from "./env";
@@ -24,7 +28,11 @@ import { DIVISIONS, PREMATCH, TICKETS, TIERS } from "./ranked_data";
 import { cardOfRarity, cardStatements, grantStatement, meterCard, progressOf, upsertProgressStatement, type Progress } from "./rewards";
 
 export const MAX_PER_S = 5;
+/** Messages a socket may send in one burst before the sustained rate applies. */
+export const BURST = 20;
 export const MAX_BYTES = 2048;
+/** A phone gone mid-match has this long to reconnect before it forfeits. */
+export const DROP_GRACE_MS = 20_000;
 export const WAIT_MS = 60_000;
 export const IDLE_MS = 120_000;
 export const LIFETIME_MS = 10 * 60_000;
@@ -66,12 +74,15 @@ interface Meta {
   kits?: Record<Side, Kit | null>;
   /** A side that reported its period and then dropped: finished, not forfeiting. */
   leftWaiting: Side | null;
+  /** When each side's socket dropped mid-match (null = seated); the alarm forfeits a side still gone after DROP_GRACE_MS. */
+  dropped?: Record<Side, number | null>;
   /** Rematch offers after the decision; both → a fresh room for the pair. */
   rematch: Record<Side, boolean>;
   reason: string;
   recorded: boolean;
 }
-interface Attachment { side: Side; pid: string; win: number; n: number }
+/** `tok` / `at`: the rate bucket — tokens left and when they were last topped up. */
+interface Attachment { side: Side; pid: string; tok: number; at: number }
 /** A kit as the phones send it: a version and up to three ids. */
 interface Kit { v: number; ball?: string; net?: string; hoop?: string }
 
@@ -200,8 +211,9 @@ export class MatchRoom extends DurableObject<Env> {
     const pair = new WebSocketPair();
     const [client, server] = [pair[0], pair[1]];
     this.ctx.acceptWebSocket(server, [side]);
-    server.serializeAttachment({ side, pid: player.id, win: 0, n: 0 } satisfies Attachment);
+    server.serializeAttachment({ side, pid: player.id, tok: BURST, at: now } satisfies Attachment);
     m.last = now;
+    if (m.dropped?.[side]) m.dropped[side] = null; // back inside the grace: nothing happened
     const peer = m[other(side)];
     this.send(server, { t: "joined", side, room, area: m.area, peer, status: m.status, ranked: m.ranked });
     // The court rides along: an any-court host learns here where it plays.
@@ -220,8 +232,15 @@ export class MatchRoom extends DurableObject<Env> {
       // Back during the pick: the card again, with the clock as it stands.
       this.send(server, this.matched(m, side));
     } else if (m.status === "playing" && m.seed) {
-      // A reconnect mid-match gets the start again (the phone decides what to do with it).
+      // A reconnect mid-match gets the start again (the phone decides what to do with it),
+      // then the other side's buzzer reports it may have missed while away — the one
+      // message a phone cannot finish without.
       this.send(server, this.start(m, true));
+      const theirs = m.ends[other(side)];
+      for (const period of Object.keys(theirs).map(Number).sort((x, y) => x - y)) {
+        const e = theirs[String(period)];
+        this.send(server, { t: "period_end", period, score: e.score, totals: e.totals, from: other(side) });
+      }
     }
     await this.put(m);
     return new Response(null, { status: 101, webSocket: client });
@@ -243,10 +262,16 @@ export class MatchRoom extends DurableObject<Env> {
     const text = typeof raw === "string" ? raw : new TextDecoder().decode(raw);
     if (text.length > MAX_BYTES) return ws.close(1008, "too big");
     const now = Date.now();
-    const win = Math.floor(now / 1000);
-    if (att.win === win) att.n += 1; else { att.win = win; att.n = 1; }
+    att.tok = Math.min(BURST, (att.tok ?? BURST) + ((now - (att.at ?? now)) * MAX_PER_S) / 1000);
+    att.at = now;
+    if (att.tok < 1) {
+      // A flood, not a burst: closed by us, so webSocketClose may never come — let go of this side here too.
+      ws.serializeAttachment(att);
+      ws.close(1008, "too fast");
+      return this.gone(ws, "too fast");
+    }
+    att.tok -= 1;
     ws.serializeAttachment(att);
-    if (att.n > MAX_PER_S) return ws.close(1008, "too fast");
     let msg: any;
     try { msg = JSON.parse(text); } catch { return this.send(ws, { t: "error", code: "json" }); }
     if (!msg || typeof msg.t !== "string") return this.send(ws, { t: "error", code: "shape" });
@@ -370,13 +395,17 @@ export class MatchRoom extends DurableObject<Env> {
     await this.gone(ws, "error");
   }
 
-  /** A phone dropped: tell the other; a match in play ends by forfeit. */
+  /**
+   * A phone dropped: tell the other; a match in play ends by forfeit — after
+   * DROP_GRACE_MS, in case the phone is only reconnecting (a radio stall, a
+   * socket the carrier cut): back in time, nothing happened.
+   */
   private async gone(ws: WebSocket, reason: string): Promise<void> {
     if (reason === "replaced") return;
     const att = ws.deserializeAttachment() as Attachment | null;
     const m = await this.meta();
     if (!att || !m) return;
-    if (this.sockets(att.side).some((s) => s !== ws)) return; // they reconnected already
+    if (this.sockets(att.side).some((s) => s !== ws && s.readyState === WebSocket.READY_STATE_OPEN)) return; // they reconnected already
     if (m.status === "done") {
       // Off the post-match page: the other phone's REMATCH reads THEY LEFT.
       this.sendSide(other(att.side), { t: "peer_left", side: att.side });
@@ -393,6 +422,12 @@ export class MatchRoom extends DurableObject<Env> {
         await this.put(m);
         return;
       }
+      const now = Date.now();
+      if (!m.dropped) m.dropped = { a: null, b: null };
+      if (!m.dropped[att.side]) m.dropped[att.side] = now;
+      await this.ctx.storage.setAlarm(now + DROP_GRACE_MS);
+      await this.put(m);
+      return;
     }
     this.sendSide(other(att.side), { t: "peer_left", side: att.side });
     if (m.status === "prematch") {
@@ -402,15 +437,18 @@ export class MatchRoom extends DurableObject<Env> {
       await this.put(m);
       return;
     }
-    if (m.status === "playing") {
-      m.status = "done";
-      const played = Date.now() - m.started;
-      m.reason = played >= 30_000 ? "forfeit" : "void";
-      const latest = (s: Side) => { const ks = Object.keys(m.ends[s]).map(Number); return ks.length ? m.ends[s][String(Math.max(...ks))].score : 0; };
-      await this.record(m, latest("a"), latest("b"), 0, 0, m.reason === "forfeit" ? other(att.side) : null);
-      await this.ctx.storage.setAlarm(Date.now() + CLOSE_AFTER_MS);
-      await this.put(m);
-    }
+  }
+
+  /** The grace ran out on `side`: the match in play ends by forfeit (a void when it had barely begun). */
+  private async dropForfeit(m: Meta, side: Side): Promise<void> {
+    this.sendSide(other(side), { t: "peer_left", side });
+    m.status = "done";
+    const played = Date.now() - m.started;
+    m.reason = played >= 30_000 ? "forfeit" : "void";
+    const latest = (s: Side) => { const ks = Object.keys(m.ends[s]).map(Number); return ks.length ? m.ends[s][String(Math.max(...ks))].score : 0; };
+    await this.record(m, latest("a"), latest("b"), 0, 0, m.reason === "forfeit" ? other(side) : null);
+    await this.ctx.storage.setAlarm(Date.now() + CLOSE_AFTER_MS);
+    await this.put(m);
   }
 
   /**
@@ -565,7 +603,17 @@ export class MatchRoom extends DurableObject<Env> {
         await this.ctx.storage.deleteAll();
         return;
       }
-      await this.ctx.storage.setAlarm(now + IDLE_MS);
+      // A side gone past its grace, with no socket back, forfeits now; one still inside it keeps the alarm.
+      let next = now + IDLE_MS;
+      for (const side of ["a", "b"] as Side[]) {
+        const at = m.dropped?.[side];
+        if (!at) continue;
+        if (this.sockets(side).some((s) => s.readyState === WebSocket.READY_STATE_OPEN)) { m.dropped![side] = null; continue; }
+        if (now - at >= DROP_GRACE_MS) return this.dropForfeit(m, side);
+        next = Math.min(next, at + DROP_GRACE_MS);
+      }
+      await this.put(m);
+      await this.ctx.storage.setAlarm(next);
       return;
     }
     for (const ws of this.sockets()) { try { ws.close(1000, "over"); } catch { /* gone */ } }

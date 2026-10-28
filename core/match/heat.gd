@@ -358,6 +358,38 @@ func remote_forfeit(min_played_s := 30.0) -> void:
 	_events.push_back({"kind": "heat_done", "result": _result})
 
 
+## Our own line is gone (MatchClient could not get it back), or their report
+## never came: the heat ends now as a VOID — never a win on this phone's
+## say-so. The room, not the phone, knows what became of the match (its
+## `settled` says so if the line returns; Ross, 2026-10-27: a phone that
+## dropped while behind 15–30 was told it had won).
+func remote_lost() -> void:
+	if not remote or done:
+		return
+	_forfeit = "void"
+	done = true
+	_result = _build_result()
+	_result["reason"] = "void"
+	_result["won"] = false
+	_events.push_back({"kind": "heat_done", "result": _result})
+
+
+## Our buzzer went long ago and the heat still has not decided: with their
+## report in, the hold-up is our replay of their last ball (a flight that
+## never scored) — drop it and decide on the reports; without their report,
+## a void (remote_lost). Nobody stays on a court they cannot leave.
+func remote_timeout() -> void:
+	if not remote or done or player.phase != TimeTrial.PHASE_DONE:
+		return
+	if remote_reported():
+		ai.abandon_flights()
+		_remote_queue.clear()
+		_check_period_end()
+		if done:
+			return
+	remote_lost()
+
+
 ## Their card, out of the hand the room dealt them: the same play_card the
 ## bot would make (ice lands on our rim — our sim, our report; fire and
 ## vortex light our replay of theirs). False when it is not in their hand.
