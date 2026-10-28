@@ -237,6 +237,7 @@ func _on_tutorial_closed(_completed: bool) -> void:
 	_pool.update_balls([], false, 0.0)
 	_pool.set_held_position(_pool.rest_pos)
 	_holding_visual = false
+	_feel_reset()
 	trial = _match_rules
 	_match_rules = null
 	_tutorial_help = false
@@ -297,6 +298,7 @@ func demo_press() -> bool:
 	if not trial.pickup():
 		return false
 	_holding_visual = true
+	_feel_reset()
 	_anchor_pending = true
 	return true
 
@@ -347,6 +349,7 @@ func demo_drop() -> void:
 	_preview.hide_preview()
 	if _readout != null:
 		_readout.clear()
+	_feel_reset()
 	_pool.set_held_position(_pool.rest_pos)
 
 
@@ -628,6 +631,7 @@ func _on_grab() -> void:
 		return   # the demo owns the ball until the live step
 	if trial.pickup():
 		_holding_visual = true
+		_feel_reset()
 		_anchor_pending = true  # pinned on the first drag of this grab
 		if _tutorial != null:
 			_tutorial_grabs += 1
@@ -784,6 +788,63 @@ var _rng := RandomNumberGenerator.new()
 const HAND_Y_RANGE := Vector2(0.35, 2.3)
 const HAND_LATERAL := 0.9
 var _hand_pos: Vector3 = BallPool.HELD_POS
+## Shot feel (ShotFeel, design 44a, 2026-10-27): the held ball DRAWS nearer
+## the camera as the pull deepens and rolls with the drag; _hand_pos stays
+## the release origin and the arc's anchor. _feel_pull is the visual's own
+## pull — the input's while holding, easing to 0 after a cancelled gesture.
+var _feel_pull := 0.0
+var _feel_roll := 0.0            # radians about _right
+var _feel_last_y := NAN          # the hand's previous y, for the roll
+var _feel_settle_t := -1.0       # ≥ 0 while a cancelled grab settles back
+var _feel_from := {"pull": 0.0, "depth": 0.0, "scale": 1.0}
+var _feel_depth := 0.0
+var _feel_scale := 1.0
+
+
+func _feel_reset() -> void:
+	_feel_pull = 0.0
+	_feel_roll = 0.0
+	_feel_last_y = NAN
+	_feel_settle_t = -1.0
+	_feel_depth = 0.0
+	_feel_scale = 1.0
+
+
+## A cancelled gesture: the ball stays in hand and eases back to the hand point.
+func _feel_cancel() -> void:
+	_feel_from = {"pull": _feel_pull, "depth": _feel_depth, "scale": _feel_scale}
+	_feel_settle_t = 0.0
+
+
+## Every frame while holding: the settle, the (zero) idle spin, the pose.
+func _feel_step(dt: float) -> void:
+	if not trial.holding:
+		return
+	if _feel_settle_t >= 0.0:
+		_feel_settle_t += dt
+		var e := ShotFeel.settle(_feel_settle_t / ShotFeel.SETTLE_S)
+		_feel_pull = lerpf(float(_feel_from["pull"]), 0.0, e)
+		_feel_depth = lerpf(float(_feel_from["depth"]), 0.0, e)
+		_feel_scale = lerpf(float(_feel_from["scale"]), 1.0, e)
+		if _feel_settle_t >= ShotFeel.SETTLE_S:
+			_feel_settle_t = -1.0
+	else:
+		_feel_depth = ShotFeel.depth(_feel_pull)
+		_feel_scale = ShotFeel.scale(_feel_pull)
+	_feel_roll += ShotFeel.held_spin_rad(ShotFeel.frac(_feel_pull), dt)
+	_feel_apply()
+
+
+func _feel_apply() -> void:
+	if _cam == null or _pool == null:
+		return
+	var cam := _pool.to_local(_cam.global_position)
+	_pool.set_held_pose(ShotFeel.held_pos(cam, _hand_pos, _feel_depth), Basis(_right, _feel_roll), _feel_scale)
+
+
+## The held ball's drawn pose (tests, QA): {pos, depth, scale, roll}.
+func feel_state() -> Dictionary:
+	return {"pos": _pool.get_node("HeldBall").position, "depth": _feel_depth, "scale": _feel_scale, "roll": _feel_roll, "pull": _feel_pull}
 
 
 func _set_spot(i: int) -> void:
@@ -798,6 +859,7 @@ func _set_spot(i: int) -> void:
 		trial.drop()  # walked away mid-hold: put the ball down
 	_holding_visual = false
 	_pull_px = 0.0
+	_feel_reset()
 	# Camera 1.35 m behind the spot at eye height, looking at the hoop.
 	_cam.position = _spot - _fwd * 1.35 + Vector3(0.0, 1.55, 0.0)
 	var look_h: float = _arena_set.camera_look_height if _arena_set != null else 2.2
@@ -1117,8 +1179,11 @@ func _on_drag(pos: Vector2) -> void:
 	# Clamp in the shooter's frame: height, and sideways along the spot's right.
 	var lat := clampf((p - _spot).dot(_right), -HAND_LATERAL, HAND_LATERAL)
 	p = _spot + _right * lat + Vector3(0.0, clampf(p.y, HAND_Y_RANGE.x, HAND_Y_RANGE.y), 0.0)
+	if not is_nan(_feel_last_y):
+		_feel_roll += ShotFeel.roll_delta(_feel_last_y - p.y)
+	_feel_last_y = p.y
 	_hand_pos = p
-	_pool.set_held_position(p)
+	_feel_apply()
 	if _anchor_pending:
 		_grab_anchor = p
 		_anchor_pending = false
@@ -1130,6 +1195,8 @@ func _on_drag(pos: Vector2) -> void:
 ## perfect-power throw at that arc would go, from the hand's current spot.
 func _on_windup(pull_px: float) -> void:
 	_pull_px = pull_px
+	_feel_pull = pull_px
+	_feel_settle_t = -1.0
 	_refresh_preview()
 	_refresh_readout()
 
@@ -1214,6 +1281,7 @@ func _on_flick(sample: Dictionary) -> void:
 	_overlay.record_flick(sample, launch)
 	if launch.is_empty():
 		_refresh_readout()  # cancelled gesture: ball stays in hand, so do the numbers
+		_feel_cancel()
 		return
 	if _readout != null and _help_on():
 		# The release sample is the honest speed; the live value was still
@@ -1254,6 +1322,7 @@ func _process(dt: float) -> void:
 	# View sync.
 	_holding_visual = trial.holding
 	_pool.update_balls(trial.balls(), _holding_visual, dt)
+	_feel_step(dt)
 	_court.magnet_follow(CourtGeometry.magnet_target(trial.balls()))
 	_court.step_rim(dt)
 	_court.step_net(dt, trial.balls())

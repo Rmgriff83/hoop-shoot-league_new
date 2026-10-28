@@ -858,6 +858,26 @@ and archive pages size their lists from `screen_height()`. The match HUD's
 chrome anchors too since 2026-10-26 (→ HUD, "Pinned to the phone");
 results and match end stay on the centred band until their redesigns land.
 
+## Shot feel (2026-10-27)
+
+The wind-up READS on the held ball (`game/view/shot_feel.gd` `ShotFeel`,
+Ross's design "Shot Feel Sandbox" 44a, his numbers verbatim): the deeper the
+pull, the further the pool's held ball slides back along the camera ray
+toward you — still under the finger, but larger by real perspective — it
+rolls backward with the drag, and a cancelled gesture eases it back.
+Presentation only: `_hand_pos` (the finger on the hand plane) stays the
+release origin, the preview arc's and the readout's anchor, and the sim
+never sees it. FULL PULL 270 px (band px: the sandbox's phone is the
+720-wide frame `FlickInput` measures `_charge` in) for the full effect;
+TOWARD YOU 0.32 m, EASE OUT (`1 − (1 − x)²`); EXTRA SCALE +4 % on top of
+perspective; ROLL WITH DRAG 0.6 × true rolling (Δy / r) about the spot's
+right, carried into the flight (`BallPool.set_held_pose`, the first flight
+frame inherits the rolled orientation); HELD SPIN 0; SETTLE 0.08 s cubic
+out from the pose at the cancel. The flight keeps the sim's own backspin
+(`backspin_per_mps`, ≈ 210–280 RPM on a cage shot) — the sandbox's
+RELEASE SPIN was its stand-in for that. `--qa-aim`'s `aim_pull000…100`
+show the ball coming at the camera; `tests/test_shot_feel.gd`.
+
 ## The flick (2026-10-25)
 
 `FlickInput` (`game/input/flick_input.gd`) turns the touch into the release

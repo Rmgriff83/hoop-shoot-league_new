@@ -46,6 +46,9 @@ const SQUASH_DAMPING := 1.0
 ## the finger-projected hand point IS the shot's release origin (no hop).
 const HELD_POS := Vector3(0.0, 1.25, 0.0)
 ## Live rest pose (the screen moves it when the shooter changes spot).
+## The held ball's pose is presentational (ShotFeel, 2026-10-27): the screen
+## slides it toward the camera and rolls it with the drag; the sim launches
+## from the screen's own hand point.
 var rest_pos := HELD_POS
 
 var _pool: Array[MeshInstance3D] = []
@@ -67,6 +70,7 @@ var _held: MeshInstance3D
 ## Purely presentational — the sim core stays RNG-free and deterministic.
 var _rng := RandomNumberGenerator.new()
 var _grab_base := Basis.IDENTITY
+var _held_rot := Basis.IDENTITY   # the grab base with the drag's roll on it
 var _base_by_ball := {}   # BallState → Basis (orientation at release)
 var _angle_by_ball := {}  # BallState → float (integrated backspin angle)
 var _roll_by_ball := {}   # BallState → float (integrated roll about the travel axis)
@@ -184,6 +188,23 @@ func _random_grab() -> Basis:
 ## sim always launches from its own release point.
 func set_held_position(p: Vector3) -> void:
 	_held.position = p
+	_held.basis = _held_rot
+
+
+## The held ball's full pose (ShotFeel): where it draws, the drag's roll on
+## top of the grab orientation, and the extra size.
+func set_held_pose(p: Vector3, roll: Basis, scale: float) -> void:
+	_held.position = p
+	_held_rot = roll * _grab_base
+	_held.basis = _held_rot.scaled(Vector3.ONE * scale)
+
+
+func held_scale() -> float:
+	return _held.basis.get_scale().x
+
+
+func held_basis() -> Basis:
+	return _held_rot
 
 
 ## Call every frame with the rules object's in-flight balls.
@@ -197,6 +218,7 @@ func update_balls(balls: Array[BallState], holding: bool, dt: float) -> void:
 	# Fresh pickup → the hand ball shows a new random grab orientation.
 	if holding and not _was_holding:
 		_grab_base = _random_grab()
+		_held_rot = _grab_base
 		_held.basis = _grab_base
 	# Ball left the hand → park the visual back at the rest pose.
 	if not holding and _was_holding:
@@ -210,9 +232,10 @@ func update_balls(balls: Array[BallState], holding: bool, dt: float) -> void:
 				_ball_in_slot[i] = s
 				_squash[i].set_to(0.0)
 				_squash_n[i] = Vector3.UP
-			# First frame in flight: inherit the orientation it was held with.
+			# First frame in flight: inherit the orientation it was held with
+			# (the drag's roll included, so it leaves the hand without a snap).
 			if not _base_by_ball.has(s):
-				_base_by_ball[s] = _grab_base
+				_base_by_ball[s] = _held_rot
 				_angle_by_ball[s] = 0.0
 			mi.visible = true
 			# Integrate the sim's real spin (positive = backspin; decays on
