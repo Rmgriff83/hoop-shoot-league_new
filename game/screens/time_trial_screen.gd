@@ -153,6 +153,7 @@ func _ready() -> void:
 	input.grab_pressed.connect(_on_grab)
 	input.drag_moved.connect(_on_drag)
 	input.windup_changed.connect(_on_windup)
+	input.pull_changed.connect(_on_pull)
 	input.flick_charging.connect(_on_charging)
 	input.flick_released.connect(_on_flick)
 	_after_ready()
@@ -309,6 +310,7 @@ func demo_drag(pos: Vector2) -> void:
 
 func demo_windup(pull_px: float) -> void:
 	_on_windup(pull_px)
+	_on_pull(pull_px)
 	_refresh_preview()
 
 
@@ -1195,10 +1197,17 @@ func _on_drag(pos: Vector2) -> void:
 ## perfect-power throw at that arc would go, from the hand's current spot.
 func _on_windup(pull_px: float) -> void:
 	_pull_px = pull_px
-	_feel_pull = pull_px
-	_feel_settle_t = -1.0
 	_refresh_preview()
 	_refresh_readout()
+
+
+## The finger's live pull drives the ball's size (ShotFeel): it grows with
+## the pull and shrinks the instant the flick starts back up — the arc keeps
+## the latched wind-up above, this is only the look (Ross, 2026-10-28: the
+## latched value held the ball big through the whole flick, a visible lag).
+func _on_pull(live_px: float) -> void:
+	_feel_pull = live_px
+	_feel_settle_t = -1.0
 
 
 ## Tuning mode draws the whole arc to the rim (a dev aid). Shot help draws most

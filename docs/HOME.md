@@ -883,12 +883,15 @@ out from the pose at the cancel. The flight keeps the sim's own backspin
 (`backspin_per_mps`, ≈ 210–280 RPM on a cage shot) — the sandbox's
 RELEASE SPIN was its stand-in for that. `--qa-aim`'s `aim_pull000…100`
 show the ball coming at the camera; `tests/test_shot_feel.gd`.
-Follow-up (2026-10-28): the release no longer snaps — a ball's first
-flight frame starts where the held ball was drawn (nearer, larger) and
-eases to the sim's pose over `ShotFeel.RELEASE_S` 0.16 s (cubic out, a
-uniform scale on the flight basis, `BallPool._release_by_ball`; 0.08 read
-as too quick on the phone), so a deep pull zips back further in the same
-time; and only the pull rolls the ball —
+Follow-up (2026-10-28): the ball's size follows the finger's LIVE pull
+(`FlickInput.pull_changed`, the same vertical displacement as the wind-up
+but never latched, so the flick drains it as the finger comes back up —
+the arc keeps the latched `windup_changed`), so the shrink starts the
+instant the flick turns and is mostly done by lift-off; the release then
+no longer snaps — a ball's first flight frame starts where the held ball
+was drawn and eases to the sim's pose over `ShotFeel.RELEASE_S` 0.08 s
+(cubic out, a uniform scale on the flight basis,
+`BallPool._release_by_ball`), finishing what is left; and only the pull rolls the ball —
 `roll_delta` ignores an upward step, so the flick itself no longer unwinds
 the roll and the ball leaves turning the way the sim's backspin carries on
 (`_right = _fwd × UP` is the sim's spin axis, so the signs agree).

@@ -17,12 +17,13 @@ const ROLL_WITH_DRAG := 0.6      # × true rolling (Δy / r), about the spot's r
 const HELD_SPIN_RPM := 0.0       # idle backspin at full pull while held
 const SETTLE_S := 0.08           # a cancelled grab eases back (cubic out)
 ## The release (Ross, 2026-10-28): the flight ball starts where the held
-## ball was drawn — nearer and larger — and eases to the sim's own pose in
-## this long (cubic out). A deeper pull covers more ground in the same
-## time, so it zips back accordingly; without it the first flight frame
-## snapped the ball back 0.32 m and 4 %. 0.08 (the cancel settle's time)
-## read as too quick on the phone; 0.16 since.
-const RELEASE_S := 0.16
+## ball was drawn and eases to the sim's own pose in this long (cubic out),
+## so the first flight frame never snaps. The size itself follows the
+## finger's LIVE pull (FlickInput.pull_changed), so the shrink starts the
+## instant the flick turns up and most of it is done by lift-off; this only
+## finishes what is left. (A latched pull held the ball big through the
+## flick, which read as lag whatever this number was.)
+const RELEASE_S := 0.08
 
 
 ## The pull as a fraction of the full effect.

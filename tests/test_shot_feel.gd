@@ -57,7 +57,7 @@ func run(t) -> void:
 	# The release blend (Ross, 2026-10-28): a ball let go while drawn nearer
 	# and larger starts its flight there and eases to the sim's pose over
 	# RELEASE_S, instead of snapping back on frame one.
-	t.close(ShotFeel.RELEASE_S, 0.16, 1e-12, "the release eases out over 0.16 s (0.08 was too quick for Ross)")
+	t.close(ShotFeel.RELEASE_S, 0.08, 1e-12, "the release finishes the residual over 0.08 s (the live pull does the rest)")
 	var rp := BallPool.new()
 	rp._ready()
 	rp.update_balls([], true, 0.016)
@@ -73,10 +73,10 @@ func run(t) -> void:
 	t.ok(gap > 0.1 and gap < 0.3, "…the ball is between the hand's pose and the sim's (%.3f m from the sim's)" % gap)
 	t.ok((Vector3(fp["pos"]) - drawn_at).length() < (drawn_at - sim_at).length(), "…and on its way from where it was drawn")
 	t.ok(float(fp["scale"]) > 1.0 and float(fp["scale"]) < 1.04, "…the extra size easing out too (%.3f)" % float(fp["scale"]))
-	for _i in 12:
+	for _i in 8:
 		rp.update_balls(flight, false, 0.016)
 	fp = rp.flight_pose(0)
-	t.ok(not fp["blending"], "after 0.2 s the blend is over")
+	t.ok(not fp["blending"], "after 0.14 s the blend is over")
 	t.ok((Vector3(fp["pos"]) - sim_at).length() < 1e-5, "…the ball sits on the sim's point")
 	t.close(float(fp["scale"]), 1.0, 1e-5, "…at true size")
 	rp.free()

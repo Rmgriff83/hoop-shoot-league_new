@@ -78,6 +78,18 @@ func run(t) -> void:
 	t.ok(absf(float(slow["speed_sh"]) - 5.0) < 0.15, "…and the flick after it reads its speed (%.2f)" % float(slow["speed_sh"]))
 	# 4. The throw's first frames no longer drain the arc.
 	t.ok(absf(float(s4["pull_px"]) - 300.0) < 1e-6, "a straight flick keeps the pull it turned from (%.1f)" % float(s4["pull_px"]))
+	# The live pull (ShotFeel's, 2026-10-28) is never latched: the flick
+	# drains it as the finger comes back up, while the throw keeps the 300.
+	var live: Array = []
+	var live_cb := func(px: float) -> void:
+		live.push_back(px)
+	fi.pull_changed.connect(live_cb)
+	var s4b := _gesture(fi, start, _pull_then_flick(300.0, 4, 5.0))
+	fi.pull_changed.disconnect(live_cb)
+	t.ok(absf(float(s4b["pull_px"]) - 300.0) < 1e-6, "…the throw's pull is still the latched 300")
+	t.ok(live.size() >= 13 and absf(float(live[8]) - 300.0) < 1e-6, "the live pull reached 300 at the turn (%s)" % str(live[8] if live.size() > 8 else null))
+	t.ok(float(live[live.size() - 1]) < 1e-6, "…and the flick drained it to 0 by lift-off (%.1f)" % float(live[live.size() - 1]))
+	t.ok(float(live[9]) < float(live[8]) and float(live[9]) > 0.0, "…shrinking from the flick's first frame (%.1f)" % float(live[9]))
 	# 5. A slow ease-up discharges and never latches.
 	var latched_any: Array = [false]
 	var speeds: Array = []
