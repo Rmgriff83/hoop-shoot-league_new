@@ -105,12 +105,23 @@ the game, not the generated project. The icon set is resized from
 
 ## The icon
 
-`assets/icon/` holds a placeholder: the game's 22 px pixel ball on the ink,
-rendered by `tools/render_icon.gd`
-(`godot --headless --path . -s tools/render_icon.gd && godot --headless --path . --import`)
-as `icon_1024.png` (iOS + `application/config/icon`), `android_192.png`
-and the adaptive `adaptive_fg_432.png` / `adaptive_bg_432.png`. When the
-real icon lands, drop the PNGs over these (same names) or adjust the script.
+`assets/icon/icon_1024.png` is Ross's final icon (design 46b NEON BALL,
+2026-10-28: the neon basketball — one orange tube with a white-hot core
+tracing the outline and the four seams, a stepped glow on the bricks — on
+the brick wall, no text; drawn on a 128-cell grid, exported at 1024, opaque
+and square since iOS masks the corners). It comes from the design
+project's `export/app_icon/icon_1024x1024.png` with the C2PA chunk
+stripped. iOS and `application/config/icon` take it as is (the preset
+resizes it nearest-neighbour). The Android files beside it are derived by
+`tools/render_icon.gd`
+(`godot --headless --path . -s tools/render_icon.gd && godot --headless --path . --import`):
+`android_192.png` (the legacy launcher icon, nearest), and the adaptive
+pair at 2.7 px per cell — `adaptive_bg_432.png` is a brick wall tiled from
+the icon's own ball-free border bricks (the wall repeats every 16 cells),
+`adaptive_fg_432.png` is only the ball and its glow on transparency, on
+the same cell grid so the mortar lines meet; the tube spans ~243 px and the
+glow ~259, inside Android's 264 px safe circle. A new icon: drop the 1024
+over the file and rerun the script. No monochrome (themed-icon) layer yet.
 
 ## Presets (`export_presets.cfg`)
 
