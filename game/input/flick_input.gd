@@ -38,12 +38,6 @@ signal drag_moved(pos: Vector2)
 ## Latched the moment the upward flick starts, so the throw doesn't drain it.
 ## Fired on the press (0) and every drag, for the arc preview.
 signal windup_changed(pull_px: float)
-## The finger's LIVE pull (px): the same vertical displacement, but never
-## latched — the flick discharges it as the finger comes back up, so the
-## held ball's size follows the finger (ShotFeel) and starts shrinking the
-## instant the flick begins, while the throw keeps the latched wind-up.
-## Fired with windup_changed.
-signal pull_changed(live_px: float)
 ## Live throw strength while the flick is under way: the window speed in
 ## screen-heights/s — the same quantity the release sample carries — and
 ## `latched` says the throw has actually begun (below that, the finger is
@@ -95,7 +89,6 @@ var _curl := 0.0
 var _charge := 0.0
 ## The charge when the finger last moved DOWN: what the latch restores.
 var _charge_at_turn := 0.0
-var _live := 0.0   # the finger's pull right now, latch or no latch
 var _latched := false
 ## Total finger travel (px) — a real dead zone (a wind-up-and-flick can end
 ## near where it started, so net travel would wrongly read as a tap).
@@ -141,13 +134,11 @@ func _begin_at(pos: Vector2, now: int) -> void:
 	_curl = 0.0
 	_charge = 0.0
 	_charge_at_turn = 0.0
-	_live = 0.0
 	_latched = false
 	_path_len = 0.0
 	grab_pressed.emit()
 	drag_moved.emit(pos)
 	windup_changed.emit(0.0)
-	pull_changed.emit(0.0)
 
 
 func _move_at(pos: Vector2, now: int) -> void:
@@ -197,17 +188,13 @@ func _move_at(pos: Vector2, now: int) -> void:
 	# pull sends sparse events (gaps over REST_S) and must still charge. The
 	# first upward frame after a hold may drain a little; the latch, a frame
 	# later, gives it back.
-	var heading := _win_vel if _win_vel.length() > MIN_HEADING_SPEED else delta
-	var vertical := absf(heading.y) > absf(heading.x)
 	if not _latched:
-		if vertical:
+		var heading := _win_vel if _win_vel.length() > MIN_HEADING_SPEED else delta
+		if absf(heading.y) > absf(heading.x):
 			_charge = maxf(0.0, _charge + delta.y)
 		if delta.y > 0.0:
 			_charge_at_turn = _charge   # still pulling: this is the charge a throw keeps
-	if vertical:
-		_live = maxf(0.0, _live + delta.y)   # the flick drains this one
 	windup_changed.emit(_charge)
-	pull_changed.emit(_live)
 	flick_charging.emit(_win_vel.length() / view_h, _latched)
 
 

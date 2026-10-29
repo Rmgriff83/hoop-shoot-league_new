@@ -3,10 +3,7 @@ extends Node3D
 ## Renders sim BallStates onto a pool of MeshInstance3D spheres, plus the held
 ## ball in the shooter's hands. Scene space = canonical sim space, so mapping
 ## is a straight copy (float32 truncation here is render-only — the sim keeps
-## its own float64 state). The held ball's pose is presentational (ShotFeel:
-## nearer the camera, larger, rolled by the pull); a ball's first flight
-## frame inherits that pose and eases to the sim's over ShotFeel.RELEASE_S,
-## so the release never snaps.
+## its own float64 state).
 
 const POOL_SIZE := 8
 ## Squash feel. The ball dents along the surface it hit, by an amount set by the
@@ -49,9 +46,6 @@ const SQUASH_DAMPING := 1.0
 ## the finger-projected hand point IS the shot's release origin (no hop).
 const HELD_POS := Vector3(0.0, 1.25, 0.0)
 ## Live rest pose (the screen moves it when the shooter changes spot).
-## The held ball's pose is presentational (ShotFeel, 2026-10-27): the screen
-## slides it toward the camera and rolls it with the drag; the sim launches
-## from the screen's own hand point.
 var rest_pos := HELD_POS
 
 var _pool: Array[MeshInstance3D] = []
@@ -73,14 +67,7 @@ var _held: MeshInstance3D
 ## Purely presentational — the sim core stays RNG-free and deterministic.
 var _rng := RandomNumberGenerator.new()
 var _grab_base := Basis.IDENTITY
-var _held_rot := Basis.IDENTITY   # the grab base with the drag's roll on it
 var _base_by_ball := {}   # BallState → Basis (orientation at release)
-## BallState → {offset: Vector3, scale: float, pull: float, rate: float,
-## t: float}: how far the held ball was drawn from the sim's release point
-## and how much larger, run down over the flight's first frames at the
-## flick's rate (ShotFeel.resorb_k), or over RELEASE_S without one.
-var _release_by_ball := {}
-var _next_release := {"pull": 0.0, "rate": 0.0}   # set_release_feel, for the next ball
 var _angle_by_ball := {}  # BallState → float (integrated backspin angle)
 var _roll_by_ball := {}   # BallState → float (integrated roll about the travel axis)
 
@@ -197,37 +184,6 @@ func _random_grab() -> Basis:
 ## sim always launches from its own release point.
 func set_held_position(p: Vector3) -> void:
 	_held.position = p
-	_held.basis = _held_rot
-
-
-## The held ball's full pose (ShotFeel): where it draws, the drag's roll on
-## top of the grab orientation, and the extra size.
-func set_held_pose(p: Vector3, roll: Basis, scale: float) -> void:
-	_held.position = p
-	_held_rot = roll * _grab_base
-	_held.basis = _held_rot.scaled(Vector3.ONE * scale)
-
-
-func held_scale() -> float:
-	return _held.basis.get_scale().x
-
-
-func held_basis() -> Basis:
-	return _held_rot
-
-
-## The screen, just before the sim releases: the pull the hand still shows
-## and the flick's rate (band px/s), so the next ball's first flight frames
-## keep resorbing exactly as the hand was.
-func set_release_feel(pull_px: float, rate_px_s: float) -> void:
-	_next_release = {"pull": pull_px, "rate": rate_px_s}
-
-
-## Flight slot `i` as drawn: its position and uniform scale (the release
-## blend's leftovers; 1.0 once it has eased out). For tests.
-func flight_pose(i: int) -> Dictionary:
-	var mi: MeshInstance3D = _pool[i]
-	return {"pos": mi.position, "scale": mi.basis.get_scale().x, "blending": _release_by_ball.has(_ball_in_slot[i])}
 
 
 ## Call every frame with the rules object's in-flight balls.
@@ -241,12 +197,7 @@ func update_balls(balls: Array[BallState], holding: bool, dt: float) -> void:
 	# Fresh pickup → the hand ball shows a new random grab orientation.
 	if holding and not _was_holding:
 		_grab_base = _random_grab()
-		_held_rot = _grab_base
 		_held.basis = _grab_base
-	# Where the held ball was drawn this frame (the pool's own space, the one
-	# the flight meshes use): a ball released now starts its flight there.
-	var held_at := _held.position
-	var held_scale_at := held_scale()
 	# Ball left the hand → park the visual back at the rest pose.
 	if not holding and _was_holding:
 		_held.position = rest_pos
@@ -259,16 +210,10 @@ func update_balls(balls: Array[BallState], holding: bool, dt: float) -> void:
 				_ball_in_slot[i] = s
 				_squash[i].set_to(0.0)
 				_squash_n[i] = Vector3.UP
-			# First frame in flight: inherit the orientation it was held with
-			# (the drag's roll included, so it leaves the hand without a snap).
+			# First frame in flight: inherit the orientation it was held with.
 			if not _base_by_ball.has(s):
-				_base_by_ball[s] = _held_rot
+				_base_by_ball[s] = _grab_base
 				_angle_by_ball[s] = 0.0
-				_release_by_ball[s] = {
-					"offset": held_at - Vector3(s.pos.x, s.pos.y, s.pos.z),
-					"scale": held_scale_at, "pull": float(_next_release["pull"]),
-					"rate": float(_next_release["rate"]), "t": 0.0}
-				_next_release = {"pull": 0.0, "rate": 0.0}
 			mi.visible = true
 			# Integrate the sim's real spin (positive = backspin; decays on
 			# rim/board contacts) and roll about the sim's spin axis, which is
@@ -294,26 +239,12 @@ func update_balls(balls: Array[BallState], holding: bool, dt: float) -> void:
 			# make Godot re-derive the basis and silently discard the shear —
 			# which is exactly the bug this replaces (the old code scaled local
 			# Y, an axis that tumbles with backspin).
-			# The release blend: the ball starts where the hand drew it (nearer,
-			# larger) and eases to the sim's pose — a uniform scale, so it
-			# commutes with the dent.
-			var rel_off := Vector3.ZERO
-			var rel_scale := 1.0
-			if _release_by_ball.has(s):
-				var r: Dictionary = _release_by_ball[s]
-				r["t"] = float(r["t"]) + dt
-				var k := ShotFeel.resorb_k(float(r["pull"]), float(r["rate"]), float(r["t"]))
-				if k <= 0.0:
-					_release_by_ball.erase(s)
-				else:
-					rel_off = Vector3(r["offset"]) * k
-					rel_scale = 1.0 + (float(r["scale"]) - 1.0) * k
-			mi.basis = _squash_basis(n, sq) * rot.scaled(Vector3.ONE * rel_scale)
+			mi.basis = _squash_basis(n, sq) * rot
 			# The sim holds the centre at R_BALL through a contact, so a centre-
 			# scaled dent would lift the flattened face off the surface. Offset
 			# the node to keep the contact face planted.
 			mi.position = (Vector3(s.pos.x, s.pos.y, s.pos.z)
-				- n * (SimConstants.R_BALL * sq) + rel_off)
+				- n * (SimConstants.R_BALL * sq))
 		else:
 			mi.visible = false
 			_squash[i].set_to(0.0)
@@ -327,7 +258,6 @@ func update_balls(balls: Array[BallState], holding: bool, dt: float) -> void:
 				_base_by_ball.erase(key)
 				_angle_by_ball.erase(key)
 				_roll_by_ball.erase(key)
-				_release_by_ball.erase(key)
 
 
 ## Dent the pool ball nearest a contact, along that contact's surface normal.
