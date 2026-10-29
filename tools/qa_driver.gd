@@ -1637,6 +1637,17 @@ func _run_multi() -> void:
 			await _sleep(0.4)
 			await _snap("multi_rewards")
 			print("QA multi: rewards pending=%s meter='%s'" % [rp.pending_count(), rp.meter_text()])
+			# Three odds and nothing waiting (Ross's phone, 2026-10-28): the
+			# meter line breaks in two and the page stays inside the screen.
+			var wide: Dictionary = fx.duplicate(true)
+			wide["pending"] = []
+			wide["login_days"] = 5
+			wide["unlocked"] = ["first_login", "first_ranked_match", "first_ranked_win", "tier_rookie_1", "tier_starter", "tier_starter_3", "tier_starter_2"]
+			wide["meter"] = {"progress": 14, "size": 22, "odds": {"common": 0.75, "rare": 0.22, "epic": 0.03}}
+			rp.set_data(wide)
+			await _sleep(0.4)
+			await _snap("multi_rewards_wide")
+			print("QA multi: rewards wide meter='%s' body_w=%.0f" % [rp.meter_text().replace("\n", " / "), rp.body.size.x])
 			rp.close()
 			await _sleep(0.5)
 	# The pre-match pick (docs/BACKEND.md → Ranked): a seeded cache (a spare

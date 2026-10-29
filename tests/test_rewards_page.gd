@@ -33,6 +33,13 @@ func run(t) -> void:
 	page.set_data({"pending": [], "unlocked": [], "login_days": 0, "meter": {"progress": 0, "size": 22, "odds": {"common": 1.0, "rare": 0.0, "epic": 0.0}}})
 	t.ok(root.find_child("NothingPending", true, false) != null, "the empty line")
 	t.eq(page.meter_text(), "METER 0/22 · 100% COMMON", "an empty meter")
+	# Three odds (EPIC in the pool) ran the line, and the whole page, off the
+	# right of the screen (Ross, 2026-10-28): it breaks after METER n/n, and
+	# nothing on the page asks for more width than the frame has.
+	page.set_data({"pending": [], "unlocked": [], "login_days": 5, "meter": {"progress": 14, "size": 22, "odds": {"common": 0.75, "rare": 0.22, "epic": 0.03}}})
+	t.eq(page.meter_text(), "METER 14/22\n75% COMMON · 22% RARE · 3% EPIC", "a wide meter line breaks after the count")
+	t.ok(page.body.get_combined_minimum_size().x <= HomePage.FRAME_SIZE.x - 2.0 * HomePage.PAD, "the page never asks for more width than the frame (%.0f)" % page.body.get_combined_minimum_size().x)
+	t.ok(page.body.size.x <= HomePage.FRAME_SIZE.x - 2.0 * HomePage.PAD, "…and the body stays inside it (%.0f)" % page.body.size.x)
 	# Offline with nothing cached: the one line.
 	var cold := RewardsPage.new()
 	cold.build({})

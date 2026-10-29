@@ -6,6 +6,10 @@ extends HomePage
 ## milestone — unlocked gold, the rest dim. `build(data)` takes the
 ## /v1/rewards dict (tests feed tests/fixtures/rewards.json); the title
 ## reloads it after a claim. Copy from MatchCopy / MilestoneCopy.
+## Every line wraps (a label's text is otherwise the page's minimum width,
+## and the frame would grow past the screen — Ross saw the EPIC odds push
+## the whole page right, 2026-10-28); the meter line breaks on purpose,
+## METER 14/22 over the odds, once it is wider than the frame.
 
 signal claim(key: String)
 
@@ -101,8 +105,10 @@ func _build_meter(col: VBoxContainer) -> void:
 	fill.anchor_right = clampf(float(progress) / maxf(float(size_), 1.0), 0.0, 1.0)
 	bar.add_child(fill)
 	col.add_child(bar)
-	var line := words(MatchCopy.meter_line({"meter": {"after": progress, "size": size_, "odds": m.get("odds", OnlineDrops.odds_for(str(_data.get("tier", "rookie")), App.level()))}}), 16, true)
+	var text := MatchCopy.meter_line({"meter": {"after": progress, "size": size_, "odds": m.get("odds", OnlineDrops.odds_for(str(_data.get("tier", "rookie")), App.level()))}})
+	var line := words(_two_lines(text, 16), 16, true)
 	line.name = "MeterLine"
+	line.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	line.add_theme_color_override("font_color", GOLD)
 	col.add_child(line)
 	var cap := words(MatchCopy.meter_caption(), 14)
@@ -115,7 +121,7 @@ func _build_pending(col: VBoxContainer) -> void:
 	col.add_child(chip(MatchCopy.pending_head()))
 	var pending: Array = _data.get("pending", []) if _data.get("pending") is Array else []
 	if pending.is_empty():
-		var none := words(MatchCopy.nothing_pending(), 14)
+		var none := words(_two_lines(MatchCopy.nothing_pending(), 14, false), 14)
 		none.name = "NothingPending"
 		none.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		col.add_child(none)
@@ -176,8 +182,9 @@ func _build_pending(col: VBoxContainer) -> void:
 func _build_logins(col: VBoxContainer) -> void:
 	var days := int(_data.get("login_days", 0))
 	var next_day := int(_data.get("next_login_card", OnlineDrops.next_login_card(days)))
-	var l := words(MatchCopy.login_line(days, next_day), 16, true)
+	var l := words(_two_lines(MatchCopy.login_line(days, next_day), 16), 16, true)
 	l.name = "LoginLine"
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	col.add_child(l)
 
 
@@ -200,11 +207,24 @@ func _build_milestones(col: VBoxContainer) -> void:
 		var l := words(("+ " if on else "- ") + MilestoneCopy.name(key), 14, false)
 		l.name = "Milestone_" + key
 		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		l.add_theme_color_override("font_color", GOLD if on else CREAM)
 		if not on:
 			l.modulate = Color(1, 1, 1, 0.5)
 		grid.add_child(l)
+
+
+## A line wider than the frame's inside breaks at its first " · " (METER
+## 14/22 over the odds, LOGIN DAYS · 5 over the next card, NOTHING WAITING
+## over the hint) instead of wrapping wherever the width falls.
+func _two_lines(text: String, size_: int, display := true) -> String:
+	var f := UiFont.display() if display else UiFont.body_bold()
+	var w := f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(size_)).x + 2.0 * RetroTheme.OUTLINE
+	var i := text.find(" · ")
+	if i < 0 or w <= FRAME_SIZE.x - 2.0 * PAD:
+		return text
+	return text.substr(0, i) + "\n" + text.substr(i + 3)
 
 
 func pending_count() -> int:

@@ -307,9 +307,13 @@ chevron (the footer says START INSIDE).
   METER with its bar, odds and `A FULL METER DROPS A CARD`, WAITING FOR YOU
   rows (the card, `LOGIN REWARD` / `MILESTONE`, the name, CLAIM → CLAIMED),
   `LOGIN DAYS · 7 · NEXT CARD AT DAY 10`, MILESTONES as a two-column grid
-  (unlocked gold with `+`, the rest dim). QA: `--qa-multi` (`multi_menu`,
+  (unlocked gold with `+`, the rest dim). Every line on the page wraps, and
+  a line wider than the frame breaks at its first `·` (`METER 14/22` over
+  three odds, `NOTHING WAITING` over its hint): a label's text is otherwise
+  the page's minimum width, and the whole frame ran off the right of the
+  screen once EPIC joined the odds (2026-10-28). QA: `--qa-multi` (`multi_menu`,
   `multi_code`, `multi_found`, `multi_failed`, `multi_finding`,
-  `multi_rewards`, `multi_prematch`, `multi_prematch_ready`, `online_result`),
+  `multi_rewards`, `multi_rewards_wide`, `multi_prematch`, `multi_prematch_ready`, `online_result`),
   `--qa-heat-result` (`online_result_win`, `online_result_loss`). Since 2026-10-25 (37a's latest pass) the menu opens with your gold
   player card (the jersey, handle and `#tag`, `TOWN · LVL 07`; your badge and
   `#18 · 32-16` on the right; a bar through your division, `16 / 50 TO MVP
