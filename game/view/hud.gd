@@ -322,6 +322,13 @@ func _refresh_best() -> void:
 	var chip := HudCopy.best_chip(_best, roundi(_score_spring.target))
 	_best_label.text = str(chip["label"])
 	_best_val.text = str(chip["val"])
+	# NEW BEST 31 is wider than the 164 chip; a panel grows from its left
+	# edge, so it ran off the right of the screen (Ross, 2026-10-28). The
+	# chip keeps its right edge under the score card and grows left instead.
+	var right := BEST_POS.x + BEST_SIZE.x + ShadowStyle.OFFSET
+	var w := maxf(BEST_SIZE.x + ShadowStyle.OFFSET, _best_chip.get_combined_minimum_size().x)
+	_best_chip.size.x = w
+	_best_chip.position.x = right - w
 
 
 # ---- updates ---------------------------------------------------------------------
@@ -457,6 +464,11 @@ func side_texts() -> Array:
 
 func best_text() -> String:
 	return "%s %s" % [_best_label.text, _best_val.text] if _best_chip.visible else ""
+
+
+## The BEST chip's [left, right] edges in band x (the right one never moves).
+func best_edges() -> Array:
+	return [_best_chip.position.x, _best_chip.position.x + _best_chip.size.x]
 
 
 # ---- pieces ----------------------------------------------------------------------

@@ -625,7 +625,9 @@ a smaller chevron beside it, `IconButton("next", 44)`, skips to the next song in
 playlist, turning the music on first if it was off), the clock card (stopwatch + seconds, gold in the last
 ten; `OT1 12.3` in overtime) or the teal PRACTICE card, the orange SCORE card
 with the springy count-up and, in a trial, the gold BEST chip (`NEW BEST`
-once you pass it) — and the **toast chips** (designs 4a / 5a, 2026-10-24;
+once you pass it; wider than its 164, it grows LEFT with its right edge
+under the score card — it ran off the screen's right, 2026-10-28; QA
+`hud_new_best`) — and the **toast chips** (designs 4a / 5a, 2026-10-24;
 `game/ui/toast.gd` `Mode.SIDE`, `HudCopy.toast_for`): a chip hangs off the
 screen's edge 36 px in with its centre a third of the way up (y 853, clear of
 the opponent window and the hoop), slides in from off-screen with an 8 px

@@ -858,6 +858,14 @@ func _run_hud() -> void:
 	await _sleep(1.6)
 	await _snap("hud_live")
 	print("QA hud: " + _render_stats())
+	# NEW BEST: the chip grows left, its right edge under the score card.
+	var hud_nb: Hud = get_tree().root.find_child("Hud", true, false)
+	if hud_nb != null:
+		hud_nb.set_best(1)
+		hud_nb.set_score(31)
+		await _sleep(0.4)
+		await _snap("hud_new_best")
+		print("QA hud: best chip '%s' edges %s" % [hud_nb.best_text(), str(hud_nb.best_edges())])
 	# The level music note (bottom-left): on, then off again.
 	var note: Button = get_tree().root.find_child("MusicButton", true, false)
 	if note != null:
