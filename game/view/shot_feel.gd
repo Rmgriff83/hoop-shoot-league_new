@@ -18,10 +18,11 @@ const HELD_SPIN_RPM := 0.0       # idle backspin at full pull while held
 const SETTLE_S := 0.08           # a cancelled grab eases back (cubic out)
 ## The release (Ross, 2026-10-28): the flight ball starts where the held
 ## ball was drawn — nearer and larger — and eases to the sim's own pose in
-## this long (cubic out, the same 0.08 s as the cancel settle). A deeper
-## pull covers more ground in the same time, so it zips back accordingly;
-## without it the first flight frame snapped the ball back 0.32 m and 4 %.
-const RELEASE_S := 0.08
+## this long (cubic out). A deeper pull covers more ground in the same
+## time, so it zips back accordingly; without it the first flight frame
+## snapped the ball back 0.32 m and 4 %. 0.08 (the cancel settle's time)
+## read as too quick on the phone; 0.16 since.
+const RELEASE_S := 0.16
 
 
 ## The pull as a fraction of the full effect.
