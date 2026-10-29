@@ -887,11 +887,15 @@ Follow-up (2026-10-28): the ball's size follows the finger's LIVE pull
 (`FlickInput.pull_changed`, the same vertical displacement as the wind-up
 but never latched, so the flick drains it as the finger comes back up —
 the arc keeps the latched `windup_changed`), so the shrink starts the
-instant the flick turns and is mostly done by lift-off; the release then
-no longer snaps — a ball's first flight frame starts where the held ball
-was drawn and eases to the sim's pose over `ShotFeel.RELEASE_S` 0.08 s
-(cubic out, a uniform scale on the flight basis,
-`BallPool._release_by_ball`), finishing what is left; and only the pull rolls the ball —
+instant the flick turns; and it runs at the flick's RATE, per rendered
+frame (`ShotFeel.resorb`: the pull runs down toward the finger's live
+pull at `flick_charging`'s window speed in band px/s, never past it) —
+stepping the size per touch event, which arrive unevenly, skipped and
+jumped. The release then no longer snaps — a ball's first flight frame
+starts where the held ball was drawn and the same rate carries on from the
+pull the hand still showed (`BallPool.set_release_feel` →
+`ShotFeel.resorb_k`, a uniform scale on the flight basis; with no rate, a
+`RELEASE_S` 0.08 s cubic ease); and only the pull rolls the ball —
 `roll_delta` ignores an upward step, so the flick itself no longer unwinds
 the roll and the ball leaves turning the way the sim's backspin carries on
 (`_right = _fwd × UP` is the sim's spin axis, so the signs agree).

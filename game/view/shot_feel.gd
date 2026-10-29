@@ -24,6 +24,14 @@ const SETTLE_S := 0.08           # a cancelled grab eases back (cubic out)
 ## finishes what is left. (A latched pull held the ball big through the
 ## flick, which read as lag whatever this number was.)
 const RELEASE_S := 0.08
+## The resorb (Ross, 2026-10-28, "at the same rate as the flick"): once the
+## finger turns up, the ball's pull runs down at the flick's measured speed
+## per RENDERED frame — not per touch event, which arrive unevenly (two in
+## one frame, none the next) and made the shrink skip and jump — and the
+## same rate carries straight through the release. A hard flick resorbs
+## fast, a soft one slowly; the ball never moves faster than the finger.
+## With no rate (a demo shot, a test) the release falls back to RELEASE_S.
+const RATE_DEFAULT_PX_S := PULL_FULL_PX / RELEASE_S
 
 
 ## The pull as a fraction of the full effect.
@@ -69,6 +77,23 @@ static func roll_delta(dy_m: float) -> float:
 static func settle(k: float) -> float:
 	k = clampf(k, 0.0, 1.0)
 	return 1.0 - (1.0 - k) * (1.0 - k) * (1.0 - k)
+
+
+## The pull after running down at `rate_px_s` for `dt` from `pull_px`, never
+## below `floor_px` (the finger's live pull: the ball follows the finger
+## down and resorbs toward it at the flick's rate, never past it).
+static func resorb(pull_px: float, floor_px: float, rate_px_s: float, dt: float) -> float:
+	return maxf(floor_px, pull_px - maxf(rate_px_s, 0.0) * dt)
+
+
+## The release blend's leftover 1 → 0 at `t` after lift-off: the pull keeps
+## running down from `pull0` at `rate_px_s`, and the depth/scale curve
+## follows it (so the flight starts shrinking exactly as the hand was);
+## with no pull or rate, a RELEASE_S cubic ease.
+static func resorb_k(pull0: float, rate_px_s: float, t: float) -> float:
+	if pull0 <= 0.0 or rate_px_s <= 0.0:
+		return 1.0 - settle(t / RELEASE_S)
+	return curve(frac(pull0 - rate_px_s * t)) / curve(frac(pull0))
 
 
 ## The idle backspin's angle over `dt` at this pull (0 with HELD_SPIN_RPM 0).

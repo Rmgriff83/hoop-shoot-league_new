@@ -57,7 +57,16 @@ func run(t) -> void:
 	# The release blend (Ross, 2026-10-28): a ball let go while drawn nearer
 	# and larger starts its flight there and eases to the sim's pose over
 	# RELEASE_S, instead of snapping back on frame one.
-	t.close(ShotFeel.RELEASE_S, 0.08, 1e-12, "the release finishes the residual over 0.08 s (the live pull does the rest)")
+	t.close(ShotFeel.RELEASE_S, 0.08, 1e-12, "the release's fallback ease is 0.08 s")
+	# The resorb runs at the flick's rate (Ross, 2026-10-28): per frame, toward
+	# the finger, never past it; the same rate shapes the release blend.
+	t.close(ShotFeel.resorb(270.0, 0.0, 2700.0, 0.05), 135.0, 1e-9, "a 2700 px/s flick takes the pull down 135 px in 50 ms")
+	t.close(ShotFeel.resorb(270.0, 200.0, 2700.0, 0.05), 200.0, 1e-9, "…but never below the finger's live pull")
+	t.close(ShotFeel.resorb(100.0, 0.0, 2700.0, 0.05), 0.0, 1e-9, "…and never below 0")
+	t.close(ShotFeel.resorb_k(270.0, 2700.0, 0.05), 0.75, 1e-9, "the release leftover follows the depth curve of the pull still running down (135 px → 0.75)")
+	t.close(ShotFeel.resorb_k(270.0, 2700.0, 0.1), 0.0, 1e-9, "…gone once the pull reaches 0")
+	t.close(ShotFeel.resorb_k(0.0, 0.0, 0.04), 1.0 - ShotFeel.settle(0.5), 1e-9, "no pull or rate: the RELEASE_S ease")
+	t.close(ShotFeel.RATE_DEFAULT_PX_S, 270.0 / 0.08, 1e-9, "the default rate covers the full pull in RELEASE_S")
 	var rp := BallPool.new()
 	rp._ready()
 	rp.update_balls([], true, 0.016)
@@ -80,3 +89,24 @@ func run(t) -> void:
 	t.ok((Vector3(fp["pos"]) - sim_at).length() < 1e-5, "…the ball sits on the sim's point")
 	t.close(float(fp["scale"]), 1.0, 1e-5, "…at true size")
 	rp.free()
+	# With the flick's rate: a hand still showing 270 px of pull, flicked at
+	# 2700 px/s, keeps shrinking along the depth curve — 0.974 of the gap
+	# after one frame, nothing left after 0.1 s.
+	var rr := BallPool.new()
+	rr._ready()
+	rr.update_balls([], true, 0.016)
+	var shot2 := ShotSim.create_shot({"angle_deg": 50.0, "speed": 6.2, "rx": 0.0, "ry": 1.85, "rz": 0.0, "bx": 1.0, "bz": 0.0}, SimGeometry.arcade())
+	var sim2 := Vector3(shot2.pos.x, shot2.pos.y, shot2.pos.z)
+	rr.set_held_pose(sim2 + Vector3(-0.3, 0.0, 0.0), Basis.IDENTITY, 1.04)
+	rr.set_release_feel(270.0, 2700.0)
+	var flight2: Array[BallState] = [shot2]
+	rr.update_balls(flight2, false, 0.016)
+	var fp2: Dictionary = rr.flight_pose(0)
+	var k1 := ShotFeel.resorb_k(270.0, 2700.0, 0.016)
+	t.close((Vector3(fp2["pos"]) - sim2).length(), 0.3 * k1, 1e-4, "frame one keeps %.3f of the gap — the pull still running down at the flick's rate" % k1)
+	t.close(float(fp2["scale"]), 1.0 + 0.04 * k1, 1e-5, "…and of the extra size")
+	for _i in 6:
+		rr.update_balls(flight2, false, 0.016)
+	fp2 = rr.flight_pose(0)
+	t.ok(not fp2["blending"] and (Vector3(fp2["pos"]) - sim2).length() < 1e-5, "…and sits on the sim's point once the pull has run out (0.1 s)")
+	rr.free()

@@ -155,6 +155,7 @@ func _ready() -> void:
 	input.windup_changed.connect(_on_windup)
 	input.pull_changed.connect(_on_pull)
 	input.flick_charging.connect(_on_charging)
+	input.flick_charging.connect(_on_feel_rate)
 	input.flick_released.connect(_on_flick)
 	_after_ready()
 	# The first-shot tutorial (design 38a): once, before the first offline match's countdown.
@@ -340,6 +341,9 @@ func demo_shoot(_angle_deg: float) -> void:
 		return
 	if _readout != null:
 		_readout.freeze(sh, tuning)
+	# The flight's first frames keep resorbing at the flick's rate from the
+	# pull the hand still shows (the release sample's honest speed).
+	_pool.set_release_feel(_feel_pull, float(sample.get("speed_sh", 0.0)) * float(sample.get("viewport_h", UiLayout.DESIGN.y)))
 	trial.release(launch)
 	_holding_visual = false
 
@@ -801,6 +805,8 @@ var _feel_settle_t := -1.0       # ≥ 0 while a cancelled grab settles back
 var _feel_from := {"pull": 0.0, "depth": 0.0, "scale": 1.0}
 var _feel_depth := 0.0
 var _feel_scale := 1.0
+var _feel_live := 0.0            # the finger's live pull (FlickInput.pull_changed)
+var _feel_rate := ShotFeel.RATE_DEFAULT_PX_S   # the flick's speed, band px/s
 
 
 func _feel_reset() -> void:
@@ -810,6 +816,8 @@ func _feel_reset() -> void:
 	_feel_settle_t = -1.0
 	_feel_depth = 0.0
 	_feel_scale = 1.0
+	_feel_live = 0.0
+	_feel_rate = ShotFeel.RATE_DEFAULT_PX_S
 
 
 ## A cancelled gesture: the ball stays in hand and eases back to the hand point.
@@ -831,6 +839,13 @@ func _feel_step(dt: float) -> void:
 		if _feel_settle_t >= ShotFeel.SETTLE_S:
 			_feel_settle_t = -1.0
 	else:
+		# Pulling: the ball follows the finger down. The flick: it resorbs
+		# toward the finger at the flick's rate, per frame — touch events
+		# come unevenly, and stepping the size on each one skipped and jumped.
+		if _feel_live >= _feel_pull:
+			_feel_pull = _feel_live
+		else:
+			_feel_pull = ShotFeel.resorb(_feel_pull, _feel_live, _feel_rate, dt)
 		_feel_depth = ShotFeel.depth(_feel_pull)
 		_feel_scale = ShotFeel.scale(_feel_pull)
 	_feel_roll += ShotFeel.held_spin_rad(ShotFeel.frac(_feel_pull), dt)
@@ -1206,8 +1221,15 @@ func _on_windup(pull_px: float) -> void:
 ## the latched wind-up above, this is only the look (Ross, 2026-10-28: the
 ## latched value held the ball big through the whole flick, a visible lag).
 func _on_pull(live_px: float) -> void:
-	_feel_pull = live_px
+	_feel_live = live_px
 	_feel_settle_t = -1.0
+
+
+## The flick's live speed (screen-heights/s → band px/s): the rate the ball
+## resorbs at, in _feel_step and through the release.
+func _on_feel_rate(speed_sh: float, _latched: bool) -> void:
+	if speed_sh > 0.0:
+		_feel_rate = speed_sh * UiLayout.DESIGN.y
 
 
 ## Tuning mode draws the whole arc to the rim (a dev aid). Shot help draws most

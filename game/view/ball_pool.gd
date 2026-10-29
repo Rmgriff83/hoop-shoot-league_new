@@ -75,10 +75,12 @@ var _rng := RandomNumberGenerator.new()
 var _grab_base := Basis.IDENTITY
 var _held_rot := Basis.IDENTITY   # the grab base with the drag's roll on it
 var _base_by_ball := {}   # BallState → Basis (orientation at release)
-## BallState → {offset: Vector3, scale: float, t: float}: how far the held
-## ball was drawn from the sim's release point, and how much larger, eased
-## out over the first RELEASE_S of the flight.
+## BallState → {offset: Vector3, scale: float, pull: float, rate: float,
+## t: float}: how far the held ball was drawn from the sim's release point
+## and how much larger, run down over the flight's first frames at the
+## flick's rate (ShotFeel.resorb_k), or over RELEASE_S without one.
 var _release_by_ball := {}
+var _next_release := {"pull": 0.0, "rate": 0.0}   # set_release_feel, for the next ball
 var _angle_by_ball := {}  # BallState → float (integrated backspin angle)
 var _roll_by_ball := {}   # BallState → float (integrated roll about the travel axis)
 
@@ -214,6 +216,13 @@ func held_basis() -> Basis:
 	return _held_rot
 
 
+## The screen, just before the sim releases: the pull the hand still shows
+## and the flick's rate (band px/s), so the next ball's first flight frames
+## keep resorbing exactly as the hand was.
+func set_release_feel(pull_px: float, rate_px_s: float) -> void:
+	_next_release = {"pull": pull_px, "rate": rate_px_s}
+
+
 ## Flight slot `i` as drawn: its position and uniform scale (the release
 ## blend's leftovers; 1.0 once it has eased out). For tests.
 func flight_pose(i: int) -> Dictionary:
@@ -257,7 +266,9 @@ func update_balls(balls: Array[BallState], holding: bool, dt: float) -> void:
 				_angle_by_ball[s] = 0.0
 				_release_by_ball[s] = {
 					"offset": held_at - Vector3(s.pos.x, s.pos.y, s.pos.z),
-					"scale": held_scale_at, "t": 0.0}
+					"scale": held_scale_at, "pull": float(_next_release["pull"]),
+					"rate": float(_next_release["rate"]), "t": 0.0}
+				_next_release = {"pull": 0.0, "rate": 0.0}
 			mi.visible = true
 			# Integrate the sim's real spin (positive = backspin; decays on
 			# rim/board contacts) and roll about the sim's spin axis, which is
@@ -291,7 +302,7 @@ func update_balls(balls: Array[BallState], holding: bool, dt: float) -> void:
 			if _release_by_ball.has(s):
 				var r: Dictionary = _release_by_ball[s]
 				r["t"] = float(r["t"]) + dt
-				var k := 1.0 - ShotFeel.settle(float(r["t"]) / ShotFeel.RELEASE_S)
+				var k := ShotFeel.resorb_k(float(r["pull"]), float(r["rate"]), float(r["t"]))
 				if k <= 0.0:
 					_release_by_ball.erase(s)
 				else:
