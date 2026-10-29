@@ -16,6 +16,12 @@ const PULL_EXTRA_SCALE := 0.04   # on top of perspective at full pull
 const ROLL_WITH_DRAG := 0.6      # × true rolling (Δy / r), about the spot's right
 const HELD_SPIN_RPM := 0.0       # idle backspin at full pull while held
 const SETTLE_S := 0.08           # a cancelled grab eases back (cubic out)
+## The release (Ross, 2026-10-28): the flight ball starts where the held
+## ball was drawn — nearer and larger — and eases to the sim's own pose in
+## this long (cubic out, the same 0.08 s as the cancel settle). A deeper
+## pull covers more ground in the same time, so it zips back accordingly;
+## without it the first flight frame snapped the ball back 0.32 m and 4 %.
+const RELEASE_S := 0.08
 
 
 ## The pull as a fraction of the full effect.
@@ -49,9 +55,12 @@ static func held_pos(cam: Vector3, hand: Vector3, depth_m: float) -> Vector3:
 
 ## The roll a drag step adds (radians about the spot's right): the ball turns
 ## as if it rolled down the palm. `dy_m` = the hand's previous y − its new y,
-## positive pulling down.
+## positive pulling down. Only the pull rolls it (Ross, 2026-10-28): a step
+## back up — the flick itself, or easing the pull — adds nothing, so the ball
+## leaves the hand with the roll the pull gave it and the sim's backspin
+## carries on the same way instead of the flick unwinding it first.
 static func roll_delta(dy_m: float) -> float:
-	return ROLL_WITH_DRAG * dy_m / SimConstants.R_BALL
+	return ROLL_WITH_DRAG * maxf(dy_m, 0.0) / SimConstants.R_BALL
 
 
 ## The settle's progress 0 → 1 (cubic out) at `k` = t / SETTLE_S.

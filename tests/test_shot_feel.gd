@@ -27,7 +27,8 @@ func run(t) -> void:
 	t.ok((ShotFeel.held_pos(cam, cam + Vector3(0.1, 0, 0), 0.5) - cam).length() <= 1e-9, "never past the camera")
 	# The roll: 0.6 × true rolling, top toward you on a pull down.
 	t.close(ShotFeel.roll_delta(0.121), 0.6, 1e-9, "a pull of one radius rolls 0.6 rad")
-	t.ok(ShotFeel.roll_delta(-0.05) < 0.0, "pushing up rolls the other way")
+	t.close(ShotFeel.roll_delta(-0.05), 0.0, 1e-12, "pushing up (the flick) adds no roll — only the pull turns it (Ross, 2026-10-28)")
+	t.close(ShotFeel.roll_delta(0.05) + ShotFeel.roll_delta(-0.05), ShotFeel.roll_delta(0.05), 1e-12, "…so a pull then a flick leaves the pull's roll")
 	# The settle: cubic out, 0 → 1 over SETTLE_S, monotonic.
 	t.close(ShotFeel.settle(0.0), 0.0, 1e-9, "settle starts where it was")
 	t.close(ShotFeel.settle(1.0), 1.0, 1e-9, "…and is home at SETTLE_S")
@@ -53,3 +54,29 @@ func run(t) -> void:
 	t.close(pool.held_scale(), 1.0, 1e-6, "set_held_position is back at true size")
 	t.ok(pool.held_basis().is_equal_approx(roll * base), "…keeping the roll")
 	pool.free()
+	# The release blend (Ross, 2026-10-28): a ball let go while drawn nearer
+	# and larger starts its flight there and eases to the sim's pose over
+	# RELEASE_S, instead of snapping back on frame one.
+	t.close(ShotFeel.RELEASE_S, 0.08, 1e-12, "the release eases out over 0.08 s")
+	var rp := BallPool.new()
+	rp._ready()
+	rp.update_balls([], true, 0.016)
+	var shot := ShotSim.create_shot({"angle_deg": 50.0, "speed": 6.2, "rx": 0.0, "ry": 1.85, "rz": 0.0, "bx": 1.0, "bz": 0.0}, SimGeometry.arcade())
+	var sim_at := Vector3(shot.pos.x, shot.pos.y, shot.pos.z)
+	var drawn_at := sim_at + Vector3(-0.3, 0.0, 0.0)
+	rp.set_held_pose(drawn_at, Basis.IDENTITY, 1.04)
+	var flight: Array[BallState] = [shot]
+	rp.update_balls(flight, false, 0.016)
+	var fp: Dictionary = rp.flight_pose(0)
+	var gap := (Vector3(fp["pos"]) - sim_at).length()
+	t.ok(fp["blending"], "frame one of the flight is still blending")
+	t.ok(gap > 0.1 and gap < 0.3, "…the ball is between the hand's pose and the sim's (%.3f m from the sim's)" % gap)
+	t.ok((Vector3(fp["pos"]) - drawn_at).length() < (drawn_at - sim_at).length(), "…and on its way from where it was drawn")
+	t.ok(float(fp["scale"]) > 1.0 and float(fp["scale"]) < 1.04, "…the extra size easing out too (%.3f)" % float(fp["scale"]))
+	for _i in 8:
+		rp.update_balls(flight, false, 0.016)
+	fp = rp.flight_pose(0)
+	t.ok(not fp["blending"], "after 0.14 s the blend is over")
+	t.ok((Vector3(fp["pos"]) - sim_at).length() < 1e-5, "…the ball sits on the sim's point")
+	t.close(float(fp["scale"]), 1.0, 1e-5, "…at true size")
+	rp.free()
