@@ -1480,7 +1480,7 @@ func _open_lobby() -> void:
 					_pre_match.start_countdown(float(Dictionary(a).get("countdown_s", 5)) if a is Dictionary else 5.0)
 				else:
 					App.tip_off_now()
-	_lobby.ranked.connect(func() -> void: App.start_online("any", "ranked", "", on_state))
+	_lobby.ranked.connect(func() -> void: App.start_online(_lobby.area_choice, "ranked", "", on_state))   # the picker is ranked's preference
 	_lobby.rewards.connect(_open_rewards)
 	_lobby.all_ranks.connect(func() -> void: _open_ranks(RanksCopy.RANKED))
 	# The menu's card and leaderboard (design 37a): your rank, the ladder's top three.

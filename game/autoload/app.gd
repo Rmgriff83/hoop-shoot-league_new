@@ -872,17 +872,28 @@ func start_online(area: String, how: String, code: String, on_state: Callable) -
 ## RANKED (docs/BACKEND.md → Ranked): one global rated queue. The Lobby pairs
 ## on a court both own, by rating, widening every few seconds; the phone polls
 ## `/v1/match/ranked` every `queue.poll_s` until it is paired (or cancels),
-## then opens the room like any other.
+## then opens the room like any other. The lobby's court picker rides along
+## as a PREFERENCE (Ross, 2026-10-29): `{"area": pick}`, "any" by default —
+## the server gives the same pick, or one pick over an ANY, else a common
+## court at random. The level is re-reported first so the server knows every
+## court this phone owns. A Worker from before the preference answers 400
+## to the body: then the search carries on without it.
 func _search_ranked(on_state: Callable) -> void:
 	_ranked_search += 1
 	var my_search := _ranked_search
+	var pref := match_area
 	match_area = "any"
 	_tell(on_state, "waiting", "ranked", "")
+	Net.report_level(level(), true)
 	var poll_s := float(RankedRules.queue_cfg().get("poll_s", 4))
+	var with_pref := true
 	while match_how == "ranked" and my_search == _ranked_search:
-		var r: Dictionary = await Net.request_json("match", HTTPClient.METHOD_POST, "/v1/match/ranked", {})
+		var r: Dictionary = await Net.request_json("match", HTTPClient.METHOD_POST, "/v1/match/ranked", ranked_body(pref) if with_pref else {})
 		if match_how != "ranked" or my_search != _ranked_search:
 			return
+		if not r["ok"] and r["code"] == 400 and with_pref and not ranked_body(pref).is_empty():
+			with_pref = false   # an older Worker: ask again the old way
+			continue
 		if not r["ok"]:
 			if r["code"] != -1 and r["code"] != 0:
 				_tell(on_state, "failed", "throttled" if r["code"] == 429 else "offline")
@@ -1043,6 +1054,12 @@ func offer_rematch() -> void:
 		return
 	room.send(MatchProtocol.rematch())
 	_set_rematch("both" if rematch_state == "wanted" else "offered")
+
+
+## The ranked poll's body: the picker's court as a preference, nothing for ANY
+## (an older Worker rejects unknown keys, so ANY sends the old empty body).
+static func ranked_body(pref: String) -> Dictionary:
+	return {} if pref == "" or pref == "any" else {"area": pref}
 
 
 ## The found peer with the court it is on: the message's `area` (a joiner's

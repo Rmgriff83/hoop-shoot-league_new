@@ -258,9 +258,11 @@ chevron (the footer says START INSIDE).
   and the four courts in a row (a locked court dimmed with a lock; the whole
   row dimmed and fixed on the cage with `UNLOCK MORE COURTS TO CHOOSE` while
   only the cage is open, else `n OF 4 OWNED`; the chosen one gold, the home's
-  court picked at open — the picker steers the casual games only); **RANKED**
-  (gold, `ANY COURT · RATED · ONE GLOBAL LADDER`, 2026-10-19: the rated queue,
-  docs/BACKEND.md → Ranked; the server picks a court both own); QUICK MATCH
+  court picked at open — the picker steers the casual games, and since
+  2026-10-29 is ranked's preference too); **RANKED** (gold, `YOUR COURT WHEN
+  YOU BOTH OWN IT · RATED`, 2026-10-19: the rated queue, docs/BACKEND.md →
+  Ranked; the server gives the same pick, or one pick over an ANY, else a
+  court both own at random); QUICK MATCH
   (orange; `FIRST OPEN MATCH ON YOUR COURTS` / `PLAY WHOEVER IS ON …`), CREATE
   CODE (teal, `PLAY A FRIEND`), ENTER CODE + GO (gold) over `GOT A CODE FROM A
   FRIEND? TYPE IT IN`. The loadout left this page for the **pre-match pick**

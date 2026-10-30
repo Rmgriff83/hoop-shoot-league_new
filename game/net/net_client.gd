@@ -481,9 +481,11 @@ func refresh_cards() -> bool:
 	return false
 
 
-## The game's level, for the online card cap (sent once per change).
-func report_level(level: int) -> void:
-	if level == _level_reported or not _can_call() or not registered():
+## The game's level, for the online card cap and the courts ranked may pick
+## (sent once per change; `force` sends it again — a ranked search does, so
+## a report that failed at the level-up is not waiting for the next one).
+func report_level(level: int, force := false) -> void:
+	if (level == _level_reported and not force) or not _can_call() or not registered():
 		return
 	_level_reported = level
 	var r := await _request("me", HTTPClient.METHOD_PATCH, "/v1/me", {"level": level})

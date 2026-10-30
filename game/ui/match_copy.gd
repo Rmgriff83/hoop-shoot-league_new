@@ -68,7 +68,7 @@ static func waiting_line(how: String) -> String:
 
 ## Under RANKED on the menu (2026-10-19): one global rated queue, any court.
 static func ranked_sub() -> String:
-	return "ANY COURT · RATED · ONE GLOBAL LADDER"
+	return "YOUR COURT WHEN YOU BOTH OWN IT · RATED"
 
 
 static func found_big() -> String:

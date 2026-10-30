@@ -32,8 +32,8 @@ async function register(level = 1): Promise<Player> {
 }
 const auth = (p: Player) => ({ authorization: `Bearer ${p.playerId}.${p.secret}`, "cf-connecting-ip": p.ip, "content-type": "application/json" });
 
-async function ranked(p: Player) {
-  const res = await SELF.fetch("https://api/v1/match/ranked", { method: "POST", headers: auth(p), body: "{}" });
+async function ranked(p: Player, body: Record<string, unknown> = {}) {
+  const res = await SELF.fetch("https://api/v1/match/ranked", { method: "POST", headers: auth(p), body: JSON.stringify(body) });
   return { status: res.status, json: (await res.json()) as any };
 }
 const leave = (p: Player) => SELF.fetch("https://api/v1/match/leave", { method: "POST", headers: auth(p), body: JSON.stringify({ ranked: true }) });
@@ -140,6 +140,54 @@ describe("the ranked queue", () => {
     expect(qb.json.paired).toBe(true);
     expect(["cage", "beach"]).toContain(qb.json.area);
     expect(qb.json.opponent.level).toBe(5);
+  });
+  // The lobby's picker is a preference (Ross, 2026-10-29: both on the beach landed on the cage).
+  it("both picking the same court get it", async () => {
+    const a = await register(5);
+    const b = await register(3);
+    await ranked(a, { area: "beach" });
+    const qb = await ranked(b, { area: "beach" });
+    expect(qb.json).toMatchObject({ paired: true, area: "beach" });
+    expect((await ranked(a, { area: "beach" })).json).toMatchObject({ paired: true, host: true, area: "beach" });
+    const row = await env.DB.prepare("SELECT area FROM ranked_rooms WHERE room = ?1").bind(qb.json.room).first();
+    expect(row).toMatchObject({ area: "beach" });
+  });
+  it("one pick over an ANY wins when the other owns it", async () => {
+    const a = await register(5);
+    const b = await register(3);
+    await ranked(a);                       // any
+    expect((await ranked(b, { area: "beach" })).json).toMatchObject({ paired: true, area: "beach" });
+    const c = await register(5);
+    const d = await register(3);
+    await ranked(c, { area: "beach" });
+    expect((await ranked(d)).json).toMatchObject({ paired: true, area: "beach" });
+  });
+  it("two different picks fall back to one of them; a locked pick counts as any", async () => {
+    const a = await register(5);
+    const b = await register(3);
+    await ranked(a, { area: "cage" });
+    const qb = await ranked(b, { area: "beach" });
+    expect(qb.json.paired).toBe(true);
+    expect(["cage", "beach"]).toContain(qb.json.area);
+    const c = await register(5);
+    const d = await register(3);
+    await ranked(c, { area: "park" });     // d does not own the park: c's pick means nothing against d's beach…
+    expect((await ranked(d, { area: "beach" })).json).toMatchObject({ paired: true, area: "beach" });
+    const e = await register(3);
+    const f = await register(5);
+    await ranked(e, { area: "park" });     // …and a pick of a court e has not unlocked is "any"
+    expect((await ranked(f, { area: "cage" })).json).toMatchObject({ paired: true, area: "cage" });
+    expect((await ranked(await register(), { area: "moon" })).status).toBe(400);
+  });
+  it("pickCourt: the rules, pure", async () => {
+    const { pickCourt } = await import("../src/lobby");
+    expect(pickCourt("beach", "beach", ["cage", "beach"])).toBe("beach");
+    expect(pickCourt("beach", "any", ["cage", "beach"])).toBe("beach");
+    expect(pickCourt("any", "beach", ["cage", "beach"])).toBe("beach");
+    expect(pickCourt("park", "any", ["cage", "beach"], () => 0)).toBe("cage");   // not common: random
+    expect(pickCourt("park", "beach", ["cage", "beach"])).toBe("beach");          // a pick the other can't play is no pick
+    expect(pickCourt("cage", "beach", ["cage", "beach"], () => 0.99)).toBe("beach");
+    expect(pickCourt("any", "any", ["cage", "beach"], () => 0)).toBe("cage");
   });
   it("a far pair waits for the window to widen", async () => {
     const a = await register();

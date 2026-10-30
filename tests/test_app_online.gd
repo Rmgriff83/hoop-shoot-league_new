@@ -25,6 +25,11 @@ func _result() -> Dictionary:
 
 
 func run(t) -> void:
+	# The ranked poll's body (Ross, 2026-10-29): the picker's court as a
+	# preference; ANY sends the old empty body an older Worker still takes.
+	t.eq(App.ranked_body("beach"), {"area": "beach"}, "a picked court rides the ranked poll")
+	t.eq(App.ranked_body("any"), {}, "ANY sends nothing")
+	t.eq(App.ranked_body(""), {}, "…and so does no pick")
 	var app = _app()
 	if app == null:
 		t.ok(false, "App autoload present")

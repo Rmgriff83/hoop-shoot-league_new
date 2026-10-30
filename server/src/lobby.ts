@@ -4,9 +4,12 @@
  * room codes, and the ranked queue. Quick match pairs the next two players
  * in an area into one room id; a code names a room a friend can join; the
  * ranked queue pairs by rating inside a window that widens with the wait
- * (data/ranked.json → queue), on a court both own, and remembers the room
- * for the Worker (`ranked_rooms`). Entries expire; the room itself decides
- * fullness and timeouts.
+ * (data/ranked.json → queue), on a court both own — the lobby's court picker
+ * is a PREFERENCE there (Ross, 2026-10-29: both on the beach landed on the
+ * cage): the same pick wins, one pick over an ANY wins, otherwise random
+ * among the common courts (`pickCourt`) — and remembers the room for the
+ * Worker (`ranked_rooms`). Entries expire; the room itself decides fullness
+ * and timeouts.
  */
 import { DurableObject } from "cloudflare:workers";
 import type { Env } from "./env";
@@ -24,13 +27,29 @@ interface Code { room: string; area: string; playerId: string; at: number }
 /** What the game shows of the other player on the face-off card. */
 interface Opponent { playerId: string; level: number; tier: string; division: number }
 /** `rq:<playerId>` — a player in the ranked queue (the Worker verified every number). */
-interface RankedWaiting extends Opponent { room: string; mu: number; rd: number; cons: number; areas: string[]; at: number; lean: boolean }
+interface RankedWaiting extends Opponent { room: string; mu: number; rd: number; cons: number; areas: string[]; pref: string; at: number; lean: boolean }
 /** `paired:<playerId>` — someone took this host's room; told on the host's next poll. */
 interface Paired { room: string; area: string; opponent: Opponent; at: number }
 
 const opponentOf = (w: RankedWaiting): Opponent => ({ playerId: w.playerId, level: w.level, tier: w.tier, division: w.division });
 /** A leaning player (losing streak, long away) searches as if rated `below` lower. */
 const searchCons = (w: RankedWaiting): number => (w.lean ? w.cons - QUEUE.lean.below : w.cons);
+
+/**
+ * The court a ranked pair plays on, from the courts both own (`common`, never
+ * empty) and what each picked in the lobby ("any" or a court): the same
+ * pick when both own it; a pick over an "any" when the other owns it; else
+ * one of the common courts at random. Never blocks a pairing.
+ */
+export function pickCourt(a: string, b: string, common: string[], random: () => number = Math.random): string {
+  // A pick the other side does not own is no pick at all.
+  const pa = common.includes(a) ? a : "any";
+  const pb = common.includes(b) ? b : "any";
+  if (pa !== "any" && pa === pb) return pa;
+  if (pa !== "any" && pb === "any") return pa;
+  if (pb !== "any" && pa === "any") return pb;
+  return common[Math.floor(random() * common.length)];
+}
 
 export class Lobby extends DurableObject<Env> {
   async fetch(request: Request): Promise<Response> {
@@ -100,6 +119,7 @@ export class Lobby extends DurableObject<Env> {
           tier: typeof body.tier === "string" ? body.tier : TIERS[0].id,
           division: Number(body.division) || DIVISIONS,
           areas: mine,
+          pref: typeof body.pref === "string" && mine.includes(body.pref) ? body.pref : "any",
           at: old && live(old) ? old.at : now, // asking again keeps my place in line
           lean: body.lean === true,
         };
@@ -121,7 +141,7 @@ export class Lobby extends DurableObject<Env> {
           if (ok && dist < bestDist) { best = { w, common }; bestDist = dist; }
         }
         if (best) {
-          const picked = best.common[Math.floor(Math.random() * best.common.length)];
+          const picked = pickCourt(me.pref, best.w.pref ?? "any", best.common);
           await this.ctx.storage.delete([`rq:${best.w.playerId}`, myKey]);
           await this.ctx.storage.put(`paired:${best.w.playerId}`, { room: best.w.room, area: picked, opponent: opponentOf(me), at: now } satisfies Paired);
           try {

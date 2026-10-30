@@ -379,14 +379,19 @@ app.post("/v1/match/:action{quick|code|join|leave}", async (c) => {
  * seconds until `paired`. Everything the Lobby matches on comes from here —
  * the verified level (→ the courts owned), the ratings row (made on the
  * first call), and `lean` (a losing streak or a long time away widens the
- * search downward). The Lobby remembers the pair in `ranked_rooms`, which is
- * what makes the room ranked when the phones connect.
+ * search downward). `area` (optional; "any" when absent) is the lobby
+ * picker's choice, a PREFERENCE for the court the pair plays on, never a
+ * filter (lobby.ts `pickCourt`); a court this level has not unlocked counts
+ * as "any". The Lobby remembers the pair in `ranked_rooms`, which is what
+ * makes the room ranked when the phones connect.
  */
 app.post("/v1/match/ranked", async (c) => {
   if (!on(c.env.FEATURE_RANKED)) return off(c);
   const p = c.get("player");
-  const b = await body(c, []);
+  const b = await body(c, ["area"]);
   if (!b) return c.json({ error: "bad_request" }, 400);
+  const pref = b.area === undefined ? "any" : b.area;
+  if (pref !== "any" && !(MATCH_AREAS as readonly string[]).includes(pref as string)) return c.json({ error: "area" }, 400);
   const now = Date.now();
   let r = await db.ratingOf(c.env.DB, p.id);
   if (!r) {
@@ -399,7 +404,7 @@ app.post("/v1/match/ranked", async (c) => {
   const stub = c.env.LOBBY.get(c.env.LOBBY.idFromName("lobby"));
   const res = await stub.fetch("https://lobby/ranked", {
     method: "POST",
-    body: JSON.stringify({ playerId: p.id, level, mu: r.mu, rd: r.rd, cons: r.cons, tier: r.tier, division: r.division, areas: areasForLevel(level), lean }),
+    body: JSON.stringify({ playerId: p.id, level, mu: r.mu, rd: r.rd, cons: r.cons, tier: r.tier, division: r.division, areas: areasForLevel(level), pref, lean }),
   });
   return new Response(res.body, { status: res.status, headers: { "content-type": "application/json" } });
 });

@@ -378,8 +378,15 @@ both sides to the same tier bands).
   waiters (`rq:<playerId>` entries, stale after 60 s) with a window of
   `100 + 50 × floor(max wait / 4 s)` rating points over a non-empty common
   court; past 30 s (`cap_s`) it takes the closest anyone with a common
-  court. **Ranked ignores the lobby's court picker** (Ross's call): the
-  server picks a court at random from the ones both own. A pair writes
+  court. **The lobby's court picker is a preference in ranked** (Ross,
+  2026-10-29 — until then ranked ignored it and picked at random, and both
+  players on the beach landed on the cage): the poll's body `{area}` ("any"
+  when absent; a court the level has not unlocked counts as "any") and
+  `lobby.ts` `pickCourt`: the same pick wins, one pick over an ANY wins,
+  otherwise a common court at random — never a filter, pairing is unchanged.
+  The phone re-reports its level at the start of every search
+  (`Net.report_level(level, true)`), and falls back to the empty body if a
+  Worker from before answers 400. A pair writes
   `ranked_rooms (room, area, a_id, b_id)` (pruned after a day); the taker is
   told `{room, host:false, paired:true, area, opponent}` and the host learns
   on its next poll; `POST /v1/match/leave {ranked:true}` drops the entry.
