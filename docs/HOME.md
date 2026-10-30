@@ -551,14 +551,27 @@ final buzzer and the post-match page. The heat screen settles the heat at
 the buzzer (`App.settle_heat`, which also snapshots your record, place,
 titles and series before/after into `last_heat.league_end`) and plays one
 of seven states on a dark-cage backdrop: a regular **win** (YOU WIN slams
-in with a cream flash, orange rays and confetti; your record flips 2-1 →
+in with a white flash, orange rays and confetti; your record flips 2-1 →
 3-1 and a chip says `2ND PLACE · UP 1`), a **loss** (THEY TOOK IT sinks in
 and shakes, no rays, a darker scrim, `4TH PLACE · DOWN 1`), a playoff game
-that leaves the **series** open (the bracket shows `SERIES 1 - 0`, `FIRST
-TO 2`), **advance** (ADVANCE, gold rays, YOU slides into the FINAL box over
-`VS DRE`, `ONE WIN FROM THE TITLE`), **eliminated** (ELIMINATED, your row
-dims and is struck through, they move on, `SEASON 2 OVER · 3RD PLACE`),
-**runner-up** (SO CLOSE) and **champions** (design 39b since 2026-10-27:
+that leaves the **series** open, **advance** (ADVANCE, gold rays) and
+**eliminated** (ELIMINATED). Every playoff state but the champions shows
+the **bracket** (design 15a update, Ross 2026-10-30): a dotted cream panel
+with, in the semifinal round, the FINAL box on top (a grey trophy, `YOU VS ?`
+once you are through, `MO VS ?` when they knock you out, `? VS ?` before)
+over both semis side by side (`SEMI 1 · G2 OF 3` / `SEMI 2 · G3 NEXT` /
+`DONE`; each row the first name, the season record, the series wins), a
+stepped line up from each semi that draws in gold when you win yours; in the
+final round the final's own rows sit on top under the trophy (`GAME 2 OF 3`,
+gold while you lead the game) and the semis shrink below. This game's
+winner pops its number at 1.7 s; a decided series strikes its loser at
+2.1 s and fades it at 2.3 s. No sub line under the bracket. The data is
+`league_end.bracket_after` (every series after the game, `games` dropped)
+and `table_after` for the records; `MatchEndCopy.bracket` builds it.
+The page is laid out on the 720×1560 design minus the band's 140 px
+(`TAG_Y`… `REWARDS_Y`); TAP TO CONTINUE pins 130 px above the screen's
+bottom edge (`continue_y`). The other states: **runner-up** (SO CLOSE, the
+final's bracket) and **champions** (design 39b since 2026-10-27:
 the trophy sinks in and quakes the page, CHAMPIONS slams over it, the
 series line, TITLES with the new cup popping, the CHAMPIONS BONUS XP card
 with its meter and the tickets card fed by twelve flyers, an orange

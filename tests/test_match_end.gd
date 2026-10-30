@@ -42,6 +42,21 @@ func _table(you: int) -> Array:
 	return out
 
 
+## The season's series after the game: your semi (you the high seed against
+## brickport), the other semi (kingsbridge v ferry-row), and the final when
+## given as [high, low, high wins, low wins, winner].
+func _br(mine: Array, mine_winner := "", other := [1, 1], other_winner := "", fin := []) -> Array:
+	var out := [
+		{"id": "sf-1v4", "round": "semifinal", "highSeedId": "player", "lowSeedId": "brickport", "bestOf": 3,
+			"highWins": mine[0], "lowWins": mine[1], "winnerId": mine_winner},
+		{"id": "sf-2v3", "round": "semifinal", "highSeedId": "kingsbridge", "lowSeedId": "ferry-row", "bestOf": 3,
+			"highWins": other[0], "lowWins": other[1], "winnerId": other_winner}]
+	if not fin.is_empty():
+		out.push_back({"id": "final", "round": "final", "highSeedId": fin[0], "lowSeedId": fin[1], "bestOf": 3,
+			"highWins": fin[2], "lowWins": fin[3], "winnerId": fin[4]})
+	return out
+
+
 func run(t) -> void:
 	_copy(t)
 	_overlay(t)
@@ -81,30 +96,61 @@ func _copy(t) -> void:
 	t.ok(float(loss["scrim"]) > float(win["scrim"]), "a darker scrim on a loss")
 	t.eq(loss["record"]["place"], "4TH PLACE · DOWN 1", "the place drop")
 	t.eq(loss["head_size"], 51, "a long headline shrinks (620 / 12)")
-	var series := MatchEndCopy.state(_heat(true, {"round": "semifinal", "series_after": [1, 0]}, true))
+	# Design 15a (2026-10-30): the bracket — the FINAL box over both semis,
+	# names with season records and series wins, no sub line.
+	var series := MatchEndCopy.state(_heat(true, {"round": "semifinal", "series_id": "sf-1v4", "series_after": [1, 0], "bracket_after": _br([1, 0], "", [0, 1])}, true))
 	t.eq(series["kind"], "series", "an undecided playoff game")
 	t.eq(series["tag"], "PLAYOFFS · SEMIFINAL", "the playoff tag")
-	t.eq(series["sub"], "FIRST TO 2", "best of three")
+	t.eq(series["sub"], "", "no sub under the bracket")
 	t.eq(series["block"], "bracket", "the bracket")
-	t.eq(series["bracket"]["series"], "1 - 0", "the series score")
-	t.eq(series["bracket"]["next_opp"], "VS DRE / SOL", "the other semi, first names")
-	var adv := MatchEndCopy.state(_heat(true, {"round": "semifinal", "series_after": [2, 1], "decided": true, "series_won": true, "final_opp": "kingsbridge"}, true))
+	var sb: Dictionary = series["bracket"]
+	t.eq(sb["style"], "semis", "the semifinal round: the semis style")
+	t.eq(sb["final"]["text"], "? VS ?", "nobody in the final yet")
+	t.eq(sb["semis"].size(), 2, "both semis")
+	t.eq("%s · %s" % [sb["semis"][0]["head"], sb["semis"][0]["note"]], "SEMI 1 · G1 OF 3", "your semi, by game")
+	t.eq("%s · %s" % [sb["semis"][1]["head"], sb["semis"][1]["note"]], "SEMI 2 · G2 NEXT", "the other semi, its next game")
+	var you_row: Dictionary = sb["semis"][0]["rows"][0]
+	t.eq([you_row["name"], you_row["rec"], you_row["wins"]], ["YOU", "9-5", 1], "your row: name, season record, series wins")
+	t.ok(bool(you_row["pop"]) and not bool(sb["semis"][0]["rows"][1]["pop"]), "your number pops: you won the game")
+	t.ok(not bool(you_row["struck"]) and not bool(you_row["won"]), "nothing decided, nothing struck")
+	t.eq(sb["semis"][0]["line"], MatchEndCopy.GOLD, "a won game edges your semi in gold")
+	t.eq(sb["semis"][1]["rows"][0]["name"], "DRE", "the other semi's first names")
+	var adv := MatchEndCopy.state(_heat(true, {"round": "semifinal", "series_id": "sf-1v4", "series_after": [2, 1], "decided": true, "series_won": true,
+		"final_opp": "kingsbridge", "bracket_after": _br([2, 1], "player", [2, 0], "kingsbridge")}, true))
 	t.eq(adv["kind"], "advance", "the semi won")
 	t.eq(adv["head"], "ADVANCE", "ADVANCE")
-	t.eq(adv["sub"], "ONE WIN FROM THE TITLE", "the sub")
-	t.eq(adv["bracket"]["next_name"], "YOU", "you move into the final")
-	t.eq(adv["bracket"]["next_opp"], "VS DRE", "against the known finalist")
-	t.ok(not bool(adv["bracket"]["lost"]), "no strike")
-	var out := MatchEndCopy.state(_heat(false, {"round": "semifinal", "series_after": [1, 2], "decided": true, "series_won": false, "place_after": 3}, true))
+	t.eq(adv["sub"], "", "the bracket says it, no sub")
+	t.eq(adv["bracket"]["final"]["text"], "YOU VS DRE", "you and the other semi's winner in the final")
+	t.eq(adv["bracket"]["final"]["color"], MatchEndCopy.GOLD, "…in gold")
+	t.ok(bool(adv["bracket"]["final"]["pop"]), "…popping in")
+	t.eq(adv["bracket"]["semis"][0]["note"], "G3 OF 3", "the third game")
+	t.ok(bool(adv["bracket"]["semis"][0]["rows"][1]["struck"]), "Mo is struck")
+	t.eq(adv["bracket"]["semis"][0]["path"], MatchEndCopy.GOLD, "your line up into the final is gold")
+	t.eq(adv["bracket"]["semis"][1]["note"], "DONE", "the other semi is done")
+	t.ok(not bool(adv["bracket"]["lost"]), "no strike for you")
+	var out := MatchEndCopy.state(_heat(false, {"round": "semifinal", "series_id": "sf-1v4", "series_after": [1, 2], "decided": true, "series_won": false,
+		"place_after": 3, "bracket_after": _br([1, 2], "brickport", [1, 1])}, true))
 	t.eq(out["kind"], "eliminated", "the semi lost")
 	t.eq(out["head"], "ELIMINATED", "ELIMINATED")
-	t.eq(out["sub"], "SEASON 2 OVER · 3RD PLACE", "the season is over")
-	t.ok(bool(out["bracket"]["lost"]), "your row is struck")
-	t.eq(out["bracket"]["next_name"], "MO", "they move on")
-	var ru := MatchEndCopy.state(_heat(false, {"round": "final", "series_after": [2, 3], "decided": true, "series_won": false}, true))
+	t.ok(bool(out["bracket"]["lost"]), "you are out")
+	t.ok(bool(out["bracket"]["semis"][0]["rows"][0]["struck"]) and bool(out["bracket"]["semis"][0]["rows"][1]["pop"]), "your row is struck, theirs pops")
+	t.eq(out["bracket"]["final"]["text"], "MO VS ?", "they move on")
+	t.eq(out["bracket"]["final"]["color"], MatchEndCopy.CREAM, "…in cream")
+	t.eq(out["bracket"]["semis"][1]["note"], "G3 NEXT", "the other semi goes to a third game")
+	var ru := MatchEndCopy.state(_heat(false, {"round": "final", "series_id": "final", "series_after": [1, 2], "decided": true, "series_won": false,
+		"bracket_after": _br([2, 0], "player", [1, 2], "ferry-row", ["player", "ferry-row", 1, 2, "ferry-row"])}, true))
 	t.eq(ru["kind"], "runner_up", "the final lost")
-	t.eq(ru["sub"], "SEASON 2 OVER · RUNNER-UP", "runner-up")
 	t.eq(ru["tag"], "PLAYOFFS · FINAL", "the final's tag")
+	t.eq(ru["bracket"]["style"], "final", "the final round: the final's rows on top")
+	t.eq(ru["bracket"]["final"]["game"], "GAME 3 OF 3", "the game")
+	t.ok(not bool(ru["bracket"]["final"]["gold"]), "a lost final is not gold")
+	t.eq(ru["bracket"]["final"]["rows"][0]["name"], "YOU", "you on top")
+	t.ok(bool(ru["bracket"]["final"]["rows"][0]["struck"]) and bool(ru["bracket"]["final"]["rows"][1]["won"]), "struck; Sol takes it")
+	t.eq(ru["bracket"]["semis"][0]["line"], MatchEndCopy.GOLD, "the small semi you came through is gold-edged")
+	t.eq(ru["bracket"]["semis"][1]["line"], Color(MatchEndCopy.CREAM, 0.5), "…the other faint")
+	var old := MatchEndCopy.state(_heat(true, {"round": "semifinal", "series_after": [1, 0]}, true))
+	t.eq(old["bracket"]["semis"].size(), 1, "an old snapshot without the bracket: your semi alone")
+	t.eq(old["bracket"]["semis"][0]["rows"][1]["name"], "MO", "…against the opponent")
 	var champ := MatchEndCopy.state(_heat(true, {"round": "final", "series_after": [3, 1], "decided": true, "series_won": true, "titles_after": 2}, true))
 	t.eq(champ["kind"], "champion", "the final won")
 	t.eq(champ["head"], "CHAMPIONS", "CHAMPIONS")
@@ -162,7 +208,7 @@ func _copy(t) -> void:
 	# Every string in both pixel faces (the glyph rule).
 	var display := UiFont.display()
 	var bold := UiFont.body_bold()
-	for v in [win, loss, series, adv, out, ru, champ, champ_xp, clinch, in_loss]:
+	for v in [win, loss, series, adv, out, ru, old, champ, champ_xp, clinch, in_loss]:
 		for s in MatchEndCopy.strings(v):
 			for ch in str(s):
 				t.ok(display.has_char(ch.unicode_at(0)) and bold.has_char(ch.unicode_at(0)), "glyph '%s' in both faces (%s)" % [ch, s])
@@ -207,15 +253,34 @@ func _overlay(t) -> void:
 	t.eq(loss.confetti_count(), 0, "no confetti")
 	var lh: Control = lp.find_child("HeadBox", true, false)
 	loss.step(0.45)
-	t.ok(lh.position.y < 300.0 and lh.modulate.a > 0.0, "the loss headline sinks in from above (%.1f)" % lh.position.y)
+	t.ok(lh.position.y < MatchEndOverlay.HEAD_Y and lh.modulate.a > 0.0, "the loss headline sinks in from above (%.1f)" % lh.position.y)
 	loss.free()
 	var out := MatchEndOverlay.new()
-	var op := out.build(MatchEndCopy.state(_heat(false, {"round": "semifinal", "series_after": [1, 2], "decided": true, "series_won": false, "place_after": 3}, true, "")))
-	t.ok(op.find_child("Bracket", true, false) != null and op.find_child("Strike", true, false) != null, "the eliminated page has the bracket with a strike")
+	var op := out.build(MatchEndCopy.state(_heat(false, {"round": "semifinal", "series_id": "sf-1v4", "series_after": [1, 2], "decided": true, "series_won": false,
+		"place_after": 3, "bracket_after": _br([1, 2], "brickport", [1, 1])}, true, "")))
+	for n in ["Bracket", "Final", "FinalText", "Lines", "Semi1", "Semi2", "Strike"]:
+		t.ok(op.find_child(n, true, false) != null, "the eliminated page has %s" % n)
+	t.ok(op.find_child("Sub", true, false) == null, "…and no sub line")
 	var strike: Control = op.find_child("Strike", true, false)
-	out.step(2.5)
+	var lines: MatchEndOverlay.StepLines = op.find_child("Lines", true, false)
+	t.eq(lines.progress(0), 0.0, "your semi's line waits to draw")
+	t.eq(lines.progress(1), 1.0, "…the other's is there")
+	out.step(2.0)
+	t.eq(strike.size.x, 0.0, "the strike waits until 2.1 s")
+	out.step(0.5)
 	t.ok(strike.size.x > 200.0, "the strike has grown across your row (%.0f)" % strike.size.x)
+	out.step(0.3)
+	t.close(lines.progress(0), 1.0, 1e-6, "your line has drawn in by 2.8 s")
+	var who: Control = op.find_child("Semi1", true, false).find_child("Row_player", true, false).find_child("Who", true, false)
+	t.close(who.modulate.a, 0.65, 1e-3, "your name has faded")
 	out.free()
+	var fo := MatchEndOverlay.new()
+	var fp := fo.build(MatchEndCopy.state(_heat(true, {"round": "final", "series_id": "final", "series_after": [1, 0],
+		"bracket_after": _br([2, 0], "player", [1, 2], "ferry-row", ["player", "ferry-row", 1, 0, ""])}, true)))
+	for n in ["Bracket", "Final", "FinalCup", "FinalGame", "Semi1", "Semi2", "Lines"]:
+		t.ok(fp.find_child(n, true, false) != null, "a final game's page has %s" % n)
+	t.eq((fp.find_child("FinalGame", true, false) as Label).text, "GAME 1 OF 3", "…game one")
+	fo.free()
 	# 39b: the trophy sinks in and quakes the page, the titles row, the cards.
 	var champ := MatchEndOverlay.new()
 	var cp := champ.build(MatchEndCopy.state(_heat(true, {"round": "final", "series_after": [3, 1], "decided": true, "series_won": true, "titles_after": 2}, true)

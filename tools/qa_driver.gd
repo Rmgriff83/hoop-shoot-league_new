@@ -1800,19 +1800,32 @@ func _run_match_end() -> void:
 	var base := {"year": 2, "league_name": "ARCADE LEAGUE", "record_before": [2, 1], "record_after": [3, 1],
 		"place_before": 3, "place_after": 2, "titles_before": 1, "titles_after": 1, "playoff": false, "round": "",
 		"series_id": "", "best_of": 3, "series_before": [0, 0], "series_after": [0, 0], "decided": false,
-		"series_won": false, "other_semi": ["kingsbridge", "ferry-row"], "final_opp": "", "teams": 6}
+		"series_won": false, "other_semi": ["kingsbridge", "ferry-row"], "final_opp": "", "teams": 6,
+		"table_after": [{"teamId": "player", "w": 11, "l": 3, "seed": 1}, {"teamId": "kingsbridge", "w": 10, "l": 4, "seed": 2},
+			{"teamId": "ferry-row", "w": 8, "l": 6, "seed": 3}, {"teamId": "brickport", "w": 9, "l": 5, "seed": 4}]}
 	var opp := LeagueData.shooter("brickport")
+	# Design 15a's bracket (2026-10-30): the season's series after the game.
+	var br := func(mine: Array, mine_w: String, other: Array, other_w: String, fin := []) -> Array:
+		var out := [{"id": "sf-1v4", "round": "semifinal", "highSeedId": "player", "lowSeedId": "brickport", "bestOf": 3, "highWins": mine[0], "lowWins": mine[1], "winnerId": mine_w},
+			{"id": "sf-2v3", "round": "semifinal", "highSeedId": "kingsbridge", "lowSeedId": "ferry-row", "bestOf": 3, "highWins": other[0], "lowWins": other[1], "winnerId": other_w}]
+		if not fin.is_empty():
+			out.push_back({"id": "final", "round": "final", "highSeedId": "player", "lowSeedId": fin[0], "bestOf": 3, "highWins": fin[1], "lowWins": fin[2], "winnerId": fin[3]})
+		return out
 	var cases := [
 		["win", true, 41, 37, {}, "fire7"],
 		["loss", false, 33, 36, {"record_after": [2, 2], "place_after": 4}, ""],
-		["advance", true, 44, 39, {"playoff": true, "round": "semifinal", "series_after": [2, 1], "decided": true, "series_won": true, "final_opp": "kingsbridge"}, "ice"],
-		["eliminated", false, 35, 38, {"playoff": true, "round": "semifinal", "series_after": [1, 2], "decided": true, "series_won": false, "place_after": 3}, ""],
+		["series", true, 42, 38, {"playoff": true, "round": "semifinal", "series_id": "sf-1v4", "series_after": [1, 0], "bracket_after": br.call([1, 0], "", [0, 1], "")}, ""],
+		["advance", true, 44, 39, {"playoff": true, "round": "semifinal", "series_id": "sf-1v4", "series_after": [2, 0], "decided": true, "series_won": true, "bracket_after": br.call([2, 0], "player", [1, 1], "")}, "ice"],
+		["eliminated", false, 35, 38, {"playoff": true, "round": "semifinal", "series_id": "sf-1v4", "series_after": [1, 2], "decided": true, "series_won": false, "place_after": 3, "bracket_after": br.call([1, 2], "brickport", [1, 1], "")}, ""],
+		["final_game", true, 43, 41, {"playoff": true, "round": "final", "series_id": "final", "series_after": [1, 0], "bracket_after": br.call([2, 0], "player", [1, 2], "ferry-row", ["ferry-row", 1, 0, ""])}, ""],
+		["runner_up", false, 38, 40, {"playoff": true, "round": "final", "series_id": "final", "series_after": [1, 2], "decided": true, "series_won": false, "bracket_after": br.call([2, 0], "player", [1, 2], "ferry-row", ["ferry-row", 1, 2, "ferry-row"])}, ""],
 		["champion", true, 46, 40, {"playoff": true, "round": "final", "series_after": [3, 1], "decided": true, "series_won": true, "titles_after": 2}, "fire7"],
 	]
 	for c in cases:
 		var e: Dictionary = base.duplicate(true)
 		e.merge(c[4], true)
-		var heat := {"won": c[1], "player_score": c[2], "ai_score": c[3], "ot": 0, "opponent": opp, "mode": "heat", "location": "cage",
+		var heat := {"won": c[1], "player_score": c[2], "ai_score": c[3], "ot": 0, "location": "cage", "mode": "heat",
+			"opponent": LeagueData.shooter("ferry-row") if str(e.get("round", "")) == "final" and str(c[0]) != "champion" else opp,
 			"league": {"id": "cage", "game": "po-sf-1" if bool(e["playoff"]) else "d4", "playoff": e["playoff"]},
 			"tickets": 36 if c[1] else 16, "card_drop": c[5], "league_end": e}
 		var o := MatchEndOverlay.new()

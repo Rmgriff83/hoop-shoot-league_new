@@ -73,6 +73,108 @@ static func place_text(before: int, after: int) -> String:
 	return out + " · HOLD"
 
 
+## The bracket block (design 15a): `style` "semis" (the semifinal round:
+## the FINAL box over both semis) or "final" (the final round: the final's
+## rows over the small semis). Rows carry a name, the season record, the
+## series wins, gold for the series winner, a strike for the loser and a
+## pop on the number this game moved.
+static func bracket(heat: Dictionary, opp_first := "THEM") -> Dictionary:
+	var e := _end(heat)
+	var won := bool(heat.get("won", false))
+	var recs := {}
+	for row in e.get("table_after", []):
+		recs[str(row["teamId"])] = "%d-%d" % [int(row["w"]), int(row["l"])]
+	var names := {}
+	var mine := {}
+	var semis := []
+	var fin := {}
+	for s in e.get("bracket_after", []):
+		if str(s.get("round", "")) == "final":
+			fin = s
+		else:
+			semis.push_back(s)
+		if str(s.get("id", "")) == str(e.get("series_id", "")):
+			mine = s
+	if mine.is_empty():
+		# An older snapshot without the bracket: your series from the score.
+		var sa: Array = e.get("series_after", [0, 0])
+		names["?opp"] = opp_first
+		mine = {"id": str(e.get("series_id", "")), "round": str(e.get("round", "semifinal")), "highSeedId": Campaign.PLAYER,
+			"lowSeedId": "?opp", "highWins": int(sa[0]) if sa.size() > 0 else 0, "lowWins": int(sa[1]) if sa.size() > 1 else 0,
+			"winnerId": "", "bestOf": int(e.get("best_of", 3))}
+		if bool(e.get("decided", false)):
+			mine["winnerId"] = Campaign.PLAYER if bool(e.get("series_won", false)) else "?opp"
+		if str(mine["round"]) == "final":
+			fin = mine
+		else:
+			semis = [mine]
+	var opp_id := str(mine["lowSeedId"] if mine["highSeedId"] == Campaign.PLAYER else mine["highSeedId"])
+	var pop_id := Campaign.PLAYER if won else opp_id
+	var decided := str(mine.get("winnerId", "")) != ""
+	var game_no := int(mine.get("highWins", 0)) + int(mine.get("lowWins", 0))
+	var best_of := maxi(int(mine.get("bestOf", e.get("best_of", 3))), 1)
+	var out := {"decided": decided, "lost": decided and str(mine.get("winnerId", "")) != Campaign.PLAYER}
+	var semi_list := []
+	var n := 0
+	for s in semis:
+		n += 1
+		var is_mine := str(s.get("id", "")) == str(mine.get("id", ""))
+		var winner := str(s.get("winnerId", ""))
+		var played := int(s.get("highWins", 0)) + int(s.get("lowWins", 0))
+		var head := "SEMI %d" % n
+		var gold := winner == Campaign.PLAYER or (is_mine and winner == "" and won)
+		semi_list.push_back({
+			"head": head, "mine": is_mine, "decided": winner != "",
+			"note": ("G%d OF %d" % [game_no, best_of]) if is_mine else ("G%d NEXT" % (played + 1) if winner == "" else "DONE"),
+			"line": GOLD if gold else (CREAM if is_mine else Color(CREAM, 0.35)),
+			"gold": gold,
+			"path": GOLD if winner == Campaign.PLAYER else (CREAM if winner != "" else Color(CREAM, 0.35)),
+			"winner": "" if winner == "" else _short(winner, names),
+			"you_won": winner == Campaign.PLAYER,
+			"rows": _rows(s, recs, names, pop_id if is_mine else "")})
+	out["semis"] = semi_list
+	if str(mine.get("round", "")) != "final":
+		out["style"] = "semis"
+		var left := str(semi_list[0]["winner"]) if semi_list.size() > 0 and str(semi_list[0]["winner"]) != "" else "?"
+		var right := str(semi_list[1]["winner"]) if semi_list.size() > 1 and str(semi_list[1]["winner"]) != "" else "?"
+		var finalist := false
+		for sm in semi_list:
+			finalist = finalist or bool(sm["you_won"])
+		out["final"] = {"label": "FINAL", "text": "%s VS %s" % [left, right], "you_in": finalist,
+			"line": GOLD if finalist else Color(CREAM, 0.5), "color": GOLD if finalist else CREAM, "pop": decided}
+		return out
+	out["style"] = "final"
+	var fin_gold := str(fin.get("winnerId", "")) == Campaign.PLAYER or (str(fin.get("winnerId", "")) == "" and won)
+	out["final"] = {"label": "FINAL", "game": "GAME %d OF %d" % [game_no, best_of], "gold": fin_gold,
+		"rows": _rows(fin, recs, names, pop_id)}
+	for sm in semi_list:
+		# The final's small semis: your semi gold-edged, the other faint.
+		var path_gold := false
+		for r in sm["rows"]:
+			path_gold = path_gold or (str(r["id"]) == Campaign.PLAYER)
+		sm["line"] = GOLD if path_gold else Color(CREAM, 0.5)
+		sm["path"] = GOLD if path_gold else Color(CREAM, 0.6)
+	return out
+
+
+static func _short(id: String, names: Dictionary) -> String:
+	return str(names[id]) if names.has(id) else LeagueSummary.short_name(id)
+
+
+## A series' two rows, you first when you are in it (else the high seed).
+static func _rows(s: Dictionary, recs: Dictionary, names: Dictionary, pop_id: String) -> Array:
+	var sides := [["highSeedId", "highWins"], ["lowSeedId", "lowWins"]]
+	if str(s.get("lowSeedId", "")) == Campaign.PLAYER:
+		sides.reverse()
+	var winner := str(s.get("winnerId", ""))
+	var out := []
+	for side in sides:
+		var id := str(s.get(side[0], ""))
+		out.push_back({"id": id, "name": _short(id, names), "rec": str(recs.get(id, "")), "wins": int(s.get(side[1], 0)),
+			"won": winner != "" and winner == id, "struck": winner != "" and winner != id, "pop": pop_id != "" and id == pop_id})
+	return out
+
+
 ## Everything the overlay draws.
 static func state(heat: Dictionary) -> Dictionary:
 	var k := kind(heat)
@@ -130,24 +232,21 @@ static func state(heat: Dictionary) -> Dictionary:
 				"flash": true, "flash_at": 2.5, "rays_at": 2.5, "head_at": 2.5, "head_y": 790.0, "scrim": 0.62,
 				"confetti_n": 0, "palette": [], "no_score": true, "no_rewards": true,
 				"sub": "%s · NO. %d SEED" % ["LOCKED IN" if bool(e.get("clinch_before", false)) else "CLINCHED", int(e.get("seed_after", 0))],
-				"sub_at": 2.9, "sub_y": 884.0, "ready_s": 3.6, "sound": {"name": "chime_win", "at": 2.5},
+				"sub_at": 2.9, "sub_y": 884.0, "ready_s": 3.6, "tag_y": 220.0, "rays_y": 380.0, "sound": {"name": "chime_win", "at": 2.5},
 				"button": {"title": "CONTINUE", "sub": "TO THE POST-MATCH", "at": 3.6}})
 		"series":
 			v.merge({"head": "YOU WIN" if won else "THEY TOOK IT", "head_color": GOLD if won else CREAM, "win_anim": won,
 				"rays": GOLD if won else Color.TRANSPARENT, "spin_s": 22.0, "flash": won, "scrim": 0.55 if won else 0.8,
-				"confetti_n": 24 if won else 0, "palette": PALETTE_PLAYOFF if won else [],
-				"sub": "FIRST TO %d" % (int(e.get("best_of", 3)) / 2 + 1)})
+				"confetti_n": 24 if won else 0, "palette": PALETTE_PLAYOFF if won else []})
 		"advance":
 			v.merge({"head": "ADVANCE", "head_color": GOLD, "win_anim": true, "rays": GOLD, "spin_s": 22.0,
-				"flash": true, "scrim": 0.55, "confetti_n": 50, "palette": PALETTE_PLAYOFF, "sub": "ONE WIN FROM THE TITLE"})
+				"flash": true, "scrim": 0.55, "confetti_n": 50, "palette": PALETTE_PLAYOFF})
 		"eliminated":
 			v.merge({"head": "ELIMINATED", "head_color": ORANGE, "win_anim": false, "rays": Color.TRANSPARENT, "spin_s": 30.0,
-				"flash": false, "scrim": 0.82, "confetti_n": 0, "palette": [],
-				"sub": "SEASON %d OVER · %s PLACE" % [year, ordinal(maxi(int(e.get("place_after", 3)), 3))]})
+				"flash": false, "scrim": 0.82, "confetti_n": 0, "palette": []})
 		"runner_up":
 			v.merge({"head": "SO CLOSE", "head_color": CREAM, "win_anim": false, "rays": Color.TRANSPARENT, "spin_s": 30.0,
-				"flash": false, "scrim": 0.8, "confetti_n": 0, "palette": [],
-				"sub": "SEASON %d OVER · RUNNER-UP" % year})
+				"flash": false, "scrim": 0.8, "confetti_n": 0, "palette": []})
 		"champion":
 			# 39b: the trophy drops and shakes the page, CHAMPIONS slams over it.
 			var sa: Array = e.get("series_after", [0, 0])
@@ -156,7 +255,7 @@ static func state(heat: Dictionary) -> Dictionary:
 				"confetti_n": 26, "palette": PALETTE_CHAMP, "no_score": true, "no_rewards": true, "sub": "",
 				"line": "SEASON %d · BEAT %s %d-%d · %d-%d" % [year, opp_first, int(sa[0]) if sa.size() > 0 else 0,
 					int(sa[1]) if sa.size() > 1 else 0, int(heat.get("player_score", 0)), int(heat.get("ai_score", 0))],
-				"ready_s": 3.2, "sound": {"name": "chime_big", "at": 1.0},
+				"ready_s": 3.2, "sound": {"name": "chime_big", "at": 1.0}, "tag_y": 220.0, "rays_y": 380.0,
 				"button": {"title": "CONTINUE", "sub": "TO THE POST-MATCH", "at": 3.2}})
 	v["head_size"] = 72 if k == "clinch" else mini(64, int(620.0 / maxi(str(v["head"]).length(), 1)))
 	# The middle block.
@@ -202,27 +301,12 @@ static func state(heat: Dictionary) -> Dictionary:
 			"tickets_n": int(heat.get("tickets", 0)),
 		}
 	else:
+		# Design 15a (2026-10-30): the bracket itself — the final over both
+		# semis in the semifinal round, the final's two rows over the small
+		# semis in the final. The page says no sub line under it.
 		v["block"] = "bracket"
-		var others: Array = e.get("other_semi", [])
-		var other_names := []
-		for id in others:
-			other_names.push_back(LeagueSummary.short_name(str(id)))
-		var final_opp := str(e.get("final_opp", ""))
-		var decided := bool(e.get("decided", false))
-		var series_won := bool(e.get("series_won", false))
-		var final_round := round_ == "final"
-		v["bracket"] = {
-			"round_label": "FINAL" if final_round else "SEMIFINAL",
-			"you": int(heat.get("player_score", 0)), "opp": int(heat.get("ai_score", 0)),
-			"series": "%d - %d" % [int(Array(e.get("series_after", [0, 0]))[0]), int(Array(e.get("series_after", [0, 0]))[1])],
-			"decided": decided,
-			"lost": decided and not series_won,
-			"next_label": "CHAMPION" if final_round else "FINAL",
-			"next_name": ("YOU" if series_won else opp_first) if decided else "",
-			"next_opp": ("VS %s" % LeagueSummary.short_name(final_opp)) if final_opp != "" else
-				("VS %s" % " / ".join(other_names) if not other_names.is_empty() else ""),
-			"opp_first": opp_first,
-		}
+		v["bracket"] = bracket(heat, opp_first)
+		v["sub"] = ""
 	return v
 
 
@@ -230,7 +314,7 @@ static func state(heat: Dictionary) -> Dictionary:
 static func strings(v: Dictionary) -> Array:
 	var out := [str(v.get("tag", "")), str(v.get("head", "")), str(v.get("sub", "")), str(v.get("tickets", "")),
 		str(v.get("opp_first", "")), str(v.get("line", "")), "YOU", "TAP TO CONTINUE", "NEW CARD", "TITLES"]
-	for key in ["record", "bracket", "matchup", "standings", "button"]:
+	for key in ["record", "matchup", "standings", "button"]:
 		if v.has(key):
 			for val in Dictionary(v[key]).values():
 				if val is String:
@@ -240,6 +324,20 @@ static func strings(v: Dictionary) -> Array:
 						if row is Dictionary:
 							out.push_back(str(row.get("name", "")))
 							out.push_back(str(row.get("record", "")))
+	if v.get("bracket", null) is Dictionary:
+		var b: Dictionary = v["bracket"]
+		var fin: Dictionary = b.get("final", {})
+		for key in ["label", "text", "game"]:
+			out.push_back(str(fin.get(key, "")))
+		var lists := [fin.get("rows", [])]
+		for sm in b.get("semis", []):
+			out.push_back("%s · %s" % [sm["head"], sm["note"]])
+			lists.push_back(sm["rows"])
+		for rows in lists:
+			for r in rows:
+				out.push_back(str(r["name"]))
+				out.push_back(str(r["rec"]))
+				out.push_back(str(r["wins"]))
 	if v.has("cards"):
 		out.push_back(str(Dictionary(Dictionary(v["cards"]).get("xp", {})).get("label", "")))
 		out.push_back(str(Dictionary(Dictionary(v["cards"]).get("xp", {})).get("sub", "")))

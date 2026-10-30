@@ -1868,7 +1868,7 @@ func _league_end_before(doc: Dictionary, cfg: Dictionary, result: Dictionary) ->
 		"last_day": str(season.get("phase", "")) == Season.PHASE_REGULAR and int(season.get("currentDay", 0)) >= Season.days(season),
 		"day": int(season.get("currentDay", 0)),
 		"table_after": [], "clinch_after": false, "seed_after": 0, "in_playoffs_after": false,
-		"next_series": {}, "series_game_no": 0, "earned": {"xp": 0, "tickets": 0},
+		"next_series": {}, "series_game_no": 0, "earned": {"xp": 0, "tickets": 0}, "bracket_after": [],
 		"spots": int(season.get("playoffTeams", int(cfg.get("playoff_teams", 4)))),
 	}
 	if out["playoff"]:
@@ -1910,6 +1910,13 @@ func _league_end_after(out: Dictionary, doc: Dictionary, cfg: Dictionary) -> voi
 			"best_of": int(next.get("bestOf", 0)), "seed_you": seed_of.call(Campaign.PLAYER), "seed_opp": seed_of.call(opp)}
 	if not bool(out["playoff"]):
 		return
+	# The whole bracket after the game (design 15a, 2026-10-30): both semis
+	# and the final as the season holds them, in season order.
+	out["bracket_after"] = []
+	for s in season.get("series", []):
+		var copy := Dictionary(s).duplicate(true)
+		copy.erase("games")
+		out["bracket_after"].push_back(copy)
 	for s in season.get("series", []):
 		if str(s.get("id", "")) == str(out["series_id"]):
 			out["series_after"] = LeagueSummary.series_record(s)

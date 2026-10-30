@@ -3,11 +3,11 @@ extends CanvasLayer
 ## The league match-end page (design "League Match End", docs/HOME.md →
 ## Results): plays between the final buzzer and the post-match page. One
 ## clock (`_t`) drives a schedule of small animations — the tag rises, the
-## headline slams in on a win (with a cream flash, rays and confetti) or
+## headline slams in on a win (with a white flash, rays and confetti) or
 ## sinks and shakes on a loss, the score rises, then the stakes block: the
-## record flips and the place chip pops (regular season), the bracket
-## advances or strikes you out (playoffs), or the trophy pops with your
-## titles (the final). The rewards row pops last; from READY_S a blinking
+## record flips and the place chip pops (regular season), the bracket — the
+## final over both semis — pops this game's number and strikes the beaten
+## (playoffs), or the champions page (39b) drops the trophy. The rewards row pops last; from READY_S a blinking
 ## TAP TO CONTINUE accepts a tap anywhere → `continued`. Built from
 ## MatchEndCopy.state() so tests step it off-tree.
 
@@ -16,6 +16,19 @@ signal continued
 const W := 720.0
 const H := 1280.0
 const READY_S := 3.0
+## Design 15a's rows (2026-10-30, drawn on the 720×1560 screen; minus the
+## 140 px the centred 1280 band sits below its top): the tag, the headline,
+## the score, the record panel, the sub line under it, the rewards; the
+## rays turn about RAYS_Y. TAP TO CONTINUE pins CONTINUE_UP above the
+## screen's bottom edge instead (continue_y).
+const TAG_Y := 212.0
+const HEAD_Y := 362.0
+const SCORE_Y := 475.0
+const RECORD_Y := 643.0
+const SUB_Y := 896.0
+const REWARDS_Y := 970.0
+const RAYS_Y := 437.0
+const CONTINUE_UP := 130.0
 const GOLD := MatchEndCopy.GOLD
 const ORANGE := MatchEndCopy.ORANGE
 const CREAM := MatchEndCopy.CREAM
@@ -70,7 +83,7 @@ func build(v: Dictionary) -> Control:
 		_rays = PrizeRays.new(rays_col)
 		_rays.name = "Rays"
 		_rays.set_anchors_preset(Control.PRESET_TOP_LEFT)
-		_rays.position = Vector2(W * 0.5 - 800.0, 380.0 - 800.0)
+		_rays.position = Vector2(W * 0.5 - 800.0, float(v.get("rays_y", RAYS_Y)) - 800.0)
 		_rays.size = Vector2(1600, 1600)
 		_rays.speed_deg = 360.0 / maxf(float(v.get("spin_s", 30.0)), 1.0)
 		_rays.alpha = 0.32
@@ -78,18 +91,17 @@ func build(v: Dictionary) -> Control:
 		_anim(_rays, "fadein", float(v.get("rays_at", 0.3)), 0.6)
 	_confetti = Confetti.new(int(v.get("confetti_n", 0)), Array(v.get("palette", [])), 7)
 	_root.add_child(_confetti)
-	_tag(str(v.get("tag", "")), v.get("tag_color", CREAM))
+	_tag(str(v.get("tag", "")), v.get("tag_color", CREAM), float(v.get("tag_y", TAG_Y)))
 	_head(str(v.get("head", "")), int(v.get("head_size", 64)), v.get("head_color", CREAM), bool(v.get("win_anim", false)),
-		float(v.get("head_y", 300.0)), float(v.get("head_at", 0.35)))
+		float(v.get("head_y", HEAD_Y)), float(v.get("head_at", 0.35)))
 	if not bool(v.get("no_score", false)):
 		_score(v)
-	var sub_y := 850.0
+	var sub_y := SUB_Y
 	match str(v.get("block", "record")):
 		"record":
 			_record_block(Dictionary(v.get("record", {})))
 		"bracket":
 			_bracket_block(Dictionary(v.get("bracket", {})))
-			sub_y = 856.0
 		"standings":
 			_standings_block(Dictionary(v.get("standings", {})))
 			_matchup_block(Dictionary(v.get("matchup", {})))
@@ -107,13 +119,13 @@ func build(v: Dictionary) -> Control:
 	else:
 		_continue = _label("TAP TO CONTINUE", 16, CREAM, true)
 		_continue.name = "Continue"
-		_centre(_continue, 1150.0)
+		_centre(_continue, continue_y())
 		_continue.visible = false
 		_anim(_continue, "blink", _ready_s, 1.0)
 	if bool(v.get("flash", false)):
 		_flash = ColorRect.new()
 		_flash.name = "Flash"
-		_flash.color = Color("#FFF3D0")
+		_flash.color = Color.WHITE
 		UiLayout.full_screen_fill(_flash)
 		_flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_flash.modulate.a = 0.0
@@ -187,7 +199,7 @@ func _centre(c: Control, y: float, w := W, h := 40.0) -> void:
 	_root.add_child(c)
 
 
-func _tag(text: String, color: Color) -> void:
+func _tag(text: String, color: Color, y := TAG_Y) -> void:
 	var pill := PanelContainer.new()
 	pill.name = "Tag"
 	pill.add_theme_stylebox_override("panel", _box(color, Color(DARK, 0.6)))
@@ -205,7 +217,7 @@ func _tag(text: String, color: Color) -> void:
 	row.add_child(l)
 	var holder := CenterContainer.new()
 	holder.name = "TagRow"
-	holder.position = Vector2(0, 220)
+	holder.position = Vector2(0, y)
 	holder.size = Vector2(W, 44)
 	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	holder.add_child(pill)
@@ -213,7 +225,7 @@ func _tag(text: String, color: Color) -> void:
 	_anim(holder, "rise", 0.1, 0.4)
 
 
-func _head(text: String, size_: int, color: Color, win: bool, y := 300.0, at := 0.35) -> void:
+func _head(text: String, size_: int, color: Color, win: bool, y := HEAD_Y, at := 0.35) -> void:
 	var box := Control.new()
 	box.name = "HeadBox"
 	box.position = Vector2(0, y)
@@ -236,7 +248,7 @@ func _head(text: String, size_: int, color: Color, win: bool, y := 300.0, at := 
 func _score(v: Dictionary) -> void:
 	var row := Control.new()
 	row.name = "ScoreRow"
-	row.position = Vector2(0, 420)
+	row.position = Vector2(0, SCORE_Y)
 	row.size = Vector2(W, 110)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var h := HBoxContainer.new()
@@ -270,12 +282,10 @@ func _score(v: Dictionary) -> void:
 
 
 func _record_block(r: Dictionary) -> void:
-	var panel := PanelContainer.new()
+	var panel := Face.new(CREAM, Color(CREAM, 0.20), true, 2.0, 6.0)
 	panel.name = "Record"
-	panel.position = Vector2(96, 600)
+	panel.position = Vector2(96, RECORD_Y)
 	panel.size = Vector2(528, 220)
-	panel.add_theme_stylebox_override("panel", _box(CREAM, Color(CREAM, 0.1)))
-	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var col := VBoxContainer.new()
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.add_theme_constant_override("separation", 22)
@@ -319,107 +329,278 @@ func _record_block(r: Dictionary) -> void:
 	_anim(panel, "rise", 1.3, 0.45)
 
 
-func _bracket_row(name_: String, text: String, score: String, border: Color, fill: Color) -> PanelContainer:
-	var row := PanelContainer.new()
-	row.name = name_
-	row.custom_minimum_size = Vector2(0, 64)
-	row.add_theme_stylebox_override("panel", _box(border, fill))
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var h := HBoxContainer.new()
-	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(h)
-	var l := _label(text, 20, CREAM, true)
-	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	h.add_child(l)
-	if score != "":
-		var sc := _label(score, 20, CREAM, true)
-		sc.name = "Score"
-		h.add_child(sc)
-	return row
-
-
+## The bracket block (design 15a, 2026-10-30): a dotted cream panel holding
+## the final over both semis. In the semifinal round the FINAL box sits on
+## top (`? VS ?` until a semi is decided) with a stepped line up from each
+## semi; in the final round the final's own two rows sit on top under the
+## trophy and the semis shrink below. Each row: name, season record, series
+## wins; this game's winner pops its number at 1.7 s, a decided series
+## strikes its loser at 2.1 s and fades it at 2.3 s.
 func _bracket_block(b: Dictionary) -> void:
-	var block := Control.new()
-	block.name = "Bracket"
-	block.position = Vector2(48, 596)
-	block.size = Vector2(618, 236)
-	block.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var won := bool(_v.get("won", false))
-	var lost := bool(b.get("lost", false))
-	var decided := bool(b.get("decided", false))
-	var top_c := GOLD if won else Color(CREAM, 0.4)
-	var top_bg := Color(GOLD, 0.25) if won else Color(DARK, 0.5)
-	var bot_c := Color(CREAM, 0.4) if won else CREAM
-	var bot_bg := Color(DARK, 0.5) if won else Color(CREAM, 0.15)
-	# Left: this round's pair, the game's score — the series score when it
-	# is not decided yet.
-	var left := VBoxContainer.new()
-	left.name = "Round"
-	left.position = Vector2.ZERO
-	left.size = Vector2(270, 236)
-	left.add_theme_constant_override("separation", 12)
-	left.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var rl := _label(str(b.get("round_label", "")), 16, CREAM, false)
-	rl.name = "RoundLabel"
-	rl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	left.add_child(rl)
-	var you_row := _bracket_row("YouRow", "YOU", str(b.get("you", 0)), top_c, top_bg)
-	left.add_child(you_row)
-	var opp_row := _bracket_row("OppRow", str(b.get("opp_first", "")), str(b.get("opp", 0)), bot_c, bot_bg)
-	left.add_child(opp_row)
-	block.add_child(left)
-	if lost:
-		_anim(you_row, "dim", 2.0, 0.4)
-		var strike := ColorRect.new()
-		strike.name = "Strike"
-		strike.color = ORANGE
-		strike.position = Vector2(10, 32 + 30)   # the label row, a gap, half the row
-		strike.size = Vector2(0, 4)
-		strike.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		block.add_child(strike)
-		_anim(strike, "strike", 2.0, 0.35, 250.0)
-	# The connector.
-	if lost:
-		block.move_child(block.get_node("Strike"), -1)
-	var lines := BracketLines.new(GOLD if won else CREAM)
-	lines.name = "Lines"
-	lines.position = Vector2(270, 30)
-	lines.size = Vector2(60, 160)
-	block.add_child(lines)
-	# Right: the next round.
-	var right := VBoxContainer.new()
-	right.name = "Next"
-	right.position = Vector2(330, 0)
-	right.size = Vector2(288, 236)
-	right.add_theme_constant_override("separation", 12)
-	right.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var nl := _label(str(b.get("next_label", "FINAL")), 16, CREAM, false)
-	nl.name = "NextLabel"
-	nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	right.add_child(nl)
-	var next_name := str(b.get("next_name", ""))
-	if decided:
-		var fin := _bracket_row("NextRow", next_name, "", GOLD if won else CREAM, Color(GOLD, 0.25) if won else Color(CREAM, 0.12))
-		right.add_child(fin)
-		_anim(fin, "slidein", 2.0, 0.4)
+	var final_style := str(b.get("style", "semis")) == "final"
+	var panel := Face.new(CREAM, Color(CREAM, 0.20), true, 2.0, 6.0)
+	panel.name = "Bracket"
+	panel.position = Vector2(54, 572.0 if final_style else 574.0)
+	panel.size = Vector2(W - 54.0 - 60.0, 0)
+	panel.pad = Vector4(16, 22, 16, 22)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 0)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(col)
+	var fin: Dictionary = b.get("final", {})
+	var semis: Array = b.get("semis", [])
+	if final_style:
+		col.add_child(_final_rows(fin))
 	else:
-		var series := _bracket_row("SeriesRow", "SERIES", str(b.get("series", "0 - 0")), CREAM, Color(CREAM, 0.12))
-		right.add_child(series)
-		_anim(series, "slidein", 2.0, 0.4)
-	var opp_box := PanelContainer.new()
-	opp_box.name = "NextOpp"
-	opp_box.custom_minimum_size = Vector2(0, 64)
-	var dashed := _box(Color(CREAM, 0.4), Color(0, 0, 0, 0), false)
-	opp_box.add_theme_stylebox_override("panel", dashed)
-	opp_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var ol := _label(str(b.get("next_opp", "")), 16, CREAM, false)
-	ol.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	opp_box.add_child(ol)
-	right.add_child(opp_box)
-	block.add_child(right)
-	_root.add_child(block)
-	_anim(block, "rise", 1.3, 0.45)
+		col.add_child(_final_box(fin))
+	# The stepped lines from each semi up into the final.
+	var lines := StepLines.new()
+	lines.name = "Lines"
+	lines.custom_minimum_size = Vector2(0, 20.0 if final_style else 28.0)
+	for i in semis.size():
+		var sm: Dictionary = semis[i]
+		var pts: Array
+		if final_style:
+			pts = [Vector2(150, 20), Vector2(150, 14), Vector2(170, 14), Vector2(170, 7), Vector2(190, 7), Vector2(190, 0)]
+		else:
+			pts = [Vector2(170, 28), Vector2(170, 21), Vector2(180, 21), Vector2(180, 14), Vector2(190, 14), Vector2(190, 7), Vector2(200, 7), Vector2(200, 0)]
+		if i == 1:
+			for k in pts.size():
+				pts[k] = Vector2(550.0 - pts[k].x, pts[k].y)
+		lines.add_path(pts, sm.get("path", Color(CREAM, 0.35)))
+	col.add_child(lines)
+	var row := HBoxContainer.new()
+	row.name = "Semis"
+	row.add_theme_constant_override("separation", 16 if final_style else 24)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for i in semis.size():
+		var sm: Dictionary = semis[i]
+		var box := _semi_small(sm) if final_style else _semi_box(sm)
+		box.name = "Semi%d" % (i + 1)
+		row.add_child(box)
+		if not final_style and bool(sm.get("mine", false)) and bool(sm.get("decided", false)):
+			_anim_path(lines, i, 2.3)
+	col.add_child(row)
+	_root.add_child(panel)
+	_anim(panel, "rise", 1.3, 0.45)
+
+
+## The line's 4 px are centred on the path, 10 px in from the panel's padding
+## the way the design's 550-wide svg sits in its 570-wide column.
+func _anim_path(lines: StepLines, i: int, at: float) -> void:
+	lines.set_progress(i, 0.0)
+	_anims.push_back({"node": lines, "kind": "draw", "delay": at, "dur": 0.35, "base": Vector2.ZERO, "extra": float(i)})
+
+
+static var _grey: ShaderMaterial
+
+
+## The design's `filter:grayscale(1); opacity:.75` for a trophy nobody holds yet.
+static func grey_material() -> ShaderMaterial:
+	if _grey == null:
+		var sh := Shader.new()
+		sh.code = """shader_type canvas_item;
+void fragment() {
+	vec4 c = texture(TEXTURE, UV) * COLOR;
+	COLOR = vec4(vec3(dot(c.rgb, vec3(0.2126, 0.7152, 0.0722))), c.a * 0.75);
+}
+"""
+		_grey = ShaderMaterial.new()
+		_grey.shader = sh
+	return _grey
+
+
+## Semifinal round: the FINAL box — a grey trophy, FINAL, `YOU VS ?`.
+func _final_box(fin: Dictionary) -> Control:
+	var holder := CenterContainer.new()
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var box := Face.new(fin.get("line", Color(CREAM, 0.5)), Color(DARK, 0.5), false, 3.0, 5.0)
+	box.name = "Final"
+	box.custom_minimum_size = Vector2(300, 116)
+	var col := VBoxContainer.new()
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.add_theme_constant_override("separation", 14)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(col)
+	var head := HBoxContainer.new()
+	head.alignment = BoxContainer.ALIGNMENT_CENTER
+	head.add_theme_constant_override("separation", 10)
+	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var cup := PixelIcon.new("icon_trophy", Vector2(34, 34))
+	cup.name = "FinalCup"
+	cup.material = grey_material()
+	cup.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(cup)
+	head.add_child(_label(str(fin.get("label", "FINAL")), 20, CREAM, false))
+	col.add_child(head)
+	var text := _label(str(fin.get("text", "? VS ?")), 22, fin.get("color", CREAM), true)
+	text.name = "FinalText"
+	text.pivot_offset_ratio = Vector2(0.5, 0.5)
+	col.add_child(text)
+	if bool(fin.get("pop", false)):
+		_anim(text, "pop", 2.6, 0.35)
+	holder.add_child(box)
+	return holder
+
+
+## Final round: the gold (or faint) panel with the trophy, FINAL, the game,
+## and the final's two rows.
+func _final_rows(fin: Dictionary) -> Control:
+	var holder := CenterContainer.new()
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var gold := bool(fin.get("gold", false))
+	var box := Face.new(GOLD if gold else Color(CREAM, 0.5), Color(GOLD, 0.28) if gold else Color(DARK, 0.5), gold, 3.0, 5.0)
+	box.name = "Final"
+	box.custom_minimum_size = Vector2(440, 0)
+	box.pad = Vector4(18, 8, 18, 12)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(col)
+	var head := HBoxContainer.new()
+	head.custom_minimum_size = Vector2(0, 60)
+	head.add_theme_constant_override("separation", 14)
+	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var slot := Control.new()
+	slot.custom_minimum_size = Vector2(56, 56)
+	slot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	slot.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var cup := PixelIcon.new("icon_trophy", Vector2(56, 56), 4.0)
+	cup.name = "FinalCup"
+	cup.pivot_offset = Vector2(28, 28)
+	slot.add_child(cup)
+	if gold:
+		_anim(cup, "pop", 2.6, 0.5)
+		_anim(cup, "bob", 3.1, 1.6)
+	else:
+		cup.material = grey_material()
+	head.add_child(slot)
+	var fl := _label(str(fin.get("label", "FINAL")), 18, CREAM, false)
+	fl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	fl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head.add_child(fl)
+	var game := _label(str(fin.get("game", "")), 16, CREAM, false)
+	game.name = "FinalGame"
+	head.add_child(game)
+	col.add_child(head)
+	for r in fin.get("rows", []):
+		col.add_child(_team_row(r, 50.0, 24, 36, 400.0 - 6.0))
+	holder.add_child(box)
+	return holder
+
+
+## Semifinal round: one semi — its head, its two rows.
+func _semi_box(sm: Dictionary) -> Control:
+	var gold := bool(sm.get("gold", false))
+	var box := Face.new(sm.get("line", Color(CREAM, 0.35)), Color(GOLD, 0.22) if gold else Color(DARK, 0.5), gold, 2.0, 5.0)
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.pad = Vector4(16, 10, 16, 12)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 6)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(col)
+	var head := _label("%s · %s" % [sm.get("head", ""), sm.get("note", "")], 16, CREAM, false)
+	head.name = "SemiHead"
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	col.add_child(head)
+	for r in sm.get("rows", []):
+		col.add_child(_team_row(r, 56.0, 24, 36, (W - 54.0 - 60.0 - 32.0 - 24.0) * 0.5 - 32.0))
+	return box
+
+
+## Final round: a small semi — the head, two faint rows.
+func _semi_small(sm: Dictionary) -> Control:
+	var box := Face.new(sm.get("line", Color(CREAM, 0.5)), Color(DARK, 0.5), false, 2.0, 4.0)
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.pad = Vector4(12, 8, 12, 8)
+	box.modulate.a = 0.9
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 4)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(col)
+	var head := _label(str(sm.get("head", "")), 14, CREAM, false)
+	head.name = "SemiHead"
+	head.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	col.add_child(head)
+	for r in sm.get("rows", []):
+		var won := bool(r.get("won", false))
+		var c := GOLD if won else CREAM
+		var line := Control.new()
+		line.name = "Row_" + str(r.get("id", ""))
+		line.custom_minimum_size = Vector2(0, 28)
+		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		line.modulate.a = 1.0 if won or not bool(r.get("struck", false)) else 0.6
+		var h := HBoxContainer.new()
+		UiLayout.full_rect(h)
+		h.add_theme_constant_override("separation", 8)
+		h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		line.add_child(h)
+		var nm := _label(str(r.get("name", "")), 14, c, true)
+		nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		h.add_child(nm)
+		h.add_child(_label(str(r.get("wins", 0)), 16, c, true))
+		if bool(r.get("struck", false)):
+			var st := StrikeLine.new(2.0, false)
+			st.name = "Strike"
+			st.anchor_right = 1.0
+			st.offset_left = -3.0
+			st.offset_right = 3.0
+			st.offset_top = 13.0
+			st.offset_bottom = 15.0
+			line.add_child(st)
+		col.add_child(line)
+	return box
+
+
+## One team's row: the name (shrunk to fit), its record, the series wins.
+func _team_row(r: Dictionary, h_px: float, name_px: int, wins_px: int, width: float) -> Control:
+	var won := bool(r.get("won", false))
+	var c := GOLD if won else CREAM
+	var line := Control.new()
+	line.name = "Row_" + str(r.get("id", ""))
+	line.custom_minimum_size = Vector2(0, h_px)
+	line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var h := HBoxContainer.new()
+	UiLayout.full_rect(h)
+	h.add_theme_constant_override("separation", 10)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	line.add_child(h)
+	var left := HBoxContainer.new()
+	left.name = "Who"
+	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	left.add_theme_constant_override("separation", 10)
+	left.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(left)
+	var name_ := str(r.get("name", ""))
+	var rec := str(r.get("rec", ""))
+	# Press Start is monospaced: a glyph is as wide as the size. Long first
+	# names shrink so the name, record and wins stay on the row.
+	var room := width - float(wins_px) * str(r.get("wins", 0)).length() - 10.0 - (rec.length() * 10.0 + 10.0 if rec != "" else 0.0)
+	var px := mini(name_px, int(floor(room / maxf(float(name_.length()), 1.0))))
+	var nm := _label(name_, maxi(px, 12), c, true)
+	nm.name = "Name"
+	nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	left.add_child(nm)
+	if rec != "":
+		var rl := _label(rec, 14, Color("#D9D9D9"), false)
+		rl.name = "Rec"
+		left.add_child(rl)
+	var wins := _label(str(r.get("wins", 0)), wins_px, c, true)
+	wins.name = "Wins"
+	wins.pivot_offset_ratio = Vector2(0.5, 0.5)
+	h.add_child(wins)
+	if bool(r.get("pop", false)):
+		_anim(wins, "pop", 1.7, 0.35)
+	if bool(r.get("struck", false)):
+		_anim(left, "fade_to", 2.3, 0.4, 0.65)
+		var st := StrikeLine.new(3.0, true)
+		st.name = "Strike"
+		st.position = Vector2(-4, h_px * 0.5 - 2.0)
+		st.size = Vector2(0, 3)
+		line.add_child(st)
+		_anim(st, "strike", 2.1, 0.35, width + 8.0)
+	return line
 
 
 # ---- 39a CLINCHED: the standings climb, the matchup card ----------------------------
@@ -802,6 +983,12 @@ func meter_frac() -> float:
 	return _meter.fill_frac() if _meter != null else 0.0
 
 
+## TAP TO CONTINUE's top in band coordinates: CONTINUE_UP above the
+## screen's bottom edge (1430 on the 1560 design; 1150 on a 9:16 screen).
+func continue_y() -> float:
+	return H + UiLayout.offset().y - CONTINUE_UP
+
+
 func ready_s() -> float:
 	return _ready_s
 
@@ -821,7 +1008,7 @@ var _stream_aimed := false
 func _rewards(tickets: int, drop: String) -> void:
 	var row := Control.new()
 	row.name = "Rewards"
-	row.position = Vector2(0, 910)
+	row.position = Vector2(0, REWARDS_Y)
 	row.size = Vector2(W, 84)
 	row.pivot_offset = Vector2(W * 0.5, 42)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -843,18 +1030,18 @@ func _rewards(tickets: int, drop: String) -> void:
 		var col: Color = CARD_COLORS.get(kind, GOLD)
 		var tile := Control.new()
 		tile.name = "Drop"
-		tile.custom_minimum_size = Vector2(300, 64)
+		tile.custom_minimum_size = Vector2(300, 84)
 		tile.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var bg := Panel.new()
 		bg.name = "DropBg"
-		bg.add_theme_stylebox_override("panel", _box(col, Color(col, 0.25)))
+		bg.add_theme_stylebox_override("panel", _box(col, Color(col, 0.35)))
 		UiLayout.full_rect(bg)
 		bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		tile.add_child(bg)
 		var tv := VBoxContainer.new()
 		tv.position = Vector2(96, 0)
-		tv.size = Vector2(190, 64)
+		tv.size = Vector2(190, 84)
 		tv.alignment = BoxContainer.ALIGNMENT_CENTER
 		tv.add_theme_constant_override("separation", 8)
 		tv.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -869,7 +1056,7 @@ func _rewards(tickets: int, drop: String) -> void:
 		if not card.is_empty():
 			var art := ModeCards.art(card, Vector2(66, 88), 4.0)
 			art.name = "DropArt"
-			art.position = Vector2(14, -30)
+			art.position = Vector2(14, 84.0 - 8.0 - 88.0)
 			art.rotation = deg_to_rad(-6.0)
 			art.pivot_offset = Vector2(33, 44)
 			tile.add_child(art)
@@ -1017,6 +1204,11 @@ func step(dt: float) -> void:
 				node.modulate.a = 1.0 if _t >= delay else 0.0
 			"dim":
 				node.modulate = Color.WHITE.lerp(Color(0.55, 0.55, 0.55), p)
+			"fade_to":
+				node.modulate.a = lerpf(1.0, float(a["extra"]), p)
+			"draw":
+				# steps(8): the stepped line draws itself in eight ticks.
+				(node as StepLines).set_progress(int(a["extra"]), floor(p * 8.0) / 8.0)
 			"blink":
 				node.visible = _t >= delay and fmod(_t - delay, dur) < dur * 0.5
 			"flash":
@@ -1100,18 +1292,104 @@ class DashLine extends Control:
 			x += 22.0
 
 
-## The bracket's connector: a stub from each semifinal row, a riser, a stub
-## into the final; the winner's path in the accent colour.
-class BracketLines extends Control:
-	var accent := Color.WHITE
+## A design box drawn in code: a solid ink drop shadow, the fill, the
+## cream dot texture (dot_cream / dot_gold) when `dots`, a flat edge of
+## `border` px. `pad` (left, top, right, bottom) sits inside the edge.
+class Face extends PanelContainer:
+	var edge := Color.WHITE
+	var fill := Color.TRANSPARENT
+	var dots := false
+	var border := 2.0
+	var shadow := 5.0
+	var pad := Vector4.ZERO:
+		set(value):
+			pad = value
+			_margins()
 
-	func _init(p_accent: Color) -> void:
-		accent = p_accent
+	func _init(p_edge: Color, p_fill: Color, p_dots: bool, p_border: float, p_shadow: float) -> void:
+		edge = p_edge
+		fill = p_fill
+		dots = p_dots
+		border = p_border
+		shadow = p_shadow
+		texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_margins()
+
+	func _margins() -> void:
+		var sb := StyleBoxEmpty.new()
+		sb.content_margin_left = pad.x + border
+		sb.content_margin_top = pad.y + border
+		sb.content_margin_right = pad.z + border
+		sb.content_margin_bottom = pad.w + border
+		add_theme_stylebox_override("panel", sb)
+
+	func _draw() -> void:
+		var r := Rect2(Vector2.ZERO, size)
+		if shadow > 0.0:
+			draw_rect(Rect2(Vector2.ONE * shadow, size), INK)
+		draw_rect(r, fill)
+		if dots:
+			draw_texture_rect(ShadowStyle.dot_tex(), r, true, Color(edge, ShadowStyle.DOT_ALPHA))
+		draw_rect(r.grow(-border * 0.5), edge, false, border)
+
+
+## The orange strike through a beaten team (2 px ink shadow on the big rows).
+class StrikeLine extends Control:
+	var thick := 3.0
+	var inked := true
+
+	func _init(p_thick: float, p_inked: bool) -> void:
+		thick = p_thick
+		inked = p_inked
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	func _draw() -> void:
-		var faint := Color(MatchEndCopy.CREAM, 0.35)
-		draw_rect(Rect2(0, 38, 30, 4), accent)
-		draw_rect(Rect2(0, 114, 30, 4), faint)
-		draw_rect(Rect2(26, 38, 4, 80), faint)
-		draw_rect(Rect2(26, 76, 34, 4), accent)
+		if size.x <= 0.0:
+			return
+		if inked:
+			draw_rect(Rect2(Vector2(2, 2), Vector2(size.x, thick)), INK)
+		draw_rect(Rect2(Vector2.ZERO, Vector2(size.x, thick)), ORANGE)
+
+
+## The bracket's stepped lines (the design's 550-wide svg, centred): one
+## 4 px path per semi up into the final; `set_progress` draws a path in.
+class StepLines extends Control:
+	const SVG_W := 550.0
+	var _paths: Array = []
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func add_path(pts: Array, colour: Color) -> void:
+		_paths.push_back({"pts": pts, "colour": colour, "p": 1.0})
+		queue_redraw()
+
+	func set_progress(i: int, p: float) -> void:
+		if i < _paths.size() and not is_equal_approx(float(_paths[i]["p"]), p):
+			_paths[i]["p"] = p
+			queue_redraw()
+
+	func progress(i: int) -> float:
+		return float(_paths[i]["p"]) if i < _paths.size() else 0.0
+
+	func _draw() -> void:
+		var ox := (size.x - SVG_W) * 0.5
+		for path in _paths:
+			var pts: Array = path["pts"]
+			var total := 0.0
+			for k in range(1, pts.size()):
+				total += (pts[k] - pts[k - 1]).length()
+			var left := total * float(path["p"])
+			for k in range(1, pts.size()):
+				if left <= 0.0:
+					break
+				var a: Vector2 = pts[k - 1]
+				var b: Vector2 = pts[k]
+				var seg := (b - a).length()
+				var end := a + (b - a) * minf(1.0, left / seg)
+				left -= seg
+				# A square-capped 4 px stroke: the box around the segment, grown by 2.
+				var r := Rect2(Vector2(minf(a.x, end.x), minf(a.y, end.y)), (end - a).abs()).grow(2.0)
+				r.position.x += ox
+				draw_rect(r, path["colour"])
