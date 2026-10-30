@@ -94,6 +94,13 @@ func _chrome(t) -> void:
 	t.ok((c.find_child("Home", true, false) as Control).get_parent() == (c.find_child("RunItBack", true, false) as Control).get_parent(), "…on one row")
 	t.ok(c.find_child("Board", true, false) is ShadowPanel and c.find_child("Stream", true, false) is TicketStream, "the board is a see-through panel; the stream sits over the page")
 	c.free()
+	# 7a on both screens (2026-10-30): the 9:16 design's tops at 1280, the
+	# iPhone design's at 1560.
+	var rs := load("res://game/screens/results_screen.gd")
+	t.eq(rs.tall_y(rs.BOARD_Y, rs.BOARD_Y_TALL, 1280.0), 556.0, "the board at 556 on a 9:16 screen")
+	t.eq(rs.tall_y(rs.BOARD_Y, rs.BOARD_Y_TALL, 1560.0), 741.0, "…741 on the iPhone")
+	t.eq(rs.tall_y(rs.BUTTONS_Y, rs.BUTTONS_Y_TALL, 1560.0), 1390.0, "the buttons at 1390 on it")
+	t.ok(rs.tall_y(rs.HEAD_POS.y, rs.HEAD_Y_TALL, 1420.0) > 48.0 and rs.tall_y(rs.HEAD_POS.y, rs.HEAD_Y_TALL, 1420.0) < 134.0, "between, in between")
 	var iced := best.duplicate()
 	iced["iced"] = 2
 	iced["tickets"] = 0

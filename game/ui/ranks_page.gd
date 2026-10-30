@@ -22,7 +22,7 @@ signal request(area: String, period: String)
 
 const CREAM := RetroTheme.SCENE_TEXT
 const GOLD := Color("#F0B84A")
-const MUTED := Color("#E6D9B8")
+const MUTED := Color("#D9D9D9")   # 41a, 2026-10-30 (was the cream #E6D9B8)
 const ME_BG := Color(232.0 / 255.0, 112.0 / 255.0, 58.0 / 255.0, 0.4)
 const WASH := Color(20.0 / 255.0, 16.0 / 255.0, 14.0 / 255.0, 0.58)
 const FADE_C := Color(27.0 / 255.0, 22.0 / 255.0, 19.0 / 255.0, 0.95)
@@ -40,8 +40,9 @@ const BACK_PX := 56.0
 const TAB_H := 64.0
 const TAB_GAP := 14.0
 const PERIOD_SIZE := Vector2(150, 48)
-const ROW_H := 62.0
-const RANK_W := 76.0
+const ROW_H := 68.0          # 41a, 2026-10-30 (was 62)
+const RANK_W := 66.0
+const ROW_GAP := 12
 const FADE_H := 110.0
 const PAD_X := 22.0
 ## The row's width inside the panel's padding.
@@ -119,12 +120,12 @@ func build(tabs: Array, you: Dictionary) -> Control:
 	board.size = Vector2(w, 16)
 	board.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(board)
-	board.add_child(_words("BOARD", 16))
+	board.add_child(_words("BOARD", 19))
 	var gap := Control.new()
 	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	board.add_child(gap)
-	var note := _words(RanksCopy.board_note(tabs), 16, MUTED)
+	var note := _words(RanksCopy.board_note(tabs), 19, MUTED)
 	note.name = "BoardNote"
 	board.add_child(note)
 	var tab_row := HBoxContainer.new()
@@ -174,7 +175,7 @@ func build(tabs: Array, you: Dictionary) -> Control:
 		var period := str(p)
 		var c := _card("Period" + period.capitalize(), PERIOD_SIZE)
 		c.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		var l := _display(RanksCopy.period_name(period), 12)
+		var l := _display(RanksCopy.period_name(period), 14)
 		l.name = "Text"
 		l.position = Vector2.ZERO
 		l.size = PERIOD_SIZE
@@ -184,7 +185,7 @@ func build(tabs: Array, you: Dictionary) -> Control:
 		c.pressed.connect(func() -> void: select(_area, period))
 		_chip_row.add_child(c)
 		_chips[period] = c
-	_status = _words(RanksCopy.loading_status(), 15, MUTED)
+	_status = _words(RanksCopy.loading_status(), 18, MUTED)
 	_status.name = "Status"
 	_status.position = Vector2(LEFT, top + PERIOD_DY)
 	_status.size = Vector2(w, 52)
@@ -245,7 +246,7 @@ func _build_card(top: float, w: float, you: Dictionary) -> void:
 	_me_rank.name = "MeRank"
 	_me_rank.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	right.add_child(_me_rank)
-	_me_sub = _words("", 16)
+	_me_sub = _words("", 19)
 	_me_sub.name = "MeSub"
 	_me_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	right.add_child(_me_sub)
@@ -484,40 +485,54 @@ func _row(r: Dictionary, i: int, ladder: bool) -> Control:
 	box.mouse_filter = Control.MOUSE_FILTER_PASS
 	var h := HBoxContainer.new()
 	h.name = "Inner"
-	h.add_theme_constant_override("separation", 14)
+	h.add_theme_constant_override("separation", ROW_GAP)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.position = Vector2.ZERO
 	h.size = Vector2(ROW_W, ROW_H)
 	box.add_child(h)
 	var n := int(str(r["rank"]).trim_prefix("#"))
-	var rank := _display(str(r["rank"]), 18, GOLD if n <= RanksCopy.TOP_COLOURS and not me else CREAM)
+	var rank := _display(str(r["rank"]), 22, GOLD if n <= RanksCopy.TOP_COLOURS and not me else CREAM)
 	rank.name = "Rank"
 	rank.custom_minimum_size = Vector2(RANK_W, 0)
 	rank.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	rank.size_flags_vertical = Control.SIZE_FILL
 	h.add_child(rank)
-	var name_l := _words(str(r["name"]), 19)
+	var name_l := _words(str(r["name"]), 23)
 	name_l.name = "Name"
 	name_l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	name_l.size_flags_vertical = Control.SIZE_FILL
 	name_l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	name_l.clip_text = true
 	h.add_child(name_l)
-	var tag := _words(str(r.get("tag", "")), 14, MUTED)
+	var tag := _words(str(r.get("tag", "")), 17, MUTED)
 	tag.name = "Tag"
 	tag.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	tag.size_flags_vertical = Control.SIZE_FILL
 	tag.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(tag)
-	var score := _display(str(r["score"]), 13 if ladder else 20)
+	# The score, right: on RANKED the badge over the record (41a, 2026-10-30:
+	# `ROOKIE III` 15 px over `40-11` 17 px), else the points at 24.
+	var parts := str(r["score"]).split(" · ", true, 1) if ladder else PackedStringArray([str(r["score"])])
+	var right := VBoxContainer.new()
+	right.name = "Right"
+	right.alignment = BoxContainer.ALIGNMENT_CENTER
+	right.add_theme_constant_override("separation", 8)
+	right.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(right)
+	var score := _display(parts[0], 15 if ladder else 24)
 	score.name = "Score"
 	score.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	score.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	score.size_flags_vertical = Control.SIZE_FILL
-	h.add_child(score)
+	right.add_child(score)
+	var sub_w := 0.0
+	if parts.size() > 1:
+		var sub := _words(parts[1], 17)
+		sub.name = "ScoreSub"
+		sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		right.add_child(sub)
+		sub_w = _text_w(sub)
 	# The name takes its own width, up to what the rank, the tag and the score
 	# leave (an ellipsis past that; a clipped label alone would shrink to nothing).
-	var room := ROW_W - RANK_W - 3.0 * 14.0 - _text_w(tag) - _text_w(score)
+	var room := ROW_W - RANK_W - 3.0 * ROW_GAP - _text_w(tag) - maxf(_text_w(score), sub_w)
 	name_l.custom_minimum_size.x = minf(_text_w(name_l), maxf(room, 80.0))
 	return box
 

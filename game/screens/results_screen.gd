@@ -16,15 +16,26 @@ extends Node3D
 const MARGIN := 36.0
 const RIGHT := 720.0 - 42.0
 const SCRIM_ALPHA := 0.5
+## The design's tops on its two screens (7a): the 9:16 band (2026-10-24)
+## and the 1560 iPhone (2026-10-30); `tall_y` takes the one for this screen,
+## in between on the heights between.
 const HEAD_POS := Vector2(36, 48)
+const HEAD_Y_TALL := 134.0
 const SCORE_POS := Vector2(92, 190)
+const SCORE_Y_TALL := 296.0
 const TICKETS_RECT := Rect2(720 - 42 - 240, 212, 240, 124)
+const TICKETS_Y_TALL := 312.0
 const STATS_Y := 446.0
+const STATS_Y_TALL := 638.0
 const STATS_X := Vector2(56, 720 - 62)
 const BOARD_Y := 556.0
+const BOARD_Y_TALL := 741.0
 const BOARD_W := 642.0
 const ROW_H := 64.0
 const BUTTONS_Y := 1110.0
+const BUTTONS_Y_TALL := 1390.0
+const SHORT_H := 1280.0
+const TALL_H := 1560.0
 const BUTTON_H := 120.0
 const HOME_W := 200.0
 ## The stream (design 7a): from the score into the box, after this long.
@@ -45,6 +56,7 @@ func _ready() -> void:
 	var ui := CanvasLayer.new()
 	ui.name = "Ui"
 	ui.layer = 10
+	UiLayout.anchor_layer(ui)   # screen coordinates: tall_y spreads the page to the screen
 	add_child(ui)
 	ui.add_child(build_chrome(run, App.last_run_was_best))
 	# The chime (Ross, 2026-10-26): the big one for an all-time global best,
@@ -117,7 +129,16 @@ func _build_court(location: String) -> void:
 
 
 ## Everything over the court, as one Control (also built off-tree by tests).
+## A block's top on a screen `h` tall: the 9:16 design's at 1280, the
+## iPhone design's at 1560, linear between (and a little past, on the moto).
+static func tall_y(short_y: float, tall_y_: float, h: float) -> float:
+	if h <= SHORT_H:
+		return short_y
+	return roundf(lerpf(short_y, tall_y_, (h - SHORT_H) / (TALL_H - SHORT_H)))
+
+
 func build_chrome(run: Dictionary, is_best: bool) -> Control:
+	var h := UiLayout.screen_height()
 	var chrome := Control.new()
 	chrome.name = "Chrome"
 	UiLayout.full_rect(chrome)
@@ -134,7 +155,7 @@ func build_chrome(run: Dictionary, is_best: bool) -> Control:
 	# The title block: the TIME TRIAL kicker, the area name big with the dithered shadow.
 	var head := _vbox(16)
 	head.name = "Head"
-	head.position = HEAD_POS
+	head.position = Vector2(HEAD_POS.x, tall_y(HEAD_POS.y, HEAD_Y_TALL, h))
 	chrome.add_child(head)
 	var kicker := _hbox(12)
 	var star := PixelIcon.new("icon_star", Vector2(22, 22))
@@ -153,7 +174,7 @@ func build_chrome(run: Dictionary, is_best: bool) -> Control:
 	# The score block: NEW BEST or the gap, then the score.
 	var score_col := _vbox(18)
 	score_col.name = "ScoreBlock"
-	score_col.position = SCORE_POS
+	score_col.position = Vector2(SCORE_POS.x, tall_y(SCORE_POS.y, SCORE_Y_TALL, h))
 	chrome.add_child(score_col)
 	if is_best:
 		var chip := ShadowPanel.new(GOLD, 0.0, 0.45, 14.0)
@@ -180,7 +201,7 @@ func build_chrome(run: Dictionary, is_best: bool) -> Control:
 	# The tickets box beside the score (dim with nothing earned; the stream lands in it).
 	var tk := ResultsCopy.tickets(run, is_best)
 	_box = TicketBox.new(TICKETS_RECT.size.y, 64.0, 32, 14, 20.0, 18.0, 52.0, 0.0, TICKETS_RECT.size.x)
-	_box.position = TICKETS_RECT.position
+	_box.position = Vector2(TICKETS_RECT.position.x, tall_y(TICKETS_RECT.position.y, TICKETS_Y_TALL, h))
 	_box.size = TICKETS_RECT.size + Vector2.ONE * ShadowStyle.OFFSET
 	_box.set_count(int(tk["n"]))
 	_box.set_sub(str(tk["sub"]))
@@ -191,7 +212,7 @@ func build_chrome(run: Dictionary, is_best: bool) -> Control:
 	# The stat row.
 	var stats := _hbox(0)
 	stats.name = "Stats"
-	stats.position = Vector2(STATS_X.x, STATS_Y)
+	stats.position = Vector2(STATS_X.x, tall_y(STATS_Y, STATS_Y_TALL, h))
 	stats.size = Vector2(STATS_X.y - STATS_X.x, 0)
 	chrome.add_child(stats)
 	for k in ResultsCopy.tiles(run):
@@ -209,18 +230,18 @@ func build_chrome(run: Dictionary, is_best: bool) -> Control:
 	# The TOP 5 board, this run as a sixth row under a break when it is lower.
 	var board := ShadowPanel.new(CREAM, 14.0, 0.24, 26.0)
 	board.name = "Board"
-	board.position = Vector2(MARGIN, BOARD_Y)
+	board.position = Vector2(MARGIN, tall_y(BOARD_Y, BOARD_Y_TALL, h))
 	board.size = Vector2(BOARD_W + ShadowStyle.OFFSET, 0)
 	chrome.add_child(board)
 	var bcol := _vbox(0)
 	board.add_child(bcol)
 	var bh := _hbox(0)
 	bh.custom_minimum_size = Vector2(0, 48)
-	var bt := _text("TOP %d" % ResultsCopy.BOARD_SIZE, 20, CREAM, true)
+	var bt := _text("TOP %d" % ResultsCopy.BOARD_SIZE, 22, CREAM, true)
 	bt.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bt.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	bh.add_child(bt)
-	var bn := _text(ResultsCopy.title(run), 18)
+	var bn := _text(ResultsCopy.title(run), 20)
 	bn.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	bh.add_child(bn)
 	bcol.add_child(bh)
@@ -239,7 +260,7 @@ func build_chrome(run: Dictionary, is_best: bool) -> Control:
 	# RUN IT BACK and HOME on one row.
 	var buttons := _hbox(26 - int(ShadowStyle.OFFSET))
 	buttons.name = "Buttons"
-	buttons.position = Vector2(MARGIN, BUTTONS_Y)
+	buttons.position = Vector2(MARGIN, tall_y(BUTTONS_Y, BUTTONS_Y_TALL, h))
 	buttons.size = Vector2(RIGHT - MARGIN + ShadowStyle.OFFSET, BUTTON_H + ShadowStyle.OFFSET)
 	chrome.add_child(buttons)
 	var again := ShadowCard.new(RetroTheme.c("orange"))
@@ -250,12 +271,10 @@ func build_chrome(run: Dictionary, is_best: bool) -> Control:
 	again.add_child(am)
 	var ar := _hbox(16)
 	am.add_child(ar)
-	var ac := _vbox(14)
-	ac.alignment = BoxContainer.ALIGNMENT_CENTER
-	ac.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	ac.add_child(_text("RUN IT BACK", 24, CREAM, true))
-	ac.add_child(_text(ResultsCopy.run_sub(location)))
-	ar.add_child(ac)
+	var al := _text("RUN IT BACK", 24, CREAM, true)   # no sub line since 2026-10-30 (7a)
+	al.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	al.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	ar.add_child(al)
 	var ch := _text(">", 32, CREAM, true)
 	ch.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	ar.add_child(ch)
@@ -279,29 +298,30 @@ func build_chrome(run: Dictionary, is_best: bool) -> Control:
 	return chrome
 
 
-## A board row (design 7a): grid 64 / fill / 112 / 120, 64 tall, a dashed rule
-## on top, this run's in orange with THIS RUN beside its points.
+## A board row (design 7a, 2026-10-30): grid 68 / fill / 124 / 136, 64 tall,
+## the place and points 26 px, SW / STK 23, a dashed rule on top, this
+## run's in orange with THIS RUN (21 px) beside its points.
 func _board_row(r: Dictionary) -> Control:
 	var row := _hbox(0)
 	row.name = "Row_" + str(r["n"])
 	row.custom_minimum_size = Vector2(0, ROW_H)
-	var n := _text(str(r["n"]), 22, CREAM, true)
-	n.custom_minimum_size = Vector2(64, 0)
+	var n := _text(str(r["n"]), 26, CREAM, true)
+	n.custom_minimum_size = Vector2(68, 0)
 	n.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(n)
 	var mid := _hbox(14)
 	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	var pts := _text(str(r["pts"]), 22, CREAM, true)
+	var pts := _text(str(r["pts"]), 26, CREAM, true)
 	pts.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	mid.add_child(pts)
 	if bool(r["mine"]):
-		var tag := _text("THIS RUN", 18, HI)
+		var tag := _text("THIS RUN", 21, HI)
 		tag.name = "ThisRun"
 		tag.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		mid.add_child(tag)
 	row.add_child(mid)
-	for spec in [["%s SW" % r["sw"], 112], ["%s STK" % r["st"], 120]]:
-		var c := _text(spec[0], 20)
+	for spec in [["%s SW" % r["sw"], 124], ["%s STK" % r["st"], 136]]:
+		var c := _text(spec[0], 23)
 		c.custom_minimum_size = Vector2(spec[1], 0)
 		c.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		c.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
