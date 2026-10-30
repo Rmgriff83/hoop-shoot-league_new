@@ -18,17 +18,21 @@ const SCRIM_ALPHA := 0.5
 const HEAD_POS := Vector2(36, 48)
 const SCORE_POS := Vector2(48, 192)
 const SCORE_W := 390.0
-const TICKETS_RECT := Rect2(720.0 - 42.0 - 240.0, 204.0, 240.0, 124.0)
-const METER_Y := 372.0
+const TICKETS_RECT := Rect2(720.0 - 42.0 - 250.0, 204.0, 250.0, 124.0)
+const METER_Y := 360.0
 const BOX_Y := 442.0
 const BOX_W := 642.0
 const BOX_HEAD_H := 54.0
-const COL_W := 140.0
+const COL_W := 140.0         # the YOU / opponent chips' columns
+const ROW_COL_W := 150.0     # the rows' number columns (6b, 2026-10-30)
 const ROW_H := 56.0          # a box score row
 const ROW_H_BRIGHT := 50.0   # …when bright spots follow the rows
 const BRIGHT_H := 32.0       # a bright-spot line
-const DROP_GAP := 30.0
-const DROP_H := 140.0
+const DROP_GAP := 22.0
+const DROP_H := 150.0        # a drop card (6b, 2026-10-30: a row of 311-wide cards)
+const DROP_W := 311.0
+const DROP_STEP := DROP_W + 20.0
+const METER_START := 0.5     # the XP meter fills from here (no ticket stream since 2026-10-30)
 const ONLINE_CARD_H := 140.0 # the online rewards row (the meter sits under it)
 const METER_H := 40.0        # the meter bar + line under the online rewards row
 const BUTTONS_Y := 1124.0
@@ -36,7 +40,6 @@ const BUTTON_H := 120.0
 const BUTTON_GAP := 26
 const HOME_W := 170.0
 const CONT_H := BUTTON_H     # REMATCH? / SHOOT AROUND? share the foot
-const STREAM_START := 0.45
 const HI := Color("#FFE45C")
 const CREAM := RetroTheme.SCENE_TEXT
 const GOLD := Color("#F0B84A")
@@ -44,8 +47,8 @@ const GOLD := Color("#F0B84A")
 var _t := 0.0
 var _spec: Dictionary = {}
 var _box: TicketBox
-var _stream: TicketStream
 var _meter: XpMeter
+var _drop_scroll: ScrollContainer
 var _score_label: Label
 var _court: CourtGeometry
 var _cam: Camera3D
@@ -184,19 +187,22 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 		, CONNECT_ONE_SHOT)
 		sb.add_child(rank_l)
 
-	# The tickets box, right, and the stream into it (TicketBox / TicketStream,
-	# as the time-trial results page); the XP meter under both.
+	# The tickets box, right (design 6b, 2026-10-30): the balance with the
+	# match's gain on a gold badge; the XP meter under both.
 	if in_league:
-		var ck := HeatCopy.rewards(heat)
 		var tk := int(heat.get("tickets", 0))
-		_box = TicketBox.new(TICKETS_RECT.size.y, 64.0, 30, 14, 20.0, 18.0, 64.0, 0.0, TICKETS_RECT.size.x)
+		_box = TicketBox.new(TICKETS_RECT.size.y, 56.0, 26, 14, 18.0, 16.0, 56.0, 0.0, TICKETS_RECT.size.x)
 		_box.position = TICKETS_RECT.position
-		_box.set_count(tk)
-		_box.set_sub(str(ck.get("sub", "TICKETS")))
+		_box.set_total(App.tickets())
+		_box.set_sub("TICKETS")
 		chrome.add_child(_box)
+		if tk > 0:
+			var badge := TicketBox.GainBadge.new("+%d" % tk)
+			badge.position = TicketBox.badge_at(TICKETS_RECT, badge)
+			chrome.add_child(badge)
 		var m := HeatCopy.level_meter(heat, App.xp())
 		if not m.is_empty():
-			_meter = XpMeter.new(m, BOX_W)
+			_meter = XpMeter.new(m, BOX_W, true)
 			_meter.position = Vector2(MARGIN, METER_Y)
 			chrome.add_child(_meter)
 
@@ -220,7 +226,7 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	var oc := HeatCopy.opponent_chip(heat)
 	for spec in [["YOU", RetroTheme.c("orange"), 0.40, "YouChip"], [str(oc["text"]), oc["color"], 0.50, "ThemChip"]]:
 		var cell := _hbox(0)
-		cell.custom_minimum_size = Vector2(COL_W, 0)
+		cell.custom_minimum_size = Vector2(ROW_COL_W, 0)
 		cell.alignment = BoxContainer.ALIGNMENT_END
 		var chip := ShadowPanel.new(spec[1], 0.0, float(spec[2]), 12.0)
 		chip.name = str(spec[3])
@@ -236,7 +242,7 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 		bcol.add_child(_box_row(r, row_h))
 	# The bright spots of a loss (docs/CARDS.md § Drops), in gold under the rows.
 	for line in bright:
-		var bl := _text(str(line), 17, GOLD)
+		var bl := _text(str(line), 19, GOLD)
 		bl.name = "Bright"
 		bl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		bl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -246,37 +252,13 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 		bcol.add_child(bl)
 	var below := BOX_Y + box_h + DROP_GAP
 
-	# A card drop gets its own teal row under the box, the live card in it.
+	# The card drops (design 6b, 2026-10-30): a row of teal cards under the
+	# box, each with its live card; past two they scroll sideways behind
+	# fades and < > arrows.
 	if in_league:
-		var card := HeatCopy.drop(heat)
-		if not card.is_empty():
-			var dp := ShadowPanel.new(RetroTheme.c("teal"), 0.0, 0.32, 24.0)
-			dp.name = "Drop"
-			dp.position = Vector2(MARGIN, below)
-			dp.size = Vector2(BOX_W + ShadowStyle.OFFSET, DROP_H + ShadowStyle.OFFSET)
-			var dr := _hbox(22)
-			var art := ModeCards.art(card, Vector2(78, 104), 5.0)
-			art.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-			dr.add_child(art)
-			var dc := _vbox(14)
-			dc.alignment = BoxContainer.ALIGNMENT_CENTER
-			dc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			var cap_l := _text(HeatCopy.drop_caption(heat), 16)
-			cap_l.name = "DropCaption"
-			cap_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			dc.add_child(cap_l)
-			var nm := _text(str(card.get("name", "")).to_upper(), 22, CREAM, true)
-			nm.name = "DropName"
-			nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			nm.add_theme_constant_override("line_spacing", 6)
-			dc.add_child(nm)
-			dr.add_child(dc)
-			var plus := _text("+1 CARD", 16, HI)
-			plus.name = "DropPlus"
-			plus.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-			dr.add_child(plus)
-			dp.add_child(dr)
-			chrome.add_child(dp)
+		var drops := HeatCopy.drops(heat)
+		if not drops.is_empty():
+			chrome.add_child(_drop_row(drops, below))
 
 	# The foot: CONTINUE SEASON beside HOME (a league), REMATCH? / SHOOT
 	# AROUND? beside HOME (an open online room), HOME alone otherwise.
@@ -295,14 +277,10 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 		cont.add_child(cm)
 		var crow := _hbox(16)
 		cm.add_child(crow)
-		var ccol := _vbox(14)
-		ccol.alignment = BoxContainer.ALIGNMENT_CENTER
-		ccol.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		ccol.add_child(_text("CONTINUE SEASON", 22, CREAM, true))
-		var sub := _text(HeatCopy.continue_sub(doc, cfg), 15)
-		sub.name = "ContinueSub"
-		ccol.add_child(sub)
-		crow.add_child(ccol)
+		var cl := _text("CONTINUE SEASON", 22, CREAM, true)
+		cl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		cl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		crow.add_child(cl)   # no sub line since 2026-10-30 (6b)
 		var ch := _text(">", 30, CREAM, true)
 		ch.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		crow.add_child(ch)
@@ -340,12 +318,115 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	RetroTheme.on_scene(home)
 	home.pressed.connect(App.to_title)
 	foot.add_child(home)
-
-	_stream = TicketStream.new()
-	_stream.name = "Stream"
-	_stream.tickets = int(heat.get("tickets", 0)) if in_league else 0
-	chrome.add_child(_stream)
 	return chrome
+
+
+## The drops row: 311 × 150 teal cards 20 apart from x 36; more than two
+## scroll (snapping a card at a time with the arrows) under edge fades.
+func _drop_row(drops: Array, top: float) -> Control:
+	var wrap := Control.new()
+	wrap.name = "Drops"
+	wrap.position = Vector2(0, top)
+	wrap.size = Vector2(720, DROP_H + 10.0)
+	wrap.mouse_filter = Control.MOUSE_FILTER_PASS
+	var scroll := ScrollContainer.new()
+	scroll.name = "DropScroll"
+	UiLayout.full_rect(scroll)
+	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER if drops.size() > 2 else ScrollContainer.SCROLL_MODE_DISABLED
+	wrap.add_child(scroll)
+	_drop_scroll = scroll
+	var pad := _margin(0, 0)
+	pad.add_theme_constant_override("margin_left", int(MARGIN))
+	pad.add_theme_constant_override("margin_right", 42)
+	scroll.add_child(pad)
+	var row := _hbox(int(DROP_STEP - DROP_W - ShadowStyle.OFFSET))
+	row.name = "Row"
+	pad.add_child(row)
+	for d in drops:
+		row.add_child(_drop_card(Dictionary(d)["card"], str(Dictionary(d)["caption"])))
+	if drops.size() > 2:
+		for side in ["Left", "Right"]:
+			var fade := TextureRect.new()
+			fade.name = "Fade" + side
+			var g := Gradient.new()
+			var dark := Color(20.0 / 255.0, 16.0 / 255.0, 14.0 / 255.0, 0.85)
+			g.colors = PackedColorArray([dark, Color(dark, 0.0)] if side == "Left" else [Color(dark, 0.0), dark])
+			var gt := GradientTexture2D.new()
+			gt.gradient = g
+			gt.width = 64
+			gt.height = 4
+			fade.texture = gt
+			fade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			fade.stretch_mode = TextureRect.STRETCH_SCALE
+			fade.size = Vector2(90, DROP_H)
+			fade.position = Vector2(0.0 if side == "Left" else 720.0 - 90.0, 0)
+			fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			wrap.add_child(fade)
+			var arrow := Button.new()
+			arrow.name = "Drop" + side
+			arrow.flat = true
+			arrow.focus_mode = Control.FOCUS_NONE
+			arrow.text = "<" if side == "Left" else ">"
+			arrow.add_theme_font_override("font", UiFont.display())
+			arrow.add_theme_font_size_override("font_size", UiFont.snap(22))
+			RetroTheme.on_scene(arrow)
+			arrow.size = Vector2(44, 44)
+			arrow.position = Vector2(8.0 if side == "Left" else 720.0 - 8.0 - 44.0, DROP_H * 0.5 - 27.0)
+			var dir := -1 if side == "Left" else 1
+			arrow.pressed.connect(func() -> void: scroll_drops(dir))
+			wrap.add_child(arrow)
+		scroll.get_h_scroll_bar().value_changed.connect(func(_v: float) -> void: _sync_drop_edges(wrap))
+		_sync_drop_edges.call_deferred(wrap)
+	return wrap
+
+
+## One drop: the live card, +1 CARD, why it dropped, its name.
+func _drop_card(card: Dictionary, caption: String) -> Control:
+	var dp := ShadowPanel.new(RetroTheme.c("teal"), 14.0, 0.32, 18.0)
+	dp.name = "Drop_" + str(card.get("id", ""))
+	dp.custom_minimum_size = Vector2(DROP_W + ShadowStyle.OFFSET, DROP_H + ShadowStyle.OFFSET)
+	var dr := _hbox(16)
+	var art := ModeCards.art(card, Vector2(72, 96), 5.0)
+	art.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	dr.add_child(art)
+	var dc := _vbox(10)
+	dc.alignment = BoxContainer.ALIGNMENT_CENTER
+	dc.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	var plus := _text("+1 CARD", 16, HI)
+	plus.name = "DropPlus"
+	dc.add_child(plus)
+	var cap_l := _text(caption, 14)
+	cap_l.name = "DropCaption"
+	cap_l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	dc.add_child(cap_l)
+	var nm := _text(str(card.get("name", "")).to_upper(), 16, CREAM, true)
+	nm.name = "DropName"
+	nm.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	nm.add_theme_constant_override("line_spacing", 5)
+	dc.add_child(nm)
+	dr.add_child(dc)
+	dp.add_child(dr)
+	return dp
+
+
+## The arrows: one card's step left or right.
+func scroll_drops(dir: int) -> void:
+	if _drop_scroll != null:
+		_drop_scroll.scroll_horizontal += int(dir * DROP_STEP)
+
+
+## Each edge's fade and arrow show only while there is more that way.
+func _sync_drop_edges(wrap: Control) -> void:
+	if not is_instance_valid(wrap) or _drop_scroll == null:
+		return
+	var bar := _drop_scroll.get_h_scroll_bar()
+	var left := bar.value > 4.0
+	var right := bar.value + bar.page < bar.max_value - 4.0
+	for n in ["FadeLeft", "DropLeft"]:
+		(wrap.get_node(n) as CanvasItem).visible = left
+	for n in ["FadeRight", "DropRight"]:
+		(wrap.get_node(n) as CanvasItem).visible = right
 
 
 ## The box score's height for `bright` bright-spot lines (the design's
@@ -355,21 +436,12 @@ static func box_height(bright: int) -> float:
 	return 12.0 + BOX_HEAD_H + rows * (ROW_H_BRIGHT if bright > 0 else ROW_H) + bright * BRIGHT_H + 16.0 + 4.0
 
 
-## The arrival (deferred: the layout must have settled): the tickets stream
-## from the score into the box and count up, then the XP meter fills.
+## The arrival (deferred: the layout must have settled): the XP meter
+## fills from METER_START (design 6b, 2026-10-30: the ticket stream is gone;
+## the box shows the balance with the gain on its badge).
 func _start_fx() -> void:
-	var fill_at := STREAM_START
-	if _box != null and _stream != null and _stream.tickets > 0:
-		_box.set_count(0)
-		var from := _score_label.get_global_rect().get_center() if _score_label != null else Vector2(160, 300)
-		_stream.count_changed.connect(func(n: int) -> void:
-			_box.set_count(n)
-			_box.bump()
-		)
-		_stream.play(from, _box.icon_center(), _stream.tickets, STREAM_START)
-		fill_at = STREAM_START + float(TicketStream.count(_stream.tickets)) * TicketStream.GAP + TicketStream.DUR
 	if _meter != null:
-		_meter.play(fill_at)
+		_meter.play(METER_START)
 
 
 ## The online rewards row (MatchCopy.spoils_panel / HeatCopy.rewards): the
@@ -555,13 +627,13 @@ func _box_row(r: Dictionary, h := ROW_H) -> Control:
 	var row := _hbox(0)
 	row.name = "Row_" + str(r["l"]).replace(" ", "_")
 	row.custom_minimum_size = Vector2(0, h)
-	var l := _text(str(r["l"]), 19)
+	var l := _text(str(r["l"]), 22)
 	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(l)
 	for spec in [[str(r["a"]), r["hi"] == "a"], [str(r["b"]), r["hi"] == "b"]]:
-		var c := _text(spec[0], 20, GOLD if bool(spec[1]) else CREAM, true)
-		c.custom_minimum_size = Vector2(COL_W, 0)
+		var c := _text(spec[0], 24, GOLD if bool(spec[1]) else CREAM, true)
+		c.custom_minimum_size = Vector2(ROW_COL_W, 0)
 		c.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 		c.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		row.add_child(c)

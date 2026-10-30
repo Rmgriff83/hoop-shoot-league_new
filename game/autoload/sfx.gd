@@ -64,7 +64,7 @@ func _ready() -> void:
 		"ice_freeze", "ice_crack_0", "ice_crack_1", "ice_shatter",
 		"peggy_press", "peggy_servo", "peggy_ticket", "peggy_peg_0", "peggy_peg_1", "peggy_peg_2",
 		"peggy_win", "peggy_jackpot", "match_loss", "chime_win", "chime_big", "level_up", "swish_register", "streak_coin", "match_defeat", "ticket_shuffle",
-		"countdown_beep", "countdown_go", "time_up_ring",
+		"countdown_beep", "countdown_go", "time_up_ring", "xp_tick",
 		"click_0", "click_1", "click_2", "click_3", "click_4",
 		"fx/fire_burst", "fx/ice_form", "fx/ice_break", "fx/ice_swish", "fx/fire_out",
 	]:
@@ -606,10 +606,19 @@ func chime_big() -> void:
 	_play("chime_big", -2.0)
 
 
-## The post-match XP meter filling to a LEVEL UP (Ross, 2026-10-26;
-## heyheytheree's cozy coin, data/credits.json).
+## The XP meter filling to a LEVEL UP (Ross, 2026-10-30: AdamWeeden's
+## "Gain XP / Level up", CC BY 3.0, credited; sped up 15 % and lowered 16 dB
+## to ~-24 LUFS, a touch under the chimes — it replaced heyheytheree's cozy
+## coin).
 func level_up() -> void:
-	_play("level_up", -2.0)
+	_play("level_up")
+
+
+## The XP meter climbing (Ross, 2026-10-30; a synthetic placeholder from
+## tools/gen_sfx.gd until he picks a clip): a short blip per step, `pitch`
+## rising with the fill.
+func xp_tick(pitch := 1.0) -> void:
+	_play("xp_tick", 0.0, pitch)
 
 
 ## A clean swish rings the till (Ross, 2026-10-26; mokasza's old-fashioned

@@ -982,8 +982,8 @@ func _run_heat_result() -> void:
 	App.last_heat = base
 	get_tree().change_scene_to_file(App.HEAT_RESULT_SCENE)
 	await _sleep(0.9)
-	await _snap("heat_win_stream")   # the tickets mid-flight (design 6b)
-	await _sleep(3.4)   # past the stream and the XP fill: LEVEL UP in gold
+	await _snap("heat_win_meter")   # the XP meter mid-fill (design 6b, 2026-10-30)
+	await _sleep(3.4)   # past the XP fill: LEVEL UP in gold
 	await _snap("heat_win")
 	var loss := base.duplicate(true)
 	loss["won"] = false

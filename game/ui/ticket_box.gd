@@ -72,6 +72,20 @@ func set_count(n: int) -> void:
 	_big.text = "+%d" % n
 
 
+## The league post-match's look (design 6b, 2026-10-30): the balance in
+## cream (`1,270`) instead of the gain; the gain goes on a GainBadge the page
+## hangs off the box's top-right corner (`badge_at`) — not a child: the box
+## is a container and would stretch it.
+func set_total(total: int) -> void:
+	_big.text = RetroTheme.thousands(total)
+	_big.add_theme_color_override("font_color", RetroTheme.SCENE_TEXT)
+
+
+## Where a GainBadge sits for a box whose face is `face` (right -5, top -10).
+static func badge_at(face: Rect2, badge: Control) -> Vector2:
+	return Vector2(face.end.x + 5.0 - badge.size.x, face.position.y - 10.0)
+
+
 func set_sub(text: String) -> void:
 	_sub.text = text
 
@@ -102,3 +116,23 @@ func _process(dt: float) -> void:
 		_bump_t = -1.0
 		_icon.scale = Vector2.ONE
 		_icon.rotation = 0.0
+
+
+## The gold `+30` badge: ink words on gold in an ink frame with a 3 px ink
+## drop, 32 tall. Not a container child: it sits where it is put.
+class GainBadge extends Control:
+	func _init(text: String) -> void:
+		name = "Gain"
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var l := UiFont.label(text, 14, RetroTheme.SCENE_OUTLINE, UiFont.display())
+		l.name = "Text"
+		l.position = Vector2(10, 9)
+		add_child(l)
+		var w := UiFont.display().get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(14)).x
+		size = Vector2(w + 20.0, 32.0)
+
+	func _draw() -> void:
+		var ink := RetroTheme.SCENE_OUTLINE
+		draw_rect(Rect2(Vector2(3, 3), size), ink)
+		draw_rect(Rect2(Vector2.ZERO, size), Color("#F0B84A"))
+		draw_rect(Rect2(Vector2.ONE, size - Vector2(2, 2)), ink, false, 2.0)

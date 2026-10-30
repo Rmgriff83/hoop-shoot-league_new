@@ -221,9 +221,30 @@ static func drop(heat: Dictionary) -> Dictionary:
 	return CardDefs.get_card(id) if id != "" else {}
 
 
+## Every card the match dropped, [{card, caption}] (design 6b, 2026-10-30:
+## a row of them). A record may carry `card_drops` [{id, reason}]; today's
+## matches drop one, `card_drop` / `drop_reason`.
+static func drops(heat: Dictionary) -> Array:
+	var out := []
+	if heat.get("card_drops") is Array:
+		for d in heat["card_drops"]:
+			var c := CardDefs.get_card(str(Dictionary(d).get("id", "")))
+			if not c.is_empty():
+				out.push_back({"card": c, "caption": reason_caption(str(Dictionary(d).get("reason", "")))})
+		return out
+	var one := drop(heat)
+	if not one.is_empty():
+		out.push_back({"card": one, "caption": drop_caption(heat)})
+	return out
+
+
 ## Why it dropped (docs/CARDS.md § Drops): the caption over the card's name.
 static func drop_caption(heat: Dictionary) -> String:
-	match str(heat.get("drop_reason", "")):
+	return reason_caption(str(heat.get("drop_reason", "")))
+
+
+static func reason_caption(reason: String) -> String:
+	match reason:
 		"comeback_win": return "COMEBACK CARD"
 		"close_loss": return "CLOSE ONE"
 		"loss_streak": return "TOUGH STRETCH · HERE'S AN ICE"

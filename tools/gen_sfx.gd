@@ -4,6 +4,7 @@ extends SceneTree
 ## AudioStreamPlayers — no audio-thread buffer feeding, and the "all sound is
 ## synthesized from a checked-in script" property is preserved.
 ## Run: godot --headless --path . -s tools/gen_sfx.gd
+##   (-- --only=xp_tick bakes just the named clip(s), comma-separated)
 ##
 ## Impact sounds bake 3 intensity variants (i = 0.33 / 0.66 / 1.0); runtime
 ## picks the variant and scales volume_db from the physics impact speed.
@@ -14,9 +15,13 @@ const MASTER := 0.55
 const OUT_DIR := "res://assets/audio"
 
 var _rng := RandomNumberGenerator.new()
+var _only: PackedStringArray = []
 
 
 func _initialize() -> void:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--only="):
+			_only = a.trim_prefix("--only=").split(",")
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(OUT_DIR))
 	var intensities := [0.33, 0.66, 1.0]
 	for i in 3:
@@ -45,6 +50,7 @@ func _initialize() -> void:
 	_save("peggy_win", _peggy_win())
 	_save("match_loss", _match_loss())
 	_save("peggy_jackpot", _peggy_jackpot())
+	_save("xp_tick", _xp_tick())
 	print("sfx done")
 	quit(0)
 
@@ -212,6 +218,18 @@ func _score_pop(swish: bool) -> PackedFloat64Array:
 		var tone := _osc("square", notes[i], notes[i], 0.0, 0.2)
 		_apply_env(tone, 0.12, 0.005, 0.14)
 		_mix(buf, tone, i * 0.07)
+	return buf
+
+
+## The XP meter filling (Ross, 2026-10-30, a placeholder until he picks a
+## clip; his second call: softer than the first square blip): a 60 ms
+## triangle "bloop" chirping 880 → 1320 Hz with a soft attack, played over
+## and over as the bar climbs (XpMeter, the pitch rising with the fill).
+func _xp_tick() -> PackedFloat64Array:
+	var buf := _silence(0.07)
+	var tone := _osc("triangle", 880.0, 1320.0, 0.05, 0.06)
+	_apply_env(tone, 0.22, 0.006, 0.05)
+	_mix(buf, tone, 0.0)
 	return buf
 
 
@@ -462,6 +480,8 @@ func _mix(dst: PackedFloat64Array, src: PackedFloat64Array, at_seconds: float) -
 
 
 func _save(name: String, buf: PackedFloat64Array, dir := OUT_DIR) -> void:
+	if not _only.is_empty() and not _only.has(name):
+		return
 	var bytes := PackedByteArray()
 	bytes.resize(buf.size() * 2)
 	for i in buf.size():

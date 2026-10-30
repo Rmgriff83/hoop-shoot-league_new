@@ -42,10 +42,11 @@ func run(t) -> void:
 	# Levelling up (Ross, 2026-10-26): heyheytheree's coin rings once as the
 	# post-match XP meter fills to LEVEL UP; a plain fill never rings.
 	var coin: AudioStream = load("res://assets/audio/level_up.wav")
-	t.ok(coin != null and coin.get_length() > 0.9 and coin.get_length() < 1.4, "level_up ships (~1.1 s)")
+	t.ok(coin != null and coin.get_length() > 0.45 and coin.get_length() < 0.6, "level_up ships (AdamWeeden's clip at 1.15×, ~0.51 s, 2026-10-30)")
 	if sfx != null:
 		t.ok(sfx.has_method("level_up"), "Sfx exposes level_up()")
-	t.eq(str(urls.get("https://freesound.org/people/heyheytheree/sounds/872480/", {}).get("author", "")), "heyheytheree", "the coin is credited at Ross's link")
+	t.eq(str(urls.get("https://freesound.org/people/AdamWeeden/sounds/157217/", {}).get("author", "")), "AdamWeeden", "the level-up is credited at Ross's link")
+	t.ok(ResourceLoader.exists("res://assets/audio/xp_tick.wav"), "the XP tick ships (a synthetic placeholder)")
 	var up := XpMeter.new({"level": 3, "level_before": 2, "need": 100, "gained": 40, "up": true, "cap": false, "from": 70, "to": 100}, 300.0)
 	up.manual = true
 	up.play(0.0)
@@ -56,11 +57,19 @@ func run(t) -> void:
 	up.step(1.0)
 	t.ok(up.rang(), "…once (the flag holds)")
 	up.free()
+	var climb := XpMeter.new({"level": 2, "level_before": 2, "need": 100, "gained": 20, "up": false, "cap": false, "from": 30, "to": 50}, 300.0)
+	climb.manual = true
+	climb.play(0.0)
+	for i in 120:
+		climb.step(1.0 / 60.0)
+	t.ok(climb.ticks() >= int(XpMeter.FILL_S / XpMeter.TICK_S) - 1, "the climb ticks every TICK_S while it fills (%d)" % climb.ticks())
+	climb.free()
 	var plain := XpMeter.new({"level": 2, "level_before": 2, "need": 100, "gained": 20, "up": false, "cap": false, "from": 30, "to": 50}, 300.0)
 	plain.manual = true
 	plain.play(0.0)
 	plain.step(XpMeter.FILL_S + 1.0)
 	t.ok(not plain.rang(), "a fill short of a level never rings")
+	t.ok(plain.ticks() <= 1, "one big step past the fill ticks at most once (ticks follow the frames)")
 	plain.free()
 	# A clean swish rings the till (Ross, 2026-10-26): mokasza's cash register,
 	# trimmed and sped up, on the SWISH branch of the scoring; credited.
