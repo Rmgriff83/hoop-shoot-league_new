@@ -5,7 +5,7 @@ extends RefCounted
 
 
 func run(t) -> void:
-	for clip in ["countdown_beep", "countdown_go", "timer_tick"]:
+	for clip in ["countdown_beep", "countdown_go", "timer_tick", "time_up_ring"]:
 		t.ok(ResourceLoader.exists("res://assets/audio/%s.wav" % clip), "%s.wav ships" % clip)
 	var tick: AudioStreamWAV = load("res://assets/audio/timer_tick.wav")
 	t.close(tick.get_length(), 10.0, 0.05, "the ticking runs ten seconds, the length of the window it plays in")
@@ -17,3 +17,4 @@ func run(t) -> void:
 		titles.push_back("%s by %s" % [c["title"], c["author"]])
 	t.ok(titles.has("Timer Ticking by iainmccurdy"), "the ticking is credited (CC BY 4.0)")
 	t.ok(titles.has("Countdown Start by stomachache"), "the GO sound is credited (CC0, a courtesy)")
+	t.ok(titles.has("Analog Timer by EagleStealthTeam"), "the time-up ring is credited (CC0, a courtesy)")

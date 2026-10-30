@@ -1,7 +1,8 @@
 extends Node
 ## Sound. Two layers:
 ##  • Generic synthetic WAVs (tools/gen_sfx.gd): impact clangs/thuds/bounces,
-##    buzzer, score pops — always loaded.
+##    score pops — always loaded (the countdown, ticking and time-up clips
+##    beside them are recorded ones, credited in data/credits.json).
 ##  • Per-set tables loaded on demand from the active cosmetic sets: the HOOP
 ##    owns make / miss and may override rim / board contacts; the BALL owns
 ##    floor bounces (and later pickup / release). Selecting a set loads its
@@ -59,11 +60,11 @@ func _ready() -> void:
 		"rim_clang_0", "rim_clang_1", "rim_clang_2",
 		"board_thud_0", "board_thud_1", "board_thud_2",
 		"bounce_0", "bounce_1", "bounce_2",
-		"swish", "net", "chain_rattle_0", "chain_rattle_1", "score_pop", "score_pop_swish", "buzzer",
+		"swish", "net", "chain_rattle_0", "chain_rattle_1", "score_pop", "score_pop_swish",
 		"ice_freeze", "ice_crack_0", "ice_crack_1", "ice_shatter",
 		"peggy_press", "peggy_servo", "peggy_ticket", "peggy_peg_0", "peggy_peg_1", "peggy_peg_2",
 		"peggy_win", "peggy_jackpot", "match_loss", "chime_win", "chime_big", "level_up", "swish_register", "streak_coin", "match_defeat", "ticket_shuffle",
-		"countdown_beep", "countdown_go",
+		"countdown_beep", "countdown_go", "time_up_ring",
 		"click_0", "click_1", "click_2", "click_3", "click_4",
 		"fx/fire_burst", "fx/ice_form", "fx/ice_break", "fx/ice_swish", "fx/fire_out",
 	]:
@@ -833,8 +834,12 @@ func score_pop(is_swish: bool) -> void:
 	_play("score_pop_swish" if is_swish else "score_pop")
 
 
+## Time up — a match's (each period's) or a time trial's end (Ross,
+## 2026-10-30): EagleStealthTeam's "Analog Timer" ring (CC0, credited),
+## lowered 5 dB to the chimes' loudness (about -21 LUFS). It replaced the
+## old buzzer clip.
 func buzzer() -> void:
-	_play("buzzer")
+	_play("time_up_ring")
 
 
 ## The match countdown (Ross, 2026-10-30): a single beep on each of 3, 2, 1

@@ -745,7 +745,9 @@ own clip), stomachache's "Countdown Start" on GO (`Sfx.countdown_go`, CC0),
 and iainmccurdy's "Timer Ticking" (CC BY 4.0, cut to 10 s and raised 3 dB to
 sit with the other clips) under the last ten seconds of a match, a trial or
 an overtime period (`TimeTrialScreen.TICK_FROM_S`, its own player that
-pauses with the tree; stopped at the buzzer and on leaving). The
+pauses with the tree; stopped at the buzzer and on leaving). Time up is EagleStealthTeam's "Analog Timer" ring
+(CC0, lowered 5 dB to the chimes' ~-21 LUFS; `Sfx.buzzer`), in place of
+the old synthetic buzzer. The
 opponent's window sits under the row at the right margin in a frame of their
 colour with a dithered shadow (`PipFrame`), OPP top-left, a minimize button
 top-right and their loadout hanging off the bottom as chips; minimized it is
