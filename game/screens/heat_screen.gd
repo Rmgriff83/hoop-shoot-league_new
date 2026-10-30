@@ -10,7 +10,9 @@ const PIP_SIZE := Vector2i(216, 384)
 const PIP_SIZE_LEAGUE := Vector2i(168, 298)
 ## The opponent's window (design "League Match HUD"): under the top row at
 ## the right margin, framed in their shooter colour with a dithered shadow.
-const PIP_Y := 116.0
+## The window's top (4a, 2026-10-30: 256 on the design's iPhone, under the
+## 120-tall score box).
+const PIP_Y := 157.0
 const PIP_FRAME := 3.0
 const AI_SFX_GAIN_DB := -9.0
 ## Card tray: three slots on the left edge, inside the UI zone (above the flick
@@ -86,6 +88,7 @@ func _after_ready() -> void:
 	_opp_color = chip["color"]
 	_opp_short = str(chip["text"])
 	_hud.set_heat(true, _opp_short, _opp_color)
+	_lock_pause_online()
 	var list := []
 	for sp in _spots:
 		var pos: Vector3 = sp["pos"]
@@ -211,6 +214,7 @@ func _restage(cfg: Dictionary) -> void:
 	_opp_color = chip["color"]
 	_opp_short = str(chip["text"])
 	_hud.set_heat(true, _opp_short, _opp_color)
+	_lock_pause_online()
 	_rebuild_tray()
 	if _pip_layer != null:
 		_pip_layer.free()
@@ -246,6 +250,20 @@ var _online: Node = null
 var _shot_n := 0
 var _period_sent := -1
 var _pending_card: Dictionary = {}
+
+
+## Online the match never stops for one side (design 4a, 2026-10-30): the
+## pause is dimmed with an orange slash and does nothing — the other phone's
+## clock runs on.
+func _lock_pause_online() -> void:
+	if _pause_button != null:
+		_pause_button.disabled = heat.remote
+
+
+func pause_game() -> void:
+	if heat != null and heat.remote:
+		return
+	super()
 
 
 ## The room client App opened: their messages drive heat's remote side; our
@@ -503,11 +521,11 @@ class TrayCard extends Control:
 			tag_glyph.icon_name = "cards/glyph_fire"
 			tag_glyph.queue_redraw()
 		if kind == "wait":
-			_sb.bg_color = Color(RetroTheme.SCENE_OUTLINE, 0.85)
+			_sb.bg_color = Color(RetroTheme.SCENE_OUTLINE, 0.9)
 			_sb.border_color = RetroTheme.SCENE_TEXT
 			face.modulate = Color(1, 1, 1, 0.7)
 		elif kind == "fire":
-			_sb.bg_color = Color(RetroTheme.LIGHT["orange"], 0.9)
+			_sb.bg_color = Color(RetroTheme.LIGHT["orange"], 0.95)
 			_sb.border_color = RetroTheme.LIGHT["orange"]
 			face.modulate = Color.WHITE
 		else:
@@ -843,7 +861,7 @@ static func _card_marquee(card_id: String, against_me: bool) -> String:
 	return "OPP %s" % str(card.get("name", card_id)).to_upper()
 
 
-## Screen point of the player's hoop (where a self card flies to) — raw
+## Screen point of the player's hoop (where their card on you flies to) — raw
 ## screen px: the deal layer is anchored.
 func _hoop_point() -> Vector2:
 	var cam := get_viewport().get_camera_3d()
@@ -866,7 +884,10 @@ func _show_card_play(card_id: String, by_ai: bool, target: String) -> void:
 	var cname: String = str(card.get("name", card_id))
 	var on_you := target == Heat.PLAYER
 	var from: Rect2 = Rect2(_pip_point() - DEAL_SMALL * 0.5, DEAL_SMALL) if by_ai else _dealt_from
-	var to: Vector2 = _hoop_point() if on_you else _pip_point()
+	# Every card YOU play ends in the opponent's window — the self cards too
+	# (Ross, 2026-10-30: never into your own view of the hoop); theirs still
+	# fly to whom they target.
+	var to: Vector2 = _hoop_point() if by_ai and on_you else _pip_point()
 	var copy := HudCopy.deal_toast(cname, on_you, _opp_short)
 	_hud.card_toast(str(copy["title"]), str(copy["sub"]), card, str(copy["target"]), RetroTheme.LIGHT["orange"] if by_ai else LeagueContext.BLUE)
 	_deal_card(card, from, to)
@@ -1144,6 +1165,7 @@ func _handle_event(ev: Dictionary) -> void:
 			# GO is the league's orange toast (design 4a), not the solo banner;
 			# an OT tip-off keeps the carried score on the board.
 			_court.arcade_chase()
+			Sfx.countdown_go()
 			_hud.go_toast()
 			_court.info.set_text("")
 			_court.show_score(heat.player.score if heat.ot > 0 else 0)
@@ -1306,6 +1328,7 @@ func _process(dt: float) -> void:
 	_refresh_opp_chips()
 	_refresh_tray()
 	_hud.set_ball_wait(heat.ball_wait() if heat.player.phase == TimeTrial.PHASE_RUNNING and not heat.player.holding else 0.0)
+	_hud.set_side_tags(heat.player.streak, heat.player.iced, heat.ai.streak, heat.ai.iced)
 	_watch_report(dt)
 
 

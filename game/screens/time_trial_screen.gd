@@ -439,11 +439,13 @@ func _add_back_button() -> void:
 ## keeps processing so its buttons work while paused. Leaving the screen
 ## unpauses.
 var _pause_layer: PauseMenu
+var _pause_button: IconButton
 
 
 func _add_pause_button(layer: CanvasLayer) -> void:
 	var b := IconButton.new("pause", Hud.ROW_H)   # the 120 px pause (5a / 4a, 2026-10-26)
 	b.name = "PauseButton"
+	_pause_button = b
 	b.position = UiLayout.hud_pos(Vector2(36, 32))
 	b.pressed.connect(pause_game)
 	layer.add_child(b)
@@ -625,6 +627,7 @@ func _exit_tree() -> void:
 	if App.room != null and bool(App.next_heat.get("remote", false)) and not _finished_handed_off:
 		App.cancel_online()   # quitting an online heat forfeits it
 	get_tree().paused = false
+	Sfx.timer_tick_stop()
 	if _court != null:
 		_court.leave_interactables()
 	Sfx.stop_ambience()
@@ -1359,6 +1362,8 @@ func _process(dt: float) -> void:
 	_court.step_net(dt, trial.balls())
 	if not _match_held():
 		_hud.update_clock(trial.time_left, trial.countdown, trial.phase)
+		_countdown_beep()
+		_timer_tick()
 	# The city scoreboard's clock and period (practice has no clock: blank).
 	if not _practice:
 		_court.set_clock(trial.time_left)
@@ -1378,11 +1383,41 @@ func _step_rules(dt: float) -> void:
 		_handle_event(ev)
 
 
+## A beep as each countdown digit shows (3, 2, 1); re-armed once the
+## countdown is over, so an overtime count beeps again.
+var _beeped_digit := -1
+
+
+func _countdown_beep() -> void:
+	if trial.phase != TimeTrial.PHASE_COUNTDOWN:
+		_beeped_digit = -1
+		return
+	var d := ceili(trial.countdown)
+	if d > 0 and d != _beeped_digit:
+		_beeped_digit = d
+		Sfx.countdown_beep()
+
+
+## The ticking timer under the last TICK_FROM_S seconds of a timed run (a
+## match, a trial, each overtime period); stopped at the buzzer.
+const TICK_FROM_S := 10.0
+
+
+func _timer_tick() -> void:
+	var on := not _practice and trial.phase == TimeTrial.PHASE_RUNNING \
+		and trial.time_left > 0.0 and trial.time_left <= TICK_FROM_S
+	if on:
+		Sfx.timer_tick_start()
+	else:
+		Sfx.timer_tick_stop()
+
+
 func _handle_event(ev: Dictionary) -> void:
 	match ev["kind"]:
 		"go":
 			_court.arcade_chase()
 			if not _practice:
+				Sfx.countdown_go()
 				_hud.banner("GO!", Color(0.4, 0.9, 0.55))
 				_court.info.set_text("")
 				_court.show_score(0)

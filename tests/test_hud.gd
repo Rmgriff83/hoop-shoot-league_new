@@ -112,7 +112,7 @@ func _widgets(t) -> void:
 	t.ok(absf(chip.size.y - (Toast.SIDE_SMALL_H + ShadowStyle.OFFSET)) < 0.5, "…72 tall (design 5a)")
 	t.ok(chip.size.x >= Toast.SIDE_SMALL_MIN_W, "…at least 300 wide (%.0f)" % chip.size.x)
 	t.ok(chip.mode == Toast.Mode.SIDE and chip.anchor_left == 0.0 and absf(chip.home_x() - Toast.SIDE_MARGIN) < 0.5, "…hangs off the left edge, 36 in")
-	t.ok(absf((chip.offset_top + chip.offset_bottom - ShadowStyle.OFFSET) / 2.0 - Hud.TOAST_Y) < 1.0, "…centred a third of the way up (y 853)")
+	t.ok(absf((chip.offset_top + chip.offset_bottom - ShadowStyle.OFFSET) / 2.0 - Hud.TOAST_Y) < 1.0, "…centred at y 888 (1090 on the design's iPhone, 2026-10-30)")
 	t.ok(not chip.staying(), "…and goes by itself")
 	t.ok(hud.find_child("Banner", true, false) == null and hud.find_child("Note", true, false) == null, "the centre banner and note are gone")
 	hud.banner("30s MODE: hoop on the move", Color(1.0, 0.75, 0.3))
@@ -128,23 +128,35 @@ func _widgets(t) -> void:
 	hud.hide_toast()
 	hud.hide_countdown_toast()
 	hud.set_heat(true, "OLLIE", Color("#3E7C4F"))
-	t.ok(hud.find_child("YouCard", true, false) is ShadowPanel and hud.find_child("OppCard", true, false) is ShadowPanel, "a heat shows the two side cards")
+	var box: ShadowPanel = hud.find_child("ScoreBox", true, false)
+	t.ok(box != null and box.find_child("YouRow", true, false) != null and box.find_child("OppRow", true, false) != null, "a heat shows the score box: YOU over the opponent (4a, 2026-10-30)")
+	t.eq(box.position.x, Hud.BOX_POS.x, "…beside the pause")
+	t.eq((hud.find_child("Clock", true, false) as Control).position.x, Hud.HEAT_CLOCK_POS.x, "…and the clock moves to the row's right end")
 	t.ok(not hud.find_child("ScoreCard", true, false).visible and not hud.find_child("BestChip", true, false).visible, "and hides the score card and chip")
-	t.eq((hud.find_child("OppCard", true, false) as ShadowPanel).color, Color("#3E7C4F"), "the opponent's card in their colour")
+	t.eq((box.find_child("OppRow", true, false).find_child("Side", true, false) as Label).text, "OLLIE", "the opponent's first name on the second line")
 	# Restaged (an online room's real config, a rematch; Ross 2026-10-27): one
-	# pair of cards, not a stale "0" showing through the new faces.
+	# box, not a stale "0" showing through the new face.
 	hud.set_heat(true, "GLASS", Color("#2E5C8A"))
-	var pairs := 0
+	var boxes := 0
 	for c in hud.find_children("*", "ShadowPanel", true, false):
-		if c.name == "YouCard" or c.name == "OppCard":
-			pairs += 1
-	t.eq(pairs, 2, "a second set_heat replaces the side cards")
-	t.eq((hud.find_child("OppCard", true, false).find_child("Side", true, false) as Label).text, "GLASS", "…with the new opponent")
+		if c.name == "ScoreBox":
+			boxes += 1
+	t.eq(boxes, 1, "a second set_heat replaces the box")
+	t.eq((hud.find_child("ScoreBox", true, false).find_child("OppRow", true, false).find_child("Side", true, false) as Label).text, "GLASS", "…with the new opponent")
 	hud.set_score(12)
 	hud.set_opponent_score(9)
 	for i in 120:
 		hud._process(1.0 / 60.0)
 	t.eq(hud.side_texts(), ["12", "9"], "the sides count up to their scores")
+	var you_v: Label = hud.find_child("ScoreBox", true, false).find_child("YouRow", true, false).find_child("Value", true, false)
+	var opp_v: Label = hud.find_child("ScoreBox", true, false).find_child("OppRow", true, false).find_child("Value", true, false)
+	t.ok(you_v.get_theme_color("font_color") == Hud.GOLD and opp_v.get_theme_color("font_color") == Hud.CREAM, "the one ahead is gold")
+	# The tags: the streak from 2, ICED over it.
+	hud.set_side_tags(1, false, 0, false)
+	t.eq(hud.tag_texts(), ["", ""], "no tag under 2 in a row")
+	hud.set_side_tags(3, false, 2, true)
+	t.eq(hud.tag_texts(), ["3", "ICED"], "a 3-make streak, and the opponent ICED")
+	t.eq(Hud.tag_text(5, true), "ICED", "ICED wins over a streak")
 	hud.set_ot(1)
 	t.ok(hud.find_child("OtTag", true, false).visible and (hud.find_child("OtTag", true, false) as Label).text == "OT1", "the OT tag")
 	# The league's toasts (design 4a): the countdown is a chip, STARTS IN over the digit.

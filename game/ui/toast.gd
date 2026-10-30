@@ -24,7 +24,7 @@ extends Control
 
 enum Mode { CENTER, SIDE }
 
-const FILL := Color("#1B1815", 0.85)
+const FILL := Color("#1B1815", 0.95)   # design 4a, 2026-10-30 (was .85)
 # Centre mode.
 const SLIDE_PX := 24.0
 const SLIDE_S := 0.35

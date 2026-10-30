@@ -723,21 +723,39 @@ equips it (the ball globally, the net on this court — docs/LOCKER.md → NETS)
 and closes; the dim, its X or the tile again close it; a tile with one
 owned option shows no caret and does not open.
 
-**League match** (design "League Match HUD", `game/screens/heat_screen.gd`):
-the same row with two 162×50 score cards in place of SCORE — YOU in orange,
-the opponent's first name in their shooter colour — a gold `OT1` tag in the
-clock card in overtime, and the ball-return wait as the mini toast
+**League match** (design "League Match HUD" 4a, `game/screens/heat_screen.gd`;
+the 2026-10-30 pass): the same row with one 344×120 **score box** beside the
+pause in place of SCORE — YOU on an orange band over the opponent's first
+name under a rule, each with its score (gold for whoever is ahead) and a tag:
+**ICED** with the snowflake while their rim is iced, else the flame and
+their streak from 2 makes in a row (`Hud.set_side_tags`, fed every frame from
+both sides' `TimeTrial.streak` / `iced`; `assets/ui/cards/snow_a.png`,
+`flame_a.png`) — the clock card moved to the row's right end, a gold `OT1`
+tag in it in overtime. **Online the pause is off**: a dim face with an
+orange slash (`IconButton` "pause" when disabled), and `pause_game` does
+nothing (the other phone's clock runs on). The opponent's window now hangs
+at 256 and the toasts centre at 1090 on the design's iPhone (`PIP_Y` 157,
+`Hud.TOAST_Y` 888 in band px), and the ball-return wait as the mini toast
 (2026-10-25: the ball beside `0.8S`, 60 tall, hugging its words, the
 seconds ticking down in place; it lives 1.7 s and fades by itself, reading
 `0.0S` once the ball is ready; any other notice takes the slot —
-`Hud.set_ball_wait`, `HudCopy.WAIT_TOAST_S`). The
+`Hud.set_ball_wait`, `HudCopy.WAIT_TOAST_S`). **Sounds** (2026-10-30, every
+timed mode): a beep on each countdown digit (`Sfx.countdown_beep`, Ross's
+own clip), stomachache's "Countdown Start" on GO (`Sfx.countdown_go`, CC0),
+and iainmccurdy's "Timer Ticking" (CC BY 4.0, cut to 10 s and raised 3 dB to
+sit with the other clips) under the last ten seconds of a match, a trial or
+an overtime period (`TimeTrialScreen.TICK_FROM_S`, its own player that
+pauses with the tree; stopped at the buzzer and on leaving). The
 opponent's window sits under the row at the right margin in a frame of their
 colour with a dithered shadow (`PipFrame`), OPP top-left, a minimize button
 top-right and their loadout hanging off the bottom as chips; minimized it is
 a chip in their colour with their score and a restore glyph. The card tray
 (`TrayCard`) puts each card on a dithered ink shadow with a press state and a
 chip across its middle for WAIT (dimmed) or the fire window's seconds. A
-played card grows in the middle over its shadow then flies to its target,
+played card grows in the middle over its shadow then flies on — every card
+YOU play ends in the opponent's window (their PiP, or its chip when
+minimized), self cards too (Ross, 2026-10-30); theirs fly to whom they
+target —
 while the card toast slides in from the edge (design 4a, 2026-10-24;
 `Hud.card_toast`, `Toast.set_card`, `HudCopy.deal_toast`): the card's 54×72
 thumb with its fx loop over a hard ink shadow, `DEEP FREEZE` over `PLAYED ON

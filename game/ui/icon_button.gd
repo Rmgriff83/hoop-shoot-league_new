@@ -39,6 +39,9 @@ func _init(p_kind := "locker", p_size := SIZE) -> void:
 
 
 func _draw() -> void:
+	if kind == "pause" and disabled:
+		_draw_pause_off()
+		return
 	ShadowStyle.draw(self, size, COLOR, button_pressed, is_hovered(), disabled)
 	var c := (size - Vector2.ONE * ShadowStyle.OFFSET) / 2.0
 	if button_pressed:
@@ -99,3 +102,24 @@ func _note(c: Vector2, col: Color) -> void:
 	draw_rect(Rect2(c + Vector2(-1, -14), Vector2(4, 24)), col)
 	draw_rect(Rect2(c + Vector2(3, -14), Vector2(8, 4)), col)
 	draw_rect(Rect2(c + Vector2(7, -11), Vector2(4, 8)), col)
+
+
+## The pause online (design 4a, 2026-10-30): no shadow, a dim face under a
+## faint edge, the bars at 45 %, a 6 px orange slash at 45° running 6 px
+## past the face each way — the match cannot stop for one side.
+func _draw_pause_off() -> void:
+	var face := size - Vector2.ONE * ShadowStyle.OFFSET
+	var k := maxf(1.0, roundf(face.x / 50.0))
+	var c := face / 2.0
+	var a := 0.85
+	draw_rect(Rect2(Vector2.ZERO, face), Color(20.0 / 255.0, 16.0 / 255.0, 14.0 / 255.0, 0.55 * a))
+	draw_rect(Rect2(Vector2.ZERO, face), Color(1, 1, 1, 0.45 * a), false, ShadowStyle.EDGE)
+	for i in 2:
+		draw_rect(Rect2(Vector2(c.x - 9 * k + i * 12 * k, c.y - 10 * k), Vector2(6, 20) * k), Color(1, 1, 1, 0.45 * a))
+	# The slash, with a 3 px ink drop.
+	var half := (face.x + 12.0) * 0.5
+	var dir := Vector2(1, -1).normalized()
+	var from := c - dir * half
+	var to := c + dir * half
+	draw_line(from + Vector2(3, 3), to + Vector2(3, 3), Color(RetroTheme.SCENE_OUTLINE, a), 6.0)
+	draw_line(from, to, Color(RetroTheme.LIGHT["orange"], a), 6.0)

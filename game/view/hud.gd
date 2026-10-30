@@ -12,10 +12,13 @@ extends CanvasLayer
 ## calls are rim pops off the hoop). All Controls are decorative →
 ## mouse_filter IGNORE so flicks pass
 ## through; everything sits above the flick input's grab line. Heat mode
-## (design "League Match HUD") swaps the score card for two 162×50 cards —
-## YOU in orange, the opponent's first name in their shooter colour — puts
-## a gold OT tag in the clock card in overtime, and shows the ball-return
-## wait as the mini toast (the ball and `0.8S`, 2026-10-25). Every toast
+## (design "League Match HUD" 4a, 2026-10-30 pass) swaps the score card for
+## one 344×120 box beside the pause — YOU on an orange band over the
+## opponent's first name under a rule, each with its score (gold for the
+## one ahead) and a tag: ICED (the snowflake) while their rim is iced, else
+## the flame and their streak from 2 makes — moves the clock card to the
+## row's right end, puts a gold OT tag in it in overtime, and shows the
+## ball-return wait as the mini toast (the ball and `0.8S`, 2026-10-25). Every toast
 ## leaves by fading where it is (design 4a's latest pass). Copy from HudCopy (pure).
 ## An ANCHORED layer since Ross's 2026-10-26 pass: every position here is a
 ## band design position mapped through UiLayout.hud_pos — the top row under
@@ -37,13 +40,20 @@ const BEST_POS := Vector2(520, 32 + 120 + 22)
 const BEST_SIZE := Vector2(164, 60)
 const TOP_POS := Vector2(520, 32 + 120 + 22 + 60 + 14)
 const TOP_SIZE := Vector2(164, 60)
-const YOU_POS := Vector2(340, 32)
-const OPP_POS := Vector2(522, 32)
-const SIDE_SIZE := Vector2(162, 60)
-## The toasts (designs 4a / 5a, 2026-10-24): the countdown chip and the
-## notice chip both hang off the screen's edge (App.hud_side) with their
-## centre a third of the way up — clear of the opponent window and the hoop.
-const TOAST_Y := 853.0
+## A heat's row (4a, 2026-10-30): the score box beside the pause, the clock
+## card at the right end.
+const BOX_POS := Vector2(172, 32)
+const BOX_SIZE := Vector2(344, 120)
+const BOX_ROW_H := 52.0
+const HEAT_CLOCK_POS := Vector2(534, 32)
+const ICED_C := Color("#A9E4FF")
+const STREAK_C := Color("#FFB070")
+## A streak shows from this many makes in a row.
+const STREAK_SHOWN := 2
+## The toasts (designs 4a / 5a; 2026-10-30: centred at 1090 on the
+## design's iPhone, under the lower opponent window): the countdown chip and
+## the notice chip both hang off the screen's edge (App.hud_side).
+const TOAST_Y := 888.0
 const GO_TOAST_S := 0.9
 
 var _clock_card: ShadowPanel
@@ -52,10 +62,11 @@ var _toast_small: Toast
 var _clock: Label
 var _ot_tag: Label
 var _score_card: ShadowPanel
-var _you_card: ShadowPanel
-var _opp_card: ShadowPanel
+var _box: ShadowPanel
 var _you_score: Label
 var _opp_score: Label
+var _you_tag: Dictionary = {}   # {box, icon, text} — ICED or the streak
+var _opp_tag: Dictionary = {}
 var _practice_card: ShadowPanel
 var _score: Label
 var _score_caps: Label
@@ -203,6 +214,11 @@ func _process(dt: float) -> void:
 		_opp_spring.step(dt)
 		_you_score.text = str(roundi(_score_spring.value))
 		_opp_score.text = str(roundi(_opp_spring.value))
+		# Gold for whoever is ahead (by the real scores, not the springs).
+		var you := roundi(_score_spring.target)
+		var opp := roundi(_opp_spring.target)
+		_you_score.add_theme_color_override("font_color", GOLD if you > opp else CREAM)
+		_opp_score.add_theme_color_override("font_color", GOLD if opp > you else CREAM)
 	else:
 		_score.text = str(roundi(_score_spring.value))
 
@@ -210,43 +226,138 @@ func _process(dt: float) -> void:
 # ---- modes -----------------------------------------------------------------------
 
 
-## A heat: two score cards on the row — YOU (orange) and the opponent's first
-## name in their shooter colour — in place of the SCORE card. Called again
-## when the heat is restaged (an online room's real config after the
-## pre-match page, a rematch): the old pair goes first, or its stale "0"
-## would show through the new see-through faces (Ross, 2026-10-27).
-func set_heat(on: bool, opp_label := "OPP", opp_color := LeagueContext.PINE) -> void:
+## A heat: the score box on the row in place of the SCORE card — YOU on
+## the orange band over the opponent's first name — and the clock card at
+## the row's right end. Called again when the heat is restaged (an online
+## room's real config after the pre-match page, a rematch): the old box goes
+## first, or its stale "0" would show through the new see-through face
+## (Ross, 2026-10-27). `_opp_color` is no longer worn on the row (the
+## opponent window keeps it).
+func set_heat(on: bool, opp_label := "OPP", _opp_color := LeagueContext.PINE) -> void:
 	_heat = on
 	if not on:
 		return
 	_score_card.visible = false
 	_best_chip.visible = false
 	_top_chip.visible = false
-	for old in [_you_card, _opp_card]:
-		if is_instance_valid(old):
-			old.free()
-	_you_card = _card(RetroTheme.c("orange"), YOU_POS, SIDE_SIZE, 0.32, 14.0)
-	_you_card.name = "YouCard"
-	_you_score = _side(_you_card, "YOU")
-	_opp_card = _card(opp_color, OPP_POS, SIDE_SIZE, 0.42, 14.0)
-	_opp_card.name = "OppCard"
-	_opp_score = _side(_opp_card, opp_label.to_upper())
+	_clock_card.position.x = HEAT_CLOCK_POS.x
+	if is_instance_valid(_box):
+		_box.free()
+	_box = _card(CREAM, BOX_POS, BOX_SIZE, 0.32, 18.0)
+	_box.name = "ScoreBox"
+	var rows := _vbox(0)
+	rows.name = "Rows"
+	_box.add_child(rows)
+	var you := _box_row("You", "YOU", true)
+	rows.add_child(you["row"])
+	_you_score = you["score"]
+	_you_tag = you["tag"]
+	var opp := _box_row("Opp", opp_label.to_upper(), false)
+	rows.add_child(opp["row"])
+	_opp_score = opp["score"]
+	_opp_tag = opp["tag"]
 
 
-func _side(card: ShadowPanel, label: String) -> Label:
-	var row := _hbox(8)
-	var l := _text(label, 20)
-	l.name = "Side"
-	l.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	l.clip_text = true
-	row.add_child(l)
-	var v := _text("0", 30, CREAM, true)
+## One line of the box: the name, its tag, the score; YOU on the orange band
+## (reaching the box's edges), the opponent under a rule.
+func _box_row(name_: String, label: String, band: bool) -> Dictionary:
+	var row := BoxRow.new(band)
+	row.name = name_ + "Row"
+	row.custom_minimum_size = Vector2(0, BOX_ROW_H)
+	var h := _hbox(12)
+	UiLayout.full_rect(h)
+	row.add_child(h)
+	var n := _text(label, 20, CREAM, true)
+	n.name = "Side"
+	n.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	n.size_flags_vertical = Control.SIZE_FILL
+	h.add_child(n)
+	var tag := _hbox(4)
+	tag.name = "Tag"
+	tag.visible = false
+	tag.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var icon := TextureRect.new()
+	icon.name = "TagIcon"
+	icon.custom_minimum_size = Vector2(18, 18)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_SCALE
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	icon.size_flags_vertical = Control.SIZE_SHRINK_END
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tag.add_child(icon)
+	var tt := _text("", 14, CREAM, true)
+	tt.name = "TagText"
+	tt.size_flags_vertical = Control.SIZE_SHRINK_END
+	tag.add_child(tt)
+	h.add_child(tag)
+	var gap := Control.new()
+	gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(gap)
+	var v := _text("0", 32, CREAM, true)
 	v.name = "Value"
 	v.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	row.add_child(v)
-	card.add_child(row)
-	return v
+	v.size_flags_vertical = Control.SIZE_FILL
+	h.add_child(v)
+	return {"row": row, "score": v, "tag": {"box": tag, "icon": icon, "text": tt}}
+
+
+## Each side's tag (design 4a, 2026-10-30): ICED with the snowflake while
+## their rim is iced, else the flame and their streak once it reaches
+## STREAK_SHOWN. Cheap to call every frame: it only touches what changed.
+func set_side_tags(you_streak: int, you_iced: bool, opp_streak: int, opp_iced: bool) -> void:
+	if not _heat:
+		return
+	_set_tag(_you_tag, you_streak, you_iced)
+	_set_tag(_opp_tag, opp_streak, opp_iced)
+
+
+static func tag_text(streak: int, iced: bool) -> String:
+	if iced:
+		return "ICED"
+	return str(streak) if streak >= STREAK_SHOWN else ""
+
+
+func _set_tag(tag: Dictionary, streak: int, iced: bool) -> void:
+	if tag.is_empty():
+		return
+	var text := tag_text(streak, iced)
+	var box: Control = tag["box"]
+	var label: Label = tag["text"]
+	if label.text == text and box.visible == (text != ""):
+		return
+	box.visible = text != ""
+	label.text = text
+	label.add_theme_color_override("font_color", ICED_C if iced else STREAK_C)
+	(tag["icon"] as TextureRect).texture = load("res://assets/ui/cards/%s.png" % ("snow_a" if iced else "flame_a"))
+
+
+## The tags as they read: [you, opponent] ("" when hidden), for tests.
+func tag_texts() -> Array:
+	var out := []
+	for tag in [_you_tag, _opp_tag]:
+		out.push_back((tag["text"] as Label).text if not tag.is_empty() and (tag["box"] as Control).visible else "")
+	return out
+
+
+## The box's line under the YOU row, or YOU's orange band, drawn past the
+## row to the box's inner edges (the design's margin 0 -16px).
+class BoxRow extends Control:
+	var band := false
+
+	func _init(p_band: bool) -> void:
+		band = p_band
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+
+	func _draw() -> void:
+		if band:
+			var r := Rect2(Vector2(-16, 0), Vector2(size.x + 32, size.y))
+			var o := RetroTheme.LIGHT["orange"] as Color
+			draw_rect(r, Color(o, 0.55))
+			draw_texture_rect(ShadowStyle.dot_tex(), r, true, Color(o, ShadowStyle.DOT_ALPHA))
+		else:
+			draw_rect(Rect2(Vector2.ZERO, Vector2(size.x, 2)), Color(1, 1, 1, 0.3))
 
 
 func set_opponent_score(score: int) -> void:

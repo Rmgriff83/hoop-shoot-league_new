@@ -27,6 +27,7 @@ const MISS_RATE_LIMIT_S := 0.6
 var _players: Array[AudioStreamPlayer] = []
 var _next := 0
 var _streams := {}          # generic
+var _tick: AudioStreamPlayer   # the last-ten-seconds timer (its own player: one at a time, pauses with the match)
 var _hoop := {}             # "make"/"miss"/"rim"/"board" → Array[AudioStream]
 var _ball := {}             # "bounce"/"pickup"/"release" → Array[AudioStream]
 ## Recorded contact sounds that belong to the WORLD rather than to any cosmetic
@@ -62,10 +63,16 @@ func _ready() -> void:
 		"ice_freeze", "ice_crack_0", "ice_crack_1", "ice_shatter",
 		"peggy_press", "peggy_servo", "peggy_ticket", "peggy_peg_0", "peggy_peg_1", "peggy_peg_2",
 		"peggy_win", "peggy_jackpot", "match_loss", "chime_win", "chime_big", "level_up", "swish_register", "streak_coin", "match_defeat", "ticket_shuffle",
+		"countdown_beep", "countdown_go",
 		"click_0", "click_1", "click_2", "click_3", "click_4",
 		"fx/fire_burst", "fx/ice_form", "fx/ice_break", "fx/ice_swish", "fx/fire_out",
 	]:
 		_streams[name_] = load("res://assets/audio/%s.wav" % name_)
+	_tick = AudioStreamPlayer.new()
+	_tick.name = "TimerTick"
+	_tick.bus = SFX_BUS
+	_tick.stream = load("res://assets/audio/timer_tick.wav")
+	add_child(_tick)
 	for i in POOL:
 		var p := AudioStreamPlayer.new()
 		p.bus = SFX_BUS
@@ -828,6 +835,35 @@ func score_pop(is_swish: bool) -> void:
 
 func buzzer() -> void:
 	_play("buzzer")
+
+
+## The match countdown (Ross, 2026-10-30): a single beep on each of 3, 2, 1
+## (his own clip, no credit), then stomachache's "Countdown Start" (CC0,
+## credited) on GO.
+func countdown_beep() -> void:
+	_play("countdown_beep", -2.0)
+
+
+func countdown_go() -> void:
+	_play("countdown_go")
+
+
+## The last ten seconds of a match or a time trial (Ross, 2026-10-30):
+## iainmccurdy's "Timer Ticking" (credited), cut to 10 s and lifted 3 dB to
+## sit with the other clips. One at a time; it pauses with the tree.
+func timer_tick_start() -> void:
+	if _tick != null and not _tick.playing:
+		_tick.volume_db = gain_db
+		_tick.play()
+
+
+func timer_tick_stop() -> void:
+	if _tick != null and _tick.playing:
+		_tick.stop()
+
+
+func timer_tick_playing() -> bool:
+	return _tick != null and _tick.playing
 
 
 ## Hot streak: the rim catching fire (Fire Burst by SilverIllusionist, credited).
