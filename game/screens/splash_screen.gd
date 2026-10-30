@@ -133,7 +133,7 @@ func _build_ui() -> void:
 		b.add_child(ic)
 		_ui.add_child(b)
 	# The two buttons, parked low and clear until the sign is lit.
-	var primary := _button(primary_label(App.player_created()), "icon_ball", BUTTON_TOP)
+	var primary := _button(primary_label(App.player_created()), "icon_neonball", BUTTON_TOP)
 	primary.name = "Primary"
 	primary.pressed.connect(_continue)
 	var settings := _button("SETTINGS", "icon_gear", BUTTON_TOP + BUTTON_H + BUTTON_GAP)
@@ -169,11 +169,21 @@ func _button(text: String, icon: String, top: float) -> ShadowCard:
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(l)
-	var box := CenterContainer.new()
+	var box := Control.new()
 	box.custom_minimum_size = Vector2(48, 48)
 	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(PixelIcon.new(icon, Vector2(48, 48), 3.0))
+	if icon == "icon_neonball":
+		# The neon ball (design 39a, 2026-10-30): 64 in the 48 slot, its glow
+		# spilling 8 px each way, no drop shadow (the glow is its own).
+		var neon := PixelIcon.new(icon, Vector2(64, 64))
+		neon.name = "Icon"
+		neon.position = Vector2(-8, -8)
+		box.add_child(neon)
+	else:
+		var px := PixelIcon.new(icon, Vector2(48, 48), 3.0)
+		px.name = "Icon"
+		box.add_child(px)
 	row.add_child(box)
 	return b
 

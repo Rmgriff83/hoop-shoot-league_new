@@ -18,6 +18,10 @@ const SPIN_S := 1.8
 const GOLD := Color("#F0B84A")
 const CREAM := RetroTheme.SCENE_TEXT
 const BALL_PX := 112.0
+## The neon ball icon (design 39a, 2026-10-30) draws 150 in the 112 slot:
+## its glow spills 19 px past the ball on every side.
+const NEON_PX := 150.0
+const NEON_SPILL := (NEON_PX - BALL_PX) * 0.5
 const BALL_FLOOR := 538.0      # the ball's bottom at rest (the design's column ends at 560)
 
 var manual := false
@@ -83,12 +87,12 @@ func _init(d: Dictionary, art := "") -> void:
 	_root.add_child(_shadow)
 	_ball = TextureRect.new()
 	_ball.name = "Ball"
-	_ball.texture = PixelIcon.tex("icon_ball")
+	_ball.texture = PixelIcon.tex("icon_neonball")
 	_ball.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	_ball.stretch_mode = TextureRect.STRETCH_SCALE
 	_ball.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_ball.size = Vector2(BALL_PX, BALL_PX)
-	_ball.pivot_offset = Vector2(BALL_PX * 0.5, BALL_PX * 0.5)   # spins about its centre
+	_ball.size = Vector2(NEON_PX, NEON_PX)
+	_ball.pivot_offset = Vector2(NEON_PX * 0.5, NEON_PX * 0.5)   # spins about its centre
 	_ball.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(_ball)
 	# LOADING… · the destination · the line under it.
@@ -242,7 +246,8 @@ func _apply() -> void:
 		squash = (p - 0.84) / 0.16
 	_ball.scale = Vector2(1.0 + 0.18 * squash, 1.0 - 0.18 * squash)
 	# Scaled about its centre, the squashed ball keeps its bottom on the floor.
-	_ball.position = Vector2(360.0 - BALL_PX * 0.5, BALL_FLOOR - BALL_PX - BOUNCE_H * h + BALL_PX * 0.5 * (1.0 - _ball.scale.y))
+	_ball.position = Vector2(360.0 - BALL_PX * 0.5, BALL_FLOOR - BALL_PX - BOUNCE_H * h + BALL_PX * 0.5 * (1.0 - _ball.scale.y)) \
+		- Vector2.ONE * NEON_SPILL
 	_ball.rotation = deg_to_rad(45.0 * floor(fposmod(_t, SPIN_S) / SPIN_S * 8.0))
 	_shadow.scale = Vector2(1.0 - 0.5 * h, 1.0)
 	_shadow.modulate.a = (0.55 - 0.30 * h) / 0.6

@@ -1053,7 +1053,7 @@ the bar shows real progress and the scene's own `load()` calls hit the
 cache; (3) raises the `LoadingScreen` (`game/ui/loading_screen.gd`) only if
 that runs past 0.4 s and keeps it up at least 0.6 s (`LoadingCopy.next_step`):
 the destination's tall art faintly behind (`assets/ui/areas/area_<id>_tall.png`),
-the bouncing pixel ball, LOADING… with the destination in gold and its line
+the bouncing neon ball (`icon_neonball`, the app icon's ball, 150 px in the 112 slot since 2026-10-30; the title's NEW GAME / CONTINUE carries it too, 64 in its 48 slot), LOADING… with the destination in gold and its line
 (`LoadingCopy.dest`: NEW GAME → ARCADE CAGE · YOUR FIRST COURT, CONTINUE →
 WHERE YOU LEFT OFF, a match → LEAGUE · SEASON 2 · DAY 4 · VS OLLIE, a trial
 → TIME TRIAL · 60 S…), the stage line and percentage over the bar, and a tip

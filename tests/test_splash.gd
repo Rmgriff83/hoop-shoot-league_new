@@ -60,7 +60,7 @@ func run(t) -> void:
 	# Copy and routing.
 	t.eq(load("res://game/screens/splash_screen.gd").primary_label(true), "CONTINUE", "a save: CONTINUE")
 	t.eq(load("res://game/screens/splash_screen.gd").primary_label(false), "NEW GAME", "no save: NEW GAME")
-	for n in ["icon_discord", "icon_reddit", "icon_gear", "icon_ball"]:
+	for n in ["icon_discord", "icon_reddit", "icon_gear", "icon_ball", "icon_neonball"]:
 		t.ok(PixelIcon.tex(n) != null, "%s ships" % n)
 	t.eq(PixelIcon.tex("icon_discord").get_width(), 16, "the design's 16 px Discord glyph")
 	var app = Engine.get_main_loop().root.get_node_or_null("App")
