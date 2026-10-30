@@ -169,22 +169,7 @@ func _button(text: String, icon: String, top: float) -> ShadowCard:
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(l)
-	var box := Control.new()
-	box.custom_minimum_size = Vector2(48, 48)
-	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	if icon == "icon_neonball":
-		# The neon ball (design 39a, 2026-10-30): 64 in the 48 slot, its glow
-		# spilling 8 px each way, no drop shadow (the glow is its own).
-		var neon := PixelIcon.new(icon, Vector2(64, 64))
-		neon.name = "Icon"
-		neon.position = Vector2(-8, -8)
-		box.add_child(neon)
-	else:
-		var px := PixelIcon.new(icon, Vector2(48, 48), 3.0)
-		px.name = "Icon"
-		box.add_child(px)
-	row.add_child(box)
+	row.add_child(NewPlayerPage.icon_slot(icon))
 	return b
 
 

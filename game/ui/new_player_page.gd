@@ -113,7 +113,7 @@ func _build() -> void:
 	_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	root.add_child(_status)
 	# LET'S PLAY.
-	_play = big_button("LET'S PLAY", "icon_ball")
+	_play = big_button("LET'S PLAY", "icon_neonball")
 	_play.name = "Play"
 	_play.position = Vector2(LEFT, 1060)
 	_play.pressed.connect(_lets_play)
@@ -210,13 +210,25 @@ static func big_button(text: String, icon: String) -> ShadowCard:
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(l)
-	var box := CenterContainer.new()
+	row.add_child(icon_slot(icon))
+	return b
+
+
+## A big button's 48 px icon slot (the title's buttons share it). The neon
+## ball (design 39a, 2026-10-30) draws 64 in it, its glow spilling 8 px each
+## way, with no drop shadow (the glow is its own); other icons fill it with
+## a 3 px ink drop.
+static func icon_slot(icon: String) -> Control:
+	var box := Control.new()
 	box.custom_minimum_size = Vector2(48, 48)
 	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(PixelIcon.new(icon, Vector2(48, 48), 3.0))
-	row.add_child(box)
-	return b
+	var neon := icon == "icon_neonball"
+	var px := PixelIcon.new(icon, Vector2(64, 64) if neon else Vector2(48, 48), 0.0 if neon else 3.0)
+	px.name = "Icon"
+	px.position = Vector2(-8, -8) if neon else Vector2.ZERO
+	box.add_child(px)
+	return box
 
 
 # ---- the values ----------------------------------------------------------------------
