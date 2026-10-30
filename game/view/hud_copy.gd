@@ -127,24 +127,25 @@ static func pause_context_match(where: String, game: String, opp_first: String, 
 	return pause_context(parts)
 
 
-## The info row under it: a league / online match reads `12 YOU · VS. · 9
-## OLLIE · 41.7 TIME LEFT` (yours gold); cells {v, l, gold} with a {sep}
-## between the scores.
-static func pause_stats_match(you: int, them: int, opp_first: String, left: float) -> Array:
-	return [{"v": str(you), "l": "YOU", "gold": true}, {"sep": true},
-		{"v": str(them), "l": opp_first.to_upper() if opp_first != "" else "THEM", "gold": false},
-		{"v": "%.1f" % maxf(left, 0.0), "l": "TIME LEFT", "gold": false}]
+## The info box under it (43a, 2026-10-30): your line over theirs, then
+## the clock — a league / online match reads YOU 12 / OLLIE 9 · 41.7 TIME
+## LEFT. {rows: [{name, score, mine}], clock, clock_label}.
+static func pause_stats_match(you: int, them: int, opp_first: String, left: float) -> Dictionary:
+	return {"rows": [{"name": "YOU", "score": str(you), "mine": true},
+		{"name": opp_first.to_upper() if opp_first != "" else "THEM", "score": str(them), "mine": false}],
+		"clock": "%.1f" % maxf(left, 0.0), "clock_label": "TIME LEFT"}
 
 
-## A time trial: `18 SCORE · 23.4 TIME LEFT · 31 YOUR BEST`.
-static func pause_stats_trial(score: int, left: float, best: int) -> Array:
-	return [{"v": str(score), "l": "SCORE", "gold": true}, {"v": "%.1f" % maxf(left, 0.0), "l": "TIME LEFT", "gold": false},
-		{"v": str(best), "l": "YOUR BEST", "gold": false}]
+## A time trial: SCORE 18 / YOUR BEST 31 · 23.4 TIME LEFT.
+static func pause_stats_trial(score: int, left: float, best: int) -> Dictionary:
+	return {"rows": [{"name": "SCORE", "score": str(score), "mine": true}, {"name": "YOUR BEST", "score": str(best), "mine": false}],
+		"clock": "%.1f" % maxf(left, 0.0), "clock_label": "TIME LEFT"}
 
 
-## Practice: the score and the makes, no clock.
-static func pause_stats_practice(score: int, makes: int) -> Array:
-	return [{"v": str(score), "l": "SCORE", "gold": true}, {"v": str(makes), "l": "MADE", "gold": false}]
+## Practice: SCORE / MADE, no clock.
+static func pause_stats_practice(score: int, makes: int) -> Dictionary:
+	return {"rows": [{"name": "SCORE", "score": str(score), "mine": true}, {"name": "MADE", "score": str(makes), "mine": false}],
+		"clock": "", "clock_label": ""}
 
 
 ## The warning over an armed QUIT: `TAP AGAIN` and what it costs.

@@ -246,12 +246,15 @@ func _widgets(t) -> void:
 	t.eq(HudCopy.pause_context_match("ARCADE LEAGUE", "d5", "OLLIE KNOTS"), "ARCADE LEAGUE · MATCH 5 · VS OLLIE KNOTS", "a league match's line")
 	t.eq(HudCopy.pause_context_match("ARCADE LEAGUE", "po-sf-2", "OLLIE", 1), "ARCADE LEAGUE · SEMIFINAL · GAME 2 · VS OLLIE · OT1", "a playoff game in overtime")
 	t.eq(HudCopy.pause_context_match("ONLINE", "", "DRE"), "ONLINE · VS DRE", "an online match")
-	t.eq(HudCopy.pause_stats_trial(18, 23.4, 31), [{"v": "18", "l": "SCORE", "gold": true}, {"v": "23.4", "l": "TIME LEFT", "gold": false}, {"v": "31", "l": "YOUR BEST", "gold": false}], "a trial's row")
+	t.eq(HudCopy.pause_stats_trial(18, 23.4, 31), {"rows": [{"name": "SCORE", "score": "18", "mine": true}, {"name": "YOUR BEST", "score": "31", "mine": false}], "clock": "23.4", "clock_label": "TIME LEFT"}, "a trial's box (43a, 2026-10-30)")
+	t.eq(HudCopy.pause_stats_practice(7, 4)["clock"], "", "practice has no clock in the box")
 	t.eq(HudCopy.pause_quit_warning("THIS RUN WON'T COUNT"), "TAP AGAIN\nTHIS RUN WON'T COUNT", "the armed QUIT's warning")
 	t.eq(HudCopy.pause_quit_warning(""), "TAP AGAIN", "…alone when quitting costs nothing")
 	pm.open({"context": HudCopy.pause_context_match("ARCADE LEAGUE", "d5", "OLLIE"), "stats": HudCopy.pause_stats_match(12, 9, "OLLIE", 41.7), "quit_note": HudCopy.pause_quit_note("league")})
 	t.eq((pm.find_child("Context", true, false) as Label).text, "ARCADE LEAGUE · MATCH 5 · VS OLLIE", "the line under PAUSED says where you are")
-	t.eq(pm.info_texts(), ["12 YOU", "VS.", "9 OLLIE", "41.7 TIME LEFT"], "the info row: your score, theirs, the time left")
+	t.eq(pm.info_texts(), ["YOU 12", "OLLIE 9", "41.7 TIME LEFT"], "the info box: your line over theirs, then the time left")
+	t.ok(pm.find_child("Info", true, false) is ShadowPanel and pm.find_child("OptionsHead", true, false) == null, "an orange box; no OPTIONS head (2026-10-30)")
+	t.eq((pm.find_child("Ball", true, false) as Control).size.y, PauseMenu.TILE_H + ShadowStyle.OFFSET, "the tiles are 240 tall")
 	t.eq(HudCopy.pause_resume_sub(-1.0), "BACK TO PRACTICE · NO CLOCK", "practice has no clock")
 	# HUD SIDE (43a, later 2026-10-27): its row opens LEFT / RIGHT above it; a pick sets it, says so and closes.
 	var was_hud: String = app.hud_side

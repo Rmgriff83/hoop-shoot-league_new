@@ -4,8 +4,7 @@ extends CanvasLayer
 ## (Game Center / Play Games) already knows an account other than this one
 ## (docs/BACKEND.md → Platform identity, a 409 on link). USE IT runs
 ## Platform.accept_conflict() (restore + forced pull); NOT NOW keeps this
-## account unlinked. A dim over the screen, a cream dotted card, like
-## NetAreaSheet.
+## account unlinked. A dim over the screen, a cream dotted card.
 
 signal closed
 

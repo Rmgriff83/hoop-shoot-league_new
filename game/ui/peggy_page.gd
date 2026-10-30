@@ -1,55 +1,58 @@
 class_name PeggyPage
 extends HomePage
-## The PEGGY page (docs/LOCKER.md), opened from the locker's PEGGY button:
+## The PEGGY page (docs/LOCKER.md), opened from the locker's PLAY PEGGY:
 ## the carnival drop machine (PeggyMachine) filling the frame under a head
-## of `<` · the level chip with its XP meter · the ticket chip. Tickets only
-## ever buy plays: the PLAY (300) overlay over the machine feeds a ticket
-## (the flight) and credits it — the credit is saved, so leaving and coming
-## back keeps the ticket in and DROP flashing — then the joystick aims and
-## DROP drops. Short of tickets with no credit, PLAY is greyed with NEED n
-## MORE and the cap shows its red X; the joystick still moves the crane. A
-## win pops the prize card over the page: NEW BALL (SET AS YOUR BALL?) or
-## NEW NET (HANG IT ON YOUR COURTS?), EQUIP / KEEP, AGAIN · 300; an epic or
-## legend plate dims harder and turns the rays. `<` returns to the locker.
+## of `< BACK` · the big ticket panel (design "Store and Locker" 30a,
+## 2026-10-30). Tickets only ever buy plays: the big PLAY (300) over the
+## machine, shining, feeds a ticket (the flight) and credits it — the credit
+## is saved, so leaving and coming back keeps the ticket in and DROP
+## flashing — then the joystick aims and DROP drops. Short of tickets with
+## no credit, the small PLAY is greyed with NEED n MORE and the cap shows its
+## red X; the joystick still moves the crane. A win pops the prize card over
+## the page: NEW BALL (SET AS YOUR BALL?) or NEW NET (HANG IT ON YOUR
+## COURTS?), EQUIP / KEEP, AGAIN · 300; an epic or legend plate dims harder
+## and turns the rays. `< BACK` returns to the locker.
 
 const TIER_COLOR := PeggyMachine.TIER_COLOR
 const PLAY_Y := 0.34
 const PLAY_BACK_S := 2.4
 const GREY_EDGE := Color("#7A706A")
 const GREY_TEXT := Color("#A89E94")
+const HEAD_ROW := 104.0
+## The big PLAY (design 30a): 420 wide, 50 / 46 round PLAY 64 and the 30 px price.
+const BIG_PLAY := Vector2(420, 215)
+const SMALL_PLAY_W := 230.0
 
 var _machine: PeggyMachine
-var _badge: LevelBadge
 var _play: ShadowCard
 var _play_need: Label
+var _play_shine: Control
 var _card: Control
 var _rays: PrizeRays
 var _play_back: Tween
 
 
+func _flush_top() -> bool:
+	return true
+
+
 func _build() -> void:
-	# `<` · LVL chip · ....... · tickets
-	var h := head("PEGGY")
-	var title: Label = h.get_node("Title")
-	title.visible = false
-	var back := button("<", CREAM, 24, 52)
-	back.name = "Back"
-	back.custom_minimum_size.x = 52 + ShadowStyle.OFFSET
+	# < BACK · ....... · tickets
+	var h := HBoxContainer.new()
+	h.name = "Head"
+	h.custom_minimum_size = Vector2(0, HEAD_ROW + ShadowStyle.OFFSET)
+	h.mouse_filter = Control.MOUSE_FILTER_PASS
+	body.add_child(h)
+	var back := back_button(24, 28, 16)
+	back.custom_minimum_size.x = 26.0 + _word_w("<", 28) + 16.0 + _word_w("BACK", 24) + 26.0 + ShadowStyle.OFFSET
 	back.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	back.pressed.connect(close)
 	h.add_child(back)
-	h.move_child(back, 0)
-	_badge = LevelBadge.new()
-	_badge.set_level(App.level(), Progression.frac_for(App.xp()))
-	_badge.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	h.add_child(_badge)
-	h.move_child(_badge, 1)
 	var spacer := Control.new()
 	spacer.name = "Spacer"
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(spacer)
-	h.move_child(spacer, 2)
+	h.add_child(ticket_panel())
 	# The stage: the body's expanding row reserves the room; the machine
 	# itself sits UNDER the body in the frame (so the head's `<` and chip
 	# take their taps) and spills past the stage on every side. The body
@@ -69,32 +72,34 @@ func _build() -> void:
 	root.move_child(_machine, 0)
 	stage.item_rect_changed.connect(_fit_machine.bind(stage))
 	_fit_machine(stage)
-	# PLAY (300), over the machine.
+	# PLAY (300), over the machine: big and shining, small and grey while short.
 	_play = ShadowCard.new(RetroTheme.LIGHT["orange"])
 	_play.name = "Play"
-	_play.tint = 0.4
+	_play.tint = 0.55
+	_play_shine = PreMatchPage.Shine.new(2.2, 200.0, 0.6)
+	_play_shine.name = "Shine"
+	_play.add_child(_play_shine)
 	var col := VBoxContainer.new()
 	col.name = "Col"
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
-	col.add_theme_constant_override("separation", 12)
-	col.position = Vector2(28, 18)
 	_play.add_child(col)
-	var big := words("PLAY", 32, true)
+	var big := words("PLAY", 64, true)
 	big.name = "Word"
 	col.add_child(big)
 	var cost := HBoxContainer.new()
 	cost.name = "Cost"
 	cost.alignment = BoxContainer.ALIGNMENT_CENTER
 	cost.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	cost.add_theme_constant_override("separation", 8)
 	col.add_child(cost)
-	cost.add_child(words("(", 16, true))
-	var icon := PixelIcon.new("icon_ticket", Vector2(22, 14))
+	var open := words("(", 16, true)
+	open.name = "Open"
+	cost.add_child(open)
+	var icon := PixelIcon.new("icon_ticket", Vector2(48, 31), 2.0)
 	icon.name = "Icon"
 	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	cost.add_child(icon)
-	var price := words("%d)" % PeggyPrizes.DROP_COST, 16, true)
+	var price := words("%d" % PeggyPrizes.DROP_COST, 30, true)
 	price.name = "Price"
 	cost.add_child(price)
 	_play_need = words("", 16)
@@ -107,23 +112,46 @@ func _build() -> void:
 	_refresh_machine()
 
 
-## The machine over the stage's rect, 50 px past each side, 96 up, 20 down.
+## The machine over the stage's rect, 50 px past each side, 40 up, 12 down
+## (design 30a, 2026-10-30: clear of the taller head, down to the frame's foot).
 func _fit_machine(stage: Control) -> void:
 	if _machine == null:
 		return
 	var top_left := body.position + stage.position
-	_machine.position = top_left + Vector2(-50.0, -96.0)
-	_machine.size = stage.size + Vector2(100.0, 116.0)
+	_machine.position = top_left + Vector2(-50.0, -40.0)
+	_machine.size = stage.size + Vector2(100.0, 52.0)
 
 
+static func _word_w(text: String, px: int) -> float:
+	return UiFont.display().get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(px)).x
+
+
+## PLAY's size and words for its state: big (design 30a) or the small grey
+## one with NEED n MORE (30f).
 func _layout_play() -> void:
-	var col: Control = _play.get_node("Col")
-	var w := 230.0
-	var hgt := 110.0 + (34.0 if _play_need.visible else 0.0)
+	var col: VBoxContainer = _play.get_node("Col")
+	var cost: HBoxContainer = col.get_node("Cost")
+	var short := _play_need.visible
+	var w := SMALL_PLAY_W if short else BIG_PLAY.x
+	var hgt := (110.0 + 34.0) if short else BIG_PLAY.y
+	col.add_theme_constant_override("separation", 12 if short else 24)
+	cost.add_theme_constant_override("separation", 8 if short else 14)
+	var word: Label = col.get_node("Word")
+	word.add_theme_font_size_override("font_size", UiFont.snap(32 if short else 64))
+	word.add_theme_constant_override("outline_size", RetroTheme.OUTLINE if short else 2 * RetroTheme.OUTLINE)
+	var price: Label = cost.get_node("Price")
+	price.text = ("%d)" if short else "%d") % PeggyPrizes.DROP_COST
+	price.add_theme_font_size_override("font_size", UiFont.snap(16 if short else 30))
+	(cost.get_node("Open") as Control).visible = short
+	var icon: PixelIcon = cost.get_node("Icon")
+	icon.custom_minimum_size = Vector2(22, 14) if short else Vector2(48, 31)
 	_play.custom_minimum_size = Vector2(w + ShadowStyle.OFFSET, hgt + ShadowStyle.OFFSET)
 	_play.size = _play.custom_minimum_size
-	col.size = Vector2(w - 56.0, hgt - 36.0)
-	_play.position = Vector2((FRAME_SIZE.x - w) * 0.5, frame_height() * PLAY_Y)
+	col.position = Vector2.ZERO
+	col.size = Vector2(w, hgt)
+	_play_shine.size = Vector2(w, hgt)
+	_play_shine.visible = not short
+	_play.position = Vector2(roundf((FRAME_SIZE.x - w) * 0.5), frame_height() * PLAY_Y)
 
 
 func set_view_active(on: bool) -> void:
@@ -136,7 +164,6 @@ func _refresh_machine() -> void:
 		return
 	_machine.set_slots(App.peggy_slots())
 	_machine.refresh_state()
-	_badge.set_level(App.level(), Progression.frac_for(App.xp()))
 	set_tickets()
 	_refresh_play()
 
@@ -155,7 +182,7 @@ func _refresh_play() -> void:
 		_play_need.text = "NEED %s MORE" % RetroTheme.thousands(short)
 	var grey := short > 0
 	_play.color = GREY_EDGE if grey else RetroTheme.LIGHT["orange"]
-	_play.tint = 0.55 if grey else 0.4
+	_play.tint = 0.55
 	for l in _play.find_children("*", "Label", true, false):
 		(l as Label).add_theme_color_override("font_color", GREY_TEXT if grey else CREAM)
 	var icon: PixelIcon = _play.find_child("Icon", true, false)
@@ -179,7 +206,6 @@ func _on_play() -> void:
 
 func _on_dropped(prize: Dictionary) -> void:
 	set_tickets()
-	_badge.set_level(App.level(), Progression.frac_for(App.xp()))
 	_show_card(prize)
 	if _play_back != null and _play_back.is_valid():
 		_play_back.kill()
@@ -195,10 +221,6 @@ func machine() -> PeggyMachine:
 
 func play_button() -> ShadowCard:
 	return _play
-
-
-func badge() -> LevelBadge:
-	return _badge
 
 
 # ---- the prize card -------------------------------------------------------------------

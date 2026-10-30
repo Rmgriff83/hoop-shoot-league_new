@@ -21,10 +21,10 @@ Ticker      flat strip at the very bottom, scrolling copy from the save
 ```
 No bottom nav: the phone's safe area would push one up, and the space goes to
 the cards. **Locker** (`game/ui/locker_panel.gd`, docs/LOCKER.md): a **page**
-over the area (below) — BALLS, the balls you own (equip via `App.select`),
-and NETS, the nets you own (COTTON / CHAIN sub-tab; a tap opens the
-hang-it-where sheet — any net on any court, or EVERYWHERE); nothing unowned
-is listed. Its PEGGY button opens the
+over the area (below) — BALLS by rarity (tap to arm, again to equip via
+`App.select`) and NETS by kind (dots for the courts each hangs on; a tap
+opens HANG IT ON inline, one button per court you have reached), OWNED or
+ALL (ALL adds ???? tiles for what is not won yet). Its PLAY PEGGY row opens the
 **PEGGY page** (`game/ui/peggy_page.gd`), the carnival drop machine that
 wins balls and nets — tickets buy nothing else; the hoop counter is closed
 for now (`App.HOOPS_IN_LOCKER`). The locker icon carries a gold dot while a
@@ -81,9 +81,10 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
   (654 × 1234 at (30, 20), see-through dotted pieces in the scene colours on
   every palette) slides in from the right over the area, under a light wash
   (`HomePage.WASH`), 0.3 s on the league's quad curve; the full-width dotted
-  CLOSE runs it back. Pages **stack**: PEGGY from the locker slides the
+  CLOSE (`< BACK` on the locker and PEGGY since 2026-10-30) runs it back.
+  Pages **stack**: PEGGY from the locker slides the
   locker out under it to the LEFT and brings it back when it closes
-  (`slide_out(true, false)` / `slide_in(true)`); the locker's CLOSE then
+  (`slide_out(true, false)` / `slide_in(true)`); the locker's BACK then
   returns home. A `rebuild_chrome()` keeps the chrome out while a
   page is open.
 - **The league in context** (`game/ui/league_context.gd`, `LeagueContext`):
@@ -699,10 +700,10 @@ dim over the frozen match, PAUSED in gold over where you are (`ARCADE
 LEAGUE · MATCH 5 · VS OLLIE`, a playoff game `… · SEMIFINAL · GAME 2 · VS
 OLLIE · OT1`, `ARCADE CAGE · TIME TRIAL`, `BEACH · PRACTICE` —
 `HudCopy.pause_context_match`, each screen's `_pause_info`), the **info
-row** under it (`12 YOU · VS. · 9 OLLIE · 41.7 TIME LEFT` in a match, `18
-SCORE · 23.4 TIME LEFT · 31 YOUR BEST` in a trial, score and makes in
-practice; yours gold — `HudCopy.pause_stats_*`), OPTIONS · TAP TO CHANGE
-over three tiles — SHOT HELP (its `icon_aim_*` icon), BALL and NET (their
+box** under it (2026-10-30: an orange box, your line over theirs — `YOU 12`
+over `OLLIE 9` in a match, `SCORE 18` over `YOUR BEST 31` in a trial, SCORE
+over MADE in practice; your score gold — then a rule and the clock with
+TIME LEFT, none in practice; `HudCopy.pause_stats_*`), three 240-tall tiles — SHOT HELP (its `icon_aim_*` icon), BALL and NET (their
 thumbnails) with the value and a gold caret — **HUD SIDE** and **SOUND**
 sharing the row under them, half width each (the value and a gold caret;
 each opens a small menu above it, its notch pointing down at the row: HUD
@@ -788,8 +789,9 @@ skip it (`App.qa_skip_tutorial`) except `--qa-tutorial`.
   empty slots of the dev save).
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-hud` →
   `user://qa/hud_countdown.png`, `hud_live.png`, `hud_pause.png`,
-  `locker_slide.png` (mid-move), `locker_balls.png`, `locker_nets.png`,
-  `locker_nets_chain.png`, `hud_practice.png`, `hud_practice30.png`.
+  `locker_slide.png` (mid-move), `locker_balls.png`, `locker_balls_all.png`,
+  `locker_ball_armed.png`, `locker_nets.png`, `locker_net_sheet.png` (HANG IT
+  ON), `locker_nets_all.png`, `hud_practice.png`, `hud_practice30.png`.
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-tutorial` → the first-shot
   tutorial over a cage trial: `tutorial_00..04.png` (each step mid-demo), `tutorial_result.png`
   (a live flick's verdict), `tutorial_countdown.png` (LET'S PLAY, then the count).

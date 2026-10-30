@@ -24,11 +24,15 @@ const SLIDE := 1.1 * 720.0
 const CREAM := RetroTheme.SCENE_TEXT
 const HEAD_H := 52.0
 const CLOSE_H := 64.0
+## The tall rows of the 2026-10-30 "Store and Locker" pass: BACK, PLAY PEGGY.
+const TALL_H := 84.0
+const TICKETS_SIZE := Vector2(150, 104)
 
 var wash: ColorRect
 var root: Control
 var body: VBoxContainer
 var balance: CoinsPill
+var _ticket_count: Label
 var _slide: Tween
 
 
@@ -76,6 +80,17 @@ func _layout_frame() -> void:
 		root.position = FRAME_POS
 		root.size = FRAME_SIZE
 	body.size = root.size - Vector2(2.0 * PAD, 2.0 * PAD)
+	if _anchored() and _flush_top():
+		# The rows start at the top safe area itself (118 on an iPhone), or
+		# at the usual 40 without a notch.
+		body.position.y = UiLayout.header_top(FRAME_POS.y + PAD) - root.position.y
+		body.size.y = root.size.y - body.position.y - PAD
+
+
+## Whether the body's first row sits right at the top safe area instead of
+## a pad under it (the locker and PEGGY since the 2026-10-30 redesign).
+func _flush_top() -> bool:
+	return false
 
 
 ## Whether the frame follows the screen's edges (most pages) or stays the 1234-tall band.
@@ -137,6 +152,66 @@ func head(title: String, with_chip := true) -> HBoxContainer:
 func set_tickets() -> void:
 	if balance != null:
 		balance.set_coins(App.tickets())
+	if _ticket_count != null:
+		_ticket_count.text = RetroTheme.thousands(App.tickets())
+
+
+## The big ticket panel (design 31a / 30a, 2026-10-30): a 150 × 104 gold
+## face, the ticket and the count over TICKETS.
+func ticket_panel() -> ShadowPanel:
+	var p := ShadowPanel.new(RetroTheme.LIGHT["gold"], 0.0, 0.35)
+	p.name = "Tickets"
+	p.custom_minimum_size = TICKETS_SIZE + Vector2.ONE * ShadowStyle.OFFSET
+	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	var col := VBoxContainer.new()
+	col.name = "Col"
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_theme_constant_override("separation", 10)
+	p.add_child(col)
+	var row := HBoxContainer.new()
+	row.name = "Row"
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", 10)
+	col.add_child(row)
+	var icon := PixelIcon.new("icon_ticket", Vector2(34, 22), 2.0)
+	icon.name = "Icon"
+	icon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(icon)
+	_ticket_count = words("", 24, true)
+	_ticket_count.name = "Count"
+	row.add_child(_ticket_count)
+	var l := words("TICKETS", 14)
+	l.name = "Label"
+	col.add_child(l)
+	set_tickets()
+	return p
+
+
+## `< BACK` (the locker's foot, PEGGY's head; design 31a / 30a, 2026-10-30):
+## a cream face `height` tall, the chevron and the word centred on it.
+func back_button(word_px: int, chevron_px: int, gap: int, height := TALL_H) -> ShadowCard:
+	var b := ShadowCard.new(CREAM)
+	b.name = "Back"
+	b.custom_minimum_size = Vector2(0, height + ShadowStyle.OFFSET)
+	var row := HBoxContainer.new()
+	row.name = "Row"
+	UiLayout.full_rect(row)
+	row.offset_right = -ShadowStyle.OFFSET
+	row.offset_bottom = -ShadowStyle.OFFSET
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_theme_constant_override("separation", gap)
+	b.add_child(row)
+	var chev := words("<", chevron_px, true)
+	chev.name = "Chevron"
+	row.add_child(chev)
+	var w := words("BACK", word_px, true)
+	w.name = "Word"
+	row.add_child(w)
+	b.pressed.connect(close)
+	return b
 
 
 ## A see-through dotted button with its words as its own text (the tabs,

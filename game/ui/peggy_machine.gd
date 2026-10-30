@@ -634,8 +634,10 @@ func _process(delta: float) -> void:
 		var before := _aim
 		set_aim(_aim + tilt * CRANE_V * delta)
 		moving = _aim != before
+	# The shaft points out of the deck, so a turn about its y swings the knob
+	# sideways: +tilt (a drag right) leans it right, with the crane.
 	if _stick != null:
-		_stick.rotation.y = lerpf(_stick.rotation.y, -tilt * 0.45, minf(1.0, 18.0 * delta))
+		_stick.rotation.y = lerpf(_stick.rotation.y, tilt * 0.45, minf(1.0, 18.0 * delta))
 	if moving:
 		if not Sfx.peggy_servo_playing():
 			Sfx.peggy_servo_start()

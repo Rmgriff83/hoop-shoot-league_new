@@ -1,23 +1,35 @@
 # The locker and PEGGY — the collection, and how balls and nets are won (2026-10-01, pages 2026-10-15, the carnival cabinet 2026-10-15)
 
 The **locker** (the ball icon on the home page, `game/ui/locker_panel.gd`)
-is a page over the area (docs/HOME.md → Pages, design "Store and Locker"):
-your collection, nothing more. **BALLS** lists the balls you own in a
-4-wide grid of dotted tiles (the one in use gold, "IN USE"; the rest
-"EQUIP", tap to equip everywhere); **NETS** lists the nets you own, split by
-a **COTTON / CHAIN sub-tab** since each kind hangs on different courts
-(below). The tabs count what you own ("BALLS 9", "NETS 2"). No locked or
-unowned tile is shown: **nothing is bought outright — tickets only ever
+is a page over the area (docs/HOME.md → Pages, design "Store and Locker"
+31a / 31b, redrawn 2026-10-30): your collection. The head is **LOCKER**
+beside the big **ticket panel** (150 × 104 gold: the ticket and the count
+over TICKETS, `HomePage.ticket_panel`), then **PLAY PEGGY** across the page
+(WIN BALLS + NETS · 300 TICKETS ›; a band of light sweeps it while a drop
+is affordable), then the **BALLS / NETS** tabs ("BALLS 9", "NETS 5"), each
+with an **OWNED / ALL** sub-tab and the count beside it ("9 OWNED", or "9 /
+91 OWNED" under ALL). The collection sits in three-wide grids of 200-tall
+dotted tiles with a soft glow behind each picture: **balls by rarity**
+(COMMON · LVL 1, RARE · LVL 1, EPIC · LVL 3, LEGEND · LVL 5 — the rarity
+swatch, the level it first drops at, owned/total; a rarity you own nothing
+of is left out under OWNED) and **nets by kind** (COTTON, CHAIN). **ALL**
+adds a greyed **????** tile for everything not yet won. A ball tile: the
+one in use is gold; the first tap **arms** another (orange, **EQUIP?**,
+let go after 4 s), the second uses it everywhere (`App.select`). The foot
+is **`< BACK`** (84 tall). Nothing is bought outright — **tickets only ever
 buy PEGGY plays, and both the balls and the nets are its prizes** (Ross,
-2026-10-15). The **PEGGY button** beside the ticket chip opens the **PEGGY
-page** (`game/ui/peggy_page.gd`): the carnival drop machine fills the
-frame under `<` · the level chip with its XP meter · the ticket chip. Tap
-**PLAY (300)** over the machine and a ticket flies into the console and
-**credits** it (saved — leave and come back, the ticket is still in and
-DROP still flashing); drive the crane with the joystick; tap **DROP** and
-the puck rattles down the peg board into one of seven bays. Whatever hides
-in that bay is yours. `<` returns to the locker; the locker's CLOSE returns
-home. The hoop counter that used to
+2026-10-15). **PLAY PEGGY** opens the **PEGGY page**
+(`game/ui/peggy_page.gd`, design 30a): the carnival drop machine fills the
+frame under `< BACK` and the ticket panel (the level chip is gone). Tap the
+big shining **PLAY (300)** over the machine and a ticket flies into the
+console and **credits** it (saved — leave and come back, the ticket is
+still in and DROP still flashing); drive the crane with the joystick (the
+knob leans the way you drag, 2026-10-30); tap **DROP** and the puck rattles
+down the peg board into one of seven bays. Whatever hides in that bay is
+yours. Short of a drop, PLAY shrinks to the grey one with NEED n MORE (30f).
+`< BACK` returns to the locker; the locker's `< BACK` returns home. Both
+pages start their rows right at the top safe area (`HomePage._flush_top`).
+The hoop counter that used to
 sit under the balls (buy for tickets, swap) is **closed for now**
 (`App.HOOPS_IN_LOCKER = false`, 2026-10-07): `try_buy("hoop", …)` refuses;
 the player's hoop stays the starter and the beach / city mandate their own.
@@ -59,23 +71,21 @@ itself and the ball's physics (`SimGeometry` net drag / wall restitution,
 the AI calibration, the golden grid). `App.net_kind_for_area` still names a
 hoop's native kind, which is the stock fallback when nothing owned is hung.
 
-- The **NETS tab** lists the styles you own under the COTTON / CHAIN
-  sub-tab (a filter by kind; tile `Net_<id>`, the thumbnail from
-  `assets/textures/nets/thumbs/<id>.png`, rendered by `--qa-net-thumbs` —
-  the net alone, no rim), under a head "COTTON · TAP A NET TO HANG IT", with
-  the kind line ("CHAIN") and a tag: **IN USE ON PARK + CITY** (the gold
-  tile) or **EQUIP**.
-  Tapping a net opens the **hang-it-where sheet** (`game/ui/net_area_sheet.gd`,
-  `NetAreaSheet`, layer 35 over the locker; QA `locker_net_sheet.png`): the
-  net's name and thumbnail, one row per area in `App.AREA_MODES` order
-  (`Area_<id>`: the area, then what hangs there — gold **HANGING** when it is
-  this net; an area the level has not reached reads **LOCKED · LVL n** and
-  does nothing), **EVERYWHERE** (`App.select_net_everywhere`, now every
-  area — PEGGY's prize-card EQUIP uses it too) and **CLOSE**. A row hangs
-  the net on that area (`App.select_net(area, id)`, owned only) and the
-  rows restyle in place; closing refills the tab. **Buying has no UI yet** (2026-10-15): the
-  locker is the collection; `App.try_buy("net", id)` stays wired for the
-  store page to come, and the economy still prices every style.
+- The **NETS tab** (31b, 2026-10-30) lists every net grouped by kind,
+  what you own (tile `Net_<id>`, the rimless thumbnail from
+  `assets/textures/nets/thumbs/<id>.png`, rendered by `--qa-net-thumbs`) and,
+  under ALL, a ???? per net not yet won. A row of **dots** along each tile's
+  top is the courts you have reached (`App.unlocked_areas`), gold where the
+  net hangs; a net hanging anywhere is a gold tile. Tapping a net opens
+  **HANG IT ON** inline, under its row with a notch up to it (the tile turns
+  orange): the name, an X, and one button per reached court — gold
+  **HANGING** or **TAP TO HANG**. A tap hangs it there (`App.select_net`,
+  owned only; each court holds one net, so the one there comes down) and the
+  panel stays open; X or the tile again closes it. (The old hang-it-where
+  sheet with EVERYWHERE is gone; `App.select_net_everywhere` remains for
+  PEGGY's prize-card EQUIP.) **Buying has no UI yet** (2026-10-15):
+  `App.try_buy("net", id)` stays wired for the store page to come, and the
+  economy still prices every style.
 - The **pause menu**'s NET row (docs/HOME.md) cycles every owned net and
   hangs the pick on **that court only**
   (`App.select_net(area, id)`); its BALL row cycles the owned balls and the
@@ -269,5 +279,7 @@ while the crane moves), `peggy_ticket` (the flight), `peggy_peg_0..2`
 QA: `godot --path . --resolution 360x640 -- --qa-peggy` (the locker, PEGGY
 sliding in, PLAY and the ticket flight, the credited cap, the crane at the
 bumper, the drop, the card, AGAIN, the staged epic and net cards, the short
-state, `<` back to the locker, the badge, the NETS tab, both tabs once more);
-`--qa-hud` snaps the locker's slide, BALLS, NETS and the CHAIN sub-tab.
+state, `< BACK` to the locker, the badge, the NETS tab, both tabs once more;
+`peggy_stick_right` is a real drag on the knob); `--qa-hud` snaps the
+locker's slide, BALLS, BALLS under ALL, an armed ball, NETS, HANG IT ON and
+NETS under ALL.

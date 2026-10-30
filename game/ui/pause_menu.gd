@@ -29,6 +29,12 @@ extends CanvasLayer
 ## picks LEFT / RIGHT and closes; SOUND turns MUSIC and SOUND FX on or off
 ## (App.set_music_sound / set_sfx_sound, gold = on) and stays open, the row
 ## summing it up (ALL ON, MUSIC ONLY, FX ONLY, ALL OFF).
+##
+## 2026-10-30 update of 43a: the info row is an orange box — your line over
+## theirs (YOU 12 / OLLIE 9; SCORE / YOUR BEST in a trial), a rule, then the
+## clock and TIME LEFT on the right; OPTIONS · TAP TO CHANGE is gone; the
+## tiles grow to 240 with a 116 picture, and everything under them moves
+## down 30; the popover's cells glow behind their thumbnails.
 
 signal resumed
 signal quit
@@ -48,22 +54,23 @@ const LEFT := 36.0
 const RIGHT := 42.0
 const COL_W := 720.0 - LEFT - RIGHT
 const TITLE_Y := 150.0
-const INFO_Y := 282.0
-const INFO_H := 108.0
-const SEP_W := 64.0
-const OPTIONS_Y := 416.0
-const HUD_ROW_Y := 690.0
+const INFO_Y := 262.0
+const INFO_ROW_H := 54.0
+const INFO_PAD := 16.0
+const CLOCK_W := 170.0
+const HUD_ROW_Y := 720.0
 const HUD_ROW_H := 88.0
 const ROW2_GAP := 20.0
-const POP2_BOTTOM := 604.0   # the small menu's foot, from the frame's bottom
+const POP2_BOTTOM := 574.0   # the small menu's foot, from the frame's bottom
 const POP2_NOTCH := {"hud": 138.0, "sound": 466.0}   # its notch's left, from LEFT
 const QUIT_SIZE := 150.0
 const QUIT_BOTTOM := 60.0
 const WARN := Color("#FFB08A")
 const TILES_Y := 456.0
-const TILE_H := 210.0
+const TILE_H := 240.0
+const TILE_ICON := 116.0
 const TILE_GAP := 20.0
-const POP_Y := 694.0
+const POP_Y := 724.0
 const POP_GRID_H := 250.0
 const GRID_COLS := 5
 const RESUME_W := 428.0
@@ -82,7 +89,11 @@ var _quit: ShadowCard
 var _quit_top: Label
 var _quit_sub: Label        # the TAP AGAIN warning over the square
 var _quit_armed_at := -1.0
-var _info_row: HBoxContainer
+var _info_rows: VBoxContainer
+var _clock_col: Control
+var _clock_rule: Control
+var _clock_value: Label
+var _clock_label: Label
 var _rows2: Dictionary = {}   # "hud" / "sound" → {card, value}
 var _pop_rows: Dictionary = {}   # the open small menu's rows: key → {card, tag}
 var _tiles: Dictionary = {}   # kind → {card, icon, value, caret}
@@ -122,14 +133,52 @@ func _ready() -> void:
 	_context.name = "Context"
 	_context.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	head.add_child(_context)
-	# The info row: where things stand (filled by open()).
-	_info_row = HBoxContainer.new()
-	_info_row.name = "Info"
-	_info_row.position = Vector2(LEFT, INFO_Y)
-	_info_row.size = Vector2(COL_W, INFO_H)
-	_info_row.add_theme_constant_override("separation", 8)
-	_info_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(_info_row)
+	# The info box: where things stand (filled by open()) — your line over
+	# theirs, a rule, the clock.
+	var box := ShadowPanel.new(ORANGE, INFO_PAD, ShadowStyle.TINT, 14.0)
+	box.name = "Info"
+	box.position = Vector2(LEFT, INFO_Y)
+	box.size = Vector2(COL_W + ShadowStyle.OFFSET, 2.0 * INFO_ROW_H + 2.0 * INFO_PAD + ShadowStyle.OFFSET)
+	add_child(box)
+	var ibox := HBoxContainer.new()
+	ibox.add_theme_constant_override("separation", 8)
+	ibox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(ibox)
+	var rows_m := MarginContainer.new()
+	rows_m.add_theme_constant_override("margin_left", 10)
+	rows_m.add_theme_constant_override("margin_right", 10)
+	rows_m.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rows_m.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ibox.add_child(rows_m)
+	_info_rows = VBoxContainer.new()
+	_info_rows.name = "Rows"
+	_info_rows.alignment = BoxContainer.ALIGNMENT_CENTER
+	_info_rows.add_theme_constant_override("separation", 0)
+	_info_rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rows_m.add_child(_info_rows)
+	var crule := ColorRect.new()
+	crule.name = "ClockRule"
+	crule.color = Color(CREAM, 0.35)
+	crule.custom_minimum_size = Vector2(2, 0)
+	crule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ibox.add_child(crule)
+	_clock_rule = crule
+	var ccol := VBoxContainer.new()
+	ccol.name = "Clock"
+	ccol.custom_minimum_size = Vector2(CLOCK_W, 0)
+	ccol.alignment = BoxContainer.ALIGNMENT_CENTER
+	ccol.add_theme_constant_override("separation", 14)
+	ccol.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ibox.add_child(ccol)
+	_clock_col = ccol
+	_clock_value = _text("", 32, CREAM, true)
+	_clock_value.name = "ClockValue"
+	_clock_value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ccol.add_child(_clock_value)
+	_clock_label = _text("", 16, MUTED)
+	_clock_label.name = "ClockLabel"
+	_clock_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	ccol.add_child(_clock_label)
 	# QUIT: the small square left of RESUME (two taps), the warning over it.
 	_quit = ShadowCard.new(CREAM)
 	_quit.name = "Quit"
@@ -164,23 +213,6 @@ func _ready() -> void:
 	_quit_sub.visible = false
 	add_child(_quit_sub)
 	_quit.pressed.connect(_on_quit)
-	# OPTIONS ———— TAP TO CHANGE
-	var opt := HBoxContainer.new()
-	opt.name = "OptionsHead"
-	opt.position = Vector2(LEFT, OPTIONS_Y)
-	opt.size = Vector2(COL_W, 20)
-	opt.add_theme_constant_override("separation", 14)
-	opt.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(opt)
-	opt.add_child(_text("OPTIONS", 15, CREAM, true))
-	var rule := ColorRect.new()
-	rule.color = Color(CREAM, 0.35)
-	rule.custom_minimum_size = Vector2(0, 2)
-	rule.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	rule.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	opt.add_child(rule)
-	opt.add_child(_text("TAP TO CHANGE", 14, MUTED))
 	# The three tiles.
 	var tile_w := (COL_W - 2.0 * TILE_GAP) / 3.0
 	var kinds := ["help", "ball", "net"]
@@ -233,52 +265,61 @@ func _ready() -> void:
 	resume.pressed.connect(func() -> void: resumed.emit())
 
 
-## The info row from `stats`: {v, l, gold} cells, a {sep} is the VS. between.
-func _fill_info(stats: Array) -> void:
-	if _info_row == null:
+## The info box from `stats` ({rows: [{name, score, mine}], clock, clock_label},
+## HudCopy.pause_stats_*): your row first, white over gold; a later row
+## under a rule, muted. No clock (practice) drops the clock column.
+func _fill_info(stats: Dictionary) -> void:
+	if _info_rows == null:
 		return
-	for c in _info_row.get_children():
-		_info_row.remove_child(c)
+	for c in _info_rows.get_children():
+		_info_rows.remove_child(c)
 		c.queue_free()
-	for m in stats:
-		if bool(Dictionary(m).get("sep", false)):
-			var sep := _text("VS.", 18, MUTED, true)
-			sep.name = "InfoSep"
-			sep.custom_minimum_size = Vector2(SEP_W, INFO_H - 30.0)
-			sep.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-			sep.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-			sep.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
-			_info_row.add_child(sep)
-			continue
-		var cell := VBoxContainer.new()
-		cell.name = "Info_%s" % str(m.get("l", "")).to_lower().replace(" ", "_")
-		cell.alignment = BoxContainer.ALIGNMENT_CENTER
-		cell.add_theme_constant_override("separation", 14)
-		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		cell.custom_minimum_size = Vector2(0, INFO_H)
-		cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var v := _text(str(m.get("v", "")), 40, GOLD if bool(m.get("gold", false)) else CREAM, true)
-		v.name = "Value"
-		v.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		v.clip_text = true
-		cell.add_child(v)
-		var l := _text(str(m.get("l", "")), 16, MUTED)
-		l.name = "Label"
-		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		l.clip_text = true
-		cell.add_child(l)
-		_info_row.add_child(cell)
+	var rows: Array = stats.get("rows", [])
+	for i in rows.size():
+		var r: Dictionary = rows[i]
+		var mine := bool(r.get("mine", false))
+		if i > 0:
+			var line := ColorRect.new()
+			line.color = Color(CREAM, 0.3)
+			line.custom_minimum_size = Vector2(0, 2)
+			line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_info_rows.add_child(line)
+		var row := HBoxContainer.new()
+		row.name = "Row_%d" % i
+		row.custom_minimum_size = Vector2(0, INFO_ROW_H - (2.0 if i > 0 else 0.0))
+		row.add_theme_constant_override("separation", 14)
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_info_rows.add_child(row)
+		var n := _text(str(r.get("name", "")), 22, CREAM if mine else MUTED, true)
+		n.name = "Name"
+		n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+		n.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		n.size_flags_vertical = Control.SIZE_FILL
+		n.clip_text = true
+		n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		row.add_child(n)
+		var v := _text(str(r.get("score", "")), 36, GOLD if mine else CREAM, true)
+		v.name = "Score"
+		v.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		v.size_flags_vertical = Control.SIZE_FILL
+		row.add_child(v)
+	var clock := str(stats.get("clock", ""))
+	_clock_col.visible = clock != ""
+	_clock_rule.visible = clock != ""
+	_clock_value.text = clock
+	_clock_label.text = str(stats.get("clock_label", "TIME LEFT"))
 
 
+## The box as words: `YOU 12`, `OLLIE 9`, then `41.7 TIME LEFT` (for tests).
 func info_texts() -> Array:
 	var out := []
-	if _info_row == null:
+	if _info_rows == null:
 		return out
-	for c in _info_row.get_children():
-		if c is Label:
-			out.push_back((c as Label).text)
-		else:
-			out.push_back("%s %s" % [(c.get_node("Value") as Label).text, (c.get_node("Label") as Label).text])
+	for c in _info_rows.get_children():
+		if c is HBoxContainer:
+			out.push_back("%s %s" % [(c.get_node("Name") as Label).text, (c.get_node("Score") as Label).text])
+	if _clock_col.visible:
+		out.push_back("%s %s" % [_clock_value.text, _clock_label.text])
 	return out
 
 
@@ -319,8 +360,8 @@ func _row2(name_: String, label: String, face_w: float) -> Dictionary:
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(col)
-	col.add_child(_text(label, 17, MUTED))
-	var value := _text("", 14, CREAM, true)
+	col.add_child(_text(label, 19, MUTED))
+	var value := _text("", 16, CREAM, true)
 	value.name = name_ + "Value"
 	value.clip_text = true
 	value.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -341,17 +382,17 @@ func _tile(name_: String, label: String, face_w: float) -> Dictionary:
 	add_child(card)
 	var col := VBoxContainer.new()
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
-	col.add_theme_constant_override("separation", 16)
+	col.add_theme_constant_override("separation", 22)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.position = Vector2(12, 18)
-	col.size = Vector2(face_w - 24, TILE_H - 34)
+	col.position = Vector2(6, 18)
+	col.size = Vector2(face_w - 12, TILE_H - 36)
 	card.add_child(col)
-	var l := _text(label, 14, MUTED)
+	var l := _text(label, 20, MUTED)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(l)
 	var icon := TextureRect.new()
 	icon.name = name_ + "Icon"
-	icon.custom_minimum_size = Vector2(84, 84)
+	icon.custom_minimum_size = Vector2(TILE_ICON, TILE_ICON)
 	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -363,7 +404,7 @@ func _tile(name_: String, label: String, face_w: float) -> Dictionary:
 	row.add_theme_constant_override("separation", 8)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(row)
-	var value := _text("", 11, CREAM, true)
+	var value := _text("", 16, CREAM, true)
 	value.name = name_ + "Value"
 	value.clip_text = true
 	value.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -394,7 +435,7 @@ func open(info: Dictionary = {}) -> void:
 	_info = info.duplicate()
 	if _context != null:
 		_context.text = str(info.get("context", ""))
-	_fill_info(Array(info.get("stats", [])))
+	_fill_info(info.get("stats", {}) if info.get("stats") is Dictionary else {})
 	_disarm()
 	_close_pop()
 	_refresh_values()
@@ -485,8 +526,8 @@ func _refresh_values() -> void:
 	for k in _tiles:
 		var t: Dictionary = _tiles[k]
 		var v := t["value"] as Label
-		var room: float = float(t["face_w"]) - 24.0 - ((t["caret"] as Control).custom_minimum_size.x + 8.0 if (t["caret"] as Control).visible else 0.0)
-		var w := UiFont.display().get_string_size(v.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(11)).x + 2.0 * RetroTheme.OUTLINE
+		var room: float = float(t["face_w"]) - 12.0 - ((t["caret"] as Control).custom_minimum_size.x + 8.0 if (t["caret"] as Control).visible else 0.0)
+		var w := UiFont.display().get_string_size(v.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(16)).x + 2.0 * RetroTheme.OUTLINE
 		v.custom_minimum_size.x = minf(w, room)
 		var on: bool = str(k) == _pop_kind
 		(t["card"] as ShadowCard).color = GOLD if on else CREAM
@@ -605,7 +646,7 @@ func _open_pop(kind: String) -> void:
 	head.add_theme_constant_override("separation", 12)
 	head.mouse_filter = Control.MOUSE_FILTER_PASS
 	body.add_child(head)
-	head.add_child(_text({"help": "SHOT HELP", "ball": "BALL", "net": "NET"}[kind], 15, GOLD, true))
+	head.add_child(_text({"help": "SHOT HELP", "ball": "BALL", "net": "NET"}[kind], 21, GOLD, true))
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sp.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -615,8 +656,8 @@ func _open_pop(kind: String) -> void:
 		"ball": note = "%d OWNED" % _ball_ids().size()
 		"net": note = "%d OWNED · THIS COURT" % _net_ids().size()
 		_: note = "WHAT SHOWS AS YOU AIM"
-	head.add_child(_text(note, 14, MUTED))
-	var x := HomePage.button("X", CREAM, 14, 36.0)
+	head.add_child(_text(note, 17, MUTED))
+	var x := HomePage.button("X", CREAM, 17, 36.0)
 	x.name = "PopClose"
 	x.custom_minimum_size = Vector2(36 + ShadowStyle.OFFSET, 36 + ShadowStyle.OFFSET)
 	x.pressed.connect(_close_pop)
@@ -633,7 +674,7 @@ func _open_pop(kind: String) -> void:
 			h.position = Vector2(18, 0)
 			h.size = Vector2(COL_W - 40 - 36 - ShadowStyle.OFFSET, 64)
 			row.add_child(h)
-			var n := _text(str(App.SHOT_HELP_LABELS[i]), 15, CREAM, true)
+			var n := _text(str(App.SHOT_HELP_LABELS[i]), 18, CREAM, true)
 			n.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			n.size_flags_vertical = Control.SIZE_FILL
 			h.add_child(n)
@@ -641,7 +682,7 @@ func _open_pop(kind: String) -> void:
 			sp2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			sp2.mouse_filter = Control.MOUSE_FILTER_IGNORE
 			h.add_child(sp2)
-			var d := _text(str(HELP_DESC[i]), 14, MUTED)
+			var d := _text(str(HELP_DESC[i]), 17, MUTED)
 			d.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			d.size_flags_vertical = Control.SIZE_FILL
 			h.add_child(d)
@@ -671,20 +712,33 @@ func _open_pop(kind: String) -> void:
 		c.name = "Opt_" + str(id)
 		c.tint = 0.40 if on else 0.28
 		c.custom_minimum_size = Vector2.ONE * (cell + ShadowStyle.OFFSET)
+		# The cell's glow behind the thumbnail (2026-10-30), like the locker's tiles.
+		var glow := TextureRect.new()
+		glow.name = "Glow"
+		glow.texture = LockerPanel._glow(GOLD if on else CREAM)
+		glow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		glow.stretch_mode = TextureRect.STRETCH_SCALE
+		glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		glow.size = Vector2.ONE * cell
+		c.add_child(glow)
 		var pic := TextureRect.new()
 		pic.texture = _thumb(kind, str(id))
 		pic.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
 		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		pic.position = Vector2.ONE * cell * 0.12
-		pic.size = Vector2.ONE * cell * 0.76
+		if kind == "net":   # the rimless net fills the cell, nudged up
+			pic.position = Vector2(0, -cell * 0.08)
+			pic.size = Vector2.ONE * cell
+		else:
+			pic.position = Vector2.ONE * cell * 0.1
+			pic.size = Vector2.ONE * cell * 0.8
 		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		c.add_child(pic)
 		c.pressed.connect(pick.bind(kind, str(id)))
 		grid.add_child(c)
 	var rows := ceili(float(ids.size()) / GRID_COLS)
 	scroll.custom_minimum_size = Vector2(0, minf(POP_GRID_H, rows * (cell + ShadowStyle.OFFSET) + (rows - 1) * 14.0 + 4.0))
-	var sel := _text(_tiles[kind]["value"].text, 13, CREAM, true)
+	var sel := _text(_tiles[kind]["value"].text, 19, CREAM, true)
 	sel.name = "PopSel"
 	sel.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	body.add_child(sel)
@@ -728,13 +782,13 @@ func _open_pop2(kind: String) -> void:
 	head.add_theme_constant_override("separation", 12)
 	head.mouse_filter = Control.MOUSE_FILTER_PASS
 	body.add_child(head)
-	head.add_child(_text("HUD SIDE" if kind == "hud" else "SOUND", 15, GOLD, true))
+	head.add_child(_text("HUD SIDE" if kind == "hud" else "SOUND", 18, GOLD, true))
 	var sp := Control.new()
 	sp.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	sp.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	head.add_child(sp)
-	head.add_child(_text("TOASTS + MUSIC NOTE" if kind == "hud" else "TAP TO TURN ON / OFF", 14, MUTED))
-	var x := HomePage.button("X", CREAM, 14, 36.0)
+	head.add_child(_text("TOASTS + MUSIC NOTE" if kind == "hud" else "TAP TO TURN ON / OFF", 17, MUTED))
+	var x := HomePage.button("X", CREAM, 17, 36.0)
 	x.name = "PopClose"
 	x.custom_minimum_size = Vector2(36 + ShadowStyle.OFFSET, 36 + ShadowStyle.OFFSET)
 	x.pressed.connect(_close_pop)
@@ -754,7 +808,7 @@ func _open_pop2(kind: String) -> void:
 		hb.position = Vector2(18, 0)
 		hb.size = Vector2(COL_W - 40 - 36 - ShadowStyle.OFFSET, 64)
 		row.add_child(hb)
-		var n := _text(str(it[1]), 15, CREAM, true)
+		var n := _text(str(it[1]), 18, CREAM, true)
 		n.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		n.size_flags_vertical = Control.SIZE_FILL
 		hb.add_child(n)
@@ -762,11 +816,11 @@ func _open_pop2(kind: String) -> void:
 		sp2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		sp2.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		hb.add_child(sp2)
-		var d := _text(str(it[2]), 14, MUTED)
+		var d := _text(str(it[2]), 17, MUTED)
 		d.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		d.size_flags_vertical = Control.SIZE_FILL
 		hb.add_child(d)
-		var tag := _text("", 14, GOLD, true)
+		var tag := _text("", 17, GOLD, true)
 		tag.name = "Tag"
 		tag.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		tag.size_flags_vertical = Control.SIZE_FILL

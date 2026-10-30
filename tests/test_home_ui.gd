@@ -284,9 +284,9 @@ func _widgets(t) -> void:
 	t.ok(ModeCards.practice_card(3).disabled, "and its practice card is off")
 	var with_xp := HomeTicker.items_from([], [], 0, "", 164)
 	t.ok(with_xp.has("LEVEL 2 · 64/100 XP"), "the ticker carries the level (%s)" % str(with_xp))
-	# The locker page (docs/LOCKER.md): the collection — BALLS lists only the
-	# balls you own, NETS only the nets you own of the sub-tab's kind; PEGGY
-	# is a button to its own page.
+	# The locker page (docs/LOCKER.md, design 31a / 31b, 2026-10-30): the
+	# collection — BALLS by rarity, NETS by kind, OWNED / ALL; PLAY PEGGY
+	# opens its page; `< BACK` at the foot.
 	var cos_before: Dictionary = SaveService.get_cosmetics()
 	var cos: Dictionary = SaveService.default_cosmetics()   # the suite's parts start empty (headless)
 	cos.merge(SaveService.get_cosmetics(), true)
@@ -296,107 +296,153 @@ func _widgets(t) -> void:
 	var locker := LockerPanel.new()
 	locker._ready()
 	t.eq(locker.tab(), "BALLS", "the locker opens on BALLS")
-	t.ok(locker.find_child("Peggy", true, false) != null, "PEGGY sits beside the ticket chip")
+	t.eq(locker.view(), "OWNED", "…showing what you own")
+	var tickets_panel: Control = locker.find_child("Tickets", true, false)
+	t.ok(tickets_panel != null, "the big ticket panel sits beside LOCKER")
+	t.eq((tickets_panel.find_child("Count", true, false) as Label).text, "0", "…with the balance")
+	t.eq((tickets_panel.find_child("Label", true, false) as Label).text, "TICKETS", "…over TICKETS")
+	var peggy: Button = locker.find_child("Peggy", true, false)
+	t.ok(peggy != null and (peggy.find_child("Word", true, false) as Label).text == "PLAY PEGGY", "PLAY PEGGY sits under the head")
+	t.eq((peggy.find_child("Sub", true, false) as Label).text, "WIN BALLS + NETS · 300 TICKETS", "…saying what a play costs")
+	t.ok(not (peggy.find_child("Shine", true, false) as Control).visible, "…dull while a drop is out of reach")
 	var asked := [false]
 	locker.peggy_requested.connect(func() -> void: asked[0] = true)
-	(locker.find_child("Peggy", true, false) as Button).pressed.emit()
+	peggy.pressed.emit()
 	t.ok(asked[0], "…and asks for the PEGGY page")
-	t.ok(locker.find_child("Close", true, false) != null, "the dotted CLOSE is at the foot")
+	t.ok(locker.find_child("Back", true, false) != null and locker.find_child("Close", true, false) == null, "`< BACK` at the foot, no CLOSE")
 	var tab_balls: Button = locker.find_child("Tab_BALLS", true, false)
 	t.ok(tab_balls != null and tab_balls.text == "BALLS %d" % app.owned_count("ball"), "the BALLS tab counts what you own (%s)" % (tab_balls.text if tab_balls != null else "?"))
 	var rows: Array = locker.rows()
 	t.ok(rows.has("Ball_classic"), "the classic ball is in the locker (%s)" % str(rows.slice(0, 4)))
-	t.ok(not rows.has("Ball_gold") and not rows.has("Hoop_street"), "nothing unowned is listed: balls are won on PEGGY, hoops are closed")
+	t.ok(not rows.has("Ball_gold") and not rows.has("Hoop_street"), "nothing unowned is listed under OWNED")
 	for r in rows:
 		t.ok(app.owns("ball", String(r).trim_prefix("Ball_")) or String(r) == "Ball_" + locker._current_id("ball"), "%s is owned" % r)
+	t.eq(locker.locked_count(), 0, "no ???? tiles under OWNED")
+	var common_group: Control = locker.find_child("Group_common", true, false)
+	t.ok(common_group != null, "the balls are grouped by rarity")
+	t.eq((common_group.find_child("Level", true, false) as Label).text, "LVL 1", "…each group says its level")
+	var commons := 0
+	var owned_commons := 0
+	var legends_owned := 0
+	for cs in CosmeticLibrary.balls():
+		var bs := cs as BallSet
+		if bs.rarity == "common":
+			commons += 1
+			if rows.has("Ball_" + bs.id):
+				owned_commons += 1
+		elif bs.rarity == "legend" and rows.has("Ball_" + bs.id):
+			legends_owned += 1
+	t.eq((common_group.find_child("Count", true, false) as Label).text, "%d/%d" % [owned_commons, commons], "…and its owned / total")
+	if legends_owned == 0:
+		t.ok(locker.find_child("Group_legend", true, false) == null, "a rarity you own nothing of stays out under OWNED")
+	t.eq((locker.find_child("Meta", true, false) as Label).text, "%d OWNED" % rows.size(), "the count beside OWNED / ALL")
+	locker.show_view("ALL")
+	t.eq(locker.view(), "ALL", "ALL switches")
+	t.eq(locker.locked_count(), CosmeticLibrary.balls().size() - rows.size(), "ALL adds a ???? tile per ball you do not own")
+	t.ok(locker.find_child("Group_legend", true, false) != null, "…and every rarity shows")
+	t.eq((locker.find_child("Meta", true, false) as Label).text, "%d / %d OWNED" % [rows.size(), CosmeticLibrary.balls().size()], "…with the count out of all")
+	locker.show_view("OWNED")
 	t.ok(locker.find_child("Head_hoop", true, false) == null, "no HOOPS heading")
 	t.ok(not app.try_buy("hoop", "street"), "a hoop cannot be bought while the counter is closed")
 	t.ok(app.grant_cosmetic("ball", "gold"), "winning the gold ball")
 	locker._fill()
-	var gold: Button = locker.find_child("Ball_gold", true, false)
-	var gold_tag: Label = gold.find_child("Tag", true, false) if gold != null else null
-	t.ok(gold != null and not gold.disabled, "a won ball joins the grid")
-	t.ok(gold_tag != null and gold_tag.text == "EQUIP", "…tagged EQUIP (%s)" % (gold_tag.text if gold_tag != null else "?"))
+	var gold_tile: ShadowCard = locker.find_child("Ball_gold", true, false)
+	t.ok(gold_tile != null and gold_tile.color == HomePage.CREAM, "a won ball joins its group, cream (not in use)")
+	var ball_before: String = locker._current_id("ball")
+	locker.tap_ball("gold")
+	t.eq(locker.armed(), "gold", "the first tap arms it")
+	gold_tile = locker.find_child("Ball_gold", true, false)
+	t.ok(gold_tile.color == RetroTheme.LIGHT["orange"] and (gold_tile.find_child("Name", true, false) as Label).text == "EQUIP?", "…orange, asking EQUIP?")
+	t.eq(locker._current_id("ball"), ball_before, "…and nothing is equipped yet")
+	locker.tap_ball("gold")
+	t.eq(locker.armed(), "", "the second tap uses it")
 	if app.ball_set != null:
-		t.eq(locker.in_use_row(), "Ball_" + str(app.ball_set.id), "the ball in use is tagged")
-		var before: String = app.ball_set.id
-		t.ok(app.select("ball", "classic"), "selecting an owned ball succeeds")
-		locker._fill()
-		t.eq(locker.in_use_row(), "Ball_classic", "the locker follows the selection")
-		app.select("ball", before)
+		t.eq(app.ball_set.id, "gold", "…the gold ball is in use")
+		t.eq(locker.in_use_row(), "Ball_gold", "…and its tile is gold")
+		locker.tap_ball("gold")
+		t.eq(locker.armed(), "", "a tap on the ball in use does nothing")
+		app.select("ball", ball_before)
 	else:
 		t.eq(locker.in_use_row(), "Ball_classic", "no save (headless): the starter reads as in use")
-	# The NETS tab: owned nets by kind, the sub-tab, the gold one hangs.
+	locker.tap_ball("gold")
+	locker._disarm()
+	t.eq(locker.armed(), "", "an armed ball lets go (after ARM_S)")
+	# The NETS tab: every net by kind, the dots, HANG IT ON.
 	t.ok(locker.find_child("Tab_NETS", true, false) != null, "the NETS tab button exists")
 	locker.show_tab("NETS")
-	t.eq(locker.net_kind(), "cotton", "NETS opens on COTTON")
 	t.eq((locker.find_child("Tab_NETS", true, false) as Button).text, "NETS 2", "the tab counts the stock pair")
-	t.eq(locker.rows(), ["Net_cotton"], "only the owned cotton nets are listed")
-	t.eq(((locker.find_child("Head_net", true, false) as Control).find_child("Text", true, false) as Label).text, "COTTON · TAP A NET TO HANG IT", "the head says what a tap does")
-	var cotton_tag: Label = (locker.find_child("Net_cotton", true, false) as Button).find_child("Tag", true, false)
-	t.eq(cotton_tag.text, "IN USE ON CAGE + BEACH + PARK", "the cotton net on every nylon court")
-	t.eq(locker.in_use_row("net"), "Net_cotton", "…and it is the one in use")
-	t.ok(locker.find_child("Sub_CHAIN", true, false) != null, "the CHAIN sub-tab exists")
-	locker.show_kind("chain")
-	t.eq(locker.rows(), ["Net_chain"], "CHAIN lists the stock chain")
-	t.eq(((locker.find_child("Net_chain", true, false) as Button).find_child("Tag", true, false) as Label).text, "IN USE ON CITY", "the stock chain hangs on the city")
+	t.eq(locker.rows(), ["Net_cotton", "Net_chain"], "the owned nets, cotton first, then chain")
+	t.ok(locker.find_child("Group_cotton", true, false) != null and locker.find_child("Group_chain", true, false) != null, "grouped by kind")
+	var cotton_n := 0
+	for cs in CosmeticLibrary.nets():
+		if (cs as NetSet).kind == "cotton":
+			cotton_n += 1
+	t.eq(((locker.find_child("Group_cotton", true, false) as Control).find_child("Count", true, false) as Label).text, "1/%d" % cotton_n, "COTTON counts 1 of its nets")
+	var areas: Array = app.unlocked_areas()
+	var cotton_tile: ShadowCard = locker.find_child("Net_cotton", true, false)
+	var dots: Control = cotton_tile.find_child("Dots", true, false)
+	t.eq(dots.get_child_count(), areas.size(), "a dot per court you have reached")
+	if areas.has("cage"):
+		t.ok((dots.get_node("Dot_cage") as LockerPanel.AreaDot).on, "…the cotton's cage dot is gold")
+	if areas.has("city"):
+		t.ok(not (dots.get_node("Dot_city") as LockerPanel.AreaDot).on, "…its city dot is not (the chain hangs there)")
+	t.eq(locker.in_use_row("net"), "Net_cotton", "a net that hangs is gold")
 	t.ok(app.grant_cosmetic("net", "jack"), "owning the jack chain")
 	locker._fill()
-	var jack: Button = locker.find_child("Net_jack", true, false)
-	t.ok(jack != null and (jack.find_child("Tag", true, false) as Label).text == "EQUIP", "an owned chain joins CHAIN tagged EQUIP")
-	t.eq((jack.find_child("Kind", true, false) as Label).text, "CHAIN", "…its kind alone (any net hangs on any hoop)")
-	jack.pressed.emit()
-	var sheet := locker.area_sheet()
-	t.ok(sheet != null, "tapping a net opens the hang-it-where sheet")
-	t.eq(sheet.rows(), ["Area_cage", "Area_beach", "Area_park", "Area_city"], "…one row per area, in order")
-	t.eq(sheet.value("city"), "CHAIN", "…the city hangs its stock chain")
-	t.eq(sheet.value("park"), "COTTON", "…the park its cotton")
-	(sheet.find_child("Area_city", true, false) as Button).pressed.emit()
-	t.eq(sheet.value("city"), "HANGING", "tapping CITY hangs it there")
-	t.eq(app.net_set_for("city").id, "jack", "…saved for the city")
-	(sheet.find_child("Area_park", true, false) as Button).pressed.emit()
-	t.eq(app.net_set_for("park").id, "jack", "a chain hangs on the park too")
-	t.eq(app.net_set_for("cage").id, "cotton", "…the cage untouched")
-	sheet.close()
-	t.ok(locker.area_sheet() == null, "CLOSE takes the sheet down")
-	t.eq(((locker.find_child("Net_jack", true, false) as Button).find_child("Tag", true, false) as Label).text, "IN USE ON PARK + CITY", "…and the tile says where it hangs")
-	t.eq(((locker.find_child("Net_chain", true, false) as Button).find_child("Tag", true, false) as Label).text, "EQUIP", "the stock chain stands by")
-	(locker.find_child("Net_chain", true, false) as Button).pressed.emit()
-	(locker.area_sheet().find_child("Everywhere", true, false) as Button).pressed.emit()
-	t.eq(app.net_in_use_areas("chain"), ["cage", "beach", "park", "city"], "EVERYWHERE hangs it on every court")
-	locker.area_sheet().close()
-	t.eq(((locker.find_child("Net_chain", true, false) as Button).find_child("Tag", true, false) as Label).text, "IN USE ON CAGE + BEACH + PARK + CITY", "…and the tile says so")
-	# A locked area's row does nothing.
+	var jack_tile: ShadowCard = locker.find_child("Net_jack", true, false)
+	t.ok(jack_tile != null and jack_tile.color == HomePage.CREAM, "an owned chain joins CHAIN, cream (hung nowhere)")
+	locker.tap_net("jack")
+	t.eq(locker.open_net(), "jack", "a tap opens its HANG IT ON")
+	var hang_panel: Control = locker.find_child("HangPanel", true, false)
+	t.ok(hang_panel != null, "…under its row")
+	t.eq(((hang_panel.find_child("Title", true, false)) as Label).text, "JACK", "…named")
+	t.eq((locker.find_child("Net_jack", true, false) as ShadowCard).color, RetroTheme.LIGHT["orange"], "…the tile orange while open")
+	var area_btns := []
+	for c in hang_panel.find_children("Area_*", "Button", true, false):
+		area_btns.push_back(str(c.name).trim_prefix("Area_"))
+	t.eq(area_btns, areas, "…a button per court you have reached, in order")
+	if areas.has("city"):
+		t.eq(((hang_panel.find_child("Area_city", true, false) as Control).find_child("Sub", true, false) as Label).text, "TAP TO HANG", "…the city's says TAP TO HANG")
+		locker.hang("jack", "city")
+		t.eq(app.net_set_for("city").id, "jack", "hanging it on the city saves it")
+		t.eq(locker.open_net(), "jack", "…HANG IT ON stays open")
+		hang_panel = locker.find_child("HangPanel", true, false)
+		t.eq(((hang_panel.find_child("Area_city", true, false) as Control).find_child("Sub", true, false) as Label).text, "HANGING", "…and the city's says HANGING")
+		t.eq((locker.find_child("Net_chain", true, false) as ShadowCard).color, HomePage.CREAM, "the stock chain came down (one net a court)")
+	if areas.has("park"):
+		locker.hang("jack", "park")
+		t.eq(app.net_set_for("park").id, "jack", "a chain hangs on the park too")
+	if areas.has("cage"):
+		t.eq(app.net_set_for("cage").id, "cotton", "…the cage untouched")
+	locker.tap_net("jack")
+	t.eq(locker.open_net(), "", "a second tap closes it")
+	t.ok(locker.find_child("HangPanel", true, false) == null, "…and the panel is gone")
+	locker.tap_net("jack")
+	t.ok(locker.find_child("Shut", true, false) is Button, "HANG IT ON has its X")
+	locker.tap_net("jack")
+	locker.show_view("ALL")
+	t.eq(locker.locked_count(), CosmeticLibrary.nets().size() - locker.rows().size(), "ALL adds a ???? per net you do not own")
+	t.eq((locker.find_child("Meta", true, false) as Label).text, "%d / %d OWNED" % [locker.rows().size(), CosmeticLibrary.nets().size()], "…with the count out of all")
+	locker.show_view("OWNED")
+	# A court not yet reached has no button and no dot.
 	var gating_before: bool = app.league_gating
 	app.league_gating = true
-	(locker.find_child("Net_jack", true, false) as Button).pressed.emit()
-	var gated := locker.area_sheet()
-	t.ok(gated.is_locked("city") == not app.area_unlocked("city"), "the sheet locks what the level has not reached")
-	if gated.is_locked("city"):
-		t.ok(gated.value("city").begins_with("LOCKED · LVL"), "…and says the level (%s)" % gated.value("city"))
-		(gated.find_child("Area_city", true, false) as Button).pressed.emit()
-		t.eq(app.net_set_for("city").id, "chain", "…a tap on it hangs nothing")
-	gated.close()
+	locker.tap_net("jack")
+	var gated_btns: int = (locker.find_child("HangPanel", true, false) as Control).find_children("Area_*", "Button", true, false).size()
+	t.eq(gated_btns, app.unlocked_areas().size(), "HANG IT ON offers only the courts you have reached")
+	locker.tap_net("jack")
 	app.league_gating = gating_before
 	app.select_net_everywhere("cotton")
 	app.select_net("city", "chain")
-	locker.show_kind("cotton")
-	t.ok(not locker.rows().has("Net_jack"), "a chain is not under COTTON")
-	t.ok(app.grant_cosmetic("net", "wool"), "owning the wool net")
-	locker._fill()
-	var cottons: Array = locker.rows()
-	cottons.sort()
-	t.eq(cottons, ["Net_cotton", "Net_wool"], "COTTON lists the owned cottons")
-	t.eq(((locker.find_child("Net_wool", true, false) as Button).find_child("Kind", true, false) as Label).text, "COTTON", "the wool net's kind")
-	var tags := []
-	for l in locker.find_children("Tag", "Label", true, false):
-		tags.push_back(str(l.text))
-	for tg in tags:
-		t.ok(not str(tg).contains("TICKETS"), "no price on the locker (%s)" % tg)
+	var names := []
+	for l in locker.find_children("Name", "Label", true, false):
+		names.push_back(str(l.text))
+	for nm in names:
+		t.ok(not str(nm).contains("TICKETS"), "no price on the locker (%s)" % nm)
 	var closed_ := [false]
 	locker.closed.connect(func() -> void: closed_[0] = true)
-	locker.close()
-	t.ok(closed_[0], "CLOSE off-tree emits closed at once")
+	(locker.find_child("Back", true, false) as Button).pressed.emit()
+	t.ok(closed_[0], "BACK off-tree emits closed at once")
 	# The PEGGY page: the cabinet filling the frame, PLAY over it, the credit
 	# flow, the ball and net cards.
 	PeggyMachine.threaded = false   # the threaded load (and its spinner) is the game's; build at once here
@@ -404,17 +450,28 @@ func _widgets(t) -> void:
 	page._ready()
 	t.ok(page.machine() != null and page.machine().peg_count() == 84, "the drop machine is built with its 84 pegs")
 	t.eq(page.machine().slots().size(), 7, "seven plates are set")
-	t.ok(page.find_child("Stage", true, false) != null and page.find_child("Back", true, false) != null, "the machine's stage and the `<` back")
+	t.ok(page.find_child("Stage", true, false) != null and page.find_child("Back", true, false) != null, "the machine's stage and `< BACK`")
+	t.eq(((page.find_child("Back", true, false) as Control).find_child("Word", true, false) as Label).text, "BACK", "…which says BACK (design 30a, 2026-10-30)")
+	t.ok(page.find_child("Tickets", true, false) != null, "the big ticket panel sits in the head")
+	var badges := 0
+	for c in BeachFx._descendants(page):
+		if c is LevelBadge:
+			badges += 1
+	t.eq(badges, 0, "…and the level chip is gone")
 	t.eq(page.body.mouse_filter, Control.MOUSE_FILTER_IGNORE, "the body lets taps through to the joystick and DROP under it")
-	t.ok(page.badge() != null, "the level chip with its meter sits in the head")
 	t.ok(page.find_child("Close", true, false) == null and page.find_child("Hint", true, false) == null, "no CLOSE, no hint line")
 	t.ok(page.play_button() != null and page.play_button().visible and page.play_button().disabled, "with no tickets PLAY shows, greyed")
 	var need: Label = page.find_child("Need", true, false)
 	t.ok(need != null and need.visible and need.text == "NEED 300 MORE", "…saying how many more (%s)" % (need.text if need != null else "?"))
+	t.eq(page.play_button().custom_minimum_size.x, PeggyPage.SMALL_PLAY_W + ShadowStyle.OFFSET, "…the small grey PLAY (30f)")
+	t.ok(not (page.play_button().find_child("Shine", true, false) as Control).visible, "…with no shine")
 	t.ok(page.machine().locked(), "…and the cap is locked")
 	app.grant_tickets(480)
 	page._refresh_machine()
 	t.ok(not page.play_button().disabled and not need.visible, "with a drop's worth PLAY is live")
+	t.eq(page.play_button().custom_minimum_size, PeggyPage.BIG_PLAY + Vector2.ONE * ShadowStyle.OFFSET, "…the big PLAY (30a)")
+	t.ok((page.play_button().find_child("Shine", true, false) as Control).visible, "…shining")
+	t.eq((page.play_button().find_child("Price", true, false) as Label).text, "300", "…for 300")
 	page._on_play()
 	t.eq(app.tickets(), 180, "PLAY spends the drop")
 	t.ok(page.machine().is_busy() and not page.play_button().visible, "the ticket is flying; PLAY is hidden")
