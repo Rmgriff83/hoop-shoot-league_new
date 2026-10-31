@@ -103,6 +103,32 @@ so nothing done inside that Xcode project survives — change the preset or
 the game, not the generated project. The icon set is resized from
 `assets/icon/icon_1024.png` with nearest-neighbour (pixel art).
 
+### The store plugin (RevenueCat, 2026-10-31)
+
+The ticket store (docs/ECONOMY.md → Ticket packs) buys through RevenueCat's
+native SDKs by way of **godot-x/revenuecat 2.6.0** (MIT; Godot 4.7, iOS
+15+, Android minSdk 24). Only its two small scripts are in the repo
+(`addons/godotx_revenue_cat/`, enabled in `project.godot`); the ~240 MB of
+binaries live outside it like the keystore:
+
+```
+~/.config/hoop_shoot/revenuecat/android/revenue_cat/   revenue_cat.debug.aar, revenue_cat.release.aar
+~/.config/hoop_shoot/revenuecat/ios/plugins/revenuecat/ revenue_cat.gdip + GodotxRevenueCat / RevenueCat / RevenueCatUI .xcframework
+```
+
+(unpacked from the release's `godotx_revenue_cat.zip`). `tools/build.sh`
+copies them into `android/revenue_cat/` and `ios/plugins/revenuecat/`
+(both gitignored) before every export. The Android side rides the **gradle**
+build only — the Play preset; the phone-deploy "Android" preset stays
+gradle-free (Ross, 2026-10-31), so phone deploys run the stub store. The iOS
+preset carries `plugins/GodotxRevenueCat=true`. Missing binaries are a
+warning, not a failure: the game then runs its null store backend.
+
+The SDK keys — RevenueCat's *public* `appl_…` / `goog_…` per app — are read
+from **`store_keys.json`** at the project root (gitignored; copy
+`store_keys.example.json`). Absent or unfilled, the store is the stub too.
+docs/BACKEND.md → Ticket store has the dashboard and store-console setup.
+
 ## The icon
 
 `assets/icon/icon_1024.png` is Ross's final icon (design 46b NEON BALL,

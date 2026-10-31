@@ -60,7 +60,7 @@ func _ready() -> void:
 		App.loader.instant = _has_prefixed(args, "--qa") and not args.has("--qa-loading")
 		App.loader.force_show = args.has("--qa-loading")
 		PeggyMachine.threaded = not App.loader.instant
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# The splash is the main scene now: every other pass starts from the title.
@@ -103,6 +103,8 @@ func _ready() -> void:
 		_run_park.call_deferred()
 	elif args.has("--qa-peggy"):
 		_run_peggy.call_deferred()
+	elif args.has("--qa-store-live"):
+		_run_store_live.call_deferred()
 	elif args.has("--qa-store"):
 		_run_store.call_deferred()
 	elif args.has("--qa-match-end"):
@@ -1366,7 +1368,7 @@ func _run_store() -> void:
 	store.confirm(1)
 	await _sleep(0.3)
 	await _snap("store_busy")
-	await _sleep(TicketShop.BUSY_S)
+	await _sleep(Store.STUB_S)
 	await _snap("store_no_sale")
 	store.show_bought(0, App.tickets())
 	await _sleep(0.12)
@@ -1409,6 +1411,103 @@ func _run_store() -> void:
 		await _sleep(0.7)
 		await _snap("store_back_peggy")
 	print("QA store: done")
+	get_tree().quit(0)
+
+
+## The store with a store behind it: a FakeStoreBackend for the sheet and a
+## scripted Net.transport for the Worker (no HTTP), so the live path shows —
+## the store's own prices, the wait, the credit landing (+300 with the
+## wallet really moved), a failed sale's toast, and the slow credit's.
+var _qa_srv := {"pending": [], "gets": 0, "appear_at": -1}
+
+func _qa_transport(method: int, path: String, body: Variant, _headers: PackedStringArray) -> Dictionary:
+	if method == HTTPClient.METHOD_GET and path == "/v1/store/pending":
+		_qa_srv["gets"] = int(_qa_srv["gets"]) + 1
+		if int(_qa_srv["appear_at"]) >= 0 and int(_qa_srv["gets"]) >= int(_qa_srv["appear_at"]):
+			_qa_srv["pending"] = [{"id": 2, "productId": "tickets_1000", "tickets": 1000, "purchasedAt": 1}]
+			_qa_srv["appear_at"] = -1
+		return {"code": 200, "json": {"pending": Array(_qa_srv["pending"]).duplicate(true), "tickets": 0}}
+	if method == HTTPClient.METHOD_POST and path == "/v1/store/claim":
+		var ids: Array = Array(Dictionary(body).get("ids", []))
+		var claimed: Array = []
+		var left: Array = []
+		for r in _qa_srv["pending"]:
+			if ids.has(int(r["id"])):
+				claimed.push_back({"id": r["id"], "productId": r["productId"], "tickets": r["tickets"]})
+			else:
+				left.push_back(r)
+		_qa_srv["pending"] = left
+		return {"code": 200, "json": {"claimed": claimed, "tickets": 0}}
+	if method == HTTPClient.METHOD_GET and path == "/v1/save":
+		return {"code": 200, "json": {"parts": {}, "now": 0}}
+	return {"code": 404, "json": {"error": "not_found"}}
+
+
+func _run_store_live() -> void:
+	await _sleep(1.0)
+	await _close_archive()
+	var ts := get_tree().current_scene
+	var was_account: Dictionary = SaveService.get_account()
+	var cos_before: Dictionary = SaveService.get_cosmetics()
+	var was_enabled: bool = Net.enabled
+	Net.enabled = true
+	Net.transport = _qa_transport
+	if not Net.registered():
+		SaveService.put_account({"playerId": SaveService.uuid4(), "secret": "s".repeat(40), "name": "QA", "tag": "00", "registered": true})
+	var fake := FakeStoreBackend.new()
+	fake.prices = {"tickets_300": "CA$1.39", "tickets_1000": "CA$3.99"}
+	Store.use_backend(fake)
+	ts.call("_open_store")
+	await _sleep(0.9)
+	var store: TicketStorePage = ts.call("store")
+	if store == null:
+		print("QA store live: no store page")
+		get_tree().quit(1)
+		return
+	await _snap("store_live_prices")
+	# A sale whose credit is already there: busy for a beat, then +300.
+	fake.auto = false
+	store.tap(0)
+	await _sleep(0.2)
+	store.confirm(0)
+	await _sleep(0.3)
+	await _snap("store_live_busy")
+	_qa_srv["pending"] = [{"id": 1, "productId": "tickets_300", "tickets": 300, "purchasedAt": 1}]
+	fake.settle()
+	await _sleep(0.4)
+	await _snap("store_live_credited")
+	await _sleep(3.2)
+	# A failed sale: back to the price with the word.
+	fake.auto = true
+	fake.outcome = "error"
+	store.tap(1)
+	await _sleep(0.2)
+	store.confirm(1)
+	await _sleep(0.5)
+	await _snap("store_live_failed")
+	await _sleep(2.6)
+	# A slow credit: the store sold it, the Worker is late — the page gives
+	# the button back with TICKETS ON THE WAY, and the credit lands later.
+	fake.outcome = "ok"
+	_qa_srv["gets"] = 0
+	_qa_srv["appear_at"] = Store.FAST_TRIES + 2
+	store.tap(1)
+	await _sleep(0.2)
+	store.confirm(1)
+	await _sleep(Store.FAST_GAP_S * Store.FAST_TRIES + 0.8)
+	await _snap("store_live_slow")
+	await _sleep(Store.SLOW_GAP_S * 2.0 + 0.6)
+	await _snap("store_live_slow_landed")
+	# Put the world back.
+	Store.use_backend(RevenueCatBackend.new())
+	Net.transport = Callable()
+	Net.enabled = was_enabled
+	SaveService.put_cosmetics(cos_before)
+	if was_account.is_empty():
+		SaveService.put_account({})
+	else:
+		SaveService.put_account(was_account)
+	print("QA store live: done")
 	get_tree().quit(0)
 
 

@@ -100,13 +100,16 @@ Every request has a budget and a hit degrades to the device board.
    `leaderboard` 20/min, `me` 5/min, `register` 5/hour per IP,
    `transfer/code` 3/hour, `transfer/claim` 5/hour per IP, `link` 5/hour,
    `link/restore` 5/hour per IP, `link/<provider>` (unlink) 5/hour,
-   `DELETE /v1/me` 3/hour per IP + 2/hour per player. Minute buckets use
+   `DELETE /v1/me` 3/hour per IP + 2/hour per player, `store/pending` and
+   `store/claim` 30/min per player (`store/webhook` has only the IP wall and
+   its header secret). Minute buckets use
    the Workers Rate Limiting binding in production and an in-isolate window
    locally; hour/day windows are D1 counters (`rl`). Bodies ≤ 4 KB, JSON only,
    unknown fields → 400. Kill switches `FEATURE_SUBMIT` / `FEATURE_BOARD` /
    `FEATURE_TRANSFER` / `FEATURE_SAVE` / `FEATURE_MATCH` / `FEATURE_CARDS` /
-   `FEATURE_PLATFORM` (anything but `on` → 503, which the game reads as
-   offline); account deletion has none.
+   `FEATURE_PLATFORM` / `FEATURE_IAP` (anything but `on` → 503, which the
+   game reads as offline — and RevenueCat reads as "retry", so a webhook
+   delivery waits out a closed store switch); account deletion has none.
 4. **D1** — indexed queries only, `LIMIT ≤ 50`, rank by one indexed COUNT,
    writes only on improvement; the nightly cron prunes `seen_runs` (30 d),
    dead codes, stale counters and weeks older than eight. Turn on Cloudflare's
@@ -658,3 +661,91 @@ per-device vs transfer, cap, unlink, deletion, throttles, kill switch, 501).
   equal to the client's claim.
 - Both: flip the verifier from `NotImplemented` to real, keep the `test`
   one Vitest-only, run the Worker migration `0005` and deploy (Ross).
+
+## Ticket store (built 2026-10-31): RevenueCat, the webhook, pending → CLAIM
+
+The ticket packs of design 50a (docs/ECONOMY.md → Ticket packs) sold through
+the App Store and Play with RevenueCat in front, **the growthdyn/bball_sim
+shape**: the client only shows prices and opens the store sheet; the
+RevenueCat webhook to the backend is the only thing that credits; the client
+polls for the credit. hoop_shoot's wallet lives on the phone, so the credit
+is a *pending purchase* the phone CLAIMs, like `/v1/rewards/claim`.
+
+- **Routes** (`server/src/store_routes.ts`, the books in `store.ts`, the
+  packs from `data/store.json` via `store_data.ts`; migration **0010**:
+  `store_events`, `purchases`).
+  - `POST /v1/store/webhook` — RevenueCat's deliveries. No bearer: the
+    `Authorization` header must equal the Worker secret
+    **`REVENUECAT_WEBHOOK_AUTH`** (the value typed into the dashboard's
+    webhook form), compared in constant time; unset → every delivery is 401.
+    Body ≤ 64 KB; no `event.id` / `event.type` → 400. Then: the event id
+    already in `store_events` → 200 `already_processed`; `TEST` → 200;
+    `NON_RENEWING_PURCHASE` → the pack by `product_id` (unknown → **500**),
+    the player by `app_user_id` → `original_app_user_id` → `aliases`
+    (skipping `$RCAnonymousID:`, each a UUID that exists; none → **500**
+    `unknown_player`), then ONE batch: record the event + `INSERT OR IGNORE`
+    the sale, unique per `(store, transaction_id)` → 200 `fulfilled` (or
+    `duplicate_transaction` when a restore re-sent the same sale under a new
+    event id). `CANCELLATION` → `refunded_at` on the sale (200 either way).
+    Anything else → recorded, 200 `ignored`. **A 500 records nothing**, so
+    RevenueCat's retries (5 over ~80 min) can succeed once the cause is
+    fixed — bball_sim's lesson. Sandbox sales credit like production
+    (`environment` is stored; TestFlight needs it).
+  - `GET /v1/store/pending` (bearer, 30/min) — `{pending: [{id, productId,
+    tickets, purchasedAt}], tickets}`, unclaimed and unrefunded.
+  - `POST /v1/store/claim {ids}` (bearer, ≤ 20 ids, 30/min) — one `UPDATE …
+    RETURNING`: only the rows this call turned are answered, `{claimed:
+    [{id, productId, tickets}], tickets}`. A replay, or another player's
+    ids, answer nothing — and the phone grants only what is answered.
+  - `GET /v1/me` carries `pendingTickets` (the sum waiting), so the launch
+    fetch triggers a claim without another call. Account deletion drops the
+    player's `purchases` rows.
+- **The phone** (`game/net/store.gd`, autoload `Store`): `ensure()` starts
+  the RevenueCat SDK with the player id as the app user id once registered
+  (and `login`s a changed id after a restore); `purchase()` → the sheet →
+  `_await_credit` (8 × 1.5 s polls of pending, claim, `App.grant_tickets`,
+  `purchase_done(ok)`) or `slow` + a 20 × 5 s background poll; `sync()` on
+  `Net.resumed`, on `/v1/me`'s `pendingTickets`, and on the store page
+  opening. Tests: `server/test/store.test.ts`, `tests/test_ticket_store.gd`
+  (a `FakeStoreBackend` and a scripted `Net.transport`); QA `--qa-store`
+  (the stub) and `--qa-store-live`.
+- **Setup** (Ross; the checklist):
+  1. The plugin binaries: godot-x/revenuecat **2.6.0** (`godotx_revenue_cat.zip`
+     from its GitHub release; MIT) — unpack `android/revenue_cat/` and
+     `ios/plugins/revenuecat/` under **`~/.config/hoop_shoot/revenuecat/`**.
+     `tools/build.sh` stages them into the project (both gitignored) before
+     every export; without them the build runs the stub store.
+  2. A RevenueCat project with two apps: **iOS** bundle
+     `com.rossgriffus.hoopshootleague` (upload the In-App Purchase Key .p8
+     and an App Store Connect API key) and **Android**
+     `com.rossgriffus.hoopshoot` (the Play service-account JSON — needs the
+     Play Console account, which does not exist yet). Their public SDK keys
+     (`appl_…`, `goog_…`) go into **`store_keys.json`** (gitignored;
+     `store_keys.example.json` is the template).
+  3. App Store Connect: consumables `tickets_300` ($0.99 tier) and
+     `tickets_1000` ($2.99), the Paid Apps agreement, banking and tax; a
+     sandbox tester signed in on the phone under Settings → App Store →
+     Sandbox Account (IAP never works in the Simulator). Play Console, when
+     it exists: the same two one-time products and licence testers.
+  4. RevenueCat: products `tickets_300` / `tickets_1000`, an offering
+     `default` with packages of the same identifiers (the phone buys by
+     product id; the offering is for the dashboard).
+  5. The webhook: Integrations → Webhooks → URL
+     `https://hoop-shoot-api.rmgriffus.workers.dev/v1/store/webhook`, the
+     Authorization header value = the secret below, production **and**
+     sandbox events, all event types. Send the dashboard's TEST event and
+     check its delivery log for a 200. (RevenueCat's docs put webhooks on
+     the Pro tier — free under $2.5k of monthly tracked revenue in 2026 —
+     the same tier bball_sim uses.)
+  6. **Deploy order** (bball_sim's release rule): the Worker first —
+     `wrangler secret put REVENUECAT_WEBHOOK_AUTH --env production` (and the
+     same value in `server/.dev.vars` for `wrangler dev`), `wrangler d1
+     migrations apply hoop_shoot --env production --remote` (0010), `wrangler
+     deploy --env production` (`FEATURE_IAP = "on"` is in wrangler.toml) —
+     and only then the products go live. The other way round, buyers are
+     charged and every delivery fails until RevenueCat's retries run out.
+  7. TestFlight: buy (the credit within the fast poll), cancel, airplane
+     mode after the sheet closes (TICKETS ON THE WAY, then +N on reconnect),
+     kill the app mid-sheet and relaunch (the SDK re-posts, `sync` claims),
+     a sandbox refund (`refunded_at` in the ledger).
+

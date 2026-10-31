@@ -37,25 +37,41 @@ This keeps the "winner takes the played cards" mechanic clear of real-money
 gambling under Apple 5.3 and Google Play's gambling policy: nothing of real
 value is wagered, won or cashed out.
 
-## Ticket packs (design "Ticket Store" 50a, 2026-10-31)
+## Ticket packs (design "Ticket Store" 50a, 2026-10-31; RevenueCat 2026-10-31)
 
-Two consumables, `TicketShop.PACKS` (`game/net/ticket_shop.gd`): **300
-tickets for $0.99** and **1000 for $2.99** (about 10 % more per dollar, so
-it carries BEST VALUE). The prices are the US tiers until the platform store
-reports the player's currency. Packs buy tickets and nothing else — the rule
-above holds: tickets never buy online cards.
+Two consumables in `data/store.json` (`TicketShop.packs()`, and the Worker's
+`store_data.ts` — one table, so the phone and the credit never drift):
+**300 tickets for $0.99** (`tickets_300`) and **1000 for $2.99**
+(`tickets_1000`, about 10 % more per dollar, so it carries BEST VALUE). The
+ids are the App Store / Play / RevenueCat product ids. The US tiers show
+until the store reports the player's own price. Packs buy tickets and
+nothing else — the rule above holds: tickets never buy online cards.
+
+**Buying is the bball_sim shape** (`game/net/store.gd`, autoload `Store`;
+docs/BACKEND.md → Ticket store): the phone only shows the store's prices
+and opens its sheet through RevenueCat (`RevenueCatBackend` over the
+godot-x plugin; the base `StoreBackend` is the null backend every build
+without the plugin runs). **It never credits itself.** RevenueCat's webhook
+books the sale at the Worker as a *pending purchase*; the phone polls
+`/v1/store/pending` (every 1.5 s, eight times), CLAIMs the rows (atomic,
+once) and only then `App.grant_tickets` what the Worker answered — the
+wallet lives in the save, so the credit travels the rewards-claim road. No
+credit after the eight asks: the page gives the button back with TICKETS ON
+THE WAY and a slow poll (20 × 5 s) keeps asking; `Store.sync()` also runs at
+launch when `/v1/me` reports `pendingTickets`, on resume, and when the store
+page opens, so a sale that finished after the sheet closed (the app killed,
+a late webhook) still lands. Refunds are recorded at the Worker, never
+credited when unclaimed, and not clawed back once claimed (Ross).
 
 The page (`TicketStorePage`, docs/HOME.md → Pages) runs each price button
-idle → **ask** (X / BUY, no timeout) → **busy** (the spinner while the
-platform sheet is up) → **done** (`+N`, 2.8 s; the tickets fly into the
-balance chip and it counts up) → idle.
-
-**The store is a stub for now** (Ross, 2026-10-31): `TicketShop.purchase`
-holds the spinner `BUSY_S` (1.4 s), answers no sale and grants nothing, on
-every build. `TicketStorePage.show_bought` plays the success without a grant
-(QA, tests). The real flow replaces `purchase`: StoreKit / Play Billing,
-then the receipt verified by the Worker, which grants server-side before
-answering `true`.
+idle → **ask** (X / BUY, no timeout) → **busy** (the spinner: the sheet,
+then the wait for the credit) → **done** (`+N`, 2.8 s; the tickets fly into
+the balance chip and it counts up from the old balance) → idle. A cancel
+goes back quietly; an error shows PURCHASE FAILED; the slow case shows
+TICKETS ON THE WAY and later +N TICKETS (`StoreCopy`). Without a store (the
+desktop, QA, the gradle-free phone preset) busy ends in no sale: the stub.
+Only consumables are sold, so there is no Restore button (Apple 3.1.1 asks
+for one for non-consumables and subscriptions only).
 
 ## Earning
 
