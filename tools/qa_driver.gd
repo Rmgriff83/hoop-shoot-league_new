@@ -2098,7 +2098,7 @@ func _run_splash() -> void:
 	await _sleep(2.2)
 	# The home walkthrough (design 36a): the welcome, every step, the end.
 	await _snap("walkthrough_00")
-	for i in 6:
+	for i in 5:
 		await _click_named("TourNext")
 		await _sleep(0.7)
 		await _snap("walkthrough_%02d" % (i + 1))
@@ -2115,11 +2115,12 @@ func _run_title() -> void:
 	# The home board mid-court (design 3a): filled with a stand-in top five
 	# and a YOU row so the look can be judged without a server.
 	var bp: BoardPreview = get_tree().root.find_child("BoardPreview", true, false)
+	var qa_rows := []
+	for r in [["NEON OWL", 41], ["CLUTCH HAWK", 38], ["GLASS DUKE", 36], ["TURBO COMET", 35], ["LUCKY FOX", 34], ["PIXEL BARON", 34],
+			["RIM SHARK", 33], ["BANK PILOT", 33], ["COSMIC KID", 32], ["VELVET ACE", 32], ["HOOK ROVER", 31], ["SPIN WIZARD", 31]]:
+		qa_rows.push_back({"rank": "#%d" % (qa_rows.size() + 1), "name": r[0], "score": str(r[1]), "me": false})
 	if bp != null:
-		var rows := []
-		for r in [["NEON OWL", 41], ["CLUTCH HAWK", 38], ["GLASS DUKE", 36], ["TURBO COMET", 35], ["LUCKY FOX", 34]]:
-			rows.push_back({"rank": "#%d" % (rows.size() + 1), "name": r[0], "score": str(r[1]), "me": false})
-		bp.set_rows(rows, {"rank": 212, "score": 29})
+		bp.set_rows(qa_rows, {"rank": 212, "score": 29})
 	for i in 4:
 		await _snap("title_cage_%02d" % i)
 		if i < 3:
@@ -2135,6 +2136,23 @@ func _run_title() -> void:
 		await _sleep(0.1)
 		_mouse_button(Vector2(2, 2), false)
 		await _sleep(0.4)
+	# The board popup (design 3a, 2026-10-30): ONLINE with the stand-in rows, then YOURS.
+	if bp != null:
+		bp.pressed.emit()
+		await _sleep(0.5)
+		var sheet: BoardSheet = get_tree().root.find_child("BoardSheet", true, false)
+		if sheet != null:
+			sheet._online = qa_rows
+			sheet._me = {"rank": 212, "score": 29}
+			sheet._fill()
+			await _sleep(0.1)
+			await _snap("title_board_sheet")
+			sheet.show_tab("YOURS")
+			await _sleep(0.2)
+			await _snap("title_board_yours")
+			sheet.close()
+			await _sleep(0.4)
+		bp.set_rows(qa_rows, {"rank": 212, "score": 29})
 	await _pick_area("beach")
 	await _sleep(0.4)
 	await _snap("title_beach_00")
@@ -2147,11 +2165,14 @@ func _run_title() -> void:
 	await _click_button_named("LEAGUE")
 	await _sleep(0.8)
 	await _snap("title_league_heat")
+	await _sleep(0.1)
 	for tab in ["TABLE", "SCHED", "CARDS", "STATS"]:
 		await _click_button_named(tab)
 		await _sleep(0.6)
 		await _snap("title_league_" + tab.to_lower())
-	await _click_button_named("<")
+		if tab == "CARDS":
+			await _qa_shop_buy()
+	await _click_named("BackHome")
 	await _sleep(0.8)
 	# The locker (an IconButton has no text: click it by name).
 	var locker: Button = get_tree().root.find_child("Locker", true, false)
@@ -2162,7 +2183,9 @@ func _run_title() -> void:
 		_mouse_button(lc, false)
 		await _sleep(0.8)
 		await _snap("title_locker")
-		await _click_button_named("CLOSE")
+		var lp: Node = get_tree().root.find_child("LockerPanel", true, false)
+		if lp != null and lp.has_method("close"):
+			lp.call("close")
 		await _sleep(0.6)
 	# The menu (a HamburgerButton has no text: click it by name).
 	var menu: Button = get_tree().root.find_child("Menu", true, false)
@@ -2190,10 +2213,51 @@ func _run_title() -> void:
 	await _click_button_named("TABLE")
 	await _sleep(0.6)
 	await _snap("title_dark_table")
-	await _click_button_named("<")
+	await _click_named("BackHome")
 	await _sleep(0.8)
+	# A finished season (design 3a, 2026-10-30): the gold season-over card
+	# on MATCH and the bracket tree on TABLE, staged on a copy and restored.
+	var keep_doc: Dictionary = App.league_doc("cage").duplicate(true)
+	App.save_league_doc(_qa_done_doc(App.league_cfg("cage"), 7, true), "cage")
+	App.mark_wrap_seen("cage")
+	await _click_button_named("ENTER")
+	await _sleep(0.8)
+	await _snap("title_league_done")
+	await _click_button_named("TABLE")
+	await _sleep(0.6)
+	await _snap("title_league_bracket")
+	await _click_named("BackHome")
+	await _sleep(0.8)
+	App.save_league_doc(keep_doc, "cage")
 	print("QA title: done")
 	get_tree().quit(0)
+
+
+## The shop's buy flow on the CARDS tab (design 3a, 2026-10-30): a tap asks
+## (X / CONFIRM), CONFIRM buys and the card flies into YOUR CARDS above, +1
+## ADDED shows. Tickets granted first so the buy goes through.
+func _qa_shop_buy() -> void:
+	var lc: LeagueContext = get_tree().root.find_child("League", true, false) as LeagueContext
+	if lc == null:
+		return
+	var id := ""
+	for c in CardDefs.all():
+		if Progression.can_use(App.level(), c):
+			id = str(c["id"])
+			break
+	if id == "":
+		return
+	App.grant_tickets(int(CardDefs.get_card(id).get("price", 0)) * 2)
+	lc._fill_buy(id)
+	lc.tap_buy(id)
+	await _sleep(0.3)
+	await _snap("title_league_shop_ask")
+	lc.tap_buy(id)
+	await _sleep(0.3)
+	await _snap("title_league_shop_fly")
+	await _sleep(0.6)
+	await _snap("title_league_shop_done")
+	await _sleep(1.4)
 
 
 ## Aim QA: one REAL wind-up — press, pull DOWN in steps snapshotting at

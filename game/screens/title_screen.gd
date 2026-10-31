@@ -52,6 +52,7 @@ const WASH_ALPHA := 0.72
 ## The season chip under the area name while the league is open.
 const CHIP_X := 36.0
 const CHIP_H := 46.0
+const BACK_H := 64.0
 ## The rows on this screen (HomeLayout.compute, design "Store and Locker"
 ## 32a, 2026-10-24): the top row and the ticker on the screen's edges, the
 ## card block 74 px above the bottom, the middle in the design's proportions.
@@ -84,7 +85,7 @@ var _badge: LevelBadge
 var _wallet: CoinsPill
 var _season_chip: ShadowPanel
 var _chip_a: Label
-var _chip_b: Label
+var _back_home: ShadowCard
 var _settings: SettingsPanel
 var _ranks: RanksPage
 var _lobby: MatchLobbyPage
@@ -188,6 +189,83 @@ func _on_score_accepted(area: String, _reply: Dictionary) -> void:
 		_refresh_board()
 
 
+## The board popup (design 3a, 2026-10-30): the chrome fades out under it
+## and back when it closes; ONLINE from the cached ALL TIME board, YOURS from
+## the device's runs here.
+var _sheet: BoardSheet
+
+
+func _open_board() -> void:
+	if _sheet != null or _switching or _open:
+		return
+	var area := str(CARDS[_index]["area"])
+	var data: Dictionary = Net.cached_board(area, BOARD_PERIOD)
+	var rows: Array = RanksCopy.rows(data) if not data.is_empty() else []
+	var me: Dictionary = Dictionary(data.get("me", {})) if data.get("me") is Dictionary else {}
+	_sheet = BoardSheet.new()
+	_sheet.setup(area, rows, me, SaveService.top_scores(20, area))
+	_sheet.closed.connect(func() -> void:
+		_sheet = null
+		if _chrome != null:
+			_chrome.modulate.a = 1.0
+	)
+	_ui.add_child(_sheet)
+	var tw := create_tween()
+	tw.tween_property(_chrome, "modulate:a", 0.0, BoardSheet.COVER_S).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+
+func board_sheet() -> BoardSheet:
+	return _sheet
+
+
+## A card bought in the league's shop (design 3a, 2026-10-30): the wallet
+## and ticker re-read, and the card's art flies from its shop row into YOUR
+## CARDS above (CssEase.card_fly, 0.7 s) — an owned kind's badge bumps as it
+## lands, a new kind's slot grows open.
+func _on_card_bought(id: String, from: Rect2) -> void:
+	_refresh_ticker()
+	var cv := _cards_view
+	var card := CardDefs.get_card(id)
+	if cv == null or not is_instance_valid(cv) or card.is_empty():
+		_rebuild_float(false)
+		return
+	var had := cv.has(id)
+	var to: Rect2 = cv.slot_rect(id) if had else cv.make_room(id)
+	var fly := Control.new()
+	fly.name = "Fly"
+	fly.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fly.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	var sh := ColorRect.new()
+	sh.color = Color(0, 0, 0, 0.45)
+	sh.position = Vector2(8, 10)
+	sh.size = FloatCards.CARD
+	sh.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fly.add_child(sh)
+	fly.add_child(CardFace.new(card, FloatCards.CARD))
+	_ui.add_child(fly)
+	var s0 := from.size.x / FloatCards.CARD.x if from.size.x > 0.0 else 1.25
+	var step := func(t: float) -> void:
+		var d := CssEase.card_fly(t, from.position, to.position, s0)
+		fly.position = d["pos"]
+		fly.scale = Vector2.ONE * float(d["scale"])
+		fly.rotation_degrees = float(d["rot"])
+	step.call(0.0)
+	var tw := create_tween()
+	tw.tween_method(step, 0.0, CssEase.FLY_S, CssEase.FLY_S)
+	tw.tween_callback(func() -> void:
+		fly.queue_free()
+		if is_instance_valid(cv):
+			if had:
+				cv.bump(id)
+			else:
+				cv.grow(id)
+	)
+
+
+func cards_view() -> FloatCards:
+	return _cards_view if _cards_view != null and is_instance_valid(_cards_view) else null
+
+
 ## A walkthrough over the home (design 36a): the overlay dims everything but
 ## the part each step explains; the home's own rects are resolved here. The
 ## welcome toast waits until the tour closes.
@@ -216,7 +294,7 @@ func _walkthrough_rect(target: String) -> Rect2:
 	if _chrome == null:
 		return Rect2()
 	var league := _chrome_rect("LeagueCard")
-	league = Rect2(league.position - Vector2(0, 38), league.size + Vector2(0, 38))   # the chips float above it
+	league = Rect2(league.position - Vector2(0, 43), league.size + Vector2(0, 43))   # the season and trophies overhang it
 	match target:
 		"three":
 			return league.merge(_chrome_rect("Pair")).grow(12.0)
@@ -230,6 +308,16 @@ func _walkthrough_rect(target: String) -> Rect2:
 			return _chrome_rect("Online").grow(10.0)
 		"locker":
 			return _chrome_rect("Locker").grow(12.0)
+		"top":
+			# The whole top row: the level, the locker, the tickets and the menu.
+			var row := Rect2()
+			for n in ["Level", "Locker", "Wallet", "Menu"]:
+				var r := _chrome_rect(n)
+				if r.size != Vector2.ZERO:
+					row = r.grow(10.0) if row.size == Vector2.ZERO else row.merge(r.grow(10.0))
+			return row
+		"board":
+			return _board.get_global_rect().grow(10.0) if _board != null and _board.visible else Rect2()
 		"enter":
 			return _chrome_rect("Enter").grow(10.0)
 	return Rect2()
@@ -375,7 +463,7 @@ func rebuild_chrome() -> void:
 	_chrome.add_child(zone)
 	_stars = HBoxContainer.new()
 	_stars.name = "Stars"
-	_stars.custom_minimum_size = Vector2(0, 27)
+	_stars.custom_minimum_size = Vector2(0, 34)
 	_stars.add_theme_constant_override("separation", 6)
 	_stars.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	zone.add_child(_stars)
@@ -403,7 +491,7 @@ func rebuild_chrome() -> void:
 	# mid-court (BoardPreview).
 	var online := ShadowCard.new(RetroTheme.SCENE_TEXT)
 	online.name = "Online"
-	online.custom_minimum_size = Vector2(0, 56 + ShadowStyle.OFFSET)
+	online.custom_minimum_size = Vector2(0, 72 + ShadowStyle.OFFSET)
 	online.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var orow := HBoxContainer.new()
 	orow.name = "Row"
@@ -414,7 +502,7 @@ func rebuild_chrome() -> void:
 	var oicon := PixelIcon.new("icon_multiplayer", Vector2(30, 23), 2.0)
 	oicon.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	orow.add_child(oicon)
-	var oword := RetroTheme.on_scene(RetroTheme.display("ONLINE", 16))
+	var oword := RetroTheme.on_scene(RetroTheme.display("ONLINE", 18))
 	oword.name = "Word"
 	oword.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	oword.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -422,9 +510,9 @@ func rebuild_chrome() -> void:
 	# Measured from the font itself plus the ink outline on both sides: the
 	# label's own minimum size, read before it is in the tree, came up short
 	# and the word ran past the card's edge.
-	var word_w := UiFont.display().get_string_size("ONLINE", HORIZONTAL_ALIGNMENT_LEFT, -1, 16).x + 2.0 * RetroTheme.OUTLINE
+	var word_w := UiFont.display().get_string_size("ONLINE", HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(18)).x + 2.0 * RetroTheme.OUTLINE
 	oword.custom_minimum_size.x = word_w
-	orow.size = Vector2(30 + 14 + word_w, 56)
+	orow.size = Vector2(30 + 14 + word_w, 72)
 	online.custom_minimum_size.x = 18 + orow.size.x + 22 + ShadowStyle.OFFSET
 	name_row.add_child(online)
 	var soon := RetroTheme.on_scene(RetroTheme.caps("SOON", 16))
@@ -438,31 +526,34 @@ func rebuild_chrome() -> void:
 		tw.tween_interval(0.8)
 		tw.tween_callback(func() -> void: soon.visible = false)
 	online.pressed.connect(_open_lobby)
-	# `▾ ALL AREAS · 2/3 OPEN`: the archive's door.
+	# `ALL AREAS · 2/3 OPEN >`: the archive's door (design 3a, 2026-10-30:
+	# bold 22 with a 2 px ink shadow, the chevron with a dithered one).
 	_all_areas = Button.new()
 	_all_areas.name = "AllAreas"
 	_all_areas.flat = true
 	_all_areas.focus_mode = Control.FOCUS_NONE
-	_all_areas.custom_minimum_size = Vector2(0, 34)
+	_all_areas.custom_minimum_size = Vector2(0, 40)
 	_all_areas.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
 	for state in ["normal", "hover", "pressed", "disabled", "focus"]:
 		_all_areas.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	var row := HBoxContainer.new()
 	row.name = "AllAreasRow"
-	row.add_theme_constant_override("separation", 10)
+	row.add_theme_constant_override("separation", 14)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_all_areas.add_child(row)
-	var tri := DownTriangle.new()
-	tri.name = "Triangle"
-	tri.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(tri)
-	var all_label := _float_text("", 16, RetroTheme.SCENE_TEXT, false)
+	var all_label := _float_text("", 22, RetroTheme.SCENE_TEXT, false)
 	all_label.name = "AllAreasText"
 	all_label.add_theme_color_override("font_shadow_color", RetroTheme.SCENE_OUTLINE)
 	all_label.add_theme_constant_override("shadow_offset_x", 2)
 	all_label.add_theme_constant_override("shadow_offset_y", 2)
 	all_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(all_label)
+	var all_chev := _float_text(">", 22, RetroTheme.SCENE_TEXT, true)
+	all_chev.name = "AllAreasChevron"
+	all_chev.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	RetroTheme.dithered(all_chev, Vector2(4, 4))
+	row.add_child(all_chev)
+	row.size = Vector2(0, 40)
 	_all_areas.pressed.connect(func() -> void: _open_archive())
 	zone.add_child(_all_areas)
 	_prev = _chevron("<", -1)
@@ -477,22 +568,37 @@ func rebuild_chrome() -> void:
 	_season_chip.position = Vector2(CHIP_X, float(_lay["chip_y"]))
 	_season_chip.custom_minimum_size = Vector2(0, CHIP_H + ShadowStyle.OFFSET)
 	_season_chip.visible = false
-	var chip_row := HBoxContainer.new()
-	chip_row.add_theme_constant_override("separation", 14)
-	chip_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_season_chip.add_child(chip_row)
-	_chip_a = _float_text("", 16, RetroTheme.SCENE_TEXT, true)
+	_chip_a = _float_text("", 18, RetroTheme.SCENE_TEXT, true)
 	_chip_a.name = "ChipA"
 	_chip_a.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	chip_row.add_child(_chip_a)
-	var dash := ModeCards.Dash.new()
-	dash.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	chip_row.add_child(dash)
-	_chip_b = _float_text("", 16, LeagueContext.HI, true)
-	_chip_b.name = "ChipB"
-	_chip_b.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	chip_row.add_child(_chip_b)
+	_season_chip.add_child(_chip_a)
 	_chrome.add_child(_season_chip)
+	# BACK TO HOME (design 3a, 2026-10-30): under the chip, sliding in with it;
+	# the league's tab row no longer has a "<". On a short screen it sits on
+	# the chip's row (HomeLayout back_inline).
+	_back_home = ShadowCard.new(RetroTheme.SCENE_TEXT)
+	_back_home.name = "BackHome"
+	_back_home.visible = false
+	var brow := HBoxContainer.new()
+	brow.name = "Row"
+	brow.add_theme_constant_override("separation", 14)
+	brow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_back_home.add_child(brow)
+	var blt := _float_text("<", 26, RetroTheme.SCENE_TEXT, true)
+	blt.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	brow.add_child(blt)
+	var bword := _float_text("BACK TO HOME", 22, RetroTheme.SCENE_TEXT, true)
+	bword.name = "Word"
+	bword.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	brow.add_child(bword)
+	var bw := UiFont.display().get_string_size("<", HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(26)).x + 14.0 \
+		+ UiFont.display().get_string_size("BACK TO HOME", HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(22)).x + 4.0 * RetroTheme.OUTLINE
+	brow.position = Vector2(18, 0)
+	brow.size = Vector2(bw, BACK_H)
+	_back_home.size = Vector2(18 + bw + 22, BACK_H) + Vector2.ONE * ShadowStyle.OFFSET
+	_back_home.custom_minimum_size = _back_home.size
+	_back_home.pressed.connect(_close_league)
+	_chrome.add_child(_back_home)
 	# The wash under the card area: a vertical gradient from nothing at the
 	# area's top to a dark gray at the ticker.
 	var wash := TextureRect.new()
@@ -526,11 +632,13 @@ func rebuild_chrome() -> void:
 	_cards_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_area.add_child(_cards_row)
 	_fill_cards()
-	# The leaderboard mid-court (design 3a): the area's top five and YOU; a
-	# tap opens the full board. Slides off left while the league is open.
+	# The leaderboard mid-court (design 3a, 2026-10-30): an ink panel with a
+	# window onto the area's top fifteen and YOU pinned under it; a tap opens
+	# the board popup. Slides off left while the league is open.
 	_board = BoardPreview.new()
 	_board.position = Vector2(BOARD_X, float(_lay["board_y"]))
-	_board.pressed.connect(_open_ranks)
+	_board.set_max_height(float(_lay["board_max_h"]))
+	_board.pressed.connect(_open_board)
 	_chrome.add_child(_board)
 	_refresh_board()
 	# The floating layer over the court, above the area (the open tab's data).
@@ -543,13 +651,12 @@ func rebuild_chrome() -> void:
 	# keeping its tab.
 	if _league != null:
 		var tab := _league.current_tab()
-		var sub := _league.card_sub()
 		_league.queue_free()
-		_league = _make_league(tab, sub)
+		_league = _make_league(tab)
 	elif _open:
 		_league = _make_league()
 	_apply_area(_open_frac)
-	_rebuild_float()
+	_rebuild_float(false)
 
 	# The ticker sits at the very bottom (no bottom nav: the safe area would
 	# push one up on the phone).
@@ -567,11 +674,9 @@ func _fill_cards() -> void:
 		c.free()
 	var area := str(CARDS[_index]["area"])
 	var st := _league_state(area)
-	var league_id := str(st["league"]["id"]) if not st.is_empty() else ""
-	var slots: Array = App.loadout_slots(league_id) if league_id != "" else []
 	# A locked area (docs/PROGRESSION.md): every card disabled, the level it needs on each.
 	var lock := 0 if App.area_unlocked(area) else Progression.area_level(area)
-	var league := ModeCards.league_card(st, slots)
+	var league := ModeCards.league_card(st)
 	league.custom_minimum_size = Vector2(0, LEAGUE_H)
 	league.pressed.connect(func() -> void: _pick("league"))
 	var enter := ModeCards.enter_button(league)
@@ -595,10 +700,16 @@ func _fill_cards() -> void:
 	pair.add_child(practice)
 
 
-## Lay the area out for an openness fraction: 0 = home cards, 1 = league.
-## The box stays put; the home block slides out left, the league in from
-## the right; the chevrons show at home, the float once the league is in.
-func _apply_area(f: float) -> void:
+## Lay the area out (design 3a, 2026-10-30): `f` = the card area's openness
+## (0 = home cards, 1 = league: the home block slides out left, the league in
+## from the right, and the board off to the left), `fc` = the season chip's,
+## BACK TO HOME's and the floats' slide, `fa` = their opacity (each on its own
+## CSS curve while the league opens or closes; all `f` when set at once).
+func _apply_area(f: float, fc := -1.0, fa := -1.0) -> void:
+	if fc < 0.0:
+		fc = f
+	if fa < 0.0:
+		fa = f
 	_open_frac = f
 	_cards_row.position = Vector2(-1.1 * AREA_W * f, _area.size.y - CARDS_H)
 	if _league != null:
@@ -611,31 +722,60 @@ func _apply_area(f: float) -> void:
 		_prev.visible = home and _chevron_ok(-1)
 		_next.visible = home and _chevron_ok(1)
 	if _float != null:
-		_float.visible = not home
+		_float.visible = fa > 0.0
+		_float.position.x = 1.1 * (720.0 - 2.0 * MARGIN) * (1.0 - fc)
+		_float.modulate.a = fa
 	if _season_chip != null:
-		_season_chip.visible = f > 0.0 and _chip_a.text != ""
-		_season_chip.position = Vector2(lerpf(-1.3 * maxf(_season_chip.size.x, 1.0), CHIP_X, f), float(_lay["chip_y"]))
-		_season_chip.modulate.a = f
+		_season_chip.visible = fa > 0.0 and _chip_a.text != ""
+		_season_chip.position = Vector2(lerpf(-1.3 * maxf(_season_chip.size.x, 1.0), CHIP_X, fc), float(_lay["chip_y"]))
+		_season_chip.modulate.a = fa
+	if _back_home != null:
+		_back_home.visible = fa > 0.0
+		var bx := CHIP_X
+		if bool(_lay.get("back_inline", false)) and _season_chip != null and _chip_a.text != "":
+			bx = CHIP_X + _season_chip.size.x + 16.0
+		_back_home.position = Vector2(lerpf(-1.3 * _back_home.size.x, bx, fc), float(_lay["back_y"]) - (BACK_H - CHIP_H) / 2.0 * (1.0 if bool(_lay.get("back_inline", false)) else 0.0))
+		_back_home.modulate.a = fa
+		_back_home.disabled = fc < 1.0
 	if _board != null:
 		# The board slides off left and fades as the league opens (design 3a).
 		_board.position.x = BOARD_X - 1.3 * BoardPreview.WIDTH * f
-		_board.modulate.a = 1.0 - f
+		_board.modulate.a = 1.0 - fa
 		_board.visible = f < 1.0
 
 
-func _make_league(tab := "HEAT", sub := "YOUR CARDS") -> LeagueContext:
+## One step of the open / close slide, `x` = 0..1 of SLIDE_S: the area on
+## the 0.3 s snap curve, the chip / BACK / floats on the 0.35 s one, their
+## opacity on a 0.25 s ease-out — the design's transitions. Closing runs
+## the same curves toward home.
+const SLIDE_S := 0.35
+const AREA_S := 0.3
+const FADE_IN_S := 0.25
+
+func _slide_step(x: float, opening: bool) -> void:
+	var t := x * SLIDE_S
+	var f := CssEase.bezier(CssEase.SNAP, minf(t / AREA_S, 1.0))
+	var fc := CssEase.bezier(CssEase.SNAP, minf(t / SLIDE_S, 1.0))
+	var fa := CssEase.bezier(CssEase.EASE_OUT, minf(t / FADE_IN_S, 1.0))
+	if opening:
+		_apply_area(f, fc, fa)
+	else:
+		_apply_area(1.0 - f, 1.0 - fc, 1.0 - fa)
+
+
+func _make_league(tab := "HEAT") -> LeagueContext:
 	var lc := LeagueContext.new()
 	lc.name = "League"
-	lc.setup(str(CARDS[_index]["area"]), tab, sub)
-	lc.closed.connect(_close_league)
+	lc.setup(str(CARDS[_index]["area"]), tab)
 	lc.changed.connect(func() -> void:
 		_update_zone()
 		_refresh_ticker()
-		_rebuild_float()
+		_rebuild_float(false)
 		_maybe_open_season_wrap.call_deferred()   # ADVANCE just finished a season (design 39f)
 	)
 	lc.new_season_requested.connect(_open_new_season)
 	lc.tab_changed.connect(func(_tab: String) -> void: _rebuild_float())
+	lc.card_bought.connect(_on_card_bought)
 	_area.add_child(lc)
 	return lc
 
@@ -650,27 +790,31 @@ func _open_league(instant := false) -> void:
 	if _league == null:
 		_league = _make_league()
 	_update_zone()   # the campaign exists now: the season chip has its copy
-	_rebuild_float()
+	_rebuild_float(false)
 	if instant:
 		_apply_area(1.0)
 		return
-	var tw := create_tween()
-	tw.tween_method(_apply_area, _open_frac, 1.0, OPEN_S).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	if _league_slide != null and _league_slide.is_valid():
+		_league_slide.kill()
+	_league_slide = create_tween()
+	_league_slide.tween_method(_slide_step.bind(true), 0.0, 1.0, SLIDE_S)
 
 
-## "<" in the league: slide it out and the home block back in.
+## BACK TO HOME: slide the league out and the home block back in.
 func _close_league() -> void:
 	if not _open:
 		return
 	_open = false
 	_fill_cards()
-	var tw := create_tween()
-	tw.tween_method(_apply_area, _open_frac, 0.0, OPEN_S).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-	await tw.finished
+	if _league_slide != null and _league_slide.is_valid():
+		_league_slide.kill()
+	_league_slide = create_tween()
+	_league_slide.tween_method(_slide_step.bind(false), 0.0, 1.0, SLIDE_S)
+	await _league_slide.finished
 	if _league != null and not _open:
 		_league.queue_free()
 		_league = null
-	_rebuild_float()
+	_rebuild_float(false)
 	_refresh_ticker()
 
 
@@ -859,34 +1003,19 @@ class ChevronBadge extends Control:
 		draw_circle(Vector2(14, 14), 8.5, RetroTheme.LIGHT["gold"])
 
 
-## The little bordered down-triangle on the ALL AREAS line.
-class DownTriangle extends Control:
-	func _init() -> void:
-		custom_minimum_size = Vector2(30, 30)
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	func _draw() -> void:
-		draw_rect(Rect2(Vector2(2, 2), Vector2(28, 28)), RetroTheme.SCENE_OUTLINE, false, 2.0)
-		draw_rect(Rect2(Vector2(0, 0), Vector2(28, 28)), RetroTheme.SCENE_TEXT, false, 2.0)
-		var pts := PackedVector2Array([Vector2(8, 11), Vector2(20, 11), Vector2(14, 19)])
-		draw_colored_polygon(pts, RetroTheme.SCENE_TEXT)
-
-
 func _update_zone() -> void:
 	var arena := CosmeticLibrary.get_arena(str(CARDS[_index]["area"]))
 	_area_name.text = (arena.display_name if arena != null else str(CARDS[_index]["area"])).to_upper()
 	if _chip_a != null:
 		var chip: Array = LeagueSummary.card(_league_state(str(CARDS[_index]["area"])))["chip"]
 		_chip_a.text = str(chip[0])
-		_chip_b.text = str(chip[1])
-		_chip_b.visible = str(chip[1]) != ""
 		_season_chip.visible = _open and _chip_a.text != ""
 	for c in _stars.get_children():
 		_stars.remove_child(c)
 		c.free()
 	var n := int(arena.title_stars) if arena != null else 1
 	for i in maxi(n, 1):
-		_stars.add_child(PixelIcon.new("icon_star", Vector2(27, 27)))
+		_stars.add_child(PixelIcon.new("icon_star", Vector2(34, 34)))
 	var all_label: Label = _all_areas.find_child("AllAreasText", true, false) if _all_areas != null else null
 	if all_label != null:
 		all_label.text = "ALL AREAS · " + AreaArchiveCopy.open_count(App.level(), _archive_rows())
@@ -927,41 +1056,79 @@ func star_count() -> int:
 # ---- the floating layer ----------------------------------------------------------
 
 
-## Rebuild the float for the open tab: MATCH → the compact loadout strip;
-## CARDS → the full loadout; TABLE → your spot; SCHED → coming up; STATS →
-## this season. Nothing while the home block shows.
-func _rebuild_float() -> void:
+## Rebuild the float for the open tab (design 3a, 2026-10-30): MATCH and
+## TABLE → your spot; CARDS → YOUR CARDS, the cards you own; SCHED → coming
+## up; STATS → this season. Nothing while the home block shows. `animate`:
+## a tab switch — the old view slides 30 px left and fades while the new one
+## comes in from 30 px left (0.35 s snap, 0.25 s fade, the design's
+## transitions); the open / close slide moves the whole layer instead.
+const FLOAT_SHIFT := 30.0
+
+func _rebuild_float(animate := true) -> void:
 	if _float == null:
 		return
-	for c in _float.get_children():
-		_float.remove_child(c)
-		c.free()
+	var old: Control = _float.get_node_or_null("View")
+	if old != null:
+		old.name = "ViewOut"
+		if animate and is_inside_tree():
+			old.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			_float_out(old)
+		else:
+			_float.remove_child(old)
+			old.queue_free()
+	_cards_view = null
 	if not _open or _league == null:
 		return
 	var doc := App.league_doc(_league.league_id)
 	if doc.is_empty():
 		return
+	var view := Control.new()
+	view.name = "View"
+	UiLayout.full_rect(view)
+	view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_float.add_child(view)
 	match _league.current_tab():
-		"HEAT":
-			_float_strip()
+		"HEAT", "TABLE":
+			_float_spot(view, doc)
 		"CARDS":
-			_float_loadout()
-		"TABLE":
-			_float_spot(doc)
+			_float_cards(view)
 		"SCHED":
-			_float_upcoming(doc)
+			_float_upcoming(view, doc)
 		"STATS":
-			_float_season(doc)
+			_float_season(view, doc)
+	if animate and is_inside_tree() and old != null:
+		view.position.x = -FLOAT_SHIFT
+		view.modulate.a = 0.0
+		var tw := create_tween()
+		tw.tween_method(func(x: float) -> void:
+			if not is_instance_valid(view):
+				return
+			var t := x * SLIDE_S
+			view.position.x = -FLOAT_SHIFT * (1.0 - CssEase.bezier(CssEase.SNAP, minf(t / SLIDE_S, 1.0)))
+			view.modulate.a = CssEase.bezier(CssEase.EASE_OUT, minf(t / FADE_IN_S, 1.0))
+		, 0.0, 1.0, SLIDE_S)
 
 
-func _float_box(y: float, gap: int, right := MARGIN) -> VBoxContainer:
+func _float_out(old: Control) -> void:
+	var tw := create_tween()
+	tw.tween_method(func(x: float) -> void:
+		if not is_instance_valid(old):
+			return
+		var t := x * SLIDE_S
+		old.position.x = -FLOAT_SHIFT * CssEase.bezier(CssEase.SNAP, minf(t / SLIDE_S, 1.0))
+		old.modulate.a = 1.0 - CssEase.bezier(CssEase.EASE_OUT, minf(t / FADE_IN_S, 1.0))
+	, 0.0, 1.0, SLIDE_S)
+	tw.tween_callback(old.queue_free)
+
+
+func _float_box(parent: Control, y: float, gap: int, right := MARGIN) -> VBoxContainer:
 	var box := VBoxContainer.new()
 	box.name = "FloatBox"
 	box.position = Vector2(MARGIN, y)
 	box.size = Vector2(720 - MARGIN - right, 0)
 	box.add_theme_constant_override("separation", gap)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_float.add_child(box)
+	parent.add_child(box)
 	return box
 
 
@@ -972,97 +1139,34 @@ func _float_text(text: String, size_ := 16, color := RetroTheme.SCENE_TEXT, disp
 	return l
 
 
-## MATCH: three thumbnails and "LOADOUT · n OF 3 SET"; tap → CARDS · LOADOUT.
-func _float_strip() -> void:
-	var slots: Array = App.loadout_slots(_league.league_id)
-	var b := Button.new()
-	b.name = "LoadoutStrip"
-	b.flat = true
-	b.focus_mode = Control.FOCUS_NONE
-	b.position = Vector2(MARGIN, float(_lay["strip_y"]))
-	b.size = Vector2(720 - 2 * MARGIN, 60)
-	b.add_theme_stylebox_override("focus", StyleBoxEmpty.new())
-	b.pressed.connect(func() -> void: _league.go_loadout())
-	_float.add_child(b)
-	var row := HBoxContainer.new()
-	UiLayout.full_rect(row)
-	row.add_theme_constant_override("separation", 12)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	b.add_child(row)
-	var set_n := 0
-	for id in slots:
-		var card := CardDefs.get_card(str(id)) if id != null else {}
-		if card.is_empty():
-			row.add_child(ModeCards.empty_slot(Vector2(42, 56), 16, 2.0))
-		else:
-			set_n += 1
-			row.add_child(ModeCards.art(card, Vector2(42, 56), 4.0))
-	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(8, 0)
-	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(gap)
-	var col := VBoxContainer.new()
-	col.alignment = BoxContainer.ALIGNMENT_CENTER
-	col.add_theme_constant_override("separation", 10)
-	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(col)
-	col.add_child(_float_text("LOADOUT", 16, RetroTheme.SCENE_TEXT, true))
-	var set_l := _float_text("%d OF %d SET" % [set_n, slots.size()])
-	set_l.name = "SetLine"
-	col.add_child(set_l)
-
-
-## CARDS: the last loadout full size with its names — the pick itself
-## happens on the pre-match page before each heat (docs/CARDS.md § Drops).
-func _float_loadout() -> void:
-	var slots: Array = App.loadout_slots(_league.league_id)
-	var box := _float_box(float(_lay["loadout_y"]), 14)
-	box.name = "Loadout"
-	var set_n := 0
-	for id in slots:
-		if id != null:
-			set_n += 1
-	box.add_child(_float_text("LAST LOADOUT · %d OF %d" % [set_n, slots.size()]))
-	var row := HBoxContainer.new()
-	row.alignment = BoxContainer.ALIGNMENT_BEGIN
-	row.add_theme_constant_override("separation", 18)
-	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(row)
-	var names := VBoxContainer.new()
-	names.add_theme_constant_override("separation", 12)
-	names.size_flags_vertical = Control.SIZE_SHRINK_END
-	names.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	for i in slots.size():
-		var id: Variant = slots[i]
-		var card := CardDefs.get_card(str(id)) if id != null else {}
-		if card.is_empty():
-			row.add_child(ModeCards.empty_slot(Vector2(96, 128), 24, 3.0))
-			names.add_child(_float_text("SLOT %d EMPTY" % (i + 1), 16, RetroTheme.SCENE_MUTED))
-		else:
-			var art := ModeCards.art(card, Vector2(96, 128), 6.0)
-			art.name = "Slot_%d" % i
-			row.add_child(art)
-			var usable := Progression.can_use(App.level(), card)
-			var nm := str(card.get("name", id)).to_upper() + ("" if usable else " · LVL %d" % Progression.card_level(card))
-			names.add_child(_float_text(nm, 16, RetroTheme.SCENE_TEXT if usable else RetroTheme.SCENE_MUTED))
-	var pad := Control.new()
-	pad.custom_minimum_size = Vector2(10, 0)
-	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(pad)
-	row.add_child(names)
-
-
-## TABLE: YOUR SPOT — the big ordinal, the record and games back, the line.
-func _float_spot(doc: Dictionary) -> void:
+## MATCH / TABLE: your jersey and name · YOUR SPOT, the big ordinal, the
+## record and games back, the line in gold.
+func _float_spot(parent: Control, doc: Dictionary) -> void:
 	var sp := LeagueSummary.spot(doc, _league.cfg)
-	var box := _float_box(float(_lay["float_y"]), 14)
+	var box := _float_box(parent, float(_lay["float_y"]), 14)
 	box.name = "Spot"
-	box.add_child(_float_text(str(sp["cap"])))
+	var head := HBoxContainer.new()
+	head.name = "Head"
+	head.add_theme_constant_override("separation", 10)
+	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(head)
+	var jersey := PixelIcon.new("icon_jersey", Vector2(32, 32))
+	jersey.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(jersey)
+	var you := FaceOffPage.you_record()
+	var nm := _float_text(str(you.get("name", "YOU")).to_upper(), 22, RetroTheme.SCENE_TEXT, true)
+	nm.name = "Name"
+	nm.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	head.add_child(nm)
+	var cap := _float_text("· " + str(sp["cap"]), 18, RetroTheme.SCENE_MUTED)
+	cap.name = "Cap"
+	cap.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	head.add_child(cap)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 28)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(row)
-	var big := _float_text(str(sp["big"]), 80, RetroTheme.SCENE_TEXT, true)
+	var big := _float_text(str(sp["big"]), 86, RetroTheme.SCENE_TEXT, true)
 	big.name = "Big"
 	big.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(big)
@@ -1071,15 +1175,28 @@ func _float_spot(doc: Dictionary) -> void:
 	col.add_theme_constant_override("separation", 14)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(col)
-	col.add_child(_float_text(str(sp["line1"]), 16, RetroTheme.SCENE_TEXT, true))
-	col.add_child(_float_text(str(sp["line2"]), 16, LeagueContext.HI))
+	col.add_child(_float_text(str(sp["line1"]), 18, RetroTheme.SCENE_TEXT, true))
+	col.add_child(_float_text(str(sp["line2"]), 18, LeagueContext.HI))
+
+
+## CARDS: YOUR CARDS · n AVAILABLE over every card you own in this league,
+## 96×128 with its ×n, in a row that scrolls sideways out to the screen's
+## edge (a fade at whichever end has more). A bought card flies into it.
+var _cards_view: FloatCards
+
+func _float_cards(parent: Control) -> void:
+	_cards_view = FloatCards.new()
+	_cards_view.name = "YourCards"
+	_cards_view.position = Vector2(MARGIN, float(_lay["loadout_y"]))
+	_cards_view.build(_league.league_id)
+	parent.add_child(_cards_view)
 
 
 ## SCHED: COMING UP — the next three games as cards, today's in gold.
-func _float_upcoming(doc: Dictionary) -> void:
-	var box := _float_box(float(_lay["float_y"]), 14, 42)
+func _float_upcoming(parent: Control, doc: Dictionary) -> void:
+	var box := _float_box(parent, float(_lay["float_y"]), 14, 42)
 	box.name = "Upcoming"
-	box.add_child(_float_text("COMING UP"))
+	box.add_child(_float_text("COMING UP", 18))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 18 - int(ShadowStyle.OFFSET))
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1099,23 +1216,23 @@ func _float_upcoming(doc: Dictionary) -> void:
 		col.add_theme_constant_override("separation", 12)
 		col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.add_child(col)
-		col.add_child(_float_text(str(u["day"]), 16, RetroTheme.SCENE_TEXT, true))
-		col.add_child(_float_text(str(u["name"])))
-		col.add_child(_float_text(str(u["tag"]), 16, LeagueContext.HI))
+		col.add_child(_float_text(str(u["day"]), 18, RetroTheme.SCENE_TEXT, true))
+		col.add_child(_float_text(str(u["name"]), 18))
+		col.add_child(_float_text(str(u["tag"]), 18, LeagueContext.HI))
 		row.add_child(card)
 
 
 ## STATS: THIS SEASON — record, high points, streak.
-func _float_season(doc: Dictionary) -> void:
-	var box := _float_box(float(_lay["float_y"]), 18)
+func _float_season(parent: Control, doc: Dictionary) -> void:
+	var box := _float_box(parent, float(_lay["float_y"]), 18)
 	box.name = "Season"
-	box.add_child(_float_text("THIS SEASON"))
+	box.add_child(_float_text("THIS SEASON", 18))
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 56)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(row)
 	for k in LeagueSummary.season_stats(doc):
-		row.add_child(ModeCards.stat(str(k["v"]), str(k["l"]), 48, 14))
+		row.add_child(ModeCards.stat(str(k["v"]), str(k["l"]), 52, 14, 18))
 
 
 # ---- data ------------------------------------------------------------------------

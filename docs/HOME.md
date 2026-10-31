@@ -7,16 +7,20 @@ current area**. `game/screens/title_screen.gd` (a `Node3D`), widgets in `game/ui
 ```
 Court       full-screen CourtGeometry + Camera3D (TitlePan), under a mild scrim (0.25)
 TopBar      [LVL01 + meter] [ball = locker]                 [ticket 1,240] [menu]
-AreaZone    ★ (one star per difficulty step, ArenaSet.title_stars)
-            ARCADE CAGE (52 px, wraps at 430, dithered drop shadow) [⚔ ONLINE]
-            big < > chevrons at the screen edges (y 520), dithered shadows too
+AreaZone    ★ 34 px (one star per difficulty step, ArenaSet.title_stars)
+            ARCADE CAGE (52 px, wraps at 430, dithered drop shadow) [⚔ ONLINE] (72 tall)
+            ALL AREAS · 2/3 OPEN > (bold 22, the > dithered) — the archive
+            big < > chevrons at the screen edges (y 697), a gold dot for an unvisited area
+Board       TIME TRIAL · ALL TIME ink panel mid-court (140, 697), 434 wide: a window
+            three rows tall onto the top 15, YOU pinned under it; a tap → the popup
 Float       over the court above the area, only while the league is open (per tab)
-Wash        a vertical gradient from clear at y 781 to dark gray (0.72) at the ticker
-CardArea    a fixed box (y 781 → 1206) holding the home block or the league in context
-  League    orange, 270 high: NAME — n TITLES / SEASON n · three numbers (RECORD ·
-            PLACE · STREAK, or SERIES · ROUND · SEED) · ENTER LEAGUE > · dashed rule ·
-            NEXT · @ NAME / DAY d OF 14; trophies overhang top-left, loadout chips top-right
-  Pair      TIME TRIAL (gold, stopwatch, "BEST 29") · PRACTICE (teal, jersey, "NO CLOCK")
+Wash        a vertical gradient from clear at y 936 to dark gray (0.72) at the ticker
+CardArea    a fixed box (y 922 → 1486) holding the home block or the league in context
+  League    orange, 310 high: SEASON n over its top-left corner, trophies (with
+            sparkles) over its top-right; jersey + YOUR NAME / HOMETOWN; three numbers
+            (RECORD · PLACE · STREAK, or SERIES · ROUND · SEED) · ENTER LEAGUE > (an
+            orange dot sweep) · dashed rule · NEXT · @ NAME / DAY d OF 14
+  Pair      TIME TRIAL (gold, stopwatch, "BEST 29") · PRACTICE (teal, barbell, "NO CLOCK"), 110 high
 Ticker      flat strip at the very bottom, scrolling copy from the save
 ```
 No bottom nav: the phone's safe area would push one up, and the space goes to
@@ -29,7 +33,7 @@ ALL (ALL adds ???? tiles for what is not won yet). Its PLAY PEGGY row opens the
 wins balls and nets — tickets buy nothing else; the hoop counter is closed
 for now (`App.HOOPS_IN_LOCKER`). The locker icon carries a gold dot while a
 won prize has not been looked at.
-**The board** sits mid-court (`BoardPreview`, (140, 440), 440 wide — design 3a, 2026-10-17): the area's top five ALL TIME (Ross, 2026-10-24: the forever list, never the week's; the server's `period=all` board, else the device's own runs while the fetch is out or the server's board is still empty) and YOUR row after a gap; a tap opens the global boards (below) on the same ALL TIME tab. It slides off left as the league opens. **ONLINE** is the one cream card beside the area name (the 1v1 icon + the word): the lobby.
+**The board** sits mid-court (`BoardPreview`, (140, 697), 434 wide — design 3a, reworked 2026-10-30): an ink panel (ShadowPanel in ink at 82 %) with TIME TRIAL · ALL TIME over a cream rule, a window three 44 px rows tall onto the area's top fifteen ALL TIME (Ross, 2026-10-24: the forever list, never the week's; the server's `period=all` board, else the device's own runs while the fetch is out or the server's board is still empty) with dashed rules and a fade at its foot while more wait, and YOUR row pinned under it (gold on orange). A drag scrolls the window; a tap opens **the board popup** (`BoardSheet`): the home fades out under a 45 % ink cover (0.2 s) and a cream panel slides in from 80 px right (0.3 s): the stopwatch, TIME TRIAL over `ARCADE CAGE · 60 S`, X; ONLINE / YOURS (the active one gold); 64 px rows (ONLINE pins YOUR row under the list; YOURS lists the device's runs as `TODAY · 7 SW`, `YESTERDAY · 5 SW`, `OCT 14 · 4 SW`, the best on orange); CLOSE at the foot slides in 0.05 s later. The cover, X and CLOSE close it. The full RANKS page is reached from the online lobby's ALL RANKS (Ross, 2026-10-30: popup only on the home). On a short screen the window shows fewer rows (`HomeLayout` `board_max_h`). The board slides off left as the league opens. **ONLINE** is the one cream card beside the area name (the 1v1 icon + the word): the lobby.
 **Shop is not on the home page**: it lives inside each league, selling
 cards usable only in that league for tickets (docs/ECONOMY.md: one currency
 since 2026-10-19); the pill shows TICKETS, the one wallet.
@@ -87,44 +91,74 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
   (`slide_out(true, false)` / `slide_in(true)`); the locker's BACK then
   returns home. A `rebuild_chrome()` keeps the chrome out while a
   page is open.
-- **The league in context** (`game/ui/league_context.gd`, `LeagueContext`):
-  tapping the LEAGUE card (or ENTER LEAGUE) slides the home block out left
-  and the league in from the right, in the same box — a tab row `<` MATCH ·
-  TABLE · SCHED · CARDS · STATS (the active tab a solid cream face with an
-  orange dithered shadow) over panes that slide sideways, with an 88 px fade
-  at the bottom while a pane can still scroll. It IS the league dashboard
-  (the full-screen hub is gone): MATCH — the pine opponent card (`DAY 4 ·
-  AWAY` over the name, nickname / hometown, ACC / ARC segments and PACE beside
-  the PLAY button with the equipped cards as chips on its corner, the bio;
-  **no SIM DAY / SIM ALL — every game is played live**), plus the START
-  SEASON / ADVANCE cards for a finished season or a lost playoff (since
-  2026-10-27 START SEASON asks the title for the NEW SEASON page, and the
-  season wrap-up slides over the pane once a season is done — see Season
-  wrap-up and new season); TABLE — the
-  standings (your row orange, the dashed PLAYOFF LINE) or the bracket (the
-  semis, a connector, the final); SCHED — every game (today's gold, unplayed
-  dim); CARDS — LOADOUT (the **spares**; the equipped slots float above) and
-  SHOP (your tickets, the buy pill with the ticket icon); STATS — the
-  career grid, seasons, BEST MATCHES, the area's time trials. Every panel is
-  a see-through cream `ShadowPanel` at 24 % with cream text. `changed` fires
-  when the doc moves, `tab_changed` on a tab; `go_loadout()` lands on CARDS ·
-  LOADOUT. `App.enter_league(id)` makes a league current without a scene
-  change; `App.to_league_hub()` (CONTINUE SEASON after a heat) lands on the
-  home with it open. While open the chevrons hide and the swipe is off.
+- **The league in context** (`game/ui/league_context.gd`, `LeagueContext`;
+  reworked 2026-10-30 from design 3a): tapping the LEAGUE card (or ENTER
+  LEAGUE) slides the home block out left and the league in from the right,
+  in the same box (0.3 s on the design's `cubic-bezier(.2,.8,.2,1)`); the
+  season chip and **BACK TO HOME** (a cream card under the chip, at 640 on
+  the design; beside the chip on a short screen) slide in from the left
+  (0.35 s, fading in over 0.25 s), the board off to the left. The tab row
+  MATCH · TABLE · SCHED · CARDS · STATS (72 tall, the text at 16 — the
+  design's 20 snaps to 24 and five tabs would not fit; the active tab a
+  solid white face with tan dots, an orange dithered shadow and ink text;
+  a gold square pulsing on MATCH while a game waits, CssEase.tab_dot) sits
+  over panes that slide ±110 % (0.3 s), with an 88 px fade at the bottom
+  while a pane can still scroll. It IS the league dashboard: **MATCH** —
+  the pine opponent card (`DAY 4 · AWAY` / `SEMI 2 · GAME 3 · AWAY`, `VS.`,
+  the name, their record `2-1 RECORD · 2ND` (`· 2ND SEED` in the playoffs);
+  the nickname and hometown on the right; ACC / ARC segments and PACE
+  beside PLAY — 232×104 orange with a gold dot sweep; under a dashed rule
+  `OLLIE'S CARDS` / `THEIR CARDS FOR THIS MATCH` with their season hand as
+  48 px crops — neutral copy where the design says "HE", shooters carry no
+  pronouns; **no SIM DAY / SIM ALL — every game is played live**); a
+  finished season shows the gold **season-over card** instead (`SEASON n ·
+  OVER`, CHAMPION and their name — yours when you won — and record, your
+  titles `×n` on the right, AVG PTS / HIGH / STREAK beside START `SEASON
+  n+1`, then PLAYOFF RUN `BEAT OLLIE 2-1 · BEAT PACO 3-2`,
+  `LeagueSummary.playoff_run` / `season_line_stats`); START SEASON asks the
+  title for the NEW SEASON page (since 2026-10-27), and the season wrap-up
+  slides over the pane once a season is done (see Season wrap-up and new
+  season); out of the playoffs, ADVANCE plays out the bracket. **TABLE** —
+  the standings (your row orange, the dashed PLAYOFF LINE) or the bracket
+  as a tree: the FINAL (trophy, `FINAL · BO5`, 380 wide) over a connector
+  over the two semis side by side, then `CHAMPION: …`. **SCHED** — every
+  game (today's gold, unplayed dim). **CARDS** — the shop alone (`SHOP` over
+  `CARDS BOUGHT IN THE ARCADE CAGE SHOP CAN ONLY BE PLAYED IN ARCADE CAGE
+  MATCHES`): each row the art, the name and a `LVL n` tag on the corner
+  (gold edge once you can play it), and the buy flow — the gold price →
+  a tap asks (X + orange CONFIRM with the price; back after 4 s) → CONFIRM
+  buys (`App.try_buy_card`, no pane rebuild) and shows `+1 ADDED` for 1.6 s
+  while the card **flies** into YOUR CARDS above (`card_bought` → the
+  title, CssEase.card_fly). **STATS** — the career grid, seasons, BEST
+  MATCHES, the area's time trials. Every panel is a see-through cream
+  `ShadowPanel` at 24 % with cream text. `changed` fires when the doc
+  moves, `tab_changed` on a tab; `go_loadout()` lands on CARDS.
+  `App.enter_league(id)` makes a league current without a scene change;
+  `App.to_league_hub()` (CONTINUE SEASON after a heat) lands on the home
+  with it open. While open the chevrons hide and the swipe is off.
 - **The floating layer** (`title_screen.gd` `_rebuild_float`, over the court
-  above the area, per open tab): MATCH → the compact loadout strip (three
-  42×56 thumbnails, `LOADOUT · n OF 3 SET`; tap → CARDS · YOUR CARDS); CARDS →
-  the last loadout, read-only (96×128 cards, `LAST LOADOUT · n OF 3`, `SLOT 3
-  EMPTY`; the pick itself is the pre-match page before each heat, 2026-10-20); TABLE
-  → `YOUR SPOT` / the big ordinal / `2-1 · 1.0 GB` / `IN A PLAYOFF SPOT`;
-  SCHED → `COMING UP`, the next three games as cards (today's gold); STATS →
-  `THIS SEASON` RECORD · HIGH PTS · STREAK. Rebuilt on `tab_changed` /
-  `changed`, hidden with the home block.
-- **Season chip** — while the league is open a chip slides in under the area
-name (`SEASON 2 — 2-1`, `SEASON 2 · PLAYOFFS — SERIES 1-1`, `SEASON 2 · OVER
-— 10-4 · CHAMPS`; `LeagueSummary.card().chip`). The LEAGUE card's PLACE and
-FINISH are bare numbers; a finished season's ENTER LEAGUE narrows to the
-chevron (the footer says START INSIDE).
+  above the area, per open tab; it rides in with the league from +110 % and
+  on a tab switch the old view slides 30 px left and fades as the new one
+  comes in from 30 px left): MATCH and TABLE → your jersey and name `·
+  YOUR SPOT`, the big ordinal (86), `2-1 · 1.0 GB`, `IN A PLAYOFF SPOT` in
+  gold; CARDS → **YOUR CARDS** (`FloatCards`): `YOUR CARDS · n AVAILABLE`
+  over every card you own here, 96×128 with its `×n`, in a row that
+  scrolls sideways out to the screen's edge (fades at whichever end has
+  more; a card above your level dimmed with its LVL) — a bought card lands
+  there: an owned kind's badge bumps (CssEase.cnt_bump), a new kind's slot
+  grows open (slot_grow); SCHED → `COMING UP`, the next three games as
+  cards (today's gold); STATS → `THIS SEASON` RECORD · HIGH PTS · STREAK.
+  Rebuilt on `tab_changed` / `changed`, hidden with the home block.
+- **Season chip** — while the league is open a chip slides in under the
+  area name with the season alone (`SEASON 2`, `SEASON 2 · PLAYOFFS`,
+  `SEASON 2 · OVER`; `LeagueSummary.card().chip[0]`). The LEAGUE card's
+  PLACE and FINISH are bare numbers; a finished season's ENTER LEAGUE
+  narrows to the chevron (the footer says START INSIDE).
+- **CSS timing** (`core/ui/css_ease.gd`, `CssEase`, pure): the prototypes'
+  cubic-beziers, steps() and keyframe runs, with the timing function applied
+  to each keyframe interval as CSS does; the named runs `twinkle` (the
+  trophies' sparkles, 2.4 s steps(6), 0.55 s apart), `tab_dot`, `cnt_bump`,
+  `slot_grow`, `card_fly` and `lb_in`. `tests/test_css_ease.gd`.
 - **Summary copy** (`game/ui/league_summary.gd`, `LeagueSummary`, pure):
   `card(state)` (the LEAGUE card's top / sub / titles / stats / next line),
   `spot`, `upcoming`, `season_stats`, and `line(state)` — the one-liner the
@@ -132,8 +166,10 @@ chevron (the footer says START INSIDE).
   1 · DAY 1 · TIP OFF`, `SEASON 2 · DAY 4 · 3RD PLACE`, `SEASON 2 · SEMIS
   1-0`, `SEASON 2 · CHAMPIONS`, `SEASON 2 · DONE · 5TH PLACE`.
 - **Cards** (`game/ui/mode_cards.gd`, `ModeCards`): `league_card(state,
-  slots)` (trophies up to five then `+n`, chips = `Chip`: the card's sprite
-  loop on its own colour, or the dashed `+`), `trial_card` / `practice_card` (`icon_card`),
+  you)` (you = {name, town}, `FaceOffPage.you_record()` by default;
+  trophies up to five then `+n`, each with a `Sparkle`; `Chip` — the card's
+  sprite loop on its own colour — stays for the pre-match and HUD),
+  `trial_card` / `practice_card` (`icon_card`, PRACTICE wears `icon_barbell`),
   `text_card`, and the shared `art` / `empty_slot` / `chip` / `stat`
   pieces. LEAGUE → opens the league in context; TIME TRIAL / PRACTICE →
   `App.start_area(mode, area)`. **Quick heat is not on the home screen**.
@@ -179,8 +215,10 @@ chevron (the footer says START INSIDE).
   what it points at — with the title (display 22, gold) and "n / N", the body
   (bold 21), SKIP (150 × 68, every step but the last), `<` (from the second),
   NEXT (orange, the step's `cta` or NEXT, a `>`); `welcome` / `end` steps are
-  centred bookends at y 380 with no spot ("WELCOME TO / HOOP SHOOT LEAGUE",
-  "THAT'S IT!" at display 40 gold, dithered). Taps underneath are blocked. SKIP
+  centred bookends at y 520 with no spot ("WELCOME TO / HOOP SHOOT LEAGUE",
+  "THAT'S IT!" at display 46 gold, dithered). The count is the design's: the
+  step's place over the steps after the welcome (`1 / 5` … `4 / 5`, THAT'S IT!
+  being the fifth). Taps underneath are blocked. SKIP
   and the last NEXT both `App.mark_walkthrough_seen(id)`
   (`settings.walkthroughsSeen`) and emit `closed(completed)`. **Hosting one:**
   a screen builds `Walkthrough.new()`, `start(id, resolve)` with
@@ -189,10 +227,13 @@ chevron (the footer says START INSIDE).
   JSON plus a resolver. **The home tour** (`"home"`): queued by
   `App.create_player` (`pending_walkthrough`), run by the title once the home
   shows its cards (no archive, league closed — which is why NEW PLAYER now lands
-  on the card home rather than the open league); targets `three` (LEAGUE card +
-  the pair, the chips above it), `league`, `level` (the LVL badge), `online`
-  (the ONLINE card), `locker`, `enter`, resolved from `Chrome` by node name
-  (`title_screen._walkthrough_rect`). The welcome toast waits until the tour
+  on the card home rather than the open league). Since 2026-10-30 (36a's
+  latest pass) six steps: WELCOME, DOWN HERE.. (`three`: the LEAGUE card and
+  the pair, the season and trophies over it), UP HERE.. (`top`: the whole
+  top row — level, locker, tickets, menu), PLAY ONLINE (`online`), TOP 5
+  (`board`: the time-trial board) and THAT'S IT!; resolved from `Chrome` by
+  node name (`title_screen._walkthrough_rect`, which still answers `league`,
+  `level`, `locker` and `enter` for other tours). The welcome toast waits until the tour
   closes. The tour's buttons are `TourSkip` / `TourBack` / `TourNext` (the home
   has its own `Prev` / `Next` chevrons). `--qa-splash` snaps
   `walkthrough_00..06`; `tests/test_walkthroughs.gd`.

@@ -222,6 +222,39 @@ static func season_stats(doc: Dictionary) -> Array:
 	return [{"v": "%d-%d" % record(s), "l": "RECORD"}, {"v": str(high), "l": "HIGH PTS"}, {"v": streak_text(s), "l": "STREAK"}]
 
 
+## The season-over card's lines (design 3a, 2026-10-30): AVG PTS over every
+## game you played this season (playoffs too), your HIGH and the STREAK.
+static func season_line_stats(doc: Dictionary) -> Array:
+	var s: Dictionary = doc["season"]
+	var games := all_player_games(s)
+	var total := 0
+	var high := 0
+	for g in games:
+		var pts := int(g["homeScore"] if g["homeId"] == PLAYER else g["awayScore"])
+		total += pts
+		high = maxi(high, pts)
+	var avg := ("%.1f" % (float(total) / games.size())) if not games.is_empty() else "-"
+	return [{"l": "AVG PTS", "v": avg}, {"l": "HIGH", "v": str(high) if not games.is_empty() else "-"}, {"l": "STREAK", "v": streak_text(s)}]
+
+
+## Your playoff run in one line: `BEAT OLLIE 2-1 · BEAT PACO 3-2`, ending
+## `LOST TO PACO 2-3` where it stopped, or MISSED THE PLAYOFFS.
+static func playoff_run(season: Dictionary) -> String:
+	var parts := []
+	for series in season.get("series", []):
+		if series["highSeedId"] != PLAYER and series["lowSeedId"] != PLAYER:
+			continue
+		var wl := series_record(series)
+		var opp := short_name(opponent_in(series))
+		if str(series.get("winnerId", "")) == PLAYER:
+			parts.push_back("BEAT %s %d-%d" % [opp, wl[0], wl[1]])
+		elif str(series.get("winnerId", "")) != "":
+			parts.push_back("LOST TO %s %d-%d" % [opp, wl[0], wl[1]])
+		else:
+			parts.push_back("%s %d-%d" % ["VS " + opp, wl[0], wl[1]])
+	return " · ".join(parts) if not parts.is_empty() else "MISSED THE PLAYOFFS"
+
+
 # ---- pieces ----------------------------------------------------------------------
 
 

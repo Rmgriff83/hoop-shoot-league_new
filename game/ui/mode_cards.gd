@@ -10,11 +10,15 @@ extends RefCounted
 ## Card art thumbnails (`art`, `empty_slot`, `chip`) are shared with the
 ## league in context and the home's floating layer.
 
-const LEAGUE_H := 270.0
-const PAIR_H := 94.0
+const LEAGUE_H := 310.0
+const PAIR_H := 110.0
 const CHIP := 40.0
 const CHIP_GAP := 8.0
 const MAX_TROPHIES := 5
+const TROPHY := 38.0
+## The trophies' sparkles (the design's twinkle): each one's delay and spot in its cup.
+const SPARKLE_DELAY := 0.55
+const SPARKLE_AT := [Vector2(24, -2), Vector2(3, 8), Vector2(26, 13), Vector2(5, -5), Vector2(21, 3)]
 const CREAM := RetroTheme.SCENE_TEXT
 const HI := Color("#FFE45C")
 
@@ -22,45 +26,59 @@ const HI := Color("#FFE45C")
 # ---- the cards -------------------------------------------------------------------
 
 
-## The LEAGUE card from an App.league_states() row; `slots` = the league's
-## three loadout slots (ids or null) for the chips. Sized LEAGUE_H + shadow.
-static func league_card(state: Dictionary, slots: Array = []) -> Button:
+## The LEAGUE card from an App.league_states() row (design "Home League
+## Context v2", 2026-10-30): the season in gold over its top-left corner and
+## the trophies (each with its sparkle) over its top-right; inside, your
+## jersey, name and hometown, the three season numbers beside ENTER LEAGUE
+## (an orange dot sweep across it) and the next game over a dashed rule.
+## `you` = {name, town} (FaceOffPage.you_record() when empty). Sized
+## LEAGUE_H + shadow.
+static func league_card(state: Dictionary, you: Dictionary = {}) -> Button:
 	var info := LeagueSummary.card(state)
+	if you.is_empty():
+		you = FaceOffPage.you_record()
 	var b := ShadowCard.new(RetroTheme.c("orange"))
 	b.name = "LeagueCard"
 	b.custom_minimum_size = Vector2(0, LEAGUE_H + ShadowCard.OFFSET)
 	if not state.is_empty() and not bool(state.get("unlocked", true)):
 		b.disabled = true
-	var margin := _margin(22, 22)
+	var margin := _margin(20, 22)
 	b.add_child(margin)
 	var col := VBoxContainer.new()
 	col.name = "Text"
-	col.add_theme_constant_override("separation", 18)
+	col.add_theme_constant_override("separation", 14)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_child(col)
-	# Header: NAME — 1 TITLE, then the season.
-	var head := VBoxContainer.new()
-	head.add_theme_constant_override("separation", 10)
+	# Header: the jersey beside your name over your hometown.
+	var head := HBoxContainer.new()
+	head.name = "Head"
+	head.add_theme_constant_override("separation", 16)
 	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var lift := Control.new()
+	lift.custom_minimum_size = Vector2(0, 20 - 14)   # the design's margin-top 20, less the column's gap
+	lift.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(lift)
 	col.add_child(head)
-	var top := HBoxContainer.new()
-	top.add_theme_constant_override("separation", 12)
-	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	head.add_child(top)
-	var t := _label(str(info["top"]), 16, CREAM, true)
-	t.name = "Title"
-	top.add_child(t)
-	var titles := int(info["titles"])
-	if titles > 0:
-		var dash := Dash.new()
-		dash.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-		top.add_child(dash)
-		var tl := _label("%d TITLE%s" % [titles, "" if titles == 1 else "S"], 16, HI, true)
-		tl.name = "Titles"
-		top.add_child(tl)
-	var sub := _label(str(info["sub"]), 20, CREAM)
-	sub.name = "Sub"
-	head.add_child(sub)
+	var jersey := PixelIcon.new("icon_jersey", Vector2(60, 60), 3.0)
+	jersey.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head.add_child(jersey)
+	var who := VBoxContainer.new()
+	who.add_theme_constant_override("separation", 10)
+	who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	who.alignment = BoxContainer.ALIGNMENT_CENTER
+	who.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head.add_child(who)
+	var nm := _label(str(you.get("name", "YOU")).to_upper(), 28, CREAM, true)
+	nm.name = "PlayerName"
+	nm.clip_text = true
+	nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	who.add_child(nm)
+	var town := _label(str(you.get("town", "")).to_upper(), 20, CREAM)
+	town.name = "PlayerTown"
+	town.clip_text = true
+	town.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	town.visible = town.text != ""
+	who.add_child(town)
 	# Middle: the three numbers and ENTER LEAGUE.
 	var mid := HBoxContainer.new()
 	mid.name = "Mid"
@@ -76,15 +94,24 @@ static func league_card(state: Dictionary, slots: Array = []) -> Button:
 	stats.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	mid.add_child(stats)
 	for k in info["stats"]:
-		stats.add_child(stat(str(k["v"]), str(k["l"]), 32))
+		var st := stat(str(k["v"]), str(k["l"]), 34, 10, 18)
+		st.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		stats.add_child(st)
 	# A finished season narrows it to a centred chevron (the footer says START INSIDE).
 	var done := bool(info.get("done", false))
 	var enter := ShadowCard.new(CREAM)
 	enter.name = "Enter"
+	enter.clip_contents = true
 	enter.custom_minimum_size = Vector2((104 if done else 176) + ShadowCard.OFFSET, 0)
-	enter.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	enter.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	enter.disabled = b.disabled
-	var em := _margin(0, 16)
+	var shine := PreMatchPage.Shine.new(2.4, 200.0, 0.75, RetroTheme.c("orange"))
+	shine.name = "Shine"
+	UiLayout.full_rect(shine)
+	shine.offset_right = -ShadowCard.OFFSET
+	shine.offset_bottom = -ShadowCard.OFFSET
+	enter.add_child(shine)
+	var em := _margin(17, 16)
 	enter.add_child(em)
 	var er := HBoxContainer.new()
 	er.add_theme_constant_override("separation", 10)
@@ -92,16 +119,17 @@ static func league_card(state: Dictionary, slots: Array = []) -> Button:
 	er.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	em.add_child(er)
 	if not done:
-		var el := _label("ENTER\nLEAGUE", 16, CREAM, true)
+		var el := _label("ENTER\nLEAGUE", 18, CREAM, true)
 		el.name = "EnterLabel"
 		el.add_theme_constant_override("line_spacing", 8)
 		el.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		el.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		er.add_child(el)
-	var ch := _label(">", 32, CREAM, true)
+	var ch := _label(">", 34, CREAM, true)
 	ch.name = "Chevron"
 	ch.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	er.add_child(ch)
+	enter.custom_minimum_size.y = maxf(UiFont.snap(18) * 2 + 8, UiFont.snap(34)) + 34 + ShadowCard.OFFSET
 	mid.add_child(enter)
 	b.set_meta("enter", enter)
 	# Footer: the next game over a dashed rule.
@@ -114,38 +142,55 @@ static func league_card(state: Dictionary, slots: Array = []) -> Button:
 	fr.add_theme_constant_override("separation", 16)
 	fr.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	foot.add_child(fr)
-	var nl := _label(str(info["next_left"]), 16, CREAM)
+	var nl := _label(str(info["next_left"]), 18, CREAM)
 	nl.name = "NextLeft"
 	nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	fr.add_child(nl)
-	var nr := _label(str(info["next_right"]), 16, CREAM)
+	var nr := _label(str(info["next_right"]), 18, CREAM)
 	nr.name = "NextRight"
 	nr.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	fr.add_child(nr)
-	# Overhangs: trophies top-left, the loadout chips top-right.
+	var tail := Control.new()
+	tail.custom_minimum_size = Vector2(0, 20 - 14)   # the footer's margin-bottom 20
+	tail.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(tail)
+	# Overhangs: the season top-left, the trophies (and their sparkles) top-right.
+	var season := _label(str(info["sub"]), 18, HI, true)
+	season.name = "Season"
+	season.position = Vector2(18, -30)
+	b.add_child(season)
+	var titles := int(info["titles"])
 	if titles > 0:
 		var tr := HBoxContainer.new()
 		tr.name = "Trophies"
-		tr.position = Vector2(14, -35)
 		tr.add_theme_constant_override("separation", 6)
 		tr.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var w := 0.0
 		for i in mini(titles, MAX_TROPHIES):
-			tr.add_child(PixelIcon.new("icon_trophy", Vector2(30, 30), 2.0))
+			var cup := Control.new()
+			cup.name = "Trophy%d" % i
+			cup.custom_minimum_size = Vector2(TROPHY, TROPHY)
+			cup.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			cup.add_child(PixelIcon.new("icon_trophy", Vector2(TROPHY, TROPHY), 2.0))
+			var sp := Sparkle.new(i * SPARKLE_DELAY)
+			sp.name = "Sparkle"
+			sp.position = SPARKLE_AT[i]
+			cup.add_child(sp)
+			tr.add_child(cup)
+			w += TROPHY + (6.0 if i > 0 else 0.0)
 		if titles > MAX_TROPHIES:
-			var more := _label("+%d" % (titles - MAX_TROPHIES), 16, RetroTheme.c("gold"), true)
+			var txt := "+%d" % (titles - MAX_TROPHIES)
+			var more := _label(txt, 18, RetroTheme.c("gold"), true)
+			more.name = "MoreTitles"
 			more.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 			tr.add_child(more)
+			w += 6.0 + UiFont.display().get_string_size(txt, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(18)).x + 2.0 * RetroTheme.OUTLINE
+		tr.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		tr.offset_right = -(18 + ShadowCard.OFFSET)
+		tr.offset_left = tr.offset_right - w
+		tr.offset_top = -43
+		tr.offset_bottom = tr.offset_top + TROPHY
 		b.add_child(tr)
-	if not slots.is_empty():
-		var chips := chip_row(slots, true)
-		chips.name = "Chips"
-		var w := slots.size() * CHIP + (slots.size() - 1) * CHIP_GAP
-		chips.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-		chips.offset_right = -(18 + ShadowCard.OFFSET)
-		chips.offset_left = chips.offset_right - w
-		chips.offset_top = -20
-		chips.offset_bottom = chips.offset_top + CHIP
-		b.add_child(chips)
 	return b
 
 
@@ -165,28 +210,32 @@ static func trial_card(best: int, lock_level := 0) -> Button:
 
 
 static func practice_card(lock_level := 0) -> Button:
-	var b := icon_card("icon_jersey", "PRACTICE", ("LOCKED · LEVEL %d" % lock_level) if lock_level > 0 else "NO CLOCK", RetroTheme.c("teal"))
+	var b := icon_card("icon_barbell", "PRACTICE", ("LOCKED · LEVEL %d" % lock_level) if lock_level > 0 else "NO CLOCK", RetroTheme.c("teal"))
 	b.name = "PracticeCard"
 	b.disabled = lock_level > 0
 	return b
 
 
-## A PAIR_H card: the pixel icon (40 px in a 48 px box), the title in the
-## display face and a small-caps sub-line.
+## A PAIR_H card (design 3a, 2026-10-30): the pixel icon in a 48 px box
+## (the stopwatch at 40, the barbell at 48 with a 2 px shadow), the title in
+## the display face and a bold sub-line.
 static func icon_card(icon: String, title: String, sub: String, fill: Color) -> Button:
 	var b := ShadowCard.new(fill)
 	b.custom_minimum_size = Vector2(0, PAIR_H + ShadowCard.OFFSET)
-	var margin := _margin(0, 20)
+	var margin := _margin(0, 24)
 	b.add_child(margin)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 16)
+	row.add_theme_constant_override("separation", 18)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	margin.add_child(row)
 	var box := CenterContainer.new()
 	box.custom_minimum_size = Vector2(48, 48)
 	box.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(PixelIcon.new(icon, Vector2(40, 40)))
+	var big := icon == "icon_barbell"
+	var pic := PixelIcon.new(icon, Vector2(48, 48) if big else Vector2(40, 40), 2.0 if big else 0.0)
+	pic.name = "Icon"
+	box.add_child(pic)
 	row.add_child(box)
 	var col := VBoxContainer.new()
 	col.name = "Text"
@@ -195,10 +244,10 @@ static func icon_card(icon: String, title: String, sub: String, fill: Color) -> 
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(col)
-	var t := _label(title, 16, CREAM, true)
+	var t := _label(title, 18, CREAM, true)
 	t.name = "Title"
 	col.add_child(t)
-	var s := _label(sub, 16, CREAM)
+	var s := _label(sub, 18, CREAM)
 	s.name = "Sub"
 	s.visible = sub != ""
 	col.add_child(s)
@@ -249,12 +298,12 @@ static func league_line(state: Dictionary) -> String:
 
 
 ## A big number over its small-caps label.
-static func stat(v: String, l: String, size_ := 32, gap := 10) -> VBoxContainer:
+static func stat(v: String, l: String, size_ := 32, gap := 10, label_size := 16) -> VBoxContainer:
 	var cell := VBoxContainer.new()
 	cell.add_theme_constant_override("separation", gap)
 	cell.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	cell.add_child(_label(v, size_, CREAM, true))
-	cell.add_child(_label(l, 16, CREAM))
+	cell.add_child(_label(l, label_size, CREAM))
 	return cell
 
 
@@ -410,3 +459,25 @@ class Chip extends Control:
 		draw_rect(Rect2(Vector2(3, 3), box), RetroTheme.SCENE_OUTLINE)
 		draw_rect(Rect2(Vector2.ZERO, box), RetroTheme.SCENE_OUTLINE)
 		draw_rect(Rect2(Vector2(2, 2), box - Vector2(4, 4)), bg)
+
+
+## A trophy's sparkle (the design's twinkle, 2026-10-30): a 10 px cream plus
+## with a gold centre, hidden most of its 2.4 s loop, then popping in, turning
+## and shrinking away in steps (CssEase.twinkle), `delay` s after the others.
+class Sparkle extends Control:
+	var delay := 0.0
+	func _init(p_delay := 0.0) -> void:
+		delay = p_delay
+		size = Vector2(10, 10)
+		pivot_offset = Vector2(5, 5)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		modulate.a = 0.0
+	func _process(_dt: float) -> void:
+		var v := CssEase.twinkle(Time.get_ticks_msec() / 1000.0 - delay)
+		modulate.a = v.x
+		scale = Vector2.ONE * v.y
+		rotation_degrees = v.z
+	func _draw() -> void:
+		draw_rect(Rect2(4, 0, 2, 10), RetroTheme.SCENE_TEXT)
+		draw_rect(Rect2(0, 4, 10, 2), RetroTheme.SCENE_TEXT)
+		draw_rect(Rect2(3, 3, 4, 4), ModeCards.HI)

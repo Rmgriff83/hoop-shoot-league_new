@@ -794,12 +794,14 @@ class Shine extends Control:
 	var period := 2.0
 	var band := 200.0
 	var peak := 0.55
+	var dot := Color(1.0, 0.95, 0.85)   # the sweep's dots (design "Home League Context v2": orange on ENTER, gold on PLAY)
 	var _t := 0.0
 
-	func _init(p_period := 2.0, p_band := 200.0, p_peak := 0.55) -> void:
+	func _init(p_period := 2.0, p_band := 200.0, p_peak := 0.55, p_dot := Color(1.0, 0.95, 0.85)) -> void:
 		period = p_period
 		band = p_band
 		peak = p_peak
+		dot = p_dot
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 	func _process(dt: float) -> void:
@@ -820,7 +822,7 @@ class Shine extends Control:
 			while x < minf(size.x, cx + BAND * 0.5):
 				var a := 1.0 - absf(x - cx) / (BAND * 0.5)
 				if a > 0.0:
-					draw_rect(Rect2(x, y, 2, 2), Color(1.0, 0.95, 0.85, peak * a))
+					draw_rect(Rect2(x, y, 2, 2), Color(dot, peak * a))
 				x += step
 			y += step
 

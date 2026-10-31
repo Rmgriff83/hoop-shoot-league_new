@@ -99,21 +99,7 @@ static func primary_label(created: bool) -> String:
 
 ## CSS ease-in / ease-out: cubic-bezier(.42,0,1,1) / (0,0,.58,1), solved for x.
 static func css_ease(kind: String, x: float) -> float:
-	if x <= 0.0 or x >= 1.0:
-		return clampf(x, 0.0, 1.0)
-	var p1 := Vector2(0.42, 0.0) if kind == "in" else Vector2(0.0, 0.0)
-	var p2 := Vector2(1.0, 1.0) if kind == "in" else Vector2(0.58, 1.0)
-	var lo := 0.0
-	var hi := 1.0
-	var u := x
-	for i in 30:
-		u = (lo + hi) * 0.5
-		var bx := 3.0 * (1.0 - u) * (1.0 - u) * u * p1.x + 3.0 * (1.0 - u) * u * u * p2.x + u * u * u
-		if bx < x:
-			lo = u
-		else:
-			hi = u
-	return 3.0 * (1.0 - u) * (1.0 - u) * u * p1.y + 3.0 * (1.0 - u) * u * u * p2.y + u * u * u
+	return CssEase.bezier(CssEase.EASE_IN if kind == "in" else CssEase.EASE_OUT, x)
 
 
 ## The ball's offset from its resting spot and its scale `t` s in.
