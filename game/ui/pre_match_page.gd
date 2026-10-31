@@ -576,7 +576,7 @@ func _build_vs() -> void:
 	_vs_word = RetroTheme.display(MatchCopy.vs_word(), 64, GOLD)
 	_vs_word.name = "VsWord"
 	_vs_word.add_theme_color_override("font_outline_color", RetroTheme.SCENE_OUTLINE)
-	_vs_word.add_theme_constant_override("outline_size", RetroTheme.OUTLINE)
+	_vs_word.add_theme_constant_override("outline_size", RetroTheme.OUTLINE_SIZE)
 	_vs_word.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_vs_word.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	RetroTheme.dithered(_vs_word, Vector2(6, 6))
@@ -789,12 +789,21 @@ func _build_ready() -> void:
 
 
 ## The orange READY's shine (the design's dotWave): a band of light sweeping
-## left to right every 2 s, clipped to the face.
+## left to right every 2 s, clipped to the face. `wave()` makes it the home
+## design's full dotWave (ENTER LEAGUE, the league's PLAY / START): a
+## `band`-wide wash of the colour plus its dots, under a mask that ramps in
+## over 45 %, holds to 55 % and ramps out, its left edge running −band → 440
+## over the first 70 % of the period (`wave_to` / `wave_frac`: the lobby's
+## RANKED MATCH runs it out past its own width, `wave_to` −1, over 100 %).
 class Shine extends Control:
+	const WAVE_TO := 440.0
+	var wave_to := WAVE_TO
+	var wave_frac := 0.7
 	var period := 2.0
 	var band := 200.0
 	var peak := 0.55
 	var dot := Color(1.0, 0.95, 0.85)   # the sweep's dots (design "Home League Context v2": orange on ENTER, gold on PLAY)
+	var wash := 0.0                     # the wave's fill alpha (0 = the dots-only shine)
 	var _t := 0.0
 
 	func _init(p_period := 2.0, p_band := 200.0, p_peak := 0.55, p_dot := Color(1.0, 0.95, 0.85)) -> void:
@@ -804,6 +813,20 @@ class Shine extends Control:
 		dot = p_dot
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 
+	## The design's dotWave: `p_wash` the fill's alpha, `bright` its CSS brightness().
+	static func wave(p_period: float, col: Color, p_wash: float, bright: float) -> Shine:
+		var s := Shine.new(p_period, 200.0, 1.0, Color(col.r * bright, col.g * bright, col.b * bright))
+		s.wash = p_wash
+		return s
+
+	## The wave mask's opacity at `x` (px from the face's left) at time `t`.
+	static func wave_alpha(x: float, t: float, p_period: float, p_band: float, to := WAVE_TO, frac := 0.7) -> float:
+		var k := clampf(fposmod(t, p_period) / (p_period * frac), 0.0, 1.0)
+		var u := (x - (-p_band + (to + p_band) * k)) / p_band
+		if u <= 0.0 or u >= 1.0:
+			return 0.0
+		return minf(1.0, minf(u, 1.0 - u) / 0.45)
+
 	func _process(dt: float) -> void:
 		if not visible:
 			return
@@ -811,6 +834,9 @@ class Shine extends Control:
 		queue_redraw()
 
 	func _draw() -> void:
+		if wash > 0.0:
+			_draw_wave()
+			return
 		var BAND := band
 		var k := clampf(_t / (period * 0.7), 0.0, 1.0)
 		var cx := -BAND + (size.x + 2.0 * BAND) * k
@@ -825,6 +851,20 @@ class Shine extends Control:
 					draw_rect(Rect2(x, y, 2, 2), Color(dot, peak * a))
 				x += step
 			y += step
+
+	## The wash in 2 px columns, then the face's dots (ShadowStyle's grid) on top.
+	func _draw_wave() -> void:
+		var x := 0.0
+		while x < size.x:
+			var a := wave_alpha(x + 1.0, _t, period, band, wave_to if wave_to >= 0.0 else size.x + band, wave_frac)
+			if a > 0.0:
+				draw_rect(Rect2(x, 0, 2, size.y), Color(dot, wash * a))
+				var y := 0.0
+				if int(x) % ShadowStyle.DOT_CELL < ShadowStyle.DOT:
+					while y < size.y:
+						draw_rect(Rect2(x, y, 2, ShadowStyle.DOT), Color(dot, a))
+						y += ShadowStyle.DOT_CELL
+			x += 2.0
 
 
 # ---- the cards ------------------------------------------------------------------------------

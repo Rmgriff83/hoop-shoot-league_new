@@ -213,13 +213,19 @@ static func upcoming(doc: Dictionary, cfg: Dictionary, n := 3) -> Array:
 	return out
 
 
-## STATS: this season's RECORD, HIGH PTS and STREAK.
+## STATS: this season's RECORD, PPG (every game you played, playoffs too),
+## HIGH PTS and STREAK.
 static func season_stats(doc: Dictionary) -> Array:
 	var s: Dictionary = doc["season"]
 	var high := 0
-	for g in all_player_games(s):
-		high = maxi(high, int(g["homeScore"] if g["homeId"] == PLAYER else g["awayScore"]))
-	return [{"v": "%d-%d" % record(s), "l": "RECORD"}, {"v": str(high), "l": "HIGH PTS"}, {"v": streak_text(s), "l": "STREAK"}]
+	var total := 0
+	var games := all_player_games(s)
+	for g in games:
+		var pts := int(g["homeScore"] if g["homeId"] == PLAYER else g["awayScore"])
+		total += pts
+		high = maxi(high, pts)
+	var ppg := ("%.1f" % (float(total) / games.size())) if not games.is_empty() else "-"
+	return [{"v": "%d-%d" % record(s), "l": "RECORD"}, {"v": ppg, "l": "PPG"}, {"v": str(high), "l": "HIGH PTS"}, {"v": streak_text(s), "l": "STREAK"}]
 
 
 ## The season-over card's lines (design 3a, 2026-10-30): AVG PTS over every

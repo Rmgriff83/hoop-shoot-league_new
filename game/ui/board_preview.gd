@@ -1,7 +1,7 @@
 class_name BoardPreview
 extends Control
 ## The time-trial board on the home (design "Home League Context v2" 3a,
-## 2026-10-30): an ink panel mid-court — TIME TRIAL · ALL TIME over a rule,
+## 2026-10-31): a see-through cream panel mid-court — TIME TRIAL · ALL TIME over a rule,
 ## a window three rows tall onto the area's top fifteen (rank, name, points;
 ## dashed rules; a fade at its foot while more rows wait below) and YOUR row
 ## pinned under it in gold on orange. A drag scrolls the window; a tap opens
@@ -12,20 +12,21 @@ extends Control
 signal pressed
 
 const WIDTH := 434.0
-const PAD_TOP := 16.0
-const PAD_H := 20.0
-const PAD_BOTTOM := 10.0
-const HEAD_H := 40.0
-const ROW_H := 44.0
+const PAD_TOP := 12.0
+const PAD_H := 18.0
+const PAD_BOTTOM := 8.0
+const HEAD_H := 32.0       # the header row, then HEAD_GAP and the 2 px rule
+const HEAD_GAP := 10.0
+const ROW_H := 36.0
+const RANK_W := 46.0
 const ROWS_SHOWN := 3
 const TOP := 15
-const FADE_H := 44.0
+const FADE_H := 36.0
 const YOU := Color("#FFE45C")
 const CREAM := RetroTheme.SCENE_TEXT
 const MUTED := RetroTheme.SCENE_MUTED
 const INK := RetroTheme.SCENE_OUTLINE
-const PANEL := Color("#14100E")
-const PANEL_TINT := 0.65   # the design's 0.82, lighter (Ross, 2026-10-30)
+const FADE := Color(60.0 / 255.0, 52.0 / 255.0, 46.0 / 255.0)
 const TAP_PX := 18.0
 
 var _panel: ShadowPanel
@@ -41,9 +42,8 @@ var _dragged := false
 func _init() -> void:
 	name = "BoardPreview"
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	_panel = ShadowPanel.new(PANEL, 0.0, PANEL_TINT, 0.0)
+	_panel = ShadowPanel.new(CREAM, 0.0, ShadowStyle.TINT, 0.0)
 	_panel.name = "Panel"
-	_panel.color = INK
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(_panel)
 	var col := VBoxContainer.new()
@@ -61,22 +61,22 @@ func _init() -> void:
 	# TIME TRIAL · ALL TIME over a cream rule.
 	var head := HBoxContainer.new()
 	head.name = "Head"
-	head.custom_minimum_size = Vector2(0, HEAD_H - 12.0)
-	head.add_theme_constant_override("separation", 12)
+	head.custom_minimum_size = Vector2(0, HEAD_H)
+	head.add_theme_constant_override("separation", 10)
 	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(head)
-	var watch := PixelIcon.new("icon_stopwatch", Vector2(24, 24))
+	var watch := PixelIcon.new("icon_stopwatch", Vector2(20, 20))
 	watch.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	head.add_child(watch)
-	var title := _text("TIME TRIAL", 18, CREAM, true)
+	var title := _text("TIME TRIAL", 15, CREAM, true)
 	title.name = "Title"
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head.add_child(title)
-	var period := _text("ALL TIME", 16, MUTED)
+	var period := _text("ALL TIME", 14, MUTED)
 	period.name = "Period"
 	head.add_child(period)
 	var gap := Control.new()
-	gap.custom_minimum_size = Vector2(0, 12)
+	gap.custom_minimum_size = Vector2(0, HEAD_GAP)
 	gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(gap)
 	var rule := ColorRect.new()
@@ -109,8 +109,8 @@ func _init() -> void:
 	_fade = TextureRect.new()
 	_fade.name = "Fade"
 	var grad := Gradient.new()
-	grad.set_color(0, Color(PANEL, 0.0))
-	grad.set_color(1, Color(PANEL, 0.75))
+	grad.set_color(0, Color(FADE, 0.0))
+	grad.set_color(1, Color(FADE, 0.75))
 	var gt := GradientTexture2D.new()
 	gt.gradient = grad
 	gt.fill_from = Vector2(0, 0)
@@ -131,7 +131,7 @@ func _init() -> void:
 
 ## The room the board has on this screen: rows come off the window to fit.
 func set_max_height(h: float) -> void:
-	var fixed := PAD_TOP + HEAD_H + 2.0 + ROW_H + PAD_BOTTOM + ShadowStyle.OFFSET
+	var fixed := PAD_TOP + HEAD_H + HEAD_GAP + 2.0 + ROW_H + PAD_BOTTOM + ShadowStyle.OFFSET
 	_shown = clampi(int(floorf((h - fixed) / ROW_H)), 1, ROWS_SHOWN)
 	(_scroll.get_parent() as Control).custom_minimum_size.y = ROW_H * _shown
 	_relayout()
@@ -229,7 +229,7 @@ func _row(rank: String, who: String, pts: String, mine: bool, rule: bool) -> Con
 	wrap.name = "Row" + rank if not mine else "RowYou"
 	wrap.custom_minimum_size = Vector2(0, ROW_H)
 	var h := HBoxContainer.new()
-	h.add_theme_constant_override("separation", 12)
+	h.add_theme_constant_override("separation", 10)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	UiLayout.full_rect(h)
 	if mine:
@@ -237,17 +237,17 @@ func _row(rank: String, who: String, pts: String, mine: bool, rule: bool) -> Con
 		h.offset_right = -PAD_H
 	wrap.add_child(h)
 	var col := YOU if mine else CREAM
-	var n := _text(rank, 16, col, true)
+	var n := _text(rank, 14, col, true)
 	n.name = "Rank"
-	n.custom_minimum_size = Vector2(56, 0)
+	n.custom_minimum_size = Vector2(RANK_W, 0)
 	h.add_child(n)
-	var w := _text(who, 20, col)
+	var w := _text(who, 17, col)
 	w.name = "Name"
 	w.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	w.clip_text = true
 	w.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	h.add_child(w)
-	var p := _text(pts, 20, col, true)
+	var p := _text(pts, 17, col, true)
 	p.name = "Pts"
 	p.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	h.add_child(p)

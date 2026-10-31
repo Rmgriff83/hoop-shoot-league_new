@@ -49,7 +49,7 @@ func _theme(t) -> void:
 	t.ok(ModeCards.practice_card() is ShadowCard, "mode cards are shadow cards")
 	var over := RetroTheme.on_scene(Label.new())
 	t.eq(over.get_theme_color("font_color"), RetroTheme.SCENE_TEXT, "on-scene text is cream")
-	t.eq(over.get_theme_constant("outline_size"), RetroTheme.OUTLINE, "on-scene text carries an ink outline")
+	t.eq(over.get_theme_constant("outline_size"), RetroTheme.OUTLINE_SIZE, "on-scene text carries the design's 3 px ink edge (outline_size 12)")
 	over.free()
 	for id in ["cage", "beach", "park", "city"]:
 		t.ok(int(CosmeticLibrary.get_arena(id).title_stars) >= 1, "%s rates its difficulty in stars" % id)
@@ -154,7 +154,8 @@ func _summary(t) -> void:
 	t.ok(str(sp["big"]).ends_with("ST") or str(sp["big"]).ends_with("ND") or str(sp["big"]).ends_with("RD") or str(sp["big"]).ends_with("TH"), "a place (%s)" % sp["big"])
 	t.ok(str(sp["line1"]).begins_with("1-0 · "), "record and games back (%s)" % sp["line1"])
 	var ss := LeagueSummary.season_stats(doc)
-	t.eq(ss[1], {"v": "28", "l": "HIGH PTS"}, "season high points")
+	t.eq(ss[1], {"v": "28.0", "l": "PPG"}, "points per game, one game in")
+	t.eq(ss[2], {"v": "28", "l": "HIGH PTS"}, "season high points")
 	Campaign.sim_to_playoffs(doc, cage)
 	c = LeagueSummary.card(st)
 	t.ok(str(c["sub"]).ends_with("PLAYOFFS") or str(c["sub"]).ends_with("OVER"), "playoffs (%s)" % c["sub"])
@@ -257,6 +258,21 @@ func _widgets(t) -> void:
 		var ib := IconButton.new(kind)
 		t.eq(ib.kind, kind, "%s icon button builds" % kind)
 		ib.free()
+	# The top row (design 3a, 2026-10-30): 72 px faces, the ticket tipped back.
+	t.eq(HamburgerButton.SIZE, 72.0 + ShadowStyle.OFFSET, "the menu has a 72 px face")
+	var lb := LevelBadge.new()
+	t.eq(lb.custom_minimum_size.y, 72.0 + ShadowStyle.OFFSET, "…so does LVL")
+	lb.free()
+	var tick := PixelIcon.new("icon_ticket", Vector2(44, 28))
+	tick.turn = -30.0
+	t.ok(tick.rotation == 0.0 and tick.turn == -30.0, "the ticket's tilt is drawn, so its row cannot undo it")
+	tick.free()
+	# The ENTER / PLAY dotWave: off the face before it starts, full in the
+	# band's middle, gone after 70 % of the period.
+	var Sh = PreMatchPage.Shine
+	t.ok(Sh.wave_alpha(50.0, 0.0, 2.4, 200.0) == 0.0, "the wave starts left of the face")
+	t.ok(absf(Sh.wave_alpha(100.0, 2.4 * 0.7 * 200.0 / 640.0, 2.4, 200.0) - 1.0) < 0.001, "…full in its middle")
+	t.ok(Sh.wave_alpha(100.0, 2.4 * 0.85, 2.4, 200.0) == 0.0, "…and rests past 70 %")
 	var pill := CoinsPill.new()
 	pill.set_coins(1240)
 	t.eq(pill.text(), "1,240", "coins pill formats thousands")
@@ -529,6 +545,7 @@ func _widgets(t) -> void:
 	var active: Button = lc.find_child("Tab_HEAT", true, false)
 	t.eq((active.find_child("Label", true, false) as Label).text, "MATCH", "the first tab reads MATCH (as a child label over the solid face)")
 	t.eq((lc.find_child("Tab_TABLE", true, false) as Button).text, "TABLE", "an inactive tab carries its text")
+	t.eq((lc.find_child("Tab_TABLE", true, false) as ShadowCard).color, RetroTheme.c("orange"), "…on an orange face (2026-10-31)")
 	t.ok(lc.find_child("Opponent", true, false) != null, "MATCH shows the next opponent")
 	t.ok(lc.find_child("PlayHeat", true, false) != null, "MATCH has PLAY")
 	t.ok(lc.find_child("SimDay", true, false) == null and lc.find_child("SimAll", true, false) == null, "no sim buttons: every game is played")

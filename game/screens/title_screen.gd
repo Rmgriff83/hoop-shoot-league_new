@@ -21,6 +21,8 @@ extends Node3D
 
 ## The areas in page order live in AreaArchiveCopy.AREAS (the archive and
 ## the snapshot tool read the same list).
+const LOBBY_ME_TRIES := 3      # /v1/me reads before the lobby settles on the kept rank
+const LOBBY_RETRY_S := 1.5
 const CARDS := AreaArchiveCopy.AREAS
 const MARGIN := 36.0
 const COLUMN_W := 648.0
@@ -426,12 +428,13 @@ func rebuild_chrome() -> void:
 	scrim.mouse_filter = Control.MOUSE_FILTER_STOP
 	_chrome.add_child(scrim)
 
-	# Top bar.
+	# Top bar: 72 px faces at the design's x's (LVL 36, the ball 230, the
+	# tickets 420, the menu 606).
 	_badge = LevelBadge.new()
 	_badge.position = Vector2(MARGIN, float(_lay["top_y"]))
 	_badge.set_level(App.level(), Progression.frac_for(App.xp()))
 	_chrome.add_child(_badge)
-	var locker := IconButton.new("locker")
+	var locker := IconButton.new("locker", HamburgerButton.SIZE)
 	locker.name = "Locker"
 	locker.position = Vector2(230, float(_lay["top_y"]))
 	locker.badge = not App.unseen_prizes().is_empty()
@@ -439,17 +442,27 @@ func rebuild_chrome() -> void:
 	_chrome.add_child(locker)
 	var menu := HamburgerButton.new()
 	menu.name = "Menu"
-	menu.position = Vector2(720 - MARGIN - HamburgerButton.SIZE, float(_lay["top_y"]))
+	menu.position = Vector2(606, float(_lay["top_y"]))
 	menu.pressed.connect(_open_settings)
 	_chrome.add_child(menu)
 	_wallet = CoinsPill.new()   # the pill keeps its old class name; it shows tickets
 	_wallet.name = "Wallet"
 	_wallet.set_coins(App.tickets())
+	_wallet.custom_minimum_size = Vector2(164, 72) + Vector2.ONE * ShadowStyle.OFFSET
 	var wallet_icon: PixelIcon = _wallet.find_child("Coin", true, false)
 	if wallet_icon != null:
+		# The ticket at 44×28, tipped 30° back.
 		wallet_icon.icon_name = "icon_ticket"
-		wallet_icon.custom_minimum_size = Vector2(22, 14)
-	_wallet.position = Vector2(720 - MARGIN - HamburgerButton.SIZE - 16 - 170, float(_lay["top_y"]))
+		wallet_icon.custom_minimum_size = Vector2(44, 28)
+		wallet_icon.turn = -30.0
+	var amount: Label = _wallet.find_child("Amount", true, false)
+	if amount != null:
+		amount.add_theme_font_size_override("font_size", LevelBadge.TEXT)
+	# The face ends at the design's 584 (22 px short of the menu); a long
+	# balance grows the pill to the left.
+	_wallet.position = Vector2(420, float(_lay["top_y"]))
+	var pill := _wallet
+	pill.resized.connect(func() -> void: pill.position.x = 584.0 + ShadowStyle.OFFSET - pill.size.x)
 	_chrome.add_child(_wallet)
 
 	# The area zone: the stars on top, the name big under them with the
@@ -1222,17 +1235,17 @@ func _float_upcoming(parent: Control, doc: Dictionary) -> void:
 		row.add_child(card)
 
 
-## STATS: THIS SEASON — record, high points, streak.
+## STATS: THIS SEASON — record, points per game, high points, streak.
 func _float_season(parent: Control, doc: Dictionary) -> void:
 	var box := _float_box(parent, float(_lay["float_y"]), 18)
 	box.name = "Season"
 	box.add_child(_float_text("THIS SEASON", 18))
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 56)
+	row.add_theme_constant_override("separation", 36)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_child(row)
 	for k in LeagueSummary.season_stats(doc):
-		row.add_child(ModeCards.stat(str(k["v"]), str(k["l"]), 52, 14, 18))
+		row.add_child(ModeCards.stat(str(k["v"]), str(k["l"]), 40, 14, 18))
 
 
 # ---- data ------------------------------------------------------------------------
@@ -1607,12 +1620,39 @@ func _open_lobby() -> void:
 	var on_top_fail := func() -> void:
 		if _lobby != null:
 			_lobby.set_top_offline()
+	# Your card waits on the server (LOADING PLAYER, design 37a 2026-10-31):
+	# /v1/me (or the ladder's own line) ends it; a failed read is tried twice
+	# more, then the card settles on the rank kept from last time.
+	var me_tries := [0]
 	var on_rank := func(r: Dictionary) -> void:
 		if _lobby != null:
 			_lobby.set_rank(r)
+			_lobby.set_loading(false)
+	var on_me_fail := func() -> void:
+		if _lobby == null:
+			return
+		me_tries[0] += 1
+		if me_tries[0] < LOBBY_ME_TRIES:
+			get_tree().create_timer(LOBBY_RETRY_S).timeout.connect(func() -> void:
+				if _lobby != null and _lobby.loading():
+					Net.fetch_me())
+		else:
+			_lobby.set_rank(Net.me_rank)
+			_lobby.set_loading(false)
+	# Back from the background: ask again (a call that died while the phone
+	# slept said nothing), and the ladder past its cache.
+	var on_resumed := func() -> void:
+		if _lobby == null:
+			return
+		me_tries[0] = 0
+		Net.fetch_me()
+		Net.load_ranked_board(true)
 	Net.ranked_board_loaded.connect(on_top)
 	Net.ranked_board_failed.connect(on_top_fail)
 	Net.rank_changed.connect(on_rank)
+	Net.me_failed.connect(on_me_fail)
+	Net.resumed.connect(on_resumed)
+	_lobby.set_loading(Net.enabled and not Net.me_fresh())
 	var cached := Net.cached_ranked_board()
 	if not cached.is_empty():
 		_lobby.set_top(cached)
@@ -1626,6 +1666,8 @@ func _open_lobby() -> void:
 		Net.ranked_board_loaded.disconnect(on_top)
 		Net.ranked_board_failed.disconnect(on_top_fail)
 		Net.rank_changed.disconnect(on_rank)
+		Net.me_failed.disconnect(on_me_fail)
+		Net.resumed.disconnect(on_resumed)
 		_close_pre_match()
 		_close_rewards()
 		_lobby = null

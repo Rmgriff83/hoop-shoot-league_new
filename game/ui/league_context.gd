@@ -180,8 +180,8 @@ class TabDot extends Control:
 
 
 ## Active (design 3a, 2026-10-30): a solid white face with tan dots, an
-## orange dithered shadow and ink text. Inactive: see-through cream, cream
-## text with the ink outline.
+## orange dithered shadow and ink text. Inactive (2026-10-31): see-through
+## orange (edge, dots and shadow), white text with the ink outline.
 func _tab_button(text: String, active: bool, size_: int, height := 52.0) -> Button:
 	var b: ShadowCard
 	if active:
@@ -198,7 +198,7 @@ func _tab_button(text: String, active: bool, size_: int, height := 52.0) -> Butt
 		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		b.add_child(l)
 	else:
-		b = ShadowCard.new(CREAM)
+		b = ShadowCard.new(RetroTheme.c("orange"))
 		RetroTheme.on_scene(b)
 		b.add_theme_font_override("font", UiFont.display())
 		b.add_theme_font_size_override("font_size", UiFont.snap(size_))
@@ -290,7 +290,7 @@ func _text(text: String, size_ := 16, color := CREAM, display := false) -> Label
 ## Body copy (the bio, a blurb): the regular face, a thinner outline, wrapped.
 func _body(text: String) -> Label:
 	var l := RetroTheme.on_scene(UiFont.label(text, 16, CREAM, UiFont.body())) as Label
-	l.add_theme_constant_override("outline_size", 2)
+	l.add_theme_constant_override("outline_size", 8)   # the design's 2 px edge (RetroTheme.OUTLINE_SIZE)
 	l.add_theme_constant_override("line_spacing", 8)
 	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return l
@@ -502,9 +502,11 @@ func _shooter_card(opp_id: String, line: String, playoffs: bool) -> Control:
 	foot.add_child(fcol)
 	fcol.add_child(_display("%s'S CARDS" % LeagueSummary.short_name(opp_id), 18))
 	var hand := _opp_hand(opp_id)
-	var fsub := _text("THEIR CARDS FOR THIS MATCH" if not hand.is_empty() else "NO CARDS THIS MATCH", 20)
-	fsub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	fcol.add_child(fsub)
+	fcol.alignment = BoxContainer.ALIGNMENT_CENTER
+	if hand.is_empty():
+		var fsub := _text("NO CARDS THIS MATCH", 20)
+		fsub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		fcol.add_child(fsub)
 	var chips := _hrow(12)
 	chips.name = "OppChips"
 	chips.size_flags_vertical = Control.SIZE_SHRINK_CENTER
@@ -607,7 +609,7 @@ func _big_button(id: String, word: String, sub: String, size_: int) -> ShadowCar
 	b.clip_contents = true
 	b.custom_minimum_size = Vector2(232 + ShadowStyle.OFFSET, 104 + ShadowStyle.OFFSET)
 	b.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	var shine := PreMatchPage.Shine.new(2.0, 200.0, 0.75, HI)
+	var shine := PreMatchPage.Shine.wave(2.0, HI, 0.3, 1.2)
 	shine.name = "Shine"
 	UiLayout.full_rect(shine)
 	shine.offset_right = -ShadowStyle.OFFSET
@@ -980,7 +982,7 @@ func _fill_cards() -> void:
 	head.add_child(_display("SHOP", 30))
 	var arena := CosmeticLibrary.get_arena(str(cfg.get("arena", cfg.get("location", "cage"))))
 	var where := str(arena.display_name).to_upper() if arena != null else str(cfg.get("name", "LEAGUE")).to_upper()
-	var note := _text("CARDS BOUGHT IN THE %s SHOP CAN ONLY BE PLAYED IN %s MATCHES" % [where, where], 20, HI)
+	var note := _text("CARDS BOUGHT IN THE %s SHOP CAN ONLY BE PLAYED IN %s MATCHES" % [where, where], 16, HI)
 	note.name = "ShopNote"
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.add_theme_constant_override("line_spacing", 8)
@@ -1176,6 +1178,42 @@ class AddedBox extends Control:
 # ---- STATS -----------------------------------------------------------------------
 
 
+## The career panel's head when you hold a title (design 3a, 2026-10-31):
+## up to five 44 px trophies with their twinkles, `×n` in gold and TITLE(S),
+## over a dashed rule.
+func _career_titles(titles: int) -> VBoxContainer:
+	var row := _hrow(16)
+	row.name = "CareerTitles"
+	var cups := _hrow(8)
+	row.add_child(cups)
+	for i in mini(titles, ModeCards.MAX_TROPHIES):
+		var cup := Control.new()
+		cup.name = "Trophy%d" % i
+		cup.custom_minimum_size = Vector2(44, 44)
+		cup.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		cup.add_child(PixelIcon.new("icon_trophy", Vector2(44, 44), 2.0))
+		var sp := ModeCards.Sparkle.new(i * ModeCards.SPARKLE_DELAY)
+		sp.name = "Sparkle"
+		sp.centre = false
+		sp.position = ModeCards.SPARKLE_AT[i]
+		cup.add_child(sp)
+		cups.add_child(cup)
+	var n := _display("×%d" % titles, 30, HI)
+	n.name = "TitleCount"
+	n.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(n)
+	var l := _text("TITLE" if titles == 1 else "TITLES", 20)
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(l)
+	var v := _vcol(22)
+	v.add_child(row)
+	var rule := ModeCards.DashedRule.new(2.0)
+	rule.modulate.a = 0.4
+	v.add_child(rule)
+	return v
+
+
+
 func _fill_stats() -> void:
 	var vb := _list("STATS")
 	var tot: Dictionary = doc["career"]["totals"]
@@ -1184,24 +1222,30 @@ func _fill_stats() -> void:
 	vb.add_child(_caps("CAREER · %d SEASON%s" % [seasons.size() + 1, "" if seasons.size() == 0 else "S"]))
 	var panel := _panel(24.0, 24.0)
 	panel.name = "Career"
+	var ccol := _vcol(28)
+	panel.add_child(ccol)
+	var titles := int(doc["career"]["championships"])
+	if titles > 0:
+		ccol.add_child(_career_titles(titles))
 	var grid := GridContainer.new()
 	grid.columns = 3
 	grid.add_theme_constant_override("h_separation", 16)
 	grid.add_theme_constant_override("v_separation", 28)
 	grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(grid)
+	ccol.add_child(grid)
 	var best_finish := 0
 	for summ in seasons:
 		var f := int(summ["finish"])
 		if f > 0 and (best_finish == 0 or f < best_finish):
 			best_finish = f
-	for spec in [["%d-%d" % [int(tot["wins"]), int(tot["losses"])], "RECORD"], [str(int(doc["career"]["championships"])), "TITLES"],
+	var ppg := ("%.1f" % (float(tot["points"]) / float(tot["games"]))) if int(tot["games"]) > 0 else "-"
+	for spec in [["%d-%d" % [int(tot["wins"]), int(tot["losses"])], "RECORD"], [ppg, "PPG"],
 			[str(int(highs["points"])), "HIGH PTS"], [str(int(highs["swishes"])), "SWISHES"], [str(int(highs["streak"])), "BEST STREAK"],
 			[TickerText.ordinal(best_finish) if best_finish > 0 else "-", "BEST FINISH"]]:
 		var cell := _vcol(12)
 		cell.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		cell.add_child(_display(spec[0], 32))
-		cell.add_child(_text(spec[1], 16, MUTED))
+		cell.add_child(_text(spec[1], 16, HI))
 		grid.add_child(cell)
 	vb.add_child(panel)
 	vb.add_child(_caps("SEASONS"))
@@ -1221,7 +1265,7 @@ func _fill_stats() -> void:
 	var s: Dictionary = doc["season"]
 	cur.add_child(_cell(_display("S%d" % LeagueSummary.year_of(doc), 16), 48))
 	cur.add_child(_cell(_display("%d-%d" % LeagueSummary.record(s), 16), 96))
-	var ip := _text("IN PROGRESS" if s["phase"] != Season.PHASE_DONE else "DONE", 16, MUTED)
+	var ip := _text("IN PROGRESS" if s["phase"] != Season.PHASE_DONE else "DONE", 16, HI)
 	ip.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	cur.add_child(ip)
 	scol.add_child(cur)
@@ -1242,7 +1286,7 @@ func _fill_stats() -> void:
 		vs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		vs.clip_text = true
 		r.add_child(vs)
-		r.add_child(_text("%d SW" % int(g.get("swishes", 0)), 16, MUTED))
+		r.add_child(_text("%d SW" % int(g.get("swishes", 0)), 16, HI))
 		hcol.add_child(r)
 	vb.add_child(hp)
 	var arena := CosmeticLibrary.get_arena(str(cfg.get("arena", cfg.get("location", "cage"))))
@@ -1258,7 +1302,7 @@ func _fill_stats() -> void:
 		var r := _row(48)
 		r.add_child(_cell(_display(str(i + 1), 16), 24))
 		r.add_child(_cell(_display("%d PTS" % int(d["score"]), 16), 132))
-		var sw := _text("%d SWISHES · STREAK %d" % [int(d.get("swishes", 0)), int(d.get("bestStreak", 0))], 16, MUTED)
+		var sw := _text("%d SWISHES · STREAK %d" % [int(d.get("swishes", 0)), int(d.get("bestStreak", 0))], 16, HI)
 		sw.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		r.add_child(sw)
 		tcol.add_child(r)

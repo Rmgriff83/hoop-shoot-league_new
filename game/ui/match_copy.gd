@@ -159,7 +159,7 @@ static func leaderboard_head() -> String:
 
 
 static func leaderboard_sub() -> String:
-	return "TOP 5 · RATED"
+	return "RATED"
 
 
 static func all_ranks() -> String:
@@ -516,8 +516,17 @@ static func pending_note(left: int) -> String:
 	return "%d TO CLAIM" % left if left > 0 else "ALL CLAIMED"
 
 
+## The empty WAITING FOR YOU (design 37a, 2026-10-31).
+static func nothing_pending_head() -> String:
+	return "NOTHING TO CLAIM"
+
+
 static func nothing_pending() -> String:
-	return "NOTHING WAITING · PLAY RANKED, COME BACK TOMORROW"
+	return "EARN REWARDS BY PLAYING RANKED MATCHES, LOGGING IN EACH DAY AND HITTING MILESTONES. THEY'LL SHOW UP HERE."
+
+
+static func pending_none_note() -> String:
+	return "NONE YET"
 
 
 static func claim_word(claimed: bool) -> String:
@@ -570,7 +579,7 @@ static func strings() -> Array:
 	var out := ["QUICK MATCH", "CREATE CODE", "ENTER CODE", "GO", "CANCEL", "BACK", "<", ">", title(), code_sub(), join_sub(), code_caption(),
 		you_badge({}), you_record_line({}), you_record_line({"games": 48, "position": 18, "wins": 32, "losses": 16}),
 		progress_line({"have": 16, "need": 50, "next_tier": "mvp", "next_division": 1}), leaderboard_head(), leaderboard_sub(), all_ranks(),
-		leaderboard_loading(), leaderboard_empty(), leaderboard_offline(),
+		leaderboard_loading(), leaderboard_empty(), leaderboard_offline(), "LOADING PLAYER...", "LOADING COURTS...", "LOADING RANKS...",
 		code_line("ABCDE"), waiting_big("quick"), waiting_big("code"), waiting_line("quick"), waiting_line("code"), found_big(),
 		found_line(), you_label(), opp_label(), vs_word(), "?", "...", card_tag({"tag": "07"}),
 		card_place({"town": "SALT HARBOR", "level": 9}), card_place({"level": 7}), card_online({}),
@@ -595,7 +604,7 @@ static func strings() -> Array:
 		meter_line({"meter": {"after": 14, "size": 22, "odds": {"common": 0.7, "rare": 0.25, "epic": 0.05}}}),
 		close_loss_line({"online": true, "won": false, "player_score": 20, "ai_score": 22}),
 		shoot_around_title(), shoot_around_sub(5), rewards_title(),
-		pending_head(), pending_note(3), pending_note(0), nothing_pending(), claim_word(true), claim_word(false), login_head(), login_day(7),
+		pending_head(), pending_note(3), pending_note(0), nothing_pending(), nothing_pending_head(), pending_none_note(), claim_word(true), claim_word(false), login_head(), login_day(7),
 		login_more(7, 10), login_note(10), login_note(0), milestones_head(), milestones_note(6, 28), rank_head(), ladder_tag("you"),
 		ladder_tag("next"), ladder_tag("past"), rewards_offline()]
 	out.append_array(MilestoneCopy.strings())

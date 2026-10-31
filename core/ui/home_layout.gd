@@ -13,7 +13,7 @@ extends RefCounted
 ## screen's top), whole pixels.
 
 const TOP_Y := 32.0           # the top row (LVL, the locker ball, the tickets, the menu)
-const ROW_H := 60.0           # the top row's height: the middle starts under it
+const ROW_H := 78.0           # the top row's height (72 faces + the shadow): the middle starts under it
 const WASH_UNDER := 24.0      # the top wash runs this far under the row
 const TICKER_H := 48.0        # HomeTicker.HEIGHT
 const BOTTOM := 74.0          # the card block ends this far above the screen's bottom
@@ -23,7 +23,7 @@ const DESIGN_TOP := 118.0
 const DESIGN_CARDS := 1040.0
 const ZONE_D := 277.0         # the stars + area name zone
 const CHEVRON_D := 697.0      # the < > chevrons
-const BOARD_D := 767.0        # the time-trial board mid-court (Ross, 2026-10-30: 70 px under the chevrons)
+const BOARD_D := 773.0        # the time-trial board mid-court (design, 2026-10-31)
 const AREA_D := 922.0         # the card area's top (the tabs when the league is open)
 ## Offsets kept from the design: the season chip under the zone, BACK TO HOME
 ## under the chip, the wash a little under the area's top, the floating

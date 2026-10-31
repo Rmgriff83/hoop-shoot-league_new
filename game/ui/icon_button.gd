@@ -1,7 +1,7 @@
 class_name IconButton
 extends Button
 ## A square see-through button (ShadowStyle) with a glyph: "locker" — the
-## pixel ball (icon_ball, 22 px: set your ball); "ranks" — three bars, drawn;
+## neon ball (icon_neonball, 56 px on the home's 72 px face: set your ball); "ranks" — three bars, drawn;
 ## "multi" — the two-player icon (icon_multiplayer, 30×23 with an ink drop
 ## shadow); "shop" — a gold square, drawn; "pause" — two cream bars with
 ## ink shadows (the in-game pause). 50 px face + the 6 px shadow.
@@ -78,9 +78,10 @@ func _draw() -> void:
 				draw_line(c + Vector2(-13, 13), c + Vector2(13, -13), RetroTheme.SCENE_OUTLINE, 6.0)
 				draw_line(c + Vector2(-13, 13), c + Vector2(13, -13), RetroTheme.LIGHT["gold"], 3.0)
 		_:
-			_icon("icon_ball", c, Vector2(22, 22), 0.0)
+			var face := size.x - ShadowStyle.OFFSET
+			_icon("icon_neonball", c, Vector2.ONE * roundf(face * 56.0 / 72.0), 0.0)
 	if badge:
-		var at := c + Vector2(15, -15)
+		var at := c + Vector2(1, -1) * ((size.x - ShadowStyle.OFFSET) * 0.5 - 10.5)
 		draw_circle(at, 8.0, RetroTheme.SCENE_OUTLINE)
 		draw_circle(at, 6.0, RetroTheme.LIGHT["gold"])
 

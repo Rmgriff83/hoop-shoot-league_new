@@ -1620,14 +1620,30 @@ func _run_multi() -> void:
 		print("QA multi: no lobby")
 		get_tree().quit()
 		return
-	# The menu's card and leaderboard (design 37a) from the fixtures.
+	# The loading states (design 37a, 2026-10-31): LOADING PLAYER / COURTS / RANKS.
+	lobby.set_loading(true)
+	lobby._top_set_waiting(true)
+	await _sleep(0.5)
+	await _snap("multi_loading")
+	print("QA multi: loading %s, ranks loading %s" % [lobby.loading(), lobby.top_loading()])
+	lobby.set_loading(false)
+	# The menu's card and leaderboard (design 37a) from the fixtures; the
+	# longest badge (ALL-STAR III) with a five-digit position, to see the
+	# corner tag stays on the card's corner.
+	lobby.set_rank({"tier": "allstar", "division": 3, "games": 480, "position": 12345, "wins": 320, "losses": 160, "cons": 1320.0})
+	await _sleep(0.2)
+	await _snap("multi_menu_long")
 	lobby.set_rank({"tier": "allstar", "division": 1, "games": 48, "position": 18, "wins": 32, "losses": 16, "cons": 1416.0})
 	var ladder: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/ranked_board.json"))
-	if ladder is Dictionary and ladder["rows"].size() < MatchLobbyPage.TOP_N:
+	var names := ["PIXEL KID", "SWISH OTTER", "RIM BARON", "CHROME HAWK", "NEON FOX", "BANK PILOT", "GLASS ROVER", "TURBO ACE", "DUNK MAYOR", "CORNER SHARK", "ROOFTOP OWL", "LUCKY JESTER"]
+	while ladder is Dictionary and ladder["rows"].size() < MatchLobbyPage.TOP_N:
 		var extra: Dictionary = ladder["rows"][-1].duplicate()
 		extra["position"] = ladder["rows"].size() + 1
-		extra["name"] = "PIXEL KID"
-		ladder["rows"].push_back(extra)   # a full top five on the snap
+		extra["name"] = names[ladder["rows"].size() % names.size()]
+		extra["me"] = false
+		ladder["rows"].push_back(extra)   # a full top fifteen on the snap
+	if ladder is Dictionary and not (ladder.get("me") is Dictionary):
+		ladder["me"] = {"tier": "allstar", "division": 1, "games": 48, "position": 18, "wins": 32, "losses": 16}
 	lobby.set_top(ladder if ladder is Dictionary else {})
 	lobby._set_pending(2)
 	await _sleep(0.2)
@@ -1663,6 +1679,11 @@ func _run_multi() -> void:
 		var rp: RewardsPage = ts.call("rewards_page") if ts.has_method("rewards_page") else null
 		if rp != null:
 			var fx: Variant = JSON.parse_string(FileAccess.open("res://tests/fixtures/rewards.json", FileAccess.READ).get_as_text())
+			var none: Dictionary = fx.duplicate(true)
+			none["pending"] = []
+			rp.set_data(none)
+			await _sleep(0.4)
+			await _snap("multi_rewards_none")
 			rp.set_data(fx)
 			await _sleep(0.4)
 			await _snap("multi_rewards")
@@ -2128,6 +2149,18 @@ func _run_title() -> void:
 		await _snap("title_cage_%02d" % i)
 		if i < 3:
 			await _sleep(5.0 if i < 2 else 4.0)
+	# ENTER LEAGUE's dotWave held mid-sweep (design 3a, 2026-10-31).
+	var enter_shine: Control = null
+	var enter_b: Node = get_tree().root.find_child("Enter", true, false)
+	if enter_b != null:
+		enter_shine = enter_b.find_child("Shine", true, false)
+	if enter_shine != null:
+		enter_shine.set_process(false)
+		enter_shine.set("_t", 2.4 * 0.7 * 290.0 / 640.0)
+		enter_shine.queue_redraw()
+		await _sleep(0.1)
+		await _snap("title_enter_wave")
+		enter_shine.set_process(true)
 	# The press state: hold the LEAGUE card, snap, release off it (no open).
 	var card: Button = get_tree().root.find_child("LeagueCard", true, false)
 	if card != null:

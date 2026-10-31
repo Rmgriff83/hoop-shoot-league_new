@@ -43,11 +43,16 @@ const COURT_AT := 0.35     # the court line, after the pop…
 const COURT_S := 0.3       # …sliding in
 const MUTED := Color("#D9D9D9")
 const RANKED_H := 88.0
-const TOP_N := 5
+const TOP_N := 15          # the leaderboard's window onto the top fifteen (2026-10-31)
+const TOP_SHOWN := 3       # …three rows in view (186)
 const TOP_ROW_H := 62.0
+const TOP_PAD_X := 20.0    # the rows run edge to edge; their words sit inside the panel's padding
+const TOP_FADE := Color(60.0 / 255.0, 52.0 / 255.0, 46.0 / 255.0)
+## Your card's padding (design 37a, 2026-10-31): 46 top, 30 each side, 40 below.
+const YOU_PAD := Vector3(46.0, 30.0, 40.0)
 ## The words column on your card: the frame less the card's padding, its
 ## shadow, the jersey and the gap.
-const WHO_W := FRAME_SIZE.x - 2.0 * PAD - 44.0 - ShadowStyle.OFFSET - 84.0 - 22.0
+const WHO_W := FRAME_SIZE.x - 2.0 * PAD - 2.0 * YOU_PAD.y - ShadowStyle.OFFSET - 84.0 - 22.0
 ## The leaderboard at the menu's foot needs this much frame (a 9:16 screen
 ## has no room for it under the buttons; a phone-tall one does).
 const TOP_MIN_FRAME := 1400.0
@@ -96,6 +101,21 @@ var _me_fill: ColorRect
 var _me_progress: Label
 var _top_box: VBoxContainer
 var _top_rows: VBoxContainer
+var _top_panel: TopPanel
+var _top_win: Control
+var _top_scroll: ScrollContainer
+var _top_fade: TextureRect
+var _top_me: VBoxContainer
+var _top_load: LoadingLine
+var _top_waiting := true
+var _you_body: VBoxContainer
+var _you_loading: LoadingLine
+var _ranked_btn: ShadowCard
+var _courts_row: HBoxContainer
+var _courts_loading: LoadingLine
+## Waiting on the server for your rank (design 37a, 2026-10-31): LOADING
+## PLAYER on your card, LOADING COURTS under COURT, the match buttons dim.
+var _loading := false
 
 
 ## Build for an area (the court picked at open: it or ANY when several are open).
@@ -185,7 +205,7 @@ func _build() -> void:
 	_code_edit.add_theme_color_override("font_placeholder_color", Color("#A89E94"))
 	_code_edit.add_theme_color_override("caret_color", GOLD)
 	_code_edit.add_theme_color_override("font_outline_color", RetroTheme.SCENE_OUTLINE)
-	_code_edit.add_theme_constant_override("outline_size", 2)
+	_code_edit.add_theme_constant_override("outline_size", 8)   # the design's 2 px edge (RetroTheme.OUTLINE_SIZE)
 	for state in ["normal", "focus"]:
 		_code_edit.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	_code_edit.text_changed.connect(func(raw: String) -> void:
@@ -235,7 +255,7 @@ func _build() -> void:
 	_code_label.name = "Code"
 	_code_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	_code_label.add_theme_color_override("font_outline_color", RetroTheme.SCENE_OUTLINE)
-	_code_label.add_theme_constant_override("outline_size", RetroTheme.OUTLINE)
+	_code_label.add_theme_constant_override("outline_size", RetroTheme.OUTLINE_SIZE)
 	_code_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	RetroTheme.dithered(_code_label, Vector2(7, 7))
 	_code_block.add_child(_code_label)
@@ -327,17 +347,29 @@ func pending_text() -> String:
 ## a bar through your division, `16 / 50 TO MVP I`; RANKED MATCH.
 func _build_you() -> void:
 	var rec := FaceOffPage.you_record()
-	var card := ShadowPanel.new(GOLD, 20.0, ShadowStyle.TINT, 22.0)
+	var card := ShadowPanel.new(GOLD, 0.0, ShadowStyle.TINT, 0.0)
 	card.name = "YouMenu"
+	var sb := ShadowStyle.margins(YOU_PAD.x, YOU_PAD.y)
+	sb.content_margin_bottom = YOU_PAD.z + ShadowStyle.OFFSET
+	card.add_theme_stylebox_override("panel", sb)
 	_menu.add_child(card)
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 16)
+	col.add_theme_constant_override("separation", 20)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(col)
+	_you_body = VBoxContainer.new()
+	_you_body.name = "YouBody"
+	_you_body.add_theme_constant_override("separation", 20)
+	_you_body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(_you_body)
+	_you_loading = LoadingLine.new("LOADING PLAYER", 124.0)
+	_you_loading.name = "YouLoading"
+	_you_loading.visible = false
+	col.add_child(_you_loading)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation", 22)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(row)
+	_you_body.add_child(row)
 	var jersey := PixelIcon.new("icon_jersey", Vector2(84, 84), 4.0)
 	jersey.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(jersey)
@@ -350,6 +382,10 @@ func _build_you() -> void:
 	_me_badge = words("", 30, true)
 	_me_badge.name = "Badge"
 	_me_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	# Clipped: a long rank name must never widen the card (the record tag
+	# rides its corner — Ross, 2026-10-31).
+	_me_badge.clip_text = true
+	_me_badge.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_me_badge.add_theme_color_override("font_color", GOLD)
 	who.add_child(_me_badge)
 	var top := HBoxContainer.new()
@@ -370,12 +406,14 @@ func _build_you() -> void:
 	var place := words(MatchCopy.card_place(rec), 19)
 	place.name = "Place"
 	place.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	place.clip_text = true
+	place.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	who.add_child(place)
 	var bar_row := HBoxContainer.new()
 	bar_row.name = "Progress"
 	bar_row.add_theme_constant_override("separation", 14)
 	bar_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(bar_row)
+	_you_body.add_child(bar_row)
 	_me_bar = Control.new()
 	_me_bar.name = "Bar"
 	_me_bar.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -401,10 +439,12 @@ func _build_you() -> void:
 	_me_progress.name = "ProgressLine"
 	_me_progress.add_theme_color_override("font_color", MUTED)
 	bar_row.add_child(_me_progress)
-	col.add_child(_ranked_button())
+	_ranked_btn = _ranked_button()
+	col.add_child(_ranked_btn)
 	# The record tag on the card's top right corner (15 px over the top edge,
 	# 5 px past the right): a layer the panel stretches over its content, the
-	# tag placed in it by hand.
+	# tag placed in it by hand from the CARD's size — never the content's, so
+	# a long rank name cannot carry it off to the right.
 	var layer := Control.new()
 	layer.name = "TagLayer"
 	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -415,14 +455,18 @@ func _build_you() -> void:
 	_me_line = _me_tag.label
 	_me_line.name = "RankLine"
 	layer.resized.connect(func() -> void: _place_tag(layer))
+	card.resized.connect(func() -> void: _place_tag(layer))
 	_set_you_name(name_l, str(rec.get("name", "YOU")), tag)
 	set_rank(Dictionary(rec.get("rank", {})))
 
 
 func _place_tag(layer: Control) -> void:
+	var card := layer.get_parent() as Control
 	var w := _me_tag.get_combined_minimum_size().x
 	_me_tag.size = Vector2(w, RecordTag.H)
-	_me_tag.position = Vector2(layer.size.x + 22.0 + 5.0 - w, -20.0 - 15.0)
+	# Its right edge 5 px past the face's, its top 15 px over the card's.
+	var right := card.size.x - ShadowStyle.OFFSET + 5.0
+	_me_tag.position = Vector2(right - w, -15.0) - layer.position
 
 
 ## The record on its gold tag: dark words, no outline, a 4 px hard shadow.
@@ -464,6 +508,16 @@ func _ranked_button() -> ShadowCard:
 	b.name = "Ranked"
 	b.custom_minimum_size = Vector2(0, RANKED_H + ShadowStyle.OFFSET)
 	b.pressed.connect(func() -> void: ranked.emit())
+	b.clip_contents = true
+	# The design's dotWave in gold (2 s, across the whole button and out).
+	var shine := PreMatchPage.Shine.wave(2.0, Color("#FFE45C"), 0.3, 1.2)
+	shine.wave_to = -1.0
+	shine.wave_frac = 1.0
+	shine.name = "Shine"
+	UiLayout.full_rect(shine)
+	shine.offset_right = -ShadowStyle.OFFSET
+	shine.offset_bottom = -ShadowStyle.OFFSET
+	b.add_child(shine)
 	var h := HBoxContainer.new()
 	h.name = "Row"
 	h.add_theme_constant_override("separation", 16)
@@ -501,7 +555,7 @@ func _set_you_name(l: Label, text: String, tag: Label) -> void:
 	var f := UiFont.display()
 	var w := f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(24)).x + 2.0 * RetroTheme.OUTLINE
 	var tag_w := UiFont.body_bold().get_string_size(tag.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(19)).x + 2.0 * RetroTheme.OUTLINE
-	l.custom_minimum_size.x = minf(w, maxf(120.0, FRAME_SIZE.x - 2.0 * PAD - 44.0 - ShadowStyle.OFFSET - 84.0 - 22.0 - tag_w - 12.0))
+	l.custom_minimum_size.x = minf(w, maxf(120.0, WHO_W - tag_w - 12.0))
 
 
 ## Your ladder line on the card: the badge, `#18 · 32-16`, the division bar
@@ -511,7 +565,7 @@ func set_rank(rank: Dictionary) -> void:
 		return
 	_me_badge.text = MatchCopy.you_badge(rank)
 	_me_line.text = MatchCopy.you_record_line(rank)
-	_me_tag.visible = _me_line.text != ""   # no tag before a rated game
+	_me_tag.visible = _me_line.text != "" and not _loading   # no tag before a rated game
 	# A long badge (ALL-STAR I) steps down to 24 px rather than run under the tag.
 	var room := WHO_W + 27.0 - (_me_tag.get_combined_minimum_size().x + 12.0 if _me_tag.visible else 0.0)
 	var fits := UiFont.display().get_string_size(_me_badge.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(30)).x + 2.0 * RetroTheme.OUTLINE <= room
@@ -533,81 +587,142 @@ func progress_text() -> String:
 	return _me_progress.text if _me_progress != null and (_me_progress.get_parent() as Control).visible else ""
 
 
-## GLOBAL LEADERBOARD · TOP 5 · RATED ——— ALL RANKS >, over the ladder's
-## top five (fed by set_top / set_top_offline). Only on a tall frame.
+## The GLOBAL LEADERBOARD panel (design 37a, 2026-10-31): one see-through
+## cream panel — the trophy, GLOBAL LEADERBOARD and RATED over a cream rule;
+## a window three 62 px rows tall onto the ladder's top fifteen (a fade at
+## its foot while more wait below) with YOUR row pinned under it on orange;
+## LOADING RANKS… until the ladder answers. A tap opens the RANKS page on
+## RANKED (`all_ranks`); a drag scrolls the window. Only on a tall frame.
 func _build_top() -> void:
 	_top_box = VBoxContainer.new()
 	_top_box.name = "Leaderboard"
-	_top_box.add_theme_constant_override("separation", 14)
+	_top_box.add_theme_constant_override("separation", 0)
 	_top_box.visible = frame_height() >= TOP_MIN_FRAME
 	_menu.add_child(_top_box)
+	_top_panel = TopPanel.new()
+	_top_panel.name = "TopPanel"
+	_top_panel.pressed.connect(func() -> void:
+		if not _loading and not _top_waiting:
+			all_ranks.emit())
+	_top_box.add_child(_top_panel)
+	var col := VBoxContainer.new()
+	col.add_theme_constant_override("separation", 0)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_top_panel.add_child(col)
+	# The head and its rule sit inside the panel's 20 px; the rows run edge to edge.
+	var head_pad := MarginContainer.new()
+	head_pad.add_theme_constant_override("margin_left", int(TOP_PAD_X))
+	head_pad.add_theme_constant_override("margin_right", int(TOP_PAD_X))
+	head_pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(head_pad)
+	var head_col := VBoxContainer.new()
+	head_col.add_theme_constant_override("separation", 0)
+	head_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head_pad.add_child(head_col)
 	var head_ := HBoxContainer.new()
+	head_.name = "TopHead"
 	head_.add_theme_constant_override("separation", 12)
+	head_.custom_minimum_size = Vector2(0, 40)
 	head_.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_top_box.add_child(head_)
-	var words_col := VBoxContainer.new()
-	words_col.add_theme_constant_override("separation", 8)
-	words_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	head_.add_child(words_col)
-	# 16 px, not the design's 20 (which snaps to 24 and pushes the head past the frame).
-	var h := words(MatchCopy.leaderboard_head(), 16, true)
+	head_col.add_child(head_)
+	var cup := PixelIcon.new("icon_trophy", Vector2(26, 26))
+	cup.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	head_.add_child(cup)
+	var h := words(MatchCopy.leaderboard_head(), 20, true)
+	h.name = "TopTitle"
 	h.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	words_col.add_child(h)
+	h.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	h.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	head_.add_child(h)
 	var sub := words(MatchCopy.leaderboard_sub(), 16)
-	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	sub.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	sub.add_theme_color_override("font_color", MUTED)
-	words_col.add_child(sub)
+	head_.add_child(sub)
+	head_col.add_child(_spacer_v(12))
 	var rule := ColorRect.new()
-	rule.color = Color(CREAM, 0.35)
+	rule.color = CREAM
 	rule.custom_minimum_size = Vector2(0, 2)
-	rule.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	rule.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	head_.add_child(rule)
-	var all := button(MatchCopy.all_ranks(), CREAM, 14, 34.0)
-	all.name = "AllRanks"
-	all.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	all.custom_minimum_size.x = UiFont.display().get_string_size(MatchCopy.all_ranks(), HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(14)).x + 24.0 + 2.0 * RetroTheme.OUTLINE + ShadowStyle.OFFSET
-	all.pressed.connect(func() -> void: all_ranks.emit())
-	head_.add_child(all)
-	var panel := ShadowPanel.new(CREAM, 6.0, 0.24, 20.0)
-	panel.name = "TopPanel"
-	_top_box.add_child(panel)
+	head_col.add_child(rule)
+	# The window onto the top fifteen.
+	_top_win = Control.new()
+	_top_win.name = "TopWindow"
+	_top_win.clip_contents = true
+	_top_win.custom_minimum_size = Vector2(0, TOP_ROW_H * TOP_SHOWN)
+	_top_win.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(_top_win)
+	_top_scroll = ScrollContainer.new()
+	_top_scroll.name = "TopScroll"
+	UiLayout.full_rect(_top_scroll)
+	_top_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_top_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	_top_scroll.mouse_filter = Control.MOUSE_FILTER_PASS   # a tap reaches the panel; a drag scrolls
+	_top_scroll.scroll_started.connect(func() -> void: _top_panel.dragged = true)
+	_top_win.add_child(_top_scroll)
 	_top_rows = VBoxContainer.new()
 	_top_rows.name = "TopRows"
+	_top_rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	_top_rows.add_theme_constant_override("separation", 0)
-	_top_rows.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(_top_rows)
-	_top_rows.add_child(_top_spinner())
+	_top_rows.mouse_filter = Control.MOUSE_FILTER_PASS
+	_top_scroll.add_child(_top_rows)
+	_top_fade = TextureRect.new()
+	_top_fade.name = "TopFade"
+	var grad := Gradient.new()
+	grad.set_color(0, Color(TOP_FADE, 0.0))
+	grad.set_color(1, Color(TOP_FADE, 0.75))
+	var gt := GradientTexture2D.new()
+	gt.gradient = grad
+	gt.fill_from = Vector2(0, 0)
+	gt.fill_to = Vector2(0, 1)
+	_top_fade.texture = gt
+	_top_fade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_top_fade.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
+	_top_fade.offset_top = -52.0
+	_top_fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_top_fade.visible = false
+	_top_win.add_child(_top_fade)
+	_top_me = VBoxContainer.new()
+	_top_me.name = "TopMe"
+	_top_me.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(_top_me)
+	_top_load = LoadingLine.new("LOADING RANKS", 248.0)
+	_top_load.name = "TopLoading"
+	col.add_child(_top_load)
+	_top_set_waiting(true)
 
 
-## The spinner while the ladder is on its way (no LOADING words, 2026-10-25).
-func _top_spinner() -> Control:
-	var c := CenterContainer.new()
-	c.name = "TopLoading"
-	c.custom_minimum_size = Vector2(0, 44)
-	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	c.add_child(PixelSpinner.new(24.0))
-	return c
+## LOADING RANKS in place of the window and YOUR row (true until set_top /
+## set_top_offline).
+func _top_set_waiting(on: bool) -> void:
+	_top_waiting = on
+	_top_load.visible = on
+	_top_win.visible = not on
+	_top_me.visible = not on
 
 
-## The ladder's answer: its top five (or BE FIRST on an empty ladder).
+## The ladder's answer: its top fifteen (or BE FIRST on an empty ladder) and
+## YOUR row under them once you have a rated game.
 func set_top(board: Dictionary) -> void:
 	if _top_rows == null:
 		return
 	_clear_top()
+	_top_set_waiting(false)
 	var rows := RanksCopy.ranked_rows(board)
 	if rows.is_empty():
 		_top_line(MatchCopy.leaderboard_empty())
-		return
 	for i in mini(rows.size(), TOP_N):
-		_top_rows.add_child(_top_row(rows[i], i))
+		_top_rows.add_child(_top_row(rows[i], i, false))
+	var me := RanksCopy.ranked_me_row(board, Net.account())
+	if not me.is_empty():
+		_top_me.add_child(_top_row(me, 0, true))
+	_top_scroll.scroll_vertical = 0
 
 
 func set_top_offline() -> void:
 	if _top_rows == null or top_count() > 0:
-		return   # a cached top five stays
+		return   # a cached ladder stays
 	_clear_top()
+	_top_set_waiting(false)
 	_top_line(MatchCopy.leaderboard_offline())
 
 
@@ -621,41 +736,54 @@ func top_count() -> int:
 	return n
 
 
+func top_has_me() -> bool:
+	return _top_me != null and _top_me.get_child_count() > 0
+
+
 func leaderboard_shown() -> bool:
 	return _top_box != null and _top_box.visible
 
 
+func top_loading() -> bool:
+	return _top_waiting
+
+
 func _clear_top() -> void:
-	for c in _top_rows.get_children():
-		_top_rows.remove_child(c)
-		c.queue_free()
+	for box in [_top_rows, _top_me]:
+		for c in box.get_children():
+			box.remove_child(c)
+			c.queue_free()
 
 
 func _top_line(text: String) -> void:
 	var l := words(text, 15)
 	l.name = "TopNote"
-	l.custom_minimum_size = Vector2(0, 44)
+	l.custom_minimum_size = Vector2(0, TOP_ROW_H)
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	l.add_theme_color_override("font_color", MUTED)
 	_top_rows.add_child(l)
 
 
-## `#1`, `NET DUKE #8021` over `40-11`, `LEGEND #1` in gold on the right
-## (2026-10-30); a dashed rule over rows 2 on; the top three's rank gold.
-func _top_row(r: Dictionary, i: int) -> Control:
-	var box := RanksPage.RowBox.new()
-	box.name = "TopRow%d" % (i + 1)
-	box.rule = i > 0
-	box.me = false
+## `#1`, `NET DUKE #8021` over `40-11`, the badge on the right (gold at
+## LEGEND); a dashed rule over rows 2 on; the top three's rank gold. YOUR
+## row (`mine`): a solid cream rule over it, on orange.
+func _top_row(r: Dictionary, i: int, mine: bool) -> Control:
+	var box := TopRow.new()
+	box.name = "TopRowMe" if mine else "TopRow%d" % (i + 1)
+	box.rule = Color(CREAM, 1.0) if mine else (Color(CREAM, 0.3) if i > 0 else Color.TRANSPARENT)
+	box.solid = mine
+	box.fill = Color(RetroTheme.c("orange"), 0.35) if mine or bool(r.get("me", false)) else Color.TRANSPARENT
 	box.custom_minimum_size = Vector2(0, TOP_ROW_H)
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 12)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	UiLayout.full_rect(h)
+	h.offset_left = TOP_PAD_X
+	h.offset_right = -TOP_PAD_X
 	box.add_child(h)
 	var rank := words(str(r["rank"]), 20, true)
-	rank.add_theme_color_override("font_color", GOLD if i < 3 else CREAM)
+	rank.add_theme_color_override("font_color", GOLD if i < 3 and not mine else CREAM)
 	rank.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	rank.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	rank.custom_minimum_size = Vector2(62, 0)
@@ -692,12 +820,67 @@ func _top_row(r: Dictionary, i: int) -> Control:
 	score.name = "Score"
 	score.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	score.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	score.add_theme_color_override("font_color", GOLD)
+	score.add_theme_color_override("font_color", GOLD if parts[0].begins_with("LEGEND") else CREAM)
 	h.add_child(score)
 	# The name at its own width, up to what the rank, the tag and the badge leave.
-	var room := FRAME_SIZE.x - 2.0 * PAD - 40.0 - ShadowStyle.OFFSET - 62.0 - 24.0 - 10.0 - tag.get_combined_minimum_size().x - score.get_combined_minimum_size().x
+	var room := FRAME_SIZE.x - 2.0 * PAD - 2.0 * TOP_PAD_X - ShadowStyle.OFFSET - 6.0 - 62.0 - 24.0 - 10.0 - tag.get_combined_minimum_size().x - score.get_combined_minimum_size().x
 	name_l.custom_minimum_size.x = minf(UiFont.body_bold().get_string_size(name_l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(21)).x + 2.0 * RetroTheme.OUTLINE, maxf(room, 80.0))
 	return box
+
+
+func _top_more() -> bool:
+	if _top_scroll == null or not _top_win.visible:
+		return false
+	var bar := _top_scroll.get_v_scroll_bar()
+	return bar.max_value - bar.page - _top_scroll.scroll_vertical > 2.0
+
+
+## The leaderboard panel: see-through cream at 32 %, padding 14 / 0 / 8 (the
+## head keeps 20 each side, the rows run edge to edge); a
+## tap (under 18 px of travel, no scroll) emits `pressed`.
+class TopPanel extends ShadowPanel:
+	signal pressed
+	const TAP_PX := 18.0
+	var dragged := false
+	var _at := Vector2.INF
+	func _init() -> void:
+		super(RetroTheme.SCENE_TEXT, 0.0, ShadowStyle.TINT, 0.0)
+		var sb := ShadowStyle.margins(14.0, 0.0)
+		sb.content_margin_bottom = 8.0 + ShadowStyle.OFFSET
+		add_theme_stylebox_override("panel", sb)
+		mouse_filter = Control.MOUSE_FILTER_STOP
+		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	func _gui_input(ev: InputEvent) -> void:
+		var mb := ev as InputEventMouseButton
+		if mb == null or mb.button_index != MOUSE_BUTTON_LEFT:
+			return
+		if mb.pressed:
+			_at = mb.position
+			dragged = false
+		elif _at != Vector2.INF:
+			var tap := not dragged and mb.position.distance_to(_at) < TAP_PX
+			_at = Vector2.INF
+			if tap:
+				pressed.emit()
+			accept_event()
+
+
+## A leaderboard row's ground, edge to edge of the panel: an optional fill
+## and a rule along its top (dashed, or solid for YOUR row).
+class TopRow extends Control:
+	var rule := Color.TRANSPARENT
+	var fill := Color.TRANSPARENT
+	var solid := false
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_PASS
+	func _draw() -> void:
+		if fill.a > 0.0:
+			draw_rect(Rect2(Vector2.ZERO, size), fill)
+		if rule.a > 0.0:
+			if solid:
+				draw_rect(Rect2(0, 0, size.x, 2), rule)
+			else:
+				draw_dashed_line(Vector2(0, 1), Vector2(size.x, 1), rule, 2.0, 8.0)
 
 
 ## COURT: ANY and the four courts in a row of five; the chosen one gold.
@@ -724,6 +907,11 @@ func _build_courts() -> void:
 	row.name = "Courts"
 	row.add_theme_constant_override("separation", 14)
 	section.add_child(row)
+	_courts_row = row
+	_courts_loading = LoadingLine.new("LOADING COURTS", COURT_H + ShadowStyle.OFFSET)
+	_courts_loading.name = "CourtsLoading"
+	_courts_loading.visible = false
+	section.add_child(_courts_loading)
 	var only := owned.size() < 2
 	_courts = {}
 	for a in MatchCopy.AREAS:
@@ -765,8 +953,35 @@ func set_area(a: String) -> void:
 		var b: ShadowCard = _courts[id]
 		b.color = GOLD if id == a else CREAM
 		b.queue_redraw()
-	if _quick_sub != null:
+	if _quick_sub != null and not _loading:
 		_quick_sub.text = MatchCopy.quick_sub(a)
+
+
+## While the server has not answered for your rank (design 37a, 2026-10-31):
+## LOADING PLAYER in your card (no badge, no record tag), LOADING COURTS
+## for the picker, QUICK MATCH saying so, and RANKED / QUICK / CREATE at
+## 45 % and untappable. Off: everything back, fed by set_rank.
+func set_loading(on: bool) -> void:
+	_loading = on
+	if _you_body == null:
+		return
+	_you_body.visible = not on
+	_you_loading.visible = on
+	_me_tag.visible = not on and _me_line.text != ""
+	_courts_row.visible = not on
+	_courts_loading.visible = on
+	if _quick_sub != null:
+		_quick_sub.text = "LOADING COURTS..." if on else MatchCopy.quick_sub(area_choice)
+	for b in [_ranked_btn, _menu.get_node_or_null("Quick"), _menu.get_node_or_null("Create")]:
+		if b is ShadowCard:
+			(b as ShadowCard).disabled = on
+			(b as ShadowCard).modulate.a = 0.45 if on else 1.0
+	if _top_panel != null:
+		_top_panel.mouse_default_cursor_shape = Control.CURSOR_BUSY if on else Control.CURSOR_POINTING_HAND
+
+
+func loading() -> bool:
+	return _loading
 
 
 func _owned() -> Array:
@@ -1049,6 +1264,10 @@ func show_failed(reason: String) -> void:
 
 ## The live dots on FINDING A PLAYER… and STARTING… (none on a failure).
 func _process(dt: float) -> void:
+	if _top_fade != null:
+		var more := _top_more()
+		if more != _top_fade.visible:
+			_top_fade.visible = more
 	if _state != "waiting" and _state != "found":
 		return
 	advance(dt)

@@ -247,14 +247,11 @@ class DayBar:
 
 func _build_pending(col: VBoxContainer) -> void:
 	var pending: Array = _data.get("pending", []) if _data.get("pending") is Array else []
-	var sec := _section(col, MatchCopy.pending_head(), MatchCopy.pending_note(_left(pending)) if not pending.is_empty() else "")
+	var sec := _section(col, MatchCopy.pending_head(), MatchCopy.pending_note(_left(pending)) if not pending.is_empty() else MatchCopy.pending_none_note())
 	sec.name = "Waiting"
 	_wait_note = sec.find_child("Note", true, false)
 	if pending.is_empty():
-		var none := words(MatchCopy.nothing_pending().replace(" · ", "\n"), 16)
-		none.name = "NothingPending"
-		none.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-		sec.add_child(none)
+		sec.add_child(_nothing_pending())
 		return
 	var list := VBoxContainer.new()
 	list.name = "Pending"
@@ -264,7 +261,55 @@ func _build_pending(col: VBoxContainer) -> void:
 		list.add_child(_grant_row(g if g is Dictionary else {}))
 	var n := pending.size()
 	var full := n * (ROW_H + ShadowStyle.OFFSET) + (n - 1) * 16.0
-	sec.add_child(_faded_scroll("PendingScroll", list, minf(full, WAIT_MAX_H + ShadowStyle.OFFSET), 90.0))
+	# The window keeps its height however few wait (design 37a, 2026-10-31).
+	sec.add_child(_faded_scroll("PendingScroll", list, WAIT_MAX_H + ShadowStyle.OFFSET, 90.0 if full > WAIT_MAX_H + ShadowStyle.OFFSET else 0.0))
+
+
+## Nothing to claim (design 37a, 2026-10-31): a dashed box the list's
+## height — the trophy faded, NOTHING TO CLAIM, how rewards come.
+func _nothing_pending() -> Control:
+	var box := DashedBox.new()
+	box.name = "NothingPending"
+	box.custom_minimum_size = Vector2(0, WAIT_MAX_H - 8.0)
+	var m := MarginContainer.new()
+	UiLayout.full_rect(m)
+	m.offset_right = -8.0
+	m.add_theme_constant_override("margin_left", 40)
+	m.add_theme_constant_override("margin_right", 40)
+	m.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(m)
+	var c := VBoxContainer.new()
+	c.alignment = BoxContainer.ALIGNMENT_CENTER
+	c.add_theme_constant_override("separation", 20)
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	m.add_child(c)
+	var cup := PixelIcon.new("icon_trophy", Vector2(56, 56), 3.0)
+	cup.modulate.a = 0.6
+	cup.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	c.add_child(cup)
+	var h := words(MatchCopy.nothing_pending_head(), 22, true)
+	h.name = "NothingHead"
+	c.add_child(h)
+	var t := words(MatchCopy.nothing_pending(), 20)
+	t.name = "NothingText"
+	t.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	t.add_theme_color_override("font_color", MUTED)
+	t.add_theme_constant_override("line_spacing", 8)
+	c.add_child(t)
+	return box
+
+
+## A dashed 2 px frame at 50 % (the empty WAITING FOR YOU), 8 px short of the right edge.
+class DashedBox extends Control:
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+	func _draw() -> void:
+		var c := Color(RetroTheme.SCENE_TEXT, 0.5)
+		var r := Rect2(Vector2.ONE, size - Vector2(9.0, 2.0))
+		draw_dashed_line(r.position, Vector2(r.end.x, r.position.y), c, 2.0, 8.0)
+		draw_dashed_line(Vector2(r.position.x, r.end.y), r.end, c, 2.0, 8.0)
+		draw_dashed_line(r.position, Vector2(r.position.x, r.end.y), c, 2.0, 8.0)
+		draw_dashed_line(Vector2(r.end.x, r.position.y), r.end, c, 2.0, 8.0)
 
 
 func _left(pending: Array) -> int:

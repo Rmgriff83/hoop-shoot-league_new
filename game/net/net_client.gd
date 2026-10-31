@@ -16,6 +16,11 @@ signal board_failed(area: String, period: String)
 signal ranked_board_loaded(data: Dictionary)
 signal ranked_board_failed
 signal rank_changed(rank: Dictionary)
+## A /v1/me that could not be read (offline, backing off, a busy slot): the
+## lobby stops waiting on it and shows the rank kept from last time.
+signal me_failed
+## The app came back to the foreground: open pages re-ask what they show.
+signal resumed
 ## The mirror brought newer copies of these parts; App re-reads what it caches.
 signal save_pulled(parts: Array)
 signal save_pushed(parts: Array)
@@ -28,6 +33,7 @@ signal rewards_failed
 signal rewards_changed
 signal rewards_badge(pending: int)
 
+const ME_FRESH_S := 60.0   # a /v1/me younger than this needs no LOADING PLAYER
 const FLUSH_GAP_S := 30.0
 const BOARD_TTL_S := 60.0
 const TIMEOUT_S := 8.0
@@ -62,8 +68,12 @@ var _level_reported := -1
 ## The server's view of the level, from the last cards refresh.
 var online_level := 1
 ## Your ladder rank as the server last told it ({tier, division, games, wins,
-## losses, cons, position?}); {} until a rated game or the first /v1/me.
+## losses, cons, position?}); {} until a rated game or the first /v1/me. Kept
+## on the device (the account part's `lastRank`), so a cold start or a
+## resume shows the last known rank, never UNRANKED, while /v1/me is out.
 var me_rank: Dictionary = {}
+## When /v1/me last answered this run (seconds, Time ticks); -1 = not yet.
+var me_at := -1.0
 ## Grants waiting for a CLAIM (the lobby's REWARDS badge) and the milestone
 ## keys the server has witnessed, both from the last /v1/me or /v1/rewards.
 var pending_rewards := 0
@@ -75,14 +85,22 @@ var _last_pull := -1.0
 
 func _ready() -> void:
 	_rng.randomize()
+	var kept: Variant = account().get("lastRank", {})
+	if kept is Dictionary and me_rank.is_empty():
+		me_rank = Dictionary(kept).duplicate(true)
 
 
 ## Focus changes arrive mid-notification, when the tree may refuse a new
 ## child (the HTTPRequest node): the work waits for the next frame.
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_APPLICATION_FOCUS_IN:
+	if what == NOTIFICATION_APPLICATION_FOCUS_IN or what == NOTIFICATION_APPLICATION_RESUMED:
+		# Calls that failed while the phone slept say nothing about the
+		# network now: no back-off carried over, and the open pages re-ask.
+		_blocked_until = 0.0
+		_fails = 0
 		flush.call_deferred()
 		pull_save.call_deferred()
+		resumed.emit.call_deferred()
 	elif what == NOTIFICATION_APPLICATION_FOCUS_OUT or what == NOTIFICATION_APPLICATION_PAUSED:
 		push_save.call_deferred(true)
 
@@ -233,9 +251,11 @@ func claim_transfer(code: String) -> bool:
 ## GET /v1/me: the linked providers onto the account part (never the proof).
 func fetch_me() -> void:
 	if not registered():
+		me_failed.emit.call_deferred()
 		return
-	var r := await _request("me", HTTPClient.METHOD_GET, "/v1/me")
+	var r := await _request("me_get", HTTPClient.METHOD_GET, "/v1/me")
 	if r["ok"]:
+		me_at = Time.get_ticks_msec() / 1000.0
 		if r["json"].has("providers"):
 			var a := account()
 			a["linked"] = Array(r["json"]["providers"])
@@ -248,8 +268,16 @@ func fetch_me() -> void:
 			note_milestones(Array(r["json"]["milestones"]))
 		if r["json"].has("pending"):
 			set_pending_rewards(int(r["json"]["pending"]))
-	elif r["code"] == 401:
-		await _recover_identity()
+	else:
+		if r["code"] == 401:
+			await _recover_identity()
+		me_failed.emit()
+
+
+## Did /v1/me answer in the last ME_FRESH_S this run? (The lobby skips its
+## LOADING PLAYER then.)
+func me_fresh() -> bool:
+	return me_at >= 0.0 and Time.get_ticks_msec() / 1000.0 - me_at < ME_FRESH_S
 
 
 ## The milestone keys the server holds → the Platform facade's mirror.
@@ -437,6 +465,10 @@ func _apply_cards(json: Dictionary) -> void:
 ## The server's word on your rank (a /v1/me, a rated decision).
 func set_me_rank(rank: Dictionary) -> void:
 	me_rank = rank.duplicate(true)
+	var a := account()
+	if not a.is_empty() and a.get("lastRank", {}) != me_rank:
+		a["lastRank"] = me_rank.duplicate(true)
+		SaveService.put_account(a)
 	rank_changed.emit(me_rank)
 
 

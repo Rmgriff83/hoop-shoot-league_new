@@ -2,10 +2,14 @@ class_name LevelBadge
 extends PanelContainer
 ## The compact top-left level element: "LVL01" over its progress meter, in
 ## the see-through dithered-shadow style (ShadowStyle, cream). The meter is
-## the share of the current level earned (Progression.frac_for).
+## the share of the current level earned (Progression.frac_for). A 72 px
+## face, 14 px each side inside the edge (design "Home League Context v2", 2026-10-30).
 
 const BAR_W := 150.0
 const BAR_H := 12.0
+const FACE_H := 72.0
+## The design's 18 is off the 8 px grid; Ross wanted it bigger (2026-10-31): 24.
+const TEXT := 24
 const COLOR := RetroTheme.SCENE_TEXT
 
 var _caps: Label
@@ -16,10 +20,11 @@ var _bar: PanelContainer
 func _init() -> void:
 	name = "Level"
 	texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
-	add_theme_stylebox_override("panel", ShadowStyle.margins(10.0))
+	add_theme_stylebox_override("panel", ShadowStyle.margins(0.0, 14.0 + ShadowStyle.EDGE))
+	custom_minimum_size = Vector2(0, FACE_H + ShadowStyle.OFFSET)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var col := VBoxContainer.new()
-	col.add_theme_constant_override("separation", 6)
+	col.add_theme_constant_override("separation", 8)
 	col.alignment = BoxContainer.ALIGNMENT_CENTER
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(col)
@@ -30,13 +35,13 @@ func _init() -> void:
 	row.add_theme_constant_override("separation", 6)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(row)
-	var word := RetroTheme.on_scene(UiFont.label("LVL", 16, COLOR)) as Label
+	var word := RetroTheme.on_scene(UiFont.label("LVL", TEXT, COLOR)) as Label
 	word.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(word)
 	var dot := Dot.new()
 	dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(dot)
-	_caps = RetroTheme.on_scene(UiFont.label("01", 16, COLOR))
+	_caps = RetroTheme.on_scene(UiFont.label("01", TEXT, COLOR))
 	_caps.name = "Number"
 	_caps.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(_caps)

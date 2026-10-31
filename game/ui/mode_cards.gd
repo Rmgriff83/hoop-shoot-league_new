@@ -105,7 +105,7 @@ static func league_card(state: Dictionary, you: Dictionary = {}) -> Button:
 	enter.custom_minimum_size = Vector2((104 if done else 176) + ShadowCard.OFFSET, 0)
 	enter.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	enter.disabled = b.disabled
-	var shine := PreMatchPage.Shine.new(2.4, 200.0, 0.75, RetroTheme.c("orange"))
+	var shine := PreMatchPage.Shine.wave(2.4, RetroTheme.c("orange"), 0.28, 1.15)
 	shine.name = "Shine"
 	UiLayout.full_rect(shine)
 	shine.offset_right = -ShadowCard.OFFSET
@@ -466,6 +466,7 @@ class Chip extends Control:
 ## and shrinking away in steps (CssEase.twinkle), `delay` s after the others.
 class Sparkle extends Control:
 	var delay := 0.0
+	var centre := true   # the gold middle (the card's trophies; the career row's have none)
 	func _init(p_delay := 0.0) -> void:
 		delay = p_delay
 		size = Vector2(10, 10)
@@ -480,4 +481,5 @@ class Sparkle extends Control:
 	func _draw() -> void:
 		draw_rect(Rect2(4, 0, 2, 10), RetroTheme.SCENE_TEXT)
 		draw_rect(Rect2(0, 4, 10, 2), RetroTheme.SCENE_TEXT)
-		draw_rect(Rect2(3, 3, 4, 4), ModeCards.HI)
+		if centre:
+			draw_rect(Rect2(3, 3, 4, 4), ModeCards.HI)

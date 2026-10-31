@@ -99,6 +99,20 @@ static func ranked_me_card(data: Dictionary) -> Dictionary:
 		"sub": "%s · %d-%d" % [RankedRules.badge_text(me), int(me.get("wins", 0)), int(me.get("losses", 0))]}
 
 
+## YOUR row under the lobby's leaderboard (design 37a, 2026-10-31): the
+## ladder's `me` with your handle, as ranked_rows makes a row; {} before a
+## rated game.
+static func ranked_me_row(data: Dictionary, account: Dictionary) -> Dictionary:
+	var me: Variant = data.get("me", null)
+	if me == null or not (me is Dictionary) or me.is_empty() or int(me.get("games", 0)) <= 0:
+		return {}
+	var r := Dictionary(me).duplicate()
+	r["name"] = str(account.get("name", "YOU"))
+	r["tag"] = str(account.get("tag", ""))
+	r["me"] = true
+	return ranked_rows({"rows": [r]})[0]
+
+
 static func ranked_offline_status() -> String:
 	return "NO SIGNAL · THE LADDER NEEDS A CONNECTION"
 

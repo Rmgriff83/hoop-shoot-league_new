@@ -6,12 +6,13 @@ current area**. `game/screens/title_screen.gd` (a `Node3D`), widgets in `game/ui
 
 ```
 Court       full-screen CourtGeometry + Camera3D (TitlePan), under a mild scrim (0.25)
-TopBar      [LVL01 + meter] [ball = locker]                 [ticket 1,240] [menu]
+TopBar      72 px faces at x 36 / 230 / 420 / 606: [LVL · 01 + meter] [neon ball =
+            locker] [tilted ticket 1,240] [menu: three 30×5 bars, ink drops]; text 24
 AreaZone    ★ 34 px (one star per difficulty step, ArenaSet.title_stars)
             ARCADE CAGE (52 px, wraps at 430, dithered drop shadow) [⚔ ONLINE] (72 tall)
             ALL AREAS · 2/3 OPEN > (bold 22, the > dithered) — the archive
             big < > chevrons at the screen edges (y 697), a gold dot for an unvisited area
-Board       TIME TRIAL · ALL TIME ink panel mid-court (140, 767), 434 wide: a window
+Board       TIME TRIAL · ALL TIME cream panel mid-court (140, 773), 434 wide: a window
             three rows tall onto the top 15, YOU pinned under it; a tap → the popup
 Float       over the court above the area, only while the league is open (per tab)
 Wash        a vertical gradient from clear at y 936 to dark gray (0.72) at the ticker
@@ -19,7 +20,7 @@ CardArea    a fixed box (y 922 → 1486) holding the home block or the league in
   League    orange, 310 high: SEASON n over its top-left corner, trophies (with
             sparkles) over its top-right; jersey + YOUR NAME / HOMETOWN; three numbers
             (RECORD · PLACE · STREAK, or SERIES · ROUND · SEED) · ENTER LEAGUE > (an
-            orange dot sweep) · dashed rule · NEXT · @ NAME / DAY d OF 14
+            orange dotWave, Shine.wave) · dashed rule · NEXT · @ NAME / DAY d OF 14
   Pair      TIME TRIAL (gold, stopwatch, "BEST 29") · PRACTICE (teal, barbell, "NO CLOCK"), 110 high
 Ticker      flat strip at the very bottom, scrolling copy from the save
 ```
@@ -33,7 +34,7 @@ ALL (ALL adds ???? tiles for what is not won yet). Its PLAY PEGGY row opens the
 wins balls and nets — tickets buy nothing else; the hoop counter is closed
 for now (`App.HOOPS_IN_LOCKER`). The locker icon carries a gold dot while a
 won prize has not been looked at.
-**The board** sits mid-court (`BoardPreview`, (140, 767) — Ross moved it 70 px under the design's 697 on 2026-10-30 — 434 wide — design 3a, reworked 2026-10-30): an ink panel (ShadowPanel in ink at 65 % — Ross lightened the design's 82 %) with TIME TRIAL · ALL TIME over a cream rule, a window three 44 px rows tall onto the area's top fifteen ALL TIME (Ross, 2026-10-24: the forever list, never the week's; the server's `period=all` board, else the device's own runs while the fetch is out or the server's board is still empty) with dashed rules and a fade at its foot while more wait, and YOUR row pinned under it (gold on orange). A drag scrolls the window; a tap opens **the board popup** (`BoardSheet`): the home fades out under a 45 % ink cover (0.2 s) and a cream panel slides in from 80 px right (0.3 s): the stopwatch, TIME TRIAL over `ARCADE CAGE · 60 S`, X; ONLINE / YOURS (the active one gold); 64 px rows (ONLINE pins YOUR row under the list; YOURS lists the device's runs as `TODAY · 7 SW`, `YESTERDAY · 5 SW`, `OCT 14 · 4 SW`, the best on orange); CLOSE at the foot slides in 0.05 s later. The cover, X and CLOSE close it. The full RANKS page is reached from the online lobby's ALL RANKS (Ross, 2026-10-30: popup only on the home). On a short screen the window shows fewer rows (`HomeLayout` `board_max_h`). The board slides off left as the league opens. **ONLINE** is the one cream card beside the area name (the 1v1 icon + the word): the lobby.
+**The board** sits mid-court (`BoardPreview`, (140, 773), 434 wide — design 3a, reworked 2026-10-30, re-cut 2026-10-31): a see-through cream panel (ShadowPanel at 32 %, padding 12 / 18 / 8) with TIME TRIAL · ALL TIME (stopwatch 20) over a cream rule, a window three 36 px rows tall (108) onto the area's top fifteen ALL TIME (Ross, 2026-10-24: the forever list, never the week's; the server's `period=all` board, else the device's own runs while the fetch is out or the server's board is still empty) with dashed rules and a fade at its foot while more wait, and YOUR row pinned under it (gold on orange). A drag scrolls the window; a tap opens **the board popup** (`BoardSheet`): the home fades out under a 45 % ink cover (0.2 s) and a cream panel slides in from 80 px right (0.3 s): the stopwatch, TIME TRIAL over `ARCADE CAGE · 60 S`, X; ONLINE / YOURS (the active one gold); 64 px rows (ONLINE pins YOUR row under the list; YOURS lists the device's runs as `TODAY · 7 SW`, `YESTERDAY · 5 SW`, `OCT 14 · 4 SW`, the best on orange); CLOSE at the foot slides in 0.05 s later. The cover, X and CLOSE close it. The full RANKS page is reached from the online lobby's leaderboard panel (Ross, 2026-10-30: popup only on the home). On a short screen the window shows fewer rows (`HomeLayout` `board_max_h`). The board slides off left as the league opens. **ONLINE** is the one cream card beside the area name (the 1v1 icon + the word): the lobby.
 **Shop is not on the home page**: it lives inside each league, selling
 cards usable only in that league for tickets (docs/ECONOMY.md: one currency
 since 2026-10-19); the pill shows TICKETS, the one wallet.
@@ -54,7 +55,9 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
   design's own rgba alpha, verbatim (Ross's designs carry a +0.10 lift since
   2026-10-27: the default face 32 %, lists 24 %, sheet rows 22 %, chips 40 %;
   the old hidden 1.5× gain is gone); labels in cream + ink
-  outline. Cards use their colour; the level, locker, ranks and menu use
+  outline — the designs' global 8-way 3 px ink text-shadow, drawn as
+  `outline_size` 12 (`RetroTheme.OUTLINE_SIZE`: Godot strokes a radius of
+  outline_size / 4, so the old 3 was a 0.75 px hairline; Ross, 2026-10-31). Cards use their colour; the level, locker, ranks and menu use
   cream; the tickets pill (`CoinsPill`, its old class name) gold. `on_scene()` gives
   any text drawn straight on the court that cream face with an ink outline.
   `card_button()` dresses a `Button`; `caps()` / `display()` make labels in
@@ -100,17 +103,17 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
   (0.35 s, fading in over 0.25 s), the board off to the left. The tab row
   MATCH · TABLE · SCHED · CARDS · STATS (72 tall, the text at 16 — the
   design's 20 snaps to 24 and five tabs would not fit; the active tab a
-  solid white face with tan dots, an orange dithered shadow and ink text;
+  solid white face with tan dots, an orange dithered shadow and ink text,
+  the others see-through orange (2026-10-31);
   a gold square pulsing on MATCH while a game waits, CssEase.tab_dot) sits
   over panes that slide ±110 % (0.3 s), with an 88 px fade at the bottom
   while a pane can still scroll. It IS the league dashboard: **MATCH** —
   the pine opponent card (`DAY 4 · AWAY` / `SEMI 2 · GAME 3 · AWAY`, `VS.`,
   the name, their record `2-1 RECORD · 2ND` (`· 2ND SEED` in the playoffs);
   the nickname and hometown on the right; ACC / ARC segments and PACE
-  beside PLAY — 232×104 orange with a gold dot sweep; under a dashed rule
-  `OLLIE'S CARDS` / `THEIR CARDS FOR THIS MATCH` with their season hand as
-  48 px crops — neutral copy where the design says "HE", shooters carry no
-  pronouns; **no SIM DAY / SIM ALL — every game is played live**); a
+  beside PLAY — 232×104 orange with the gold dotWave; under a dashed rule
+  `OLLIE'S CARDS` beside their season hand as 48 px crops (`NO CARDS THIS
+  MATCH` without one; the design's sub-line went 2026-10-31); **no SIM DAY / SIM ALL — every game is played live**); a
   finished season shows the gold **season-over card** instead (`SEASON n ·
   OVER`, CHAMPION and their name — yours when you won — and record, your
   titles `×n` on the right, AVG PTS / HIGH / STREAK beside START `SEASON
@@ -129,8 +132,11 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
   a tap asks (X + orange CONFIRM with the price; back after 4 s) → CONFIRM
   buys (`App.try_buy_card`, no pane rebuild) and shows `+1 ADDED` for 1.6 s
   while the card **flies** into YOUR CARDS above (`card_bought` → the
-  title, CssEase.card_fly). **STATS** — the career grid, seasons, BEST
-  MATCHES, the area's time trials. Every panel is a see-through cream
+  title, CssEase.card_fly). **STATS** — the career grid (once you hold a
+  title, its head is up to five 44 px twinkling trophies, `×n` gold and
+  TITLE(S) over a dashed rule; then RECORD · PPG · HIGH PTS · SWISHES ·
+  BEST STREAK · BEST FINISH), seasons, BEST MATCHES, the area's time
+  trials — labels and side notes in gold (2026-10-31). Every panel is a see-through cream
   `ShadowPanel` at 24 % with cream text. `changed` fires when the doc
   moves, `tab_changed` on a tab; `go_loadout()` lands on CARDS.
   `App.enter_league(id)` makes a league current without a scene change;
@@ -147,7 +153,8 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
   more; a card above your level dimmed with its LVL) — a bought card lands
   there: an owned kind's badge bumps (CssEase.cnt_bump), a new kind's slot
   grows open (slot_grow); SCHED → `COMING UP`, the next three games as
-  cards (today's gold); STATS → `THIS SEASON` RECORD · HIGH PTS · STREAK.
+  cards (today's gold); STATS → `THIS SEASON` RECORD · PPG · HIGH PTS ·
+  STREAK (values at 40, 36 apart). YOUR CARDS' header sits 16 under its top.
   Rebuilt on `tab_changed` / `changed`, hidden with the home block.
 - **Season chip** — while the league is open a chip slides in under the
   area name with the season alone (`SEASON 2`, `SEASON 2 · PLAYOFFS`,
@@ -359,7 +366,9 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
   gold up to today, a star on each card day ahead — numbers under it);
   WAITING FOR YOU (`n TO CLAIM` / `ALL CLAIMED`; the card, `LOGIN REWARD` /
   `MILESTONE`, the name, CLAIM → CLAIMED dim; three rows in view, the rest
-  scroll under a fade); MILESTONES (`n / 28`: the firsts and win counts as
+  scroll under a fade; the window keeps its 388 px however few wait, and
+  with none it is a dashed box — the trophy faded, NOTHING TO CLAIM, how
+  rewards come — under `NONE YET`, 2026-10-31); MILESTONES (`n / 28`: the firsts and win counts as
   chips, unlocked gold with `+`, the rest dim) and RANK (the next step
   dashed, yours gold, every step reached below it; scrolls under a fade).
   No drop meter on this page since 37a (the post-match page keeps its line).
@@ -368,18 +377,35 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
   of the
   screen once EPIC joined the odds (2026-10-28). QA: `--qa-multi` (`multi_menu`,
   `multi_code`, `multi_found`, `multi_failed`, `multi_finding`,
-  `multi_rewards`, `multi_rewards_wide`, `multi_prematch`, `multi_prematch_ready`, `online_result`),
+  `multi_loading`, `multi_menu_long`, `multi_rewards_none`, `multi_rewards`, `multi_rewards_wide`, `multi_prematch`, `multi_prematch_ready`, `online_result`),
   `--qa-heat-result` (`online_result_win`, `online_result_loss`). Since 2026-10-25 (37a's latest pass) the menu opens with your gold
   player card (since 2026-10-30: the jersey; your badge at 30 px gold, the
   handle and `#tag`, `TOWN · LVL 07`; `#18 · 32-16` on a solid gold tag
   over the card's top right corner, hidden before a rated game (Ross, 2026-10-30); a bar through your division, `16 / 50
   TO MVP I`, from `RankedRules.division_progress`, hidden at the top tier
-  and before a rated game; RANKED MATCH) and ends with GLOBAL LEADERBOARD ·
-  TOP 5 · RATED: the ladder's top five (rank gold for the top three, the
-  name over the record, the badge gold on the right) in a see-through panel and ALL RANKS >, which opens
-  the ranks page on RANKED over the lobby. The title feeds both from `Net`
-  (`me_rank`, the cached ranked board); the leaderboard shows only on a
-  frame of 1400 px or more (a 9:16 screen has no room for it).
+  and before a rated game; RANKED MATCH with the gold dotWave) and ends
+  with the GLOBAL LEADERBOARD panel (2026-10-31): one see-through cream
+  panel, the trophy, GLOBAL LEADERBOARD and RATED over a cream rule, a window
+  three 62 px rows tall onto the ladder's top fifteen (rank gold for the top
+  three, the name over the record, the badge on the right — gold at LEGEND)
+  with a fade at its foot while more wait, YOUR row pinned under it (a solid
+  rule, orange); a tap opens the ranks page on RANKED over the lobby (no ALL
+  RANKS button any more), a drag scrolls the window. The record tag is
+  placed from the card's own size and the badge / town lines clip, so a
+  long rank name can never widen the card or carry the tag off its corner
+  (Ross, 2026-10-31). **Loading** (2026-10-31): until the server answers
+  for your rank the card shows LOADING PLAYER… (no badge, no tag), the
+  picker LOADING COURTS…, QUICK MATCH's sub says so and RANKED / QUICK /
+  CREATE sit at 45 % untappable; the leaderboard shows LOADING RANKS…
+  until the ladder answers (`LoadingLine`: the spinner and the counting
+  dots). The title wires it: `Net.rank_changed` ends it; `Net.me_failed`
+  retries twice 1.5 s apart, then settles on the rank kept from last time
+  (`Net.me_rank` is saved as the account's `lastRank`, so a cold start or
+  a resume never shows UNRANKED for a ranked player); `Net.resumed` (the
+  app back from the background — the network back-off from calls that
+  died asleep is cleared) asks /v1/me and the ladder again. A /v1/me under
+  60 s old skips the loading. The leaderboard shows only on a frame of
+  1400 px or more (a 9:16 screen has no room for it).
 - **Pre-match page** (`game/ui/pre_match_page.gd` `PreMatchPage`, design "Pre
   Match" 37a, reworked 2026-10-25; `FaceOffPage` keeps the shared pieces):
   full screen before EVERY match, opened by the heat screen once the match

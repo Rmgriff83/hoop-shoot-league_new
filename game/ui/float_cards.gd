@@ -8,6 +8,7 @@ extends Control
 ## into it (the title runs the flight): an owned kind's badge bumps
 ## (`bump`), a new kind's slot grows open (`grow`).
 
+const HEAD_TOP := 16.0   # the header sits 16 under the float's top (design, 2026-10-31)
 const CARD := Vector2(96, 128)
 const SHADOW := 6.0
 const GAP := 28.0           # between faces (the art's shadow sits inside it)
@@ -50,9 +51,9 @@ func build(id: String) -> void:
 	_count.name = "Count"
 	_count.size_flags_vertical = Control.SIZE_SHRINK_END
 	head.add_child(_count)
-	head.position = Vector2.ZERO
+	head.position = Vector2(0, HEAD_TOP)
 	head.size = Vector2(WIDTH, UiFont.snap(22) + 2.0 * RetroTheme.OUTLINE)
-	var strip_y := head.size.y + 14.0 - PAD_TOP + 2.0
+	var strip_y := HEAD_TOP + head.size.y + 14.0 - PAD_TOP + 2.0
 	var strip_h := PAD_TOP + CARD.y + SHADOW + PAD_BOTTOM
 	_scroll = ScrollContainer.new()
 	_scroll.name = "Scroll"
