@@ -1,0 +1,7 @@
+{
+  "_": "Copy to store_keys.json (gitignored) with the RevenueCat public SDK keys from the dashboard: Project → Apps → the iOS app (appl_…) and the Android app (goog_…). docs/BUILD.md → The store plugin.",
+  "revenuecat": {
+    "ios": "appl_REPLACE_ME",
+    "android": "goog_REPLACE_ME"
+  }
+}

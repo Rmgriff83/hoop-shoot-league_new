@@ -20,6 +20,10 @@ boot_splash/stretch_mode=4
 boot_splash/use_filter=true
 boot_splash/image="res://assets/splash/boot_splash.png"
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/godotx_revenue_cat/plugin.cfg")
+
 [autoload]
 
 SaveService="*res://game/autoload/save_service.gd"
@@ -27,6 +31,7 @@ Sfx="*res://game/autoload/sfx.gd"
 Net="*res://game/net/net_client.gd"
 Platform="*res://game/net/platform.gd"
 App="*res://game/autoload/app.gd"
+Store="*res://game/net/store.gd"
 QaDriver="*res://tools/qa_driver.gd"
 
 [display]

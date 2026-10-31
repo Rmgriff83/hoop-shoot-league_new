@@ -133,6 +133,7 @@ func _ready() -> void:
 	Net.board_loaded.connect(_on_board_for_preview)
 	Net.board_failed.connect(_on_board_fail_for_preview)
 	Net.resumed.connect(_on_resumed_board)
+	Store.tickets_credited.connect(_on_tickets_credited)
 	Net.score_accepted.connect(_on_score_accepted)
 	rebuild_chrome()
 	_ui.add_child(_cover)
@@ -1449,6 +1450,20 @@ func _open_store() -> void:
 
 func store() -> TicketStorePage:
 	return _store
+
+
+## Bought tickets landed (Store.sync, or a slow credit after the page gave
+## up): the wallet and ticker follow, and a toast says so unless the store
+## page is up to show it itself.
+func _on_tickets_credited(n: int) -> void:
+	_refresh_ticker()
+	if _store != null or not is_inside_tree():
+		return
+	var toast := Toast.new(RetroTheme.LIGHT["gold"], UiLayout.screen_top() + WELCOME_TOP)
+	toast.name = "TicketsCredited"
+	toast.set_small(StoreCopy.credited(n), "", "icon_ticket")
+	_ui.add_child(toast)
+	toast.show_once.call_deferred()
 
 
 func peggy() -> PeggyPage:

@@ -32,6 +32,8 @@ signal rewards_loaded(data: Dictionary)
 signal rewards_failed
 signal rewards_changed
 signal rewards_badge(pending: int)
+## /v1/me said bought tickets wait at the Worker (Store claims them).
+signal store_pending_tickets(n: int)
 
 const ME_FRESH_S := 60.0   # a /v1/me younger than this needs no LOADING PLAYER
 const FLUSH_GAP_S := 30.0
@@ -268,10 +270,35 @@ func fetch_me() -> void:
 			note_milestones(Array(r["json"]["milestones"]))
 		if r["json"].has("pending"):
 			set_pending_rewards(int(r["json"]["pending"]))
+		if r["json"].has("pendingTickets"):
+			store_pending_tickets.emit(int(r["json"]["pendingTickets"]))
 	else:
 		if r["code"] == 401:
 			await _recover_identity()
 		me_failed.emit()
+
+
+# ---- the ticket store (docs/BACKEND.md → Ticket store; driven by Store) ----------
+
+
+## GET /v1/store/pending: the bought packs waiting for this phone, [{id, productId, tickets, purchasedAt}].
+func store_pending() -> Array:
+	if not registered():
+		return []
+	var r := await _request("store_pending", HTTPClient.METHOD_GET, "/v1/store/pending")
+	if r["ok"] and r["json"].get("pending") is Array:
+		return Array(r["json"]["pending"])
+	return []
+
+
+## POST /v1/store/claim: take these packs, once; answers only the rows the Worker turned in this call.
+func store_claim(ids: Array) -> Array:
+	if not registered() or ids.is_empty():
+		return []
+	var r := await _request("store_claim", HTTPClient.METHOD_POST, "/v1/store/claim", {"ids": ids})
+	if r["ok"] and r["json"].get("claimed") is Array:
+		return Array(r["json"]["claimed"])
+	return []
 
 
 ## Did /v1/me answer in the last ME_FRESH_S this run? (The lobby skips its

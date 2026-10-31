@@ -19,3 +19,8 @@ node_modules/
 *.blend1
 *.tmp
 __pycache__/
+
+# The RevenueCat plugin binaries (godot-x/revenuecat): staged from ~/.config/hoop_shoot/revenuecat by tools/build.sh.
+ios/plugins/
+# RevenueCat public SDK keys (appl_/goog_), kept out of git like the keystore; see store_keys.example.json.
+store_keys.json

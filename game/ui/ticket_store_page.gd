@@ -4,13 +4,15 @@ extends HomePage
 ## Ticket packs): a full page over the area like the locker, opened from the
 ## home's ticket chip, the locker's and PEGGY's ticket panels and a league
 ## card you can't afford. TICKETS with the balance chip, one line on what
-## tickets buy, the two packs (TicketShop.PACKS) and `< BACK`.
+## tickets buy, the two packs (TicketShop.packs()) and `< BACK`.
 ##
 ## A pack's price button runs idle → ask (X / BUY) → busy (the spinner while
-## the platform store is up) → done (+N, the tickets flying into the chip and
-## the count ticking up) → idle. The store is a stub for now (TicketShop):
-## busy ends in no sale and the button goes back to its price; `show_bought`
-## plays the success without granting anything (QA, tests).
+## the store sheet is up and the Worker's credit is awaited) → done (+N, the
+## tickets flying into the chip and the count ticking up) → idle. The buying
+## is `Store` (RevenueCat → the webhook → pending → CLAIM → grant); the page
+## only shows it: a cancel goes back quietly, an error or a slow credit goes
+## back with a toast, and `show_bought` plays the success. Without a store
+## (desktop, QA, no plugin) busy ends in no sale, the old stub.
 
 const LINE := "SPEND TICKETS ON PEGGY AND IN EACH AREA'S CARD SHOP."
 const BODY_X := 6.0           # the design's 36 px margin inside the 30 px frame
@@ -81,7 +83,7 @@ func _build() -> void:
 	line.position = Vector2(0, LINE_Y)
 	line.size = Vector2(BODY_W, 0)
 	_store.add_child(line)
-	for i in TicketShop.PACKS.size():
+	for i in TicketShop.packs().size():
 		_st.push_back({"state": "idle", "until": 0.0, "t": 0.0})
 		_build_pack(i)
 	var back := back_button(24, 28, 16, BACK_H)
@@ -95,6 +97,11 @@ func _build() -> void:
 	_flight.name = "Flight"
 	_flight.count_changed.connect(_on_count)
 	add_child(_flight)   # over the frame
+	Store.purchase_done.connect(_on_purchase_done)
+	Store.prices_changed.connect(_on_prices)
+	Store.tickets_credited.connect(_on_credited)
+	Store.fetch_prices()   # the player's own currency replaces the US tiers
+	Store.sync()           # a credit that landed while the page was away
 
 
 ## TICKETS ...... [ticket over the balance].
@@ -143,7 +150,7 @@ func _build_head() -> void:
 
 
 func _build_pack(i: int) -> void:
-	var p: Dictionary = TicketShop.PACKS[i]
+	var p: Dictionary = TicketShop.packs()[i]
 	var best := bool(p.get("best", false))
 	var panel := ShadowPanel.new(RetroTheme.LIGHT["gold"] if best else CREAM, 0.0, ShadowStyle.TINT)
 	panel.name = "Pack%d" % i
@@ -230,23 +237,76 @@ func cancel(i: int) -> void:
 		_set_state(i, "idle")
 
 
-## BUY: the platform store's turn (the spinner) until it answers.
+## BUY: the store's turn (the spinner) until the sale is credited or not.
 func confirm(i: int) -> void:
-	if state(i) != "ask":
+	if state(i) != "ask" or Store.buying() != "":
 		return
 	_set_state(i, "busy")
-	TicketShop.purchase(str(TicketShop.PACKS[i]["id"]), _on_result.bind(i))
+	Store.purchase(str(TicketShop.packs()[i]["id"]))
 
 
-func _on_result(ok: bool, i: int) -> void:
-	if state(i) != "busy":
+## Store.purchase_done: the credit landed (granted already: count up from
+## the old balance), or the sale did not happen (back to the price, with a
+## word when it was not the player's own cancel).
+func _on_purchase_done(product_id: String, ok: bool, reason: String) -> void:
+	var i := _index_of(product_id)
+	if i < 0 or state(i) != "busy":
 		return
-	if not ok:
-		_set_state(i, "idle")
+	if ok:
+		var n := int(TicketShop.packs()[i]["tickets"])
+		show_bought(i, App.tickets() - n)
 		return
-	# The real store grants before it answers: count up from the old balance.
-	var n := int(TicketShop.PACKS[i]["tickets"])
-	show_bought(i, App.tickets() - n)
+	_set_state(i, "idle")
+	match reason:
+		"error":
+			_toast(StoreCopy.failed(), CREAM)
+		"slow":
+			_toast(StoreCopy.on_the_way(), RetroTheme.LIGHT["gold"])
+
+
+func _index_of(product_id: String) -> int:
+	for i in TicketShop.packs().size():
+		if str(TicketShop.packs()[i]["id"]) == product_id:
+			return i
+	return -1
+
+
+## The store's own price strings arrived: the idle and ask buttons re-read them.
+func _on_prices() -> void:
+	for i in _st.size():
+		if state(i) == "idle" or state(i) == "ask":
+			_fill(i)
+
+
+## A credit landed outside a sale this page is showing (Store.sync, a slow
+## webhook): the chip follows and a toast says so. A sale in flight shows
+## its own +N (the credit signal comes a beat before purchase_done).
+func _on_credited(n: int) -> void:
+	if Store.buying() != "" or (_flight != null and _flight.playing()):
+		return
+	set_tickets()
+	_toast(StoreCopy.credited(n), RetroTheme.LIGHT["gold"])
+
+
+const TOAST_TOP := 44.0
+
+func _toast(text: String, colour: Color) -> void:
+	if not is_inside_tree():
+		return
+	var toast := Toast.new(colour, UiLayout.screen_top() + TOAST_TOP)
+	toast.name = "StoreToast"
+	toast.set_small(text, "", "icon_ticket")
+	add_child(toast)
+	toast.show_once.call_deferred()
+
+
+func _exit_tree() -> void:
+	if Store.purchase_done.is_connected(_on_purchase_done):
+		Store.purchase_done.disconnect(_on_purchase_done)
+	if Store.prices_changed.is_connected(_on_prices):
+		Store.prices_changed.disconnect(_on_prices)
+	if Store.tickets_credited.is_connected(_on_credited):
+		Store.tickets_credited.disconnect(_on_credited)
 
 
 ## The sale's success shown: +N, the tickets flying from the pack into the
@@ -256,7 +316,7 @@ func show_bought(i: int, from_balance: int) -> void:
 	_set_state(i, "done")
 	_fly_from = from_balance
 	_chip_count.text = RetroTheme.thousands(from_balance)
-	var n := int(TicketShop.PACKS[i]["tickets"])
+	var n := int(TicketShop.packs()[i]["tickets"])
 	if not _flight.is_inside_tree():
 		_flight.play(StoreFlight.FROM, Vector2.ZERO, n)   # off-tree (tests): the count only
 		return
@@ -286,7 +346,7 @@ func _fill(i: int) -> void:
 	for c in area.get_children():
 		area.remove_child(c)
 		c.queue_free()
-	var price := TicketShop.price(str(TicketShop.PACKS[i]["id"]))
+	var price := TicketShop.price(str(TicketShop.packs()[i]["id"]))
 	match state(i):
 		"ask":
 			var x := button("X", CREAM, 26, BUY.y)
@@ -330,7 +390,7 @@ func _fill(i: int) -> void:
 			face.size = hold.custom_minimum_size
 			face.pivot_offset = BUY * 0.5
 			hold.add_child(face)
-			var dl := words("+%d" % int(TicketShop.PACKS[i]["tickets"]), 24, true)
+			var dl := words("+%d" % int(TicketShop.packs()[i]["tickets"]), 24, true)
 			dl.name = "Word"
 			dl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			face.add_child(dl)

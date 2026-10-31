@@ -64,6 +64,25 @@ fi
 sed -i '' -E "s|^version/code=.*|version/code=$BUILD|; s|^application/version=.*|application/version=\"$BUILD\"|" export_presets.cfg
 echo "Hoop Shoot League $VERSION build $BUILD ($MODE)"
 
+# The RevenueCat plugin's binaries (docs/BUILD.md → The store plugin) live
+# outside the repo like the keystore; copy them in for the exports that can
+# carry them (the Play gradle build, iOS). Missing: a warning, the export
+# goes on and the game runs its null store backend (today's stub store).
+STORE_PLUGIN="$HOME/.config/hoop_shoot/revenuecat"
+stage_store_plugin() {
+  if [[ -d "$STORE_PLUGIN/android/revenue_cat" && -d "$STORE_PLUGIN/ios/plugins/revenuecat" ]]; then
+    rm -rf android/revenue_cat ios/plugins/revenuecat
+    mkdir -p android ios/plugins
+    cp -R "$STORE_PLUGIN/android/revenue_cat" android/revenue_cat
+    cp -R "$STORE_PLUGIN/ios/plugins/revenuecat" ios/plugins/revenuecat
+    echo "staged the RevenueCat plugin from $STORE_PLUGIN"
+  else
+    echo "no RevenueCat plugin at $STORE_PLUGIN (android/revenue_cat + ios/plugins/revenuecat): the store runs its stub"
+  fi
+  [[ -f store_keys.json ]] || echo "no store_keys.json (see store_keys.example.json): the store runs its stub"
+}
+stage_store_plugin
+
 godot_export() {  # preset path
   local flag="--export-$MODE"
   "$GODOT" --headless --path "$PROJ" "${INSTALL[@]}" "$flag" "$1" "$2" 2>&1 | grep -vE "$NOISE"

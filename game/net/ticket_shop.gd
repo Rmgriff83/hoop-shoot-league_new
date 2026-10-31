@@ -2,42 +2,44 @@ class_name TicketShop
 extends RefCounted
 ## The ticket packs (design "Ticket Store" 50a, docs/ECONOMY.md → Ticket
 ## packs): two consumables that buy tickets, nothing else — the real-money
-## rule holds (no path from money to online cards). The prices are the US
-## tiers until the platform store (StoreKit / Play Billing) reports the
-## player's own currency.
-##
-## The store itself is not wired yet (Ross, 2026-10-31): `purchase` holds the
-## spinner for BUSY_S and then reports no sale, so nothing is ever granted.
-## The real flow replaces it: the platform sheet, then the receipt verified
-## by the Worker, which grants the tickets server-side before `done(true)`.
+## rule holds (no path from money to online cards). The table is
+## data/store.json, which the Worker reads too, so the ids, the amounts and
+## the US prices never drift between the phone and the credit. The buying
+## itself is `Store` (game/net/store.gd): RevenueCat's sheet, then the
+## Worker's credit.
 
-const BUSY_S := 1.4
-const PACKS := [
-	{"id": "tickets_300", "tickets": 300, "price": "$0.99"},
-	{"id": "tickets_1000", "tickets": 1000, "price": "$2.99", "best": true},
-]
+const PATH := "res://data/store.json"
+
+static var _packs: Array = []
+
+
+## [{id, tickets, price (the US tier), best}], in the design's order.
+static func packs() -> Array:
+	if _packs.is_empty():
+		var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(PATH))
+		var rows: Array = Array(Dictionary(parsed).get("packs", [])) if parsed is Dictionary else []
+		for p in rows:
+			_packs.push_back({"id": str(p["id"]), "tickets": int(p["tickets"]), "price": str(p.get("priceUsd", "")), "best": bool(p.get("best", false))})
+	return _packs
 
 
 static func pack(id: String) -> Dictionary:
-	for p in PACKS:
+	for p in packs():
 		if str(p["id"]) == id:
 			return p
 	return {}
 
 
-## The price as the player's store shows it (the US tier for now).
+static func ids() -> Array:
+	return packs().map(func(p: Dictionary) -> String: return str(p["id"]))
+
+
+## The price as the player's store shows it: the live string `Store` fetched
+## (the player's own currency), else the US tier from the table.
 static func price(id: String) -> String:
+	var store: Node = Engine.get_main_loop().root.get_node_or_null("Store") if Engine.get_main_loop() is SceneTree else null
+	if store != null:
+		var live := str(store.get("prices").get(id, ""))
+		if live != "":
+			return live
 	return str(pack(id).get("price", ""))
-
-
-## Buy pack `id`; `done(ok: bool)` once the store answers. A stub for now:
-## always false, nothing granted.
-static func purchase(id: String, done: Callable) -> void:
-	var tree := Engine.get_main_loop() as SceneTree
-	if tree == null or pack(id).is_empty():
-		done.call(false)
-		return
-	tree.create_timer(BUSY_S).timeout.connect(func() -> void:
-		if done.is_valid():   # the page may have closed meanwhile
-			done.call(false)
-	)
