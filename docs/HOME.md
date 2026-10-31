@@ -11,7 +11,7 @@ AreaZone    ★ 34 px (one star per difficulty step, ArenaSet.title_stars)
             ARCADE CAGE (52 px, wraps at 430, dithered drop shadow) [⚔ ONLINE] (72 tall)
             ALL AREAS · 2/3 OPEN > (bold 22, the > dithered) — the archive
             big < > chevrons at the screen edges (y 697), a gold dot for an unvisited area
-Board       TIME TRIAL · ALL TIME ink panel mid-court (140, 697), 434 wide: a window
+Board       TIME TRIAL · ALL TIME ink panel mid-court (140, 747), 434 wide: a window
             three rows tall onto the top 15, YOU pinned under it; a tap → the popup
 Float       over the court above the area, only while the league is open (per tab)
 Wash        a vertical gradient from clear at y 936 to dark gray (0.72) at the ticker
@@ -33,7 +33,7 @@ ALL (ALL adds ???? tiles for what is not won yet). Its PLAY PEGGY row opens the
 wins balls and nets — tickets buy nothing else; the hoop counter is closed
 for now (`App.HOOPS_IN_LOCKER`). The locker icon carries a gold dot while a
 won prize has not been looked at.
-**The board** sits mid-court (`BoardPreview`, (140, 697), 434 wide — design 3a, reworked 2026-10-30): an ink panel (ShadowPanel in ink at 82 %) with TIME TRIAL · ALL TIME over a cream rule, a window three 44 px rows tall onto the area's top fifteen ALL TIME (Ross, 2026-10-24: the forever list, never the week's; the server's `period=all` board, else the device's own runs while the fetch is out or the server's board is still empty) with dashed rules and a fade at its foot while more wait, and YOUR row pinned under it (gold on orange). A drag scrolls the window; a tap opens **the board popup** (`BoardSheet`): the home fades out under a 45 % ink cover (0.2 s) and a cream panel slides in from 80 px right (0.3 s): the stopwatch, TIME TRIAL over `ARCADE CAGE · 60 S`, X; ONLINE / YOURS (the active one gold); 64 px rows (ONLINE pins YOUR row under the list; YOURS lists the device's runs as `TODAY · 7 SW`, `YESTERDAY · 5 SW`, `OCT 14 · 4 SW`, the best on orange); CLOSE at the foot slides in 0.05 s later. The cover, X and CLOSE close it. The full RANKS page is reached from the online lobby's ALL RANKS (Ross, 2026-10-30: popup only on the home). On a short screen the window shows fewer rows (`HomeLayout` `board_max_h`). The board slides off left as the league opens. **ONLINE** is the one cream card beside the area name (the 1v1 icon + the word): the lobby.
+**The board** sits mid-court (`BoardPreview`, (140, 747) — Ross moved it 50 px under the design's 697 on 2026-10-30 — 434 wide — design 3a, reworked 2026-10-30): an ink panel (ShadowPanel in ink at 82 %) with TIME TRIAL · ALL TIME over a cream rule, a window three 44 px rows tall onto the area's top fifteen ALL TIME (Ross, 2026-10-24: the forever list, never the week's; the server's `period=all` board, else the device's own runs while the fetch is out or the server's board is still empty) with dashed rules and a fade at its foot while more wait, and YOUR row pinned under it (gold on orange). A drag scrolls the window; a tap opens **the board popup** (`BoardSheet`): the home fades out under a 45 % ink cover (0.2 s) and a cream panel slides in from 80 px right (0.3 s): the stopwatch, TIME TRIAL over `ARCADE CAGE · 60 S`, X; ONLINE / YOURS (the active one gold); 64 px rows (ONLINE pins YOUR row under the list; YOURS lists the device's runs as `TODAY · 7 SW`, `YESTERDAY · 5 SW`, `OCT 14 · 4 SW`, the best on orange); CLOSE at the foot slides in 0.05 s later. The cover, X and CLOSE close it. The full RANKS page is reached from the online lobby's ALL RANKS (Ross, 2026-10-30: popup only on the home). On a short screen the window shows fewer rows (`HomeLayout` `board_max_h`). The board slides off left as the league opens. **ONLINE** is the one cream card beside the area name (the 1v1 icon + the word): the lobby.
 **Shop is not on the home page**: it lives inside each league, selling
 cards usable only in that league for tickets (docs/ECONOMY.md: one currency
 since 2026-10-19); the pill shows TICKETS, the one wallet.
@@ -475,6 +475,8 @@ fog). The park's dressing is
 sky shader.
 
 ## Splash (design "Splash Screen" 30a NEON WALL, 2026-10-30)
+
+Before it, the **boot splash** (Ross, 2026-10-30) replaces Godot's logo: the neon ball centred on the brick wall (`assets/splash/boot_splash.png`, 1440×3120, made by `tools/make_boot_splash.gd`; `application/boot_splash/*` — cover, the wall's dark `#1F0F0C` behind it). iOS's launch screen reuses it; Android 12+ shows its system splash (the ball icon) first.
 
 `game/screens/splash_screen.gd` (the main scene; `App.to_splash()`,
 `tests/test_splash.gd`, QA `--qa-splash`, `--qa-splash --qa-save` for the

@@ -15,6 +15,10 @@ config/version="1.0.0"
 run/main_scene="res://game/screens/splash_screen.tscn"
 config/features=PackedStringArray("4.7")
 config/icon="res://assets/icon/icon_1024.png"
+boot_splash/bg_color=Color(0.12156863, 0.05882353, 0.047058824, 1)
+boot_splash/stretch_mode=4
+boot_splash/use_filter=true
+boot_splash/image="res://assets/splash/boot_splash.png"
 
 [autoload]
 
