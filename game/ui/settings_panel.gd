@@ -467,7 +467,7 @@ func _edit(name_: String, text: String, max_len: int, display := false) -> LineE
 	e.add_theme_color_override("font_placeholder_color", Color("#A89E94"))
 	e.add_theme_color_override("caret_color", GOLD)
 	e.add_theme_color_override("font_outline_color", RetroTheme.SCENE_OUTLINE)
-	e.add_theme_constant_override("outline_size", 2)
+	e.add_theme_constant_override("outline_size", 8)   # the design's 2 px edge (RetroTheme.OUTLINE_SIZE)
 	for state in ["normal", "focus", "read_only"]:
 		e.add_theme_stylebox_override(state, StyleBoxEmpty.new())
 	return e

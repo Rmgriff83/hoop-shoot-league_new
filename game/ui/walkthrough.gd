@@ -345,7 +345,7 @@ static func _big_gold(name_: String, text: String) -> Label:
 	var l := RetroTheme.display(text, 46, GOLD)
 	l.name = name_
 	l.add_theme_color_override("font_outline_color", RetroTheme.SCENE_OUTLINE)
-	l.add_theme_constant_override("outline_size", RetroTheme.OUTLINE)
+	l.add_theme_constant_override("outline_size", RetroTheme.OUTLINE_SIZE)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	RetroTheme.dithered(l, Vector2(6, 6))

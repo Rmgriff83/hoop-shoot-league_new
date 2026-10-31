@@ -129,7 +129,7 @@ func _vs_row() -> HBoxContainer:
 	var word := RetroTheme.display(MatchCopy.vs_word(), 36, ORANGE)
 	word.name = "VsWord"
 	word.add_theme_color_override("font_outline_color", RetroTheme.SCENE_OUTLINE)
-	word.add_theme_constant_override("outline_size", RetroTheme.OUTLINE)
+	word.add_theme_constant_override("outline_size", RetroTheme.OUTLINE_SIZE)
 	word.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	RetroTheme.dithered(word, Vector2(5, 5))
 	row.add_child(word)

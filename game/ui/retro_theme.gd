@@ -35,6 +35,12 @@ const RULE := 3
 const SCENE_TEXT := Color("#FFFFFF")   # pure white since 2026-10-25 (Palette: was cream #F1E8D0)
 const SCENE_OUTLINE := Color("#221C18")
 const OUTLINE := 3
+## The `outline_size` theme constant that draws that 3 px ink edge. Godot's
+## outline is a FreeType stroke of radius outline_size / 4 px, so the old
+## outline_size 3 drew a 0.75 px hairline where the designs carry a global
+## 8-way 3 px ink text-shadow (Ross, 2026-10-31: "our fonts don't look the
+## same as the design"). OUTLINE stays the reach for width maths.
+const OUTLINE_SIZE := 4 * OUTLINE
 ## Quieter text over the court: the muted cream (a label under a number),
 ## the dim cream (a game not yet played), and the dithered drop shadow behind
 ## a headline (cream at half strength, halved again by the checker).
@@ -126,7 +132,7 @@ static func display(text: String, size_ := 24, color := Color.TRANSPARENT) -> La
 static func on_scene(node: Control) -> Control:
 	node.add_theme_color_override("font_color", SCENE_TEXT)
 	node.add_theme_color_override("font_outline_color", SCENE_OUTLINE)
-	node.add_theme_constant_override("outline_size", OUTLINE)
+	node.add_theme_constant_override("outline_size", OUTLINE_SIZE)
 	if node is Button:
 		node.add_theme_color_override("font_hover_color", LIGHT["gold"])
 		node.add_theme_color_override("font_pressed_color", LIGHT["orange"])

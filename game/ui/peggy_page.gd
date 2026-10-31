@@ -138,7 +138,7 @@ func _layout_play() -> void:
 	cost.add_theme_constant_override("separation", 8 if short else 14)
 	var word: Label = col.get_node("Word")
 	word.add_theme_font_size_override("font_size", UiFont.snap(32 if short else 64))
-	word.add_theme_constant_override("outline_size", RetroTheme.OUTLINE if short else 2 * RetroTheme.OUTLINE)
+	word.add_theme_constant_override("outline_size", RetroTheme.OUTLINE_SIZE if short else 2 * RetroTheme.OUTLINE_SIZE)
 	var price: Label = cost.get_node("Price")
 	price.text = ("%d)" if short else "%d") % PeggyPrizes.DROP_COST
 	price.add_theme_font_size_override("font_size", UiFont.snap(16 if short else 30))

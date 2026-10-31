@@ -309,7 +309,7 @@ func _snap(first: String, second: String) -> Texture2D:
 func _label(text: String, size_: int, color: Color, display := true) -> Label:
 	var l := UiFont.label(text, size_, color, UiFont.display() if display else UiFont.body_bold())
 	l.add_theme_color_override("font_outline_color", INK)
-	l.add_theme_constant_override("outline_size", RetroTheme.OUTLINE)
+	l.add_theme_constant_override("outline_size", RetroTheme.OUTLINE_SIZE)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE

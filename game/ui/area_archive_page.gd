@@ -129,7 +129,7 @@ func build(rows: Array, open_text: String, can_close := true) -> Control:
 func _label(text: String, size_: int, display := true) -> Label:
 	var l := UiFont.label(text, size_, CREAM, UiFont.display() if display else UiFont.body_bold())
 	l.add_theme_color_override("font_outline_color", INK)
-	l.add_theme_constant_override("outline_size", RetroTheme.OUTLINE)
+	l.add_theme_constant_override("outline_size", RetroTheme.OUTLINE_SIZE)
 	return l
 
 
@@ -276,7 +276,7 @@ class NewBadge extends Control:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		var l := UiFont.label("NEW", 14, Color("#F0B84A"), UiFont.display())
 		l.add_theme_color_override("font_outline_color", Color("#221C18"))
-		l.add_theme_constant_override("outline_size", RetroTheme.OUTLINE)
+		l.add_theme_constant_override("outline_size", RetroTheme.OUTLINE_SIZE)
 		l.position = Vector2(26, 0)
 		l.size = Vector2(62, 28)
 		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER

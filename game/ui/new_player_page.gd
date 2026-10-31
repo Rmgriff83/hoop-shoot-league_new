@@ -192,7 +192,7 @@ func _field_look(e: Control) -> void:
 	e.add_theme_color_override("font_placeholder_color", Color("#A89E94"))
 	e.add_theme_color_override("caret_color", BUTTER)
 	e.add_theme_color_override("font_outline_color", RetroTheme.SCENE_OUTLINE)
-	e.add_theme_constant_override("outline_size", RetroTheme.OUTLINE)
+	e.add_theme_constant_override("outline_size", RetroTheme.OUTLINE_SIZE)
 	for state in ["normal", "focus", "read_only"]:
 		var sb := StyleBoxEmpty.new()
 		sb.content_margin_top = 10.0
