@@ -476,7 +476,7 @@ sky shader.
 
 ## Splash (design "Splash Screen" 30a NEON WALL, 2026-10-30)
 
-Before it, Android 12+'s system splash shows the same ball (`assets/splash/android_splash_icon.png`, export option `splash_screen/icon`, sized to land where the boot splash draws it on the 720×1604 phone) on the icon's dark-brick background, then the **boot splash** (Ross, 2026-10-30) replaces Godot's logo: the neon ball centred on the brick wall (`assets/splash/boot_splash.png`, 1440×3120, made by `tools/make_boot_splash.gd`; `application/boot_splash/*` — cover, the wall's dark `#1F0F0C` behind it). iOS's launch screen reuses it; Android 12+ shows its system splash (the ball icon) first.
+Before it, Android 12+'s system splash (it can't be removed, and can't show a picture) shows nothing: a fully clear icon (`assets/splash/android_splash_icon.png`, export option `splash_screen/icon`) over the wall's dark (`splash_screen/background_color`; a plain APK keeps the icon's dark-brick background) — Ross, 2026-10-30. Then the **boot splash** (Ross, 2026-10-30) replaces Godot's logo: the neon ball centred on the brick wall (`assets/splash/boot_splash.png`, 1440×3120, made by `tools/make_boot_splash.gd`; `application/boot_splash/*` — cover, the wall's dark `#1F0F0C` behind it). iOS's launch screen reuses it; Android 12+ shows its system splash (the ball icon) first.
 
 `game/screens/splash_screen.gd` (the main scene; `App.to_splash()`,
 `tests/test_splash.gd`, QA `--qa-splash`, `--qa-splash --qa-save` for the
