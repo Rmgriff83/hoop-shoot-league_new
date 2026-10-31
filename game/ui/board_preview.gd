@@ -25,6 +25,7 @@ const CREAM := RetroTheme.SCENE_TEXT
 const MUTED := RetroTheme.SCENE_MUTED
 const INK := RetroTheme.SCENE_OUTLINE
 const PANEL := Color("#14100E")
+const PANEL_TINT := 0.65   # the design's 0.82, lighter (Ross, 2026-10-30)
 const TAP_PX := 18.0
 
 var _panel: ShadowPanel
@@ -40,7 +41,7 @@ var _dragged := false
 func _init() -> void:
 	name = "BoardPreview"
 	mouse_filter = Control.MOUSE_FILTER_STOP
-	_panel = ShadowPanel.new(PANEL, 0.0, 0.82, 0.0)
+	_panel = ShadowPanel.new(PANEL, 0.0, PANEL_TINT, 0.0)
 	_panel.name = "Panel"
 	_panel.color = INK
 	_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -109,7 +110,7 @@ func _init() -> void:
 	_fade.name = "Fade"
 	var grad := Gradient.new()
 	grad.set_color(0, Color(PANEL, 0.0))
-	grad.set_color(1, Color(PANEL, 0.95))
+	grad.set_color(1, Color(PANEL, 0.75))
 	var gt := GradientTexture2D.new()
 	gt.gradient = grad
 	gt.fill_from = Vector2(0, 0)

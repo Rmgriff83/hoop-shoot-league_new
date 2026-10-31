@@ -56,7 +56,9 @@ func _init(d: Dictionary, art := "") -> void:
 	var bg := ColorRect.new()
 	bg.name = "Bg"
 	bg.color = Color("#1B1815")
-	UiLayout.full_rect(bg)
+	# Nested in the root, so they bleed by hand over the whole screen (the
+	# band left the strips above and below bare on a tall phone).
+	UiLayout.full_screen_fill(bg)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(bg)
 	if art != "" and ResourceLoader.exists(art):
@@ -67,13 +69,13 @@ func _init(d: Dictionary, art := "") -> void:
 		pic.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		pic.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 		pic.modulate.a = 0.32
-		UiLayout.full_rect(pic)
+		UiLayout.full_screen_fill(pic)
 		pic.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_root.add_child(pic)
 	var veil := ColorRect.new()
 	veil.name = "Veil"
 	veil.color = Color(20.0 / 255.0, 16.0 / 255.0, 14.0 / 255.0, 0.45)
-	UiLayout.full_rect(veil)
+	UiLayout.full_screen_fill(veil)
 	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_root.add_child(veil)
 	# The bouncing ball and its shadow.
