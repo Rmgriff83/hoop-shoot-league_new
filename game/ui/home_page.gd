@@ -14,6 +14,8 @@ extends CanvasLayer
 ## build their rows into `body` from `_build()`.
 
 signal closed
+## A ticket panel was tapped: the title opens the Ticket Store over this page.
+signal store_requested
 
 const OPEN_S := 0.3
 const FRAME_POS := Vector2(30, 20)
@@ -157,10 +159,13 @@ func set_tickets() -> void:
 
 
 ## The big ticket panel (design 31a / 30a, 2026-10-30): a 150 × 104 gold
-## face, the ticket and the count over TICKETS.
-func ticket_panel() -> ShadowPanel:
-	var p := ShadowPanel.new(RetroTheme.LIGHT["gold"], 0.0, 0.35)
+## face, the ticket and the count over TICKETS. A tap asks for the Ticket
+## Store (design 50a).
+func ticket_panel() -> TapPanel:
+	var p := TapPanel.new(RetroTheme.LIGHT["gold"], 0.0, 0.35)
 	p.name = "Tickets"
+	p.shift = true
+	p.pressed.connect(func() -> void: store_requested.emit())
 	p.custom_minimum_size = TICKETS_SIZE + Vector2.ONE * ShadowStyle.OFFSET
 	p.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	var col := VBoxContainer.new()

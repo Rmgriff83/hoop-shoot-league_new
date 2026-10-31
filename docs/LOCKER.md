@@ -4,7 +4,8 @@ The **locker** (the ball icon on the home page, `game/ui/locker_panel.gd`)
 is a page over the area (docs/HOME.md → Pages, design "Store and Locker"
 31a / 31b, redrawn 2026-10-30): your collection. The head is **LOCKER**
 beside the big **ticket panel** (150 × 104 gold: the ticket and the count
-over TICKETS, `HomePage.ticket_panel`), then **PLAY PEGGY** across the page
+over TICKETS, `HomePage.ticket_panel`; a tap opens the Ticket Store over
+the page, docs/ECONOMY.md → Ticket packs), then **PLAY PEGGY** across the page
 (WIN BALLS + NETS · 300 TICKETS ›; a band of light sweeps it while a drop
 is affordable), then the **BALLS / NETS** tabs ("BALLS 9", "NETS 5"), each
 with an **OWNED / ALL** sub-tab and the count beside it ("9 OWNED", or "9 /

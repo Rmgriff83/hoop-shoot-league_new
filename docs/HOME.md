@@ -94,6 +94,16 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
   (`slide_out(true, false)` / `slide_in(true)`); the locker's BACK then
   returns home. A `rebuild_chrome()` keeps the chrome out while a
   page is open.
+- **The Ticket Store** (`game/ui/ticket_store_page.gd`, `TicketStorePage`,
+  design "Ticket Store" 50a, 2026-10-31): a page like the locker, opened by
+  a tap on the home's ticket chip (`CoinsPill.tappable`), the locker's and
+  PEGGY's ticket panel (`HomePage.ticket_panel` is a `TapPanel` →
+  `store_requested`) or a league shop card you're high enough level for but
+  can't afford (`LeagueContext.store_requested`). `TitleScreen._open_store`
+  slides whatever shows out to the left under it — PEGGY or the locker
+  (`slide_out(true, false)`), the open league (`_season_cover`), or the home
+  chrome — and BACK brings it back. The packs and the button's run are in
+  docs/ECONOMY.md → Ticket packs. QA: `--qa-store` (`store_*` snaps).
 - **The league in context** (`game/ui/league_context.gd`, `LeagueContext`;
   reworked 2026-10-30 from design 3a): tapping the LEAGUE card (or ENTER
   LEAGUE) slides the home block out left and the league in from the right,

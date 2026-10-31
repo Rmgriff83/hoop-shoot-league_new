@@ -124,6 +124,19 @@ func _shop(t, app) -> void:
 	t.eq(bought, [id], "the home hears of it (the flight)")
 	lc._process(LeagueContext.ADDED_S + 0.1)
 	t.eq(lc.buy_state(id), "idle", "+1 ADDED gives way to the price again")
+	# Short of tickets the price opens the Ticket Store (design 50a).
+	var store := [0]
+	lc.store_requested.connect(func() -> void: store[0] += 1)
+	var spare: int = app.tickets()
+	app.spend_tickets(spare)
+	lc.refresh_buys()
+	t.ok(not (lc.find_child("Buy_" + id, true, false) as Button).disabled, "a card you can't afford stays tappable…")
+	lc.tap_buy(id)
+	t.eq(store[0], 1, "…and asks for the Ticket Store")
+	t.eq(lc.buy_state(id), "idle", "…without asking to buy")
+	app.grant_tickets(spare)
+	lc.tap_buy(id)
+	t.eq(store[0], 1, "an affordable one asks as before")
 	lc.free()
 
 

@@ -21,6 +21,10 @@ const SHADOW := Vector2(3, 3)
 
 var manual := false
 var max_flyers := MAX_FLYERS   # the cap (design 39b: 12)
+## The run's own timing and icon (the Ticket Store's 0.7 s / 0.08 s, 44 px).
+var dur := DUR
+var gap := GAP
+var icon := ICON
 var from := Vector2.ZERO
 var to := Vector2.ZERO
 var tickets := 0
@@ -94,7 +98,7 @@ func landed_at(t: float) -> int:
 	var n := flyers_for(tickets)
 	if n == 0:
 		return 0
-	return clampi(int(floor((t - start - DUR) / GAP)) + 1, 0, n)
+	return clampi(int(floor((t - start - dur) / gap)) + 1, 0, n)
 
 
 ## The count the box reads at second `t`: the haul in proportion to the flyers down.
@@ -114,7 +118,7 @@ func landed() -> int:
 
 
 func done() -> bool:
-	return _t >= start + float(flyers_for(tickets)) * GAP + DUR + 0.2
+	return _t >= start + float(flyers_for(tickets)) * gap + dur + 0.2
 
 
 func playing() -> bool:
@@ -138,10 +142,10 @@ static func _ease(p: float) -> float:
 
 ## Flyer `i` at second `t`: {pos, scale, rot, alpha}, or {} when it is not up.
 func flyer_at(i: int, t: float) -> Dictionary:
-	var t0 := start + float(i) * GAP
-	if t < t0 or t > t0 + DUR:
+	var t0 := start + float(i) * gap
+	if t < t0 or t > t0 + dur:
 		return {}
-	var p := _ease((t - t0) / DUR)
+	var p := _ease((t - t0) / dur)
 	var s := flyer_start(i)
 	var m := flyer_mid(i)
 	var r0 := deg_to_rad(float(20 + i * 7) * (1.0 if i % 2 == 1 else -1.0))
@@ -177,7 +181,7 @@ func _draw() -> void:
 		var f := flyer_at(i, _t)
 		if f.is_empty():
 			continue
-		var size_ := ICON * float(f["scale"])
+		var size_ := icon * float(f["scale"])
 		draw_set_transform(f["pos"], float(f["rot"]), Vector2.ONE)
 		draw_texture_rect(tex, Rect2(-size_ * 0.5 + SHADOW, size_), false, Color(RetroTheme.SCENE_OUTLINE, float(f["alpha"])))
 		draw_texture_rect(tex, Rect2(-size_ * 0.5, size_), false, Color(1, 1, 1, float(f["alpha"])))

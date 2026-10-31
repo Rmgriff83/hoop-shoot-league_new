@@ -60,7 +60,7 @@ func _ready() -> void:
 		App.loader.instant = _has_prefixed(args, "--qa") and not args.has("--qa-loading")
 		App.loader.force_show = args.has("--qa-loading")
 		PeggyMachine.threaded = not App.loader.instant
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# The splash is the main scene now: every other pass starts from the title.
@@ -103,6 +103,8 @@ func _ready() -> void:
 		_run_park.call_deferred()
 	elif args.has("--qa-peggy"):
 		_run_peggy.call_deferred()
+	elif args.has("--qa-store"):
+		_run_store.call_deferred()
 	elif args.has("--qa-match-end"):
 		_run_match_end.call_deferred()
 	elif args.has("--qa-season"):
@@ -1334,6 +1336,89 @@ func _run_park() -> void:
 ## back to the locker, the badge, the NETS tab. Grants tickets first and
 ## restores the save's cosmetics/settings after.
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-peggy
+## The Ticket Store (design 50a): opened by a real tap on the home's ticket
+## chip, the price button's run (the stub's no-sale), the success shown
+## (+N, the flight, the count — visual only), then from the locker's and
+## PEGGY's ticket panels, each page sliding out under it and back.
+func _run_store() -> void:
+	await _sleep(1.0)
+	await _close_archive()
+	var ts := get_tree().current_scene
+	var wallet: Control = get_tree().root.find_child("Wallet", true, false)
+	if wallet == null:
+		print("QA store: no Wallet")
+		get_tree().quit(1)
+		return
+	await _tap(wallet)
+	await _sleep(0.15)
+	await _snap("store_slide")
+	await _sleep(0.7)
+	var store: TicketStorePage = ts.call("store")
+	if store == null:
+		print("QA store: the wallet tap missed; opening directly")
+		ts.call("_open_store")
+		await _sleep(0.8)
+		store = ts.call("store")
+	await _snap("store_idle")
+	store.tap(1)
+	await _sleep(0.2)
+	await _snap("store_ask")
+	store.confirm(1)
+	await _sleep(0.3)
+	await _snap("store_busy")
+	await _sleep(TicketShop.BUSY_S)
+	await _snap("store_no_sale")
+	store.show_bought(0, App.tickets())
+	await _sleep(0.12)
+	await _snap("store_done_pop")
+	await _sleep(0.3)
+	await _snap("store_fly")
+	await _sleep(1.2)
+	await _snap("store_done")
+	store.show_bought(1, App.tickets())
+	await _sleep(0.55)
+	await _snap("store_fly_1000")
+	await _sleep(3.0)
+	store.close()
+	await _sleep(0.7)
+	await _snap("store_closed_home")
+	ts.call("_open_locker")
+	await _sleep(0.8)
+	var lp: Node = ts.call("locker")
+	var lt: Control = lp.find_child("Tickets", true, false) if lp != null else null
+	if lt != null:
+		await _tap(lt)
+		await _sleep(0.15)
+		await _snap("store_from_locker_slide")
+		await _sleep(0.7)
+		await _snap("store_from_locker")
+		if ts.call("store") != null:
+			ts.call("store").close()
+		await _sleep(0.7)
+		await _snap("store_back_locker")
+	ts.call("_open_peggy")
+	await _sleep(1.0)
+	var pp: Node = ts.call("peggy")
+	var pt: Control = pp.find_child("Tickets", true, false) if pp != null else null
+	if pt != null:
+		await _tap(pt)
+		await _sleep(0.85)
+		await _snap("store_from_peggy")
+		if ts.call("store") != null:
+			ts.call("store").close()
+		await _sleep(0.7)
+		await _snap("store_back_peggy")
+	print("QA store: done")
+	get_tree().quit(0)
+
+
+func _tap(c: Control) -> void:
+	var at := _win_of(c)
+	_mouse_button(at, true)
+	await _sleep(0.08)
+	_mouse_button(at, false)
+
+
 func _run_peggy() -> void:
 	await _sleep(1.0)
 	await _close_archive()

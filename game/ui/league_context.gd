@@ -22,6 +22,7 @@ signal changed
 signal tab_changed(tab: String)
 signal new_season_requested   # START SEASON on the MATCH pane: the title rolls it and shows the NEW SEASON page (design 39d)
 signal card_bought(id: String, from: Rect2)
+signal store_requested   # a card bought short of tickets: the title opens the Ticket Store (design 50a)
 
 const TABS := ["HEAT", "TABLE", "SCHED", "CARDS", "STATS"]
 const TAB_LABELS := {"HEAT": "MATCH"}
@@ -1057,13 +1058,24 @@ func buy_state(id: String) -> String:
 	return str(_buy[id]["state"]) if _buy.has(id) else "idle"
 
 
-## A tap on a card's buy button: idle → ask, ask → buy.
+## A tap on a card's buy button: idle → ask, ask → buy. Short of tickets,
+## idle asks for the Ticket Store instead (design 50a, Ross 2026-10-31).
 func tap_buy(id: String) -> void:
 	match buy_state(id):
 		"idle":
+			if App.tickets() < int(CardDefs.get_card(id).get("price", 0)):
+				store_requested.emit()
+				return
 			_set_buy(id, "ask")
 		"ask":
 			_confirm_buy(id)
+
+
+## The wallet may have moved (the Ticket Store closed): the idle buttons again.
+func refresh_buys() -> void:
+	for card in CardDefs.all():
+		if buy_state(str(card["id"])) == "idle":
+			_fill_buy(str(card["id"]))
 
 
 func cancel_buy(id: String) -> void:
@@ -1145,7 +1157,8 @@ func _fill_buy(id: String, foot: HBoxContainer = null) -> void:
 			var buy := ShadowCard.new(RetroTheme.c("gold"))
 			buy.name = "Buy_" + id
 			buy.custom_minimum_size = Vector2(196, 72) + Vector2.ONE * ShadowStyle.OFFSET
-			buy.disabled = App.tickets() < price or not Progression.can_use(App.level(), card)   # bought at level, too
+			# Bought at level; short of tickets it opens the Ticket Store (tap_buy).
+			buy.disabled = not Progression.can_use(App.level(), card)
 			var br := _hrow(10)
 			br.alignment = BoxContainer.ALIGNMENT_CENTER
 			UiLayout.full_rect(br)

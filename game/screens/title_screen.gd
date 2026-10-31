@@ -447,7 +447,7 @@ func rebuild_chrome() -> void:
 	_chrome.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_ui.add_child(_chrome)
 	_ui.move_child(_chrome, 0)
-	if _locker != null or _peggy != null or _wrap != null or _new_season != null or _settings != null:
+	if _locker != null or _peggy != null or _wrap != null or _new_season != null or _settings != null or _store != null:
 		_chrome.position.x = _chrome_x0 - HomePage.SLIDE   # a page is open: the home UI stays out
 
 	# The scrim over the court.
@@ -491,6 +491,8 @@ func rebuild_chrome() -> void:
 	# The face ends at the design's 584 (22 px short of the menu); a long
 	# balance grows the pill to the left.
 	_wallet.position = Vector2(420, float(_lay["top_y"]))
+	_wallet.tappable = true
+	_wallet.pressed.connect(_open_store)   # the Ticket Store (design 50a)
 	var pill := _wallet
 	pill.resized.connect(func() -> void: pill.position.x = 584.0 + ShadowStyle.OFFSET - pill.size.x)
 	_chrome.add_child(_wallet)
@@ -819,13 +821,14 @@ func _make_league(tab := "HEAT") -> LeagueContext:
 	lc.new_season_requested.connect(_open_new_season)
 	lc.tab_changed.connect(func(_tab: String) -> void: _rebuild_float())
 	lc.card_bought.connect(_on_card_bought)
+	lc.store_requested.connect(_open_store)   # a card you can't afford
 	_area.add_child(lc)
 	return lc
 
 
 ## LEAGUE tapped: slide the home block out and the league in context in.
 func _open_league(instant := false) -> void:
-	if _open or _switching:
+	if _open or _switching or _store != null:
 		return
 	if not App.enter_league(str(CARDS[_index]["area"])):
 		return
@@ -845,7 +848,7 @@ func _open_league(instant := false) -> void:
 
 ## BACK TO HOME: slide the league out and the home block back in.
 func _close_league() -> void:
-	if not _open:
+	if not _open or _store != null:
 		return
 	_open = false
 	_fill_cards()
@@ -1337,7 +1340,7 @@ var _home_slide: Tween
 ## The locker page (docs/LOCKER.md): the home chrome slides out left, the
 ## page in from the right — the ENTER LEAGUE move, over the area.
 func _open_locker() -> void:
-	if _locker != null or _peggy != null or _wrap != null or _new_season != null or _settings != null or _ranks != null or _lobby != null or _switching:
+	if _store != null or _locker != null or _peggy != null or _wrap != null or _new_season != null or _settings != null or _ranks != null or _lobby != null or _switching:
 		return
 	_locker = LockerPanel.new()
 	_locker.name = "LockerPanel"
@@ -1348,6 +1351,7 @@ func _open_locker() -> void:
 		_refresh_ticker()   # the pill and ticker follow a PEGGY play / locker buy (Ross, 2026-10-27)
 	)
 	_locker.peggy_requested.connect(_open_peggy)
+	_locker.store_requested.connect(_open_store)
 	add_child(_locker)
 	_slide_home(true)
 	_locker.slide_in()
@@ -1356,7 +1360,7 @@ func _open_locker() -> void:
 ## PEGGY (docs/LOCKER.md), from the locker's PEGGY button: the locker slides
 ## out under it to the left and comes back when PEGGY closes.
 func _open_peggy() -> void:
-	if _peggy != null or _locker == null or _switching:
+	if _store != null or _peggy != null or _locker == null or _switching:
 		return
 	_peggy = PeggyPage.new()
 	_peggy.name = "PeggyPage"
@@ -1368,6 +1372,7 @@ func _open_peggy() -> void:
 			_locker._fill()
 			_locker.slide_in(true)
 	)
+	_peggy.store_requested.connect(_open_store)
 	add_child(_peggy)
 	_locker.slide_out(true, false)
 	_peggy.slide_in()
@@ -1402,6 +1407,48 @@ func _refresh_locker_badge() -> void:
 
 func locker() -> LockerPanel:
 	return _locker
+
+
+var _store: TicketStorePage
+
+
+## The Ticket Store (design 50a): over whatever shows — PEGGY or the locker
+## slide out under it to the left, the open league or the home UI slides
+## away — and BACK brings that back.
+func _open_store() -> void:
+	if _store != null or _switching or _wrap != null or _new_season != null or _settings != null or _ranks != null or _lobby != null:
+		return
+	var under: HomePage = _peggy if _peggy != null else _locker
+	var league := under == null and _open
+	_store = TicketStorePage.new()
+	_store.name = "TicketStore"
+	_store.closed.connect(func() -> void:
+		_store = null
+		if under != null and is_instance_valid(under):
+			under.set_tickets()
+			if under is PeggyPage:
+				(under as PeggyPage)._refresh_play()
+			under.slide_in(true)
+		elif league:
+			_season_cover(false)
+			if _league != null:
+				_league.refresh_buys()
+		else:
+			_slide_home(false)
+		_refresh_ticker()
+	)
+	add_child(_store)
+	if under != null:
+		under.slide_out(true, false)
+	elif league:
+		_season_cover(true)
+	else:
+		_slide_home(true)
+	_store.slide_in()
+
+
+func store() -> TicketStorePage:
+	return _store
 
 
 func peggy() -> PeggyPage:
@@ -1495,7 +1542,7 @@ func new_season_page() -> NewSeasonPage:
 
 
 func _open_settings() -> void:
-	if _locker != null or _peggy != null or _wrap != null or _new_season != null or _settings != null or _ranks != null or _lobby != null or _switching:
+	if _store != null or _locker != null or _peggy != null or _wrap != null or _new_season != null or _settings != null or _ranks != null or _lobby != null or _switching:
 		return
 	_settings = SettingsPanel.new()
 	_settings.name = "SettingsPanel"
@@ -1518,7 +1565,7 @@ func _archive_rows() -> Array:
 ## The page before an area's home (docs/HOME.md → Area archive). `instant`
 ## on a cold launch: no slide, and no `<` when the area behind is locked.
 func _open_archive(instant := false) -> void:
-	if _archive != null or _locker != null or _settings != null or _ranks != null or _lobby != null or _peggy != null or _wrap != null or _new_season != null or _switching:
+	if _store != null or _archive != null or _locker != null or _settings != null or _ranks != null or _lobby != null or _peggy != null or _wrap != null or _new_season != null or _switching:
 		return
 	var rows := _archive_rows()
 	_archive = AreaArchivePage.new()
@@ -1553,7 +1600,7 @@ func archive() -> AreaArchivePage:
 ## lobby's ALL RANKS > (`tab` RANKED, over the lobby, which slides out left
 ## under it and comes back on close).
 func _open_ranks(tab := "") -> void:
-	if _ranks != null or _archive != null or _locker != null or _settings != null or _peggy != null or _wrap != null or _new_season != null or _switching:
+	if _store != null or _ranks != null or _archive != null or _locker != null or _settings != null or _peggy != null or _wrap != null or _new_season != null or _switching:
 		return
 	var over_lobby := _lobby != null
 	_ranks = RanksPage.new()
@@ -1615,7 +1662,7 @@ func ranks() -> RanksPage:
 ## The lobby for this area: quick match, a code for a friend, or a friend's
 ## code. App arranges the room and starts the heat; the page shows the way.
 func _open_lobby() -> void:
-	if _lobby != null or _ranks != null or _archive != null or _locker != null or _settings != null or _peggy != null or _wrap != null or _new_season != null or _rewards != null or _switching:
+	if _store != null or _lobby != null or _ranks != null or _archive != null or _locker != null or _settings != null or _peggy != null or _wrap != null or _new_season != null or _rewards != null or _switching:
 		return
 	_lobby = MatchLobbyPage.new()
 	_lobby.name = "MatchLobby"

@@ -12,6 +12,7 @@ const EASE_IN := Vector4(0.42, 0.0, 1.0, 1.0)
 const EASE_OUT := Vector4(0.0, 0.0, 0.58, 1.0)
 const EASE_IN_OUT := Vector4(0.42, 0.0, 0.58, 1.0)
 const FLY := Vector4(0.45, 0.05, 0.3, 1.0)    # cardFly
+const TK_FLY := Vector4(0.3, 0.7, 0.4, 1.0)   # tkFly (the Ticket Store, 50a)
 
 
 ## cubic-bezier(p.x, p.y, p.z, p.w) at progress x (0..1), exact at the ends.
@@ -82,11 +83,12 @@ static func tab_dot(t: float) -> float:
 	return keyframes([[0.0, 1.0], [0.5, 0.8], [1.0, 1.0]], fposmod(t, TAB_DOT_S) / TAB_DOT_S, EASE_IN_OUT)
 
 
-## cntBump (a count badge taking one more): 0.35 s ease-out, 1 → 1.6 at 35 % → 1.
+## cntBump (a count badge taking one more): 0.35 s ease-out, 1 → 1.6 at 35 % → 1
+## (the Ticket Store's balance ticket: 0.2 s, ×1.25).
 const BUMP_S := 0.35
 
-static func cnt_bump(t: float) -> float:
-	return keyframes([[0.0, 1.0], [0.35, 1.6], [1.0, 1.0]], clampf(t / BUMP_S, 0.0, 1.0), EASE_OUT)
+static func cnt_bump(t: float, dur := BUMP_S, peak := 1.6) -> float:
+	return keyframes([[0.0, 1.0], [0.35, peak], [1.0, 1.0]], clampf(t / dur, 0.0, 1.0), EASE_OUT)
 
 
 ## slotGrow (a new kind's slot opening in YOUR CARDS): 0.38 s on SNAP →
@@ -118,3 +120,23 @@ const LB_IN_S := 0.3
 static func lb_in(t: float) -> Vector2:
 	var e := bezier(SNAP, clampf(t / LB_IN_S, 0.0, 1.0))
 	return Vector2(80.0 * (1.0 - e), e)
+
+
+## donePop (the Ticket Store's +N, design 50a): 0.35 s on SNAP → Vector2(scale
+## .7 → 1.08 at 60 % → 1, opacity 0 → 1 at 60 %).
+const DONE_POP_S := 0.35
+
+static func done_pop(t: float) -> Vector2:
+	var keys := [[0.0, Vector2(0.7, 0.0)], [0.6, Vector2(1.08, 1.0)], [1.0, Vector2(1.0, 1.0)]]
+	return keyframes(keys, clampf(t / DONE_POP_S, 0.0, 1.0), SNAP)
+
+
+## tkFly (a bought pack's tickets into the balance, design 50a) at progress k
+## (0..1), TK_FLY per interval → {pos, scale, rot (degrees), alpha}. The
+## transform keys: 0 % `start` at `r0`, ×1.3; 55 % `mid` at `rm`, ×1.05;
+## 100 % `end`, 0°, ×.55. The opacity keys: 0 → 1 at 12 %, 1 at 92 %, 0.
+static func tk_fly(k: float, start: Vector2, mid: Vector2, end: Vector2, r0: float, rm: float) -> Dictionary:
+	var keys := [[0.0, Vector4(start.x, start.y, 1.3, r0)], [0.55, Vector4(mid.x, mid.y, 1.05, rm)], [1.0, Vector4(end.x, end.y, 0.55, 0.0)]]
+	var v: Vector4 = keyframes(keys, k, TK_FLY)
+	var a: float = keyframes([[0.0, 0.0], [0.12, 1.0], [0.92, 1.0], [1.0, 0.0]], k, TK_FLY)
+	return {"pos": Vector2(v.x, v.y), "scale": v.z, "rot": v.w, "alpha": a}

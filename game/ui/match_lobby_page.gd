@@ -834,31 +834,12 @@ func _top_more() -> bool:
 ## The leaderboard panel: see-through cream at 32 %, padding 14 / 0 / 8 (the
 ## head keeps 20 each side, the rows run edge to edge); a
 ## tap (under 18 px of travel, no scroll) emits `pressed`.
-class TopPanel extends ShadowPanel:
-	signal pressed
-	const TAP_PX := 18.0
-	var dragged := false
-	var _at := Vector2.INF
+class TopPanel extends TapPanel:
 	func _init() -> void:
 		super(RetroTheme.SCENE_TEXT, 0.0, ShadowStyle.TINT, 0.0)
 		var sb := ShadowStyle.margins(14.0, 0.0)
 		sb.content_margin_bottom = 8.0 + ShadowStyle.OFFSET
 		add_theme_stylebox_override("panel", sb)
-		mouse_filter = Control.MOUSE_FILTER_STOP
-		mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
-	func _gui_input(ev: InputEvent) -> void:
-		var mb := ev as InputEventMouseButton
-		if mb == null or mb.button_index != MOUSE_BUTTON_LEFT:
-			return
-		if mb.pressed:
-			_at = mb.position
-			dragged = false
-		elif _at != Vector2.INF:
-			var tap := not dragged and mb.position.distance_to(_at) < TAP_PX
-			_at = Vector2.INF
-			if tap:
-				pressed.emit()
-			accept_event()
 
 
 ## A leaderboard row's ground, edge to edge of the panel: an optional fill

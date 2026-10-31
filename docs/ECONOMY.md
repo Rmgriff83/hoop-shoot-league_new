@@ -37,6 +37,26 @@ This keeps the "winner takes the played cards" mechanic clear of real-money
 gambling under Apple 5.3 and Google Play's gambling policy: nothing of real
 value is wagered, won or cashed out.
 
+## Ticket packs (design "Ticket Store" 50a, 2026-10-31)
+
+Two consumables, `TicketShop.PACKS` (`game/net/ticket_shop.gd`): **300
+tickets for $0.99** and **1000 for $2.99** (about 10 % more per dollar, so
+it carries BEST VALUE). The prices are the US tiers until the platform store
+reports the player's currency. Packs buy tickets and nothing else — the rule
+above holds: tickets never buy online cards.
+
+The page (`TicketStorePage`, docs/HOME.md → Pages) runs each price button
+idle → **ask** (X / BUY, no timeout) → **busy** (the spinner while the
+platform sheet is up) → **done** (`+N`, 2.8 s; the tickets fly into the
+balance chip and it counts up) → idle.
+
+**The store is a stub for now** (Ross, 2026-10-31): `TicketShop.purchase`
+holds the spinner `BUSY_S` (1.4 s), answers no sale and grants nothing, on
+every build. `TicketStorePage.show_bought` plays the success without a grant
+(QA, tests). The real flow replaces `purchase`: StoreKit / Play Billing,
+then the receipt verified by the Worker, which grants server-side before
+answering `true`.
+
 ## Earning
 
 Everything is data. The arithmetic is `core/economy/economy.gd` (`Economy`).
