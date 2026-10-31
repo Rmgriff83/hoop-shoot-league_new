@@ -384,7 +384,6 @@ func _build_you() -> void:
 	_me_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	# Clipped: a long rank name must never widen the card (the record tag
 	# rides its corner — Ross, 2026-10-31).
-	_me_badge.clip_text = true
 	_me_badge.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_me_badge.add_theme_color_override("font_color", GOLD)
 	who.add_child(_me_badge)
@@ -395,7 +394,6 @@ func _build_you() -> void:
 	var name_l := words("", 24, true)
 	name_l.name = "Name"
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	name_l.clip_text = true
 	name_l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	top.add_child(name_l)
 	var tag := words(MatchCopy.card_tag(rec), 19)
@@ -406,7 +404,6 @@ func _build_you() -> void:
 	var place := words(MatchCopy.card_place(rec), 19)
 	place.name = "Place"
 	place.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	place.clip_text = true
 	place.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	who.add_child(place)
 	var bar_row := HBoxContainer.new()
@@ -802,7 +799,6 @@ func _top_row(r: Dictionary, i: int, mine: bool) -> Control:
 	var name_l := words(str(r["name"]), 21)
 	name_l.name = "Name"
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	name_l.clip_text = true
 	name_l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	who.add_child(name_l)
 	var tag := words(str(r.get("tag", "")), 16)

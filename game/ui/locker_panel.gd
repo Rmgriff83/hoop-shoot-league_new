@@ -379,7 +379,6 @@ static func _glow(colour: Color) -> GradientTexture2D:
 func _name_line(vb: Control, text: String) -> Label:
 	var l := words(text, 18)
 	l.name = "Name"
-	l.clip_text = true
 	l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	vb.add_child(l)
 	return l
@@ -698,7 +697,6 @@ func _hang_panel(net: NetSet, col: int, areas: Array) -> Control:
 	title.name = "Title"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	title.add_theme_color_override("font_color", RetroTheme.LIGHT["gold"])
-	title.clip_text = true
 	title.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	names.add_child(title)
 	var ask := words("HANG IT ON", 15)

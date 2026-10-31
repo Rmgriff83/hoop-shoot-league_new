@@ -293,7 +293,6 @@ func _row(r: Array, h: float, rule: bool, rule_color: Color) -> Control:
 	var w := _text(str(r[1]), 26, CREAM)
 	w.name = "Name"
 	w.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	w.clip_text = true
 	w.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	row.add_child(w)
 	var p := _text(str(r[2]), 24, CREAM, true)

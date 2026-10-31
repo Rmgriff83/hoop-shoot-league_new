@@ -295,7 +295,6 @@ func _fill_info(stats: Dictionary) -> void:
 		n.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		n.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		n.size_flags_vertical = Control.SIZE_FILL
-		n.clip_text = true
 		n.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		row.add_child(n)
 		var v := _text(str(r.get("score", "")), 36, GOLD if mine else CREAM, true)
@@ -363,7 +362,6 @@ func _row2(name_: String, label: String, face_w: float) -> Dictionary:
 	col.add_child(_text(label, 19, MUTED))
 	var value := _text("", 16, CREAM, true)
 	value.name = name_ + "Value"
-	value.clip_text = true
 	value.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	col.add_child(value)
 	var caret := Caret.new()
@@ -406,7 +404,6 @@ func _tile(name_: String, label: String, face_w: float) -> Dictionary:
 	col.add_child(row)
 	var value := _text("", 16, CREAM, true)
 	value.name = name_ + "Value"
-	value.clip_text = true
 	value.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	row.add_child(value)
 	var caret := Caret.new()

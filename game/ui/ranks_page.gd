@@ -226,7 +226,6 @@ func _build_card(top: float, w: float, you: Dictionary) -> void:
 	who.add_child(name_row)
 	_you_name = _display(str(you.get("name", "YOU")), 20)
 	_you_name.name = "YouName"
-	_you_name.clip_text = true
 	_you_name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	name_row.add_child(_you_name)
 	_you_tag = _words(RanksCopy.tag_text(str(you.get("tag", ""))), 16, MUTED)
@@ -502,7 +501,7 @@ func _row(r: Dictionary, i: int, ladder: bool) -> Control:
 	name_l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	name_l.size_flags_vertical = Control.SIZE_FILL
 	name_l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	name_l.clip_text = true
+	name_l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	h.add_child(name_l)
 	var tag := _words(str(r.get("tag", "")), 17, MUTED)
 	tag.name = "Tag"

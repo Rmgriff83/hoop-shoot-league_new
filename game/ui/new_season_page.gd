@@ -158,7 +158,7 @@ func _fill() -> void:
 		var nm := _label(str(c.get("name", "")), 20, CREAM, true)
 		nm.name = "Name"
 		nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-		nm.clip_text = true
+		nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		_put(nm, 144.0, 26.0, W - 144.0 - 24.0 - 80.0, 24.0, card)
 		var h2h := _label(str(c.get("h2h", "")), 15, CREAM, false)
 		h2h.name = "H2h"

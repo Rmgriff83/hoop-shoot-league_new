@@ -57,7 +57,6 @@ func _face_lines(name_colour: Color, tag_colour: Color, online_colour: Color) ->
 	who.name = "Name"
 	who.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	who.add_theme_color_override("font_color", name_colour)
-	who.clip_text = true
 	who.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	top.add_child(who)
 	var tag := words("", 18)

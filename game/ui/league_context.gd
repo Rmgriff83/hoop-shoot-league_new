@@ -725,7 +725,7 @@ func _fill_table() -> void:
 			r.add_child(_cell(_display(str(i + 1), 16), 48))
 			var nm := _cell(_text(_team_name(id), 24), 0)
 			nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			nm.clip_text = true
+			nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 			r.add_child(nm)
 			r.add_child(_cell(_display(str(row["w"]), 16), 48))
 			r.add_child(_cell(_display(str(row["l"]), 16), 48))
@@ -789,7 +789,7 @@ func _fill_table() -> void:
 			var who := _text(_team_name(w) if w != "" else "%s VS %s WINNER" % [_seed_of(str(series["highSeedId"])), _seed_of(str(series["lowSeedId"]))],
 				22, CREAM if w != "" else MUTED)
 			who.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-			who.clip_text = true
+			who.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 			r1.add_child(who)
 			col.add_child(_pad_row(r1, 16))
 		fin.add_child(panel)
@@ -841,7 +841,6 @@ func _series_panel(series: Dictionary, row_h := 52, seed_size := 16, name_size :
 		r.add_child(_cell(_display(_seed_of(id), seed_size), 22))
 		var nm := _text(_team_name(id), name_size)
 		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		nm.clip_text = true
 		nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		r.add_child(nm)
 		r.add_child(_cell(_display(str(int(series[side[1]])), name_size), 32, HORIZONTAL_ALIGNMENT_RIGHT))
@@ -914,7 +913,7 @@ func _fill_sched() -> void:
 		r.add_child(_cell(_text("VS" if home else "@", 16, tone), 28))
 		var nm := _text(_team_name(opp), 24, tone)
 		nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		nm.clip_text = true
+		nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		r.add_child(nm)
 		var res := ""
 		var tag := ""
@@ -950,7 +949,7 @@ func _fill_sched() -> void:
 				r.add_child(_cell(_display("%s %d" % [round_, n], 16), 84))
 				var nm := _text("%s %s" % ["VS" if high else "@", _team_name(g["awayId"] if high else g["homeId"])], 24)
 				nm.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				nm.clip_text = true
+				nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 				r.add_child(nm)
 				r.add_child(_cell(_display("%s %d-%d" % ["W" if mine > theirs else "L", mine, theirs], 16), 128, HORIZONTAL_ALIGNMENT_RIGHT))
 				pcol.add_child(_wrapped(r))
@@ -960,7 +959,7 @@ func _fill_sched() -> void:
 				var high2: bool = series["highSeedId"] == Campaign.PLAYER
 				var nm2 := _text("%s %s" % ["VS" if high2 else "@", _team_name(LeagueSummary.opponent_in(series))], 24)
 				nm2.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-				nm2.clip_text = true
+				nm2.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 				nxt.add_child(nm2)
 				nxt.add_child(_cell(_display("NEXT", 16), 128, HORIZONTAL_ALIGNMENT_RIGHT))
 				pcol.add_child(_wrapped(nxt))
@@ -1258,7 +1257,7 @@ func _fill_stats() -> void:
 		r.add_child(_cell(_display("%d-%d" % [int(summ["w"]), int(summ["l"])], 16), 96))
 		var res := _text("%s · %s" % [TickerText.ordinal(int(summ["finish"])), LeagueSummary.playoff_long(str(summ["playoffResult"]))])
 		res.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		res.clip_text = true
+		res.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		r.add_child(res)
 		scol.add_child(r)
 	var cur := _row(48)
@@ -1284,7 +1283,7 @@ func _fill_stats() -> void:
 		r.add_child(_cell(_display("%d-%d %s" % [int(g["playerScore"]), int(g["oppScore"]), "W" if g.get("won", false) else "L"], 16), 132))
 		var vs := _text("VS " + _team_name(str(g.get("opponentId", ""))))
 		vs.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		vs.clip_text = true
+		vs.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 		r.add_child(vs)
 		r.add_child(_text("%d SW" % int(g.get("swishes", 0)), 16, HI))
 		hcol.add_child(r)

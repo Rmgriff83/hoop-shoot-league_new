@@ -328,7 +328,6 @@ func _save_card() -> ShadowCard:
 	who.add_child(col)
 	var name_l := _display(str(rec.get("name", "YOU")), 32)
 	name_l.name = "Name"
-	name_l.clip_text = true
 	name_l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	col.add_child(name_l)
 	var town := str(rec.get("town", ""))

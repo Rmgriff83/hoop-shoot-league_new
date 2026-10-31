@@ -70,12 +70,10 @@ static func league_card(state: Dictionary, you: Dictionary = {}) -> Button:
 	head.add_child(who)
 	var nm := _label(str(you.get("name", "YOU")).to_upper(), 28, CREAM, true)
 	nm.name = "PlayerName"
-	nm.clip_text = true
 	nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	who.add_child(nm)
 	var town := _label(str(you.get("town", "")).to_upper(), 20, CREAM)
 	town.name = "PlayerTown"
-	town.clip_text = true
 	town.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	town.visible = town.text != ""
 	who.add_child(town)
@@ -105,7 +103,7 @@ static func league_card(state: Dictionary, you: Dictionary = {}) -> Button:
 	enter.custom_minimum_size = Vector2((104 if done else 176) + ShadowCard.OFFSET, 0)
 	enter.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	enter.disabled = b.disabled
-	var shine := PreMatchPage.Shine.wave(2.4, RetroTheme.c("orange"), 0.28, 1.15)
+	var shine := PreMatchPage.Shine.wave(2.4, HI, 0.3, 1.2)   # our yellow (Ross, 2026-10-31; the design had orange)
 	shine.name = "Shine"
 	UiLayout.full_rect(shine)
 	shine.offset_right = -ShadowCard.OFFSET

@@ -338,7 +338,6 @@ func _who_box(name_: String, town: String, stats: Array, colour: Color, name_siz
 	var nm := words(name_, name_size, true)
 	nm.name = "Name"
 	nm.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	nm.clip_text = true
 	nm.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	nm.add_theme_color_override("font_color", colour)
 	lines.add_child(nm)
@@ -346,7 +345,6 @@ func _who_box(name_: String, town: String, stats: Array, colour: Color, name_siz
 	tw.name = "Town"
 	tw.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	tw.add_theme_color_override("font_color", MUTED)
-	tw.clip_text = true
 	tw.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	lines.add_child(tw)
 	col.add_child(_rule(Color(CREAM, 0.25)))

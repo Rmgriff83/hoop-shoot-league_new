@@ -85,7 +85,7 @@ func _fill() -> void:
 	var cn := _label(str(ch.get("name", "")), 18, GOLD, true)
 	cn.name = "ChampionName"
 	cn.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	cn.clip_text = true
+	cn.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_put(cn, 76.0, 56.0, card_w - 90.0, 24.0, champ)
 	_anim(champ, "rise", 0.8, 0.4)
 	var ru: Dictionary = v.get("runner_up", {})
@@ -99,7 +99,7 @@ func _fill() -> void:
 	var rn := _label(str(ru.get("name", "")), 18, CREAM, true)
 	rn.name = "RunnerUpName"
 	rn.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	rn.clip_text = true
+	rn.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	_put(rn, 18.0, 56.0, card_w - 36.0, 24.0, runner)
 	_anim(runner, "rise", 0.8, 0.4)
 	# Six stats in three columns.

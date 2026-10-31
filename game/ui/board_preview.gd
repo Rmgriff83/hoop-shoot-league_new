@@ -265,7 +265,6 @@ func _row(rank: String, who: String, pts: String, mine: bool, rule: bool) -> Con
 	var w := _text(who, 17, col)
 	w.name = "Name"
 	w.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	w.clip_text = true
 	w.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	h.add_child(w)
 	var p := _text(pts, 17, col, true)

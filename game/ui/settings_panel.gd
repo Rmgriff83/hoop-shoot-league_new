@@ -338,7 +338,6 @@ func _build_player() -> void:
 	_card_name.name = "CardName"
 	_card_name.add_theme_color_override("font_color", GOLD)
 	_card_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_card_name.clip_text = true
 	_card_name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	top.add_child(_card_name)
 	_card_tag = words(MatchCopy.card_tag(acct), 18)

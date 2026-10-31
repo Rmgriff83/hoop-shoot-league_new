@@ -40,6 +40,10 @@ const OUTLINE := 3
 ## outline_size 3 drew a 0.75 px hairline where the designs carry a global
 ## 8-way 3 px ink text-shadow (Ross, 2026-10-31: "our fonts don't look the
 ## same as the design"). OUTLINE stays the reach for width maths.
+## Never `clip_text` a label that wears it: the clip is the label's own box,
+## and the edge above the glyphs was cut off (Ross, 2026-10-31, the LEAGUE
+## card's name). Trim with text_overrun_behavior alone — it shrinks the label
+## the same way and draws the whole edge.
 const OUTLINE_SIZE := 4 * OUTLINE
 ## Quieter text over the court: the muted cream (a label under a number),
 ## the dim cream (a game not yet played), and the dithered drop shadow behind
