@@ -18,6 +18,10 @@ export interface Env {
   FEATURE_DROPS?: string;
   /** Platform identity link/restore/unlink (platform_routes.ts); DELETE /v1/me has no switch. */
   FEATURE_PLATFORM?: string;
+  /** The ticket store: RevenueCat's webhook, pending, claim (store_routes.ts). Off = 503, which RevenueCat retries. */
+  FEATURE_IAP?: string;
+  /** A Worker secret (`wrangler secret put`): the Authorization header value RevenueCat sends with every webhook. */
+  REVENUECAT_WEBHOOK_AUTH?: string;
   /** Vitest only: enables the `test` proof verifier (platform.ts). Never a wrangler var. */
   PLATFORM_TEST_VERIFIER?: string;
   /** Per-IP wall on every /v1 route (layer 2: a workers.dev host has no WAF). */

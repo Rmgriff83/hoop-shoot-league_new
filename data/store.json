@@ -1,0 +1,7 @@
+{
+  "_": "The ticket packs sold for real money (docs/ECONOMY.md → Ticket packs). One source for the phone (TicketShop) and the Worker (store_data.ts): the ids are the App Store / Play / RevenueCat product ids, `tickets` is what the server credits per sale, `priceUsd` the US tier shown until the store reports the player's own price.",
+  "packs": [
+    {"id": "tickets_300", "tickets": 300, "priceUsd": "$0.99"},
+    {"id": "tickets_1000", "tickets": 1000, "priceUsd": "$2.99", "best": true}
+  ]
+}

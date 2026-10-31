@@ -139,6 +139,7 @@ export function deleteAccountStatements(db: D1Database, playerId: string): D1Pre
     "DELETE FROM ratings WHERE player_id = ?1",
     "DELETE FROM online_progress WHERE player_id = ?1",
     "DELETE FROM grants WHERE player_id = ?1",
+    "DELETE FROM purchases WHERE player_id = ?1",
     "DELETE FROM players WHERE id = ?1",
   ].map((sql) => db.prepare(sql).bind(playerId));
 }
