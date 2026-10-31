@@ -20,7 +20,7 @@ const SHORT_H := 1280.0
 ## distance from the bottom); in between it scales with the screen.
 const SHORT_LIFT := 170.0
 const TEXT_Y := -40.0
-const BALL_POS := Vector2(312, 569)
+const BALL_POS := Vector2(332, 569)   # the design's 312, 20 px further right (Ross, 2026-10-30)
 const BALL_PX := 400.0
 const BALL_PIVOT := Vector2(200, 320)
 const BALL_FRAMES := 12
