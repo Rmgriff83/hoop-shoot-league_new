@@ -426,8 +426,12 @@ func _shooter_card(opp_id: String, line: String, playoffs: bool) -> Control:
 	card.name = "Opponent"
 	var vb := _vcol(16)
 	card.add_child(vb)
+	# The line and VS. beside the nickname / hometown; the name and record
+	# under them across the card's full width (a long name stays one line).
+	var head := _vcol(16)
+	vb.add_child(_inset(head, 6, 8))
 	var top := _hrow(16)
-	vb.add_child(_inset(top, 6, 8))
+	head.add_child(top)
 	var names := _vcol(16)
 	names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(names)
@@ -436,7 +440,7 @@ func _shooter_card(opp_id: String, line: String, playoffs: bool) -> Control:
 	var nm := _display(str(sh.get("name", "?")).to_upper(), 34)
 	nm.name = "OppName"
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD
-	names.add_child(nm)
+	head.add_child(nm)
 	var tr := _table_row(opp_id)
 	var rec := _hrow(12)
 	rec.name = "OppRecord"
@@ -445,15 +449,18 @@ func _shooter_card(opp_id: String, line: String, playoffs: bool) -> Control:
 	var rs := _text("RECORD · %s%s" % [place, " SEED" if playoffs else ""], 20, MUTED)
 	rs.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	rec.add_child(rs)
-	names.add_child(rec)
+	head.add_child(rec)
 	var tags := _vcol(16)
 	tags.alignment = BoxContainer.ALIGNMENT_BEGIN
 	top.add_child(tags)
+	# The column hugs the right edge; inside it the hometown starts where the nickname does.
 	var nick := _display("\"%s\"" % str(sh.get("nickname", "")).to_upper(), 22, HI)
-	nick.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	nick.name = "OppNick"
+	nick.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	tags.add_child(nick)
 	var town := _text(str(sh.get("hometown", "")).to_upper(), 22)
-	town.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	town.name = "OppTown"
+	town.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	tags.add_child(town)
 	var mid := _hrow(20)
 	vb.add_child(mid)
@@ -532,8 +539,10 @@ func _season_over_card(m: Dictionary) -> Control:
 	card.name = "SeasonOver"
 	var vb := _vcol(16)
 	card.add_child(vb)
+	var head := _vcol(16)
+	vb.add_child(_inset(head, 6, 8))
 	var top := _hrow(16)
-	vb.add_child(_inset(top, 6, 8))
+	head.add_child(top)
 	var left := _vcol(16)
 	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(left)
@@ -543,14 +552,14 @@ func _season_over_card(m: Dictionary) -> Control:
 	var cn := _display(str(you.get("name", "YOU")).to_upper() if champ == Campaign.PLAYER else _team_name(champ), 34)
 	cn.name = "Champion"
 	cn.autowrap_mode = TextServer.AUTOWRAP_WORD
-	left.add_child(cn)
+	head.add_child(cn)
 	var tr := _table_row(champ)
 	var rec := _hrow(12)
 	rec.add_child(_display("%d-%d" % [tr["w"], tr["l"]], 22))
 	var rs := _text("RECORD · %s" % (TickerText.ordinal(int(tr["place"])) if int(tr["place"]) > 0 else "-"), 20, MUTED)
 	rs.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
 	rec.add_child(rs)
-	left.add_child(rec)
+	head.add_child(rec)
 	var right := _vcol(16)
 	top.add_child(right)
 	var cups := _hrow(8)
