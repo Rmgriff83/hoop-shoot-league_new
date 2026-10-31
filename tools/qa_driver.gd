@@ -67,7 +67,9 @@ func _ready() -> void:
 	if not args.has("--qa-splash"):
 		App.to_title.call_deferred()
 	if args.has("--qa-splash"):
-		App.qa_fresh = true   # before the splash builds: NEW GAME, not CONTINUE
+		# Before the splash builds: NEW GAME, not CONTINUE (--qa-save keeps the
+		# save and snaps the CONTINUE card instead).
+		App.qa_fresh = not args.has("--qa-save")
 		_run_splash.call_deferred()
 	elif args.has("--qa-unlock"):
 		_run_unlock.call_deferred()
@@ -1897,10 +1899,10 @@ func _pick_area(id: String) -> void:
 		await _sleep(1.0)
 
 
-## The splash (docs/HOME.md → Splash): the sign dark on the frosted cage,
-## the chain down, the first blink, warming, lit with the buttons up; then
-## CONTINUE / NEW GAME into the archive.
-##   Godot --path hoop_shoot --resolution 360x640 -- --qa-splash
+## The splash (docs/HOME.md → Splash, design 30a): the ball mid-drop, its
+## first landing, the words flickering on, lit with the menu; then NEW GAME
+## into the NEW PLAYER form (add --qa-save for the CONTINUE card and stop).
+##   Godot --path hoop_shoot --resolution 360x780 -- --qa-splash
 ## The Area Unlock page (docs/HOME.md → Area unlock), staged for the beach
 ## and the city: the lock on the veiled picture, the shackle sprung on the lit
 ## picture, NEW AREA with the chips, the buttons.
@@ -2052,18 +2054,25 @@ func _run_unlock() -> void:
 
 
 func _run_splash() -> void:
-	# A fresh install (design 35a): NEW GAME, the NEW PLAYER form, LET'S PLAY,
-	# then the home walkthrough (36a) — forget it was ever seen.
-	App.qa_fresh = true
-	var st: Dictionary = SaveService.get_settings()
-	st["walkthroughsSeen"] = []
-	SaveService.put_settings(st)
-	var marks := [0.2, 0.8, 1.5, 3.0, 5.2]
+	# The neon wall (design 30a): mid-drop, the first landing's squash, the
+	# words flickering over the settled ball, lit with the menu in.
+	var marks := [0.5, 0.85, 2.3, 3.0, 4.6]
 	var at := 0.0
+	var pre := "splash_save_" if _args().has("--qa-save") else "splash_"
 	for i in marks.size():
 		await _sleep(float(marks[i]) - at)
 		at = float(marks[i])
-		await _snap("splash_%02d" % i)
+		await _snap("%s%02d" % [pre, i])
+	var sp: Node = get_tree().current_scene
+	print("QA splash: t=%.2f risen=%s" % [sp.call("time") if sp != null and sp.has_method("time") else -1.0, sp.call("risen") if sp != null and sp.has_method("risen") else false])
+	if _args().has("--qa-save"):
+		get_tree().quit(0)
+		return
+	# A fresh install (design 35a): NEW GAME, the NEW PLAYER form, LET'S PLAY,
+	# then the home walkthrough (36a) — forget it was ever seen.
+	var st: Dictionary = SaveService.get_settings()
+	st["walkthroughsSeen"] = []
+	SaveService.put_settings(st)
 	await _click_button_named("NEW GAME")
 	await _sleep(0.6)
 	await _snap("new_player")

@@ -134,7 +134,7 @@ func _ready() -> void:
 	var back := HomePage.button("<", CREAM, 28, BACK_PX)
 	back.name = "Back"
 	back.custom_minimum_size.x = BACK_PX + ShadowStyle.OFFSET
-	back.pressed.connect(func() -> void: App.to_title())
+	back.pressed.connect(func() -> void: App.leave_credits())
 	head.add_child(back)
 	var title := RetroTheme.display("CREDITS", 32, CREAM)
 	title.name = "Title"

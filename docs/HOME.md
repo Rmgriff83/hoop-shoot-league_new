@@ -429,26 +429,31 @@ fog). The park's dressing is
 (docs/BLENDER_101.md → The park), the parked cars, the falling snow and the
 sky shader.
 
-## Splash (design "Splash Screen" 29a, 2026-10-03)
+## Splash (design "Splash Screen" 30a NEON WALL, 2026-10-30)
 
 `game/screens/splash_screen.gd` (the main scene; `App.to_splash()`,
-`tests/test_splash.gd`, QA `--qa-splash`): the first screen on launch and
-where the area archive's `<` leads. The design's own 3D neon sign
-(`game/view/neon_sign_3d.gd`, `NeonSign3D`, the "Neon Sign.html" model
-rebuilt with SurfaceTool at startup: HOOP / SHOOT / LEAGUE as rounded
-single-stroke glass tubes — cream core, orange glass, two additive halos —
-the jumps between a word's strokes blocked out behind, electrodes at the
-word ends, the sixteen-bead pull chain under the last E, three orange spill
-lights) hangs in a 720×720 viewport of its own (black, a little glow) over a
-black background — Ross's call for now; the frosted-cage version was cut.
-It plays the moment the screen appears, on the design's timeline: the chain
-tug at 0.35–1.2 s, dark until 1.3 s, four uneven blinks, a 2.6 s swell to
-full, then a 7 % breath; a tap replays it. At 4.6 s the two full-width
-orange buttons rise in 0.15 s apart: CONTINUE (`App.player_created()`) → the
-title, which opens the archive as the front door — on a fresh install the
-button reads NEW GAME and opens the NEW PLAYER form instead (design 35a, see
-New player above); SETTINGS → the settings sheet. Discord and Reddit icons sit top-left (the
-links come later). Title music starts here and carries into the title.
+`tests/test_splash.gd`, QA `--qa-splash`, `--qa-splash --qa-save` for the
+CONTINUE card): the first screen on launch and where the area archive's `<`
+leads. The 3D neon sign (29a) is gone: the app icon's look blown up, drawn
+in an anchored layer from `assets/splash/` — the brick wall (`neon_bg`),
+HOOP SHOOT LEAGUE as full-frame pixel neon (`neon_text_off` under
+`neon_text_on`, both at y −40) and the orange neon ball between the wall and
+the words (`neon_ball_roll`, twelve 400 px frames; the strip was rebuilt from
+a truncated download using its exact 180° symmetry). The timeline is the
+design's CSS keyframes as pure functions: `ball_pose` (2 s from 0.2 s: a drop
+from (−120, −1100), three bounces lower each time to 190 / 70 / 18 px with a
+squash on each landing, CSS ease-in/out per key), `ball_frame` (frames 9 → 11
+on the first bounce, then 0 and 1), `text_level` (the buzz-and-flicker
+`neonOn` 2.2 s from 1.9 s, then a 3.7 s hum dipping to 0.82; the ball hums
+on 4.3 s from 2.4 s), `fade_at` (the menu at 2.7 / 2.85 / 3.0 s, the
+Discord / Reddit icons at 3 s). The menu sits 535 px above the screen's foot
+(1025 on the 1560 design): your save card — jersey, name, hometown, the online
+badge in butter when rated, `LVL n`, `>` (CONTINUE → the title with the
+archive as the front door) — or, on a fresh install, NEW GAME with the neon
+ball (→ the NEW PLAYER form, design 35a); SETTINGS; CREDITS (`App.to_credits`
+remembers where it was opened from, so its back returns to the splash). On a
+9:16 screen the sign block rides up 170 px (`sign_lift`). A tap on the sign
+replays everything. Title music starts here and carries into the title.
 
 ## Area unlock (design "Area Unlock" 18a, 2026-10-05)
 

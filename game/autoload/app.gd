@@ -47,6 +47,8 @@ var home_open_league := ""
 var pending_welcome := {}
 ## QA: pretend there is no player yet (the splash shows NEW GAME, the form).
 var qa_fresh := false
+## Where the credits page was opened from (App.to_credits).
+var credits_from := "title"
 ## QA only (tools/qa_driver.gd --qa-perf): a bot shoots on OUR side of a
 ## league heat, so both sides play like a real match while the probe measures.
 var qa_player_bot: AiRatings = null
@@ -1659,8 +1661,23 @@ func start_league(id: String) -> void:
 		to_league_hub()
 
 
-func to_credits() -> void:
+## The credits page; its back returns where it was opened from ("title" or
+## "splash": the splash's CREDITS row since design 30a, or SETTINGS → CREDITS
+## opened over the splash). Left empty, it is read from the current scene.
+func to_credits(from := "") -> void:
+	if from == "":
+		var cs := get_tree().current_scene
+		from = "splash" if cs != null and cs.scene_file_path == SPLASH_SCENE else "title"
+	credits_from = from
 	_move(CREDITS_SCENE, "credits", "")
+
+
+## The credits page's back.
+func leave_credits() -> void:
+	if credits_from == "splash":
+		to_splash()
+	else:
+		to_title()
 
 
 ## The "dashboard" is the home page with the current league open in context.
