@@ -27,6 +27,16 @@ static func name(key: String) -> String:
 	return key.to_upper().replace("_", " ")
 
 
+## A rank step's name on the ladder: `PRO` (the tier reached) or `PRO II`.
+static func step_name(key: String) -> String:
+	return name(key).trim_suffix(" REACHED")
+
+
+## Is this key a rank step (a tier or a division reached)?
+static func is_step(key: String) -> bool:
+	return key.begins_with("tier_") or key.begins_with("division_")
+
+
 ## The grant's kind as a short word over its row.
 static func kind_word(kind: String) -> String:
 	match kind:

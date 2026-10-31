@@ -67,7 +67,7 @@ func run(t) -> void:
 	cold.build({})
 	t.ok(cold.root.find_child("Skeleton", true, false) != null and cold.root.find_child("MeterBar", true, false) == null, "rewards with nothing cached: the skeleton, not an empty meter")
 	cold.set_data({"pending": [], "unlocked": [], "login_days": 0})
-	t.ok(cold.root.find_child("MeterBar", true, false) != null, "…until the answer comes")
+	t.ok(cold.root.find_child("DayBar", true, false) != null, "…until the answer comes")
 	cold.free()
 	# 3D previews (39b): PEGGY's slot spinner while the cabinet loads on a thread.
 	var was := PeggyMachine.threaded

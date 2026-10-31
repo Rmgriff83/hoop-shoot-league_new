@@ -506,16 +506,13 @@ static func rewards_title() -> String:
 	return "REWARDS"
 
 
-static func meter_head() -> String:
-	return "DROP METER"
-
-
-static func meter_caption() -> String:
-	return "A FULL METER DROPS A CARD · RANKED MATCHES FILL IT"
-
-
 static func pending_head() -> String:
 	return "WAITING FOR YOU"
+
+
+## The note beside WAITING FOR YOU: what is left to claim.
+static func pending_note(left: int) -> String:
+	return "%d TO CLAIM" % left if left > 0 else "ALL CLAIMED"
 
 
 static func nothing_pending() -> String:
@@ -526,15 +523,42 @@ static func claim_word(claimed: bool) -> String:
 	return "CLAIMED" if claimed else "CLAIM"
 
 
-static func login_line(days: int, next_day: int) -> String:
-	var line := "LOGIN DAYS · %d" % days
-	if next_day > 0:
-		line += " · NEXT CARD AT DAY %d" % next_day
-	return line
+static func login_head() -> String:
+	return "LOGIN DAYS"
+
+
+static func login_day(days: int) -> String:
+	return "DAY %d" % days
+
+
+## Under DAY n: how far the next login card is (nothing once they are all earned).
+static func login_more(days: int, next_day: int) -> String:
+	return "%d MORE TO A CARD" % (next_day - days) if next_day > days else ""
+
+
+## The note beside LOGIN DAYS.
+static func login_note(next_day: int) -> String:
+	return "NEXT CARD AT DAY %d" % next_day if next_day > 0 else "EVERY LOGIN CARD EARNED"
 
 
 static func milestones_head() -> String:
 	return "MILESTONES"
+
+
+static func milestones_note(done: int, total: int) -> String:
+	return "%d / %d" % [done, total]
+
+
+static func rank_head() -> String:
+	return "RANK"
+
+
+## The rank ladder's row tags.
+static func ladder_tag(kind: String) -> String:
+	match kind:
+		"you": return "YOU"
+		"next": return "NEXT"
+	return "REACHED"
 
 
 static func rewards_offline() -> String:
@@ -569,8 +593,10 @@ static func strings() -> Array:
 		spoils_panel({"ranked": true, "pay": false})["caption"],
 		meter_line({"meter": {"after": 14, "size": 22, "odds": {"common": 0.7, "rare": 0.25, "epic": 0.05}}}),
 		close_loss_line({"online": true, "won": false, "player_score": 20, "ai_score": 22}),
-		shoot_around_title(), shoot_around_sub(5), rewards_title(), meter_head(), meter_caption(),
-		pending_head(), nothing_pending(), claim_word(true), claim_word(false), login_line(7, 10), login_line(30, 0), milestones_head(), rewards_offline()]
+		shoot_around_title(), shoot_around_sub(5), rewards_title(),
+		pending_head(), pending_note(3), pending_note(0), nothing_pending(), claim_word(true), claim_word(false), login_head(), login_day(7),
+		login_more(7, 10), login_note(10), login_note(0), milestones_head(), milestones_note(6, 28), rank_head(), ladder_tag("you"),
+		ladder_tag("next"), ladder_tag("past"), rewards_offline()]
 	out.append_array(MilestoneCopy.strings())
 	for a in AREAS:
 		out.push_back(court_name(a))

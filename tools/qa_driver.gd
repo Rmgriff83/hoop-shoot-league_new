@@ -1664,18 +1664,27 @@ func _run_multi() -> void:
 			rp.set_data(fx)
 			await _sleep(0.4)
 			await _snap("multi_rewards")
-			print("QA multi: rewards pending=%s meter='%s'" % [rp.pending_count(), rp.meter_text()])
-			# Three odds and nothing waiting (Ross's phone, 2026-10-28): the
-			# meter line breaks in two and the page stays inside the screen.
+			print("QA multi: rewards pending=%s login='%s' ladder=%s" % [rp.pending_count(), rp.login_text(), rp.ladder()])
+			# Design 37a's sample (2026-10-30): five waiting (two in view),
+			# day 7 of 10, the steps up to ALL-STAR III reached.
 			var wide: Dictionary = fx.duplicate(true)
-			wide["pending"] = []
-			wide["login_days"] = 5
-			wide["unlocked"] = ["first_login", "first_ranked_match", "first_ranked_win", "tier_rookie_1", "tier_starter", "tier_starter_3", "tier_starter_2"]
-			wide["meter"] = {"progress": 14, "size": 22, "odds": {"common": 0.75, "rare": 0.22, "epic": 0.03}}
+			wide["pending"] = [
+				{"key": "division_pro_2", "kind": "milestone", "card": "ice"},
+				{"key": "division_pro_3", "kind": "milestone", "card": "ice"},
+				{"key": "tier_pro", "kind": "milestone", "card": "fire7"},
+				{"key": "login_day_7", "kind": "login", "card": "fire7"},
+				{"key": "welcome_back_1", "kind": "welcome_back", "card": "magnet6"}]
+			wide["login_days"] = 7
+			wide["next_login_card"] = 10
+			var ul := ["first_login", "first_ranked_match", "first_ranked_win", "division_rookie_1"]
+			for t_ in ["starter", "pro"]:
+				ul.append_array(["tier_" + t_, "division_%s_3" % t_, "division_%s_2" % t_, "division_%s_1" % t_])
+			ul.append_array(["tier_allstar", "division_allstar_3"])
+			wide["unlocked"] = ul
 			rp.set_data(wide)
 			await _sleep(0.4)
 			await _snap("multi_rewards_wide")
-			print("QA multi: rewards wide meter='%s' body_w=%.0f" % [rp.meter_text().replace("\n", " / "), rp.body.size.x])
+			print("QA multi: rewards full body=%s ladder=%d" % [rp.body.size, rp.ladder().size()])
 			rp.close()
 			await _sleep(0.5)
 	# The pre-match pick (docs/BACKEND.md → Ranked): a seeded cache (a spare

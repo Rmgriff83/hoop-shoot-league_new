@@ -528,9 +528,9 @@ Migration `0009_online_progress.sql`: `online_progress`, `grants`,
   SPOILS TODAY), the meter bar + `METER 14/22 · 82% COMMON · 18% RARE`, a
   `CLOSE ONE · THE METER NOTICED` line, and SHOOT AROUND? beside REMATCH?
   after 2+ straight losses (`App.start_shoot_around`: a time trial with the
-  once-a-day +5, `progress.online.shoot_day`); the lobby's REWARDS row with
-  the pending count → `RewardsPage` (the meter, CLAIM rows, login days, the
-  milestone grid); `Net.load_rewards / claim_reward`, `Platform.note_milestones`
+  once-a-day +5, `progress.online.shoot_day`); the lobby's rewards trophy with
+  the pending count → `RewardsPage` (login days, CLAIM rows, milestone chips,
+  the rank ladder; 2026-10-30); `Net.load_rewards / claim_reward`, `Platform.note_milestones`
   → `PlatformBackend.unlock(key)` (a no-op until the store plugins). QA:
   `--qa-heat-result` (`online_result_win`, `online_result_loss`),
   `--qa-multi` (`multi_rewards`).

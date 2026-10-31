@@ -306,16 +306,21 @@ chevron (the footer says START INSIDE).
   14/22 · 82% COMMON · 18% RARE`, bright spots in a loss, and the REMATCH?
   card (orange to ask, gold when they asked, teal once both have, THEY LEFT
   when the other phone went home) — with SHOOT AROUND? (`A TIME TRIAL · +5
-  TICKETS`) beside it after 2+ straight losses. The lobby's **REWARDS** row
-  (`LOGIN DAYS · MILESTONES · THE METER`, or `3 WAITING TO CLAIM` in gold)
-  opens the **rewards page** (`game/ui/rewards_page.gd` `RewardsPage`): DROP
-  METER with its bar, odds and `A FULL METER DROPS A CARD`, WAITING FOR YOU
-  rows (the card, `LOGIN REWARD` / `MILESTONE`, the name, CLAIM → CLAIMED),
-  `LOGIN DAYS · 7 · NEXT CARD AT DAY 10`, MILESTONES as a two-column grid
-  (unlocked gold with `+`, the rest dim). Every line on the page wraps, and
-  a line wider than the frame breaks at its first `·` (`METER 14/22` over
-  three odds, `NOTHING WAITING` over its hint): a label's text is otherwise
-  the page's minimum width, and the whole frame ran off the right of the
+  TICKETS`) beside it after 2+ straight losses. The lobby's rewards **trophy**
+  (a gold count while grants wait) opens the **rewards page**
+  (`game/ui/rewards_page.gd` `RewardsPage`, 37a's REWARDS view since
+  2026-10-30): `<` REWARDS; LOGIN DAYS (`NEXT CARD AT DAY 10`, `DAY 7` gold
+  over `3 MORE TO A CARD`, a ten-cell strip ending on the next card day —
+  gold up to today, a star on each card day ahead — numbers under it);
+  WAITING FOR YOU (`n TO CLAIM` / `ALL CLAIMED`; the card, `LOGIN REWARD` /
+  `MILESTONE`, the name, CLAIM → CLAIMED dim; three rows in view, the rest
+  scroll under a fade); MILESTONES (`n / 28`: the firsts and win counts as
+  chips, unlocked gold with `+`, the rest dim) and RANK (the next step
+  dashed, yours gold, every step reached below it; scrolls under a fade).
+  No drop meter on this page since 37a (the post-match page keeps its line).
+  Nothing on the page asks for more width than the frame: a label's text is
+  otherwise the page's minimum width, and the whole frame ran off the right
+  of the
   screen once EPIC joined the odds (2026-10-28). QA: `--qa-multi` (`multi_menu`,
   `multi_code`, `multi_found`, `multi_failed`, `multi_finding`,
   `multi_rewards`, `multi_rewards_wide`, `multi_prematch`, `multi_prematch_ready`, `online_result`),

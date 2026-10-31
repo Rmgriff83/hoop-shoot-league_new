@@ -1,7 +1,8 @@
 extends RefCounted
-## The rewards page (game/ui/rewards_page.gd) off-tree from the fixture
-## answer: the meter line, the pending rows with CLAIM, the login line, the
-## milestone grid with the unlocked ones gold; CLAIM emits once and flips.
+## The rewards page (game/ui/rewards_page.gd, design 37a's REWARDS view,
+## 2026-10-30) off-tree from the fixture answer: DAY n and the ten-day strip,
+## the pending rows with CLAIM, the milestone chips with the unlocked ones
+## gold, the rank ladder; CLAIM emits once and flips.
 
 
 func run(t) -> void:
@@ -10,16 +11,36 @@ func run(t) -> void:
 	var page := RewardsPage.new()
 	var root := page.build(fx)
 	t.eq((root.find_child("Title", true, false) as Label).text, "REWARDS", "the title")
-	t.eq(page.meter_text(), "METER 14/22 · 82% COMMON · 18% RARE", "the meter line from the answer")
-	t.close((root.find_child("MeterFill", true, false) as ColorRect).anchor_right, 14.0 / 22.0, 1e-6, "the bar's fill")
+	t.ok(root.find_child("Back", true, false) is ShadowCard, "< back in the head")
+	t.ok(root.find_child("Close", true, false) == null and root.find_child("MeterBar", true, false) == null, "no CLOSE and no drop meter (37a)")
+	# LOGIN DAYS: day 3, the next card at 7.
+	t.eq(page.login_text(), "DAY 3 · 4 MORE TO A CARD", "DAY n and how far the card is")
+	var days := page.login_days()
+	t.eq(days.size(), 10, "ten cells")
+	t.eq([days[0]["day"], days[9]["day"]], [1, 10], "…days 1 to 10 while the card is in reach")
+	t.eq([days[2]["got"], days[3]["got"]], [true, false], "…gold up to today")
+	t.eq([days[6]["card"], days[9]["card"], days[4]["card"], days[0]["card"]], [true, true, false, false], "…a star on each card day ahead")
+	t.eq(RewardsPage.login_window(25, 30, [1, 3, 7, 10, 30]).map(func(e: Dictionary) -> int: return e["day"]), range(21, 31), "a far card: the ten days ending on it")
+	t.eq(RewardsPage.login_window(40, 0, [1, 3, 7, 10, 30])[9], {"day": 40, "got": true, "card": false}, "every card earned: the last ten days, all gold")
+	# WAITING FOR YOU.
 	t.ok(root.find_child("Grant_login_day_3", true, false) != null and root.find_child("Grant_first_ranked_win", true, false) != null, "two pending rows")
 	t.eq(page.pending_count(), 2, "pending count")
-	t.eq((root.find_child("LoginLine", true, false) as Label).text, "LOGIN DAYS · 3 · NEXT CARD AT DAY 7", "the login line")
-	var gold: Label = root.find_child("Milestone_first_ranked_win", true, false)
-	var dim: Label = root.find_child("Milestone_ranked_wins_10", true, false)
-	t.ok(gold != null and dim != null, "the milestone grid lists both")
-	t.ok(gold.text.begins_with("+ ") and dim.text.begins_with("- "), "unlocked marked, locked not")
-	t.ok(dim.modulate.a < 1.0 and gold.modulate.a == 1.0, "the locked one is dim")
+	t.eq((root.find_child("Waiting", true, false).find_child("Note", true, false) as Label).text, "2 TO CLAIM", "the waiting note")
+	# MILESTONES: the firsts and win counts as chips; the steps on the ladder.
+	var gold: RewardsPage.DotBox = root.find_child("Milestone_first_ranked_win", true, false)
+	var dim: RewardsPage.DotBox = root.find_child("Milestone_ranked_wins_10", true, false)
+	t.ok(gold != null and dim != null, "chips for both")
+	t.ok(gold.on and not dim.on, "unlocked gold, locked dim")
+	t.ok(root.find_child("Milestone_tier_pro", true, false) == null, "rank steps are not chips")
+	var keys := OnlineDrops.all_milestone_keys()
+	t.eq((root.find_child("MilestonesSection", true, false).find_child("Note", true, false) as Label).text, "3 / %d" % keys.size(), "the milestone count")
+	t.eq(page.ladder(), [["next", "ROOKIE"]], "no step reached: just NEXT")
+	var steps := keys.filter(func(k: String) -> bool: return MilestoneCopy.is_step(k))
+	t.eq(RewardsPage.ladder_rows(steps, ["tier_rookie", "division_rookie_3", "division_rookie_2", "division_rookie_1", "tier_starter", "division_starter_3"]),
+		[["next", "STARTER II"], ["you", "STARTER III"], ["past", "STARTER"], ["past", "ROOKIE I"], ["past", "ROOKIE II"], ["past", "ROOKIE III"], ["past", "ROOKIE"]],
+		"the ladder: next, you, then every step below")
+	t.eq(RewardsPage.ladder_rows(["tier_mvp", "tier_legend"], ["tier_mvp", "tier_legend"])[0], ["you", "LEGEND"], "at the top: no NEXT")
+	# CLAIM.
 	var claims := []
 	page.claim.connect(func(k: String) -> void: claims.push_back(k))
 	var b: ShadowCard = root.find_child("Grant_login_day_3", true, false).find_child("Claim", true, false)
@@ -29,17 +50,18 @@ func run(t) -> void:
 	t.eq(claims, ["login_day_3"], "CLAIM emits once")
 	t.eq(b.text, "CLAIMED", "…and flips")
 	t.ok(b.disabled, "…and is dead")
+	t.eq((root.find_child("Waiting", true, false).find_child("Note", true, false) as Label).text, "1 TO CLAIM", "…and the note counts down")
 	# Nothing pending, nothing unlocked.
-	page.set_data({"pending": [], "unlocked": [], "login_days": 0, "meter": {"progress": 0, "size": 22, "odds": {"common": 1.0, "rare": 0.0, "epic": 0.0}}})
+	page.set_data({"pending": [], "unlocked": [], "login_days": 0})
 	t.ok(root.find_child("NothingPending", true, false) != null, "the empty line")
-	t.eq(page.meter_text(), "METER 0/22 · 100% COMMON", "an empty meter")
-	# Three odds (EPIC in the pool) ran the line, and the whole page, off the
-	# right of the screen (Ross, 2026-10-28): it breaks after METER n/n, and
-	# nothing on the page asks for more width than the frame has.
-	page.set_data({"pending": [], "unlocked": [], "login_days": 5, "meter": {"progress": 14, "size": 22, "odds": {"common": 0.75, "rare": 0.22, "epic": 0.03}}})
-	t.eq(page.meter_text(), "METER 14/22\n75% COMMON · 22% RARE · 3% EPIC", "a wide meter line breaks after the count")
+	# Many grants, a long name: nothing on the page asks for more width than
+	# the frame (Ross saw a wide line push the page right, 2026-10-28).
+	var many := []
+	for i in 6:
+		many.push_back({"key": "division_allstar_%d" % (i % 3 + 1), "kind": "milestone", "card": "fire7"})
+	page.set_data({"pending": many, "unlocked": keys, "login_days": 12})
 	t.ok(page.body.get_combined_minimum_size().x <= HomePage.FRAME_SIZE.x - 2.0 * HomePage.PAD, "the page never asks for more width than the frame (%.0f)" % page.body.get_combined_minimum_size().x)
-	t.ok(page.body.size.x <= HomePage.FRAME_SIZE.x - 2.0 * HomePage.PAD, "…and the body stays inside it (%.0f)" % page.body.size.x)
+	t.ok(page.body.get_combined_minimum_size().y <= HomePage.FRAME_SIZE.y - 2.0 * HomePage.PAD, "…nor more height than the short frame (%.0f)" % page.body.get_combined_minimum_size().y)
 	# Offline with nothing cached: the one line.
 	var cold := RewardsPage.new()
 	cold.build({})
