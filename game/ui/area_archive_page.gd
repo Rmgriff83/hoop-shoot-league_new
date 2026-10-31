@@ -61,13 +61,7 @@ func build(rows: Array, open_text: String, can_close := true) -> Control:
 	UiLayout.full_rect(bg)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sheet.add_child(bg)
-	var bricks := TextureRect.new()
-	bricks.name = "Bricks"
-	bricks.texture = load("res://assets/splash/neon_bg.png")
-	bricks.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	bricks.size = Vector2(720, 1560)
-	bricks.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_sheet.add_child(bricks)
+	_sheet.add_child(BrickWall.new(UiLayout.screen_height()))
 	# The header: < AREAS n/3 OPEN.
 	var head := HBoxContainer.new()
 	head.name = "Head"

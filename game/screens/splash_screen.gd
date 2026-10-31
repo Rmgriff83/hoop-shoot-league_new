@@ -183,8 +183,9 @@ func _build_ui() -> void:
 	UiLayout.full_rect(dark)
 	dark.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bg.add_child(dark)
-	# The wall from the top, the design's full height (a shorter screen crops its foot).
-	bg.add_child(_image("Bricks", "neon_bg", Vector2.ZERO))
+	# The wall from the top, the design's full height (a shorter screen crops
+	# its foot, a taller one carries the bond on to the bottom).
+	bg.add_child(BrickWall.new(UiLayout.screen_height()))
 	_ui = CanvasLayer.new()
 	_ui.name = "Ui"
 	_ui.layer = 10

@@ -46,6 +46,15 @@ func run(t) -> void:
 	for n in ["neon_bg", "neon_text_off", "neon_text_on", "neon_ball_on", "neon_ball_roll"]:
 		t.ok(load("res://assets/splash/%s.png" % n) is Texture2D, "%s ships" % n)
 	t.eq(load("res://assets/splash/neon_ball_roll.png").get_width(), 4800, "the roll strip: twelve 400 px frames")
+	# The wall reaches the foot of a screen taller than the design (Ross, 2026-10-31).
+	var tall := BrickWall.new(1604.0)
+	t.ok(tall.extended() and tall.size.y == 1604.0, "a 1604 screen: the bricks carry on past 1560")
+	var ext: TextureRect = tall.get_child(1)
+	t.ok(ext.position.y == 1560.0 and ext.size.y >= 44.0 and fmod((ext.texture as AtlasTexture).region.position.y - 1560.0, BrickWall.PERIOD) == 0.0, "…with whole 96 px periods, so the bond lines up")
+	tall.free()
+	var fits := BrickWall.new(1560.0)
+	t.ok(not fits.extended(), "the design's height: the image alone")
+	fits.free()
 	for n in ["icon_discord", "icon_reddit", "icon_gear", "icon_jersey", "icon_neonball"]:
 		t.ok(PixelIcon.tex(n) != null, "%s ships" % n)
 	var app = Engine.get_main_loop().root.get_node_or_null("App")

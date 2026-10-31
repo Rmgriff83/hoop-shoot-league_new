@@ -5,7 +5,10 @@ extends Button
 ## everything is drawn. One colour by default; `fill` / `dot` / `shadow`
 ## override the parts (a solid cream face with an orange shadow — the active
 ## tab), `tint` the face's opacity. Pressing drops the face onto its shadow
-## and moves the text and the children with it.
+## and moves the text and the children with it. The face is drawn by a child
+## shown BEHIND the button (`Face`), so it sits under the button's own text:
+## drawn in the button's _draw it went over the words and dulled them by the
+## tint (Ross, 2026-10-31: the inactive league tabs' text).
 
 const OFFSET := ShadowStyle.OFFSET
 
@@ -14,6 +17,7 @@ var tint := ShadowStyle.TINT
 var fill := Color.TRANSPARENT
 var dot := Color.TRANSPARENT
 var shadow := Color.TRANSPARENT
+var _face: FaceLayer
 
 
 func _init(p_color := Color.WHITE) -> void:
@@ -33,6 +37,12 @@ func _init(p_color := Color.WHITE) -> void:
 	button_up.connect(_shift.bind(false))
 	mouse_entered.connect(queue_redraw)
 	mouse_exited.connect(queue_redraw)
+	_face = FaceLayer.new()
+	_face.name = "Face"
+	_face.show_behind_parent = true
+	_face.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	UiLayout.full_rect(_face)
+	add_child(_face, false, Node.INTERNAL_MODE_FRONT)
 
 
 ## Inside a ScrollContainer the press passes up to it, so a drag that starts
@@ -67,13 +77,31 @@ func _shift(down: bool) -> void:
 		_shifted = down
 		var d := Vector2.ONE * OFFSET * (1.0 if down else -1.0)
 		for c in get_children():
-			if c is Control:
+			if c is Control and c != _face:
 				c.position += d
 	queue_redraw()
 
 
-func _draw() -> void:
+## Every redraw of the button redraws its face (the same frame: the face's
+## deferred redraw runs in the flush that draws the button).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_DRAW and _face != null:
+		_face.queue_redraw()
+
+
+func _draw_face(ci: CanvasItem) -> void:
 	var f := fill if fill.a > 0.0 else Color(color, ShadowStyle.face_alpha(tint))
 	var d := dot if dot.a > 0.0 else Color(color, ShadowStyle.DOT_ALPHA)
 	var s := shadow if shadow.a > 0.0 else Color(color, ShadowStyle.SHADOW_ALPHA)
-	ShadowStyle.draw_ex(self, size, color, f, d, s, button_pressed, is_hovered(), disabled)
+	ShadowStyle.draw_ex(ci, size, color, f, d, s, button_pressed, is_hovered(), disabled)
+
+
+## The face, drawn behind the button (show_behind_parent) and so under its text.
+class FaceLayer extends Control:
+	func _init() -> void:
+		texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+		texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	func _draw() -> void:
+		var card := get_parent() as ShadowCard
+		if card != null:
+			card._draw_face(self)
