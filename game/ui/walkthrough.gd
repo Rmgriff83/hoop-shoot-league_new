@@ -23,7 +23,7 @@ const CARD_PAD := 28.0
 const CARD_GROUND := Color(27.0 / 255.0, 24.0 / 255.0, 21.0 / 255.0, 0.88)
 const BODY_LINE_GAP := 12
 const GAP := 36.0              # between the spot and the card
-const BOOKEND_TOP := 380.0
+const BOOKEND_TOP := 520.0     # the welcome and THAT'S IT! (design 36a, 2026-10-30)
 const SPOT_PAD := 12.0
 const GLIDE_S := 0.4
 const CARD_IN_S := 0.35
@@ -210,10 +210,9 @@ func _build_card(st: Dictionary, kind: String) -> void:
 	col.name = "Col"
 	col.add_theme_constant_override("separation", 20)
 	_card.add_child(col)
-	var n := Walkthroughs.plain_count(steps)
 	match kind:
 		"welcome":
-			var pre := _words("WELCOME TO", 20, true)
+			var pre := _words("WELCOME TO", 24, true)
 			pre.name = "Pre"
 			pre.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 			col.add_child(pre)
@@ -225,7 +224,7 @@ func _build_card(st: Dictionary, kind: String) -> void:
 			row.name = "TitleRow"
 			row.add_theme_constant_override("separation", 16)
 			col.add_child(row)
-			var title := _words(str(st.get("title", "")), 22, true)
+			var title := _words(str(st.get("title", "")), 26, true)
 			title.name = "Title"
 			title.add_theme_color_override("font_color", GOLD)
 			title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
@@ -233,11 +232,12 @@ func _build_card(st: Dictionary, kind: String) -> void:
 			# and the card would grow to a column of letters' height.
 			title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 			row.add_child(title)
-			var count := _words("%d / %d" % [_plain_index(), n], 16)
+			# The design's count: the step's place over the steps after the welcome (THAT'S IT! is the last).
+			var count := _words("%d / %d" % [_index, steps.size() - 1], 19)
 			count.name = "Count"
 			count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			row.add_child(count)
-	var body := _words(str(st.get("body", "")), 21)
+	var body := _words(str(st.get("body", "")), 24)
 	body.name = "Body"
 	body.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -250,7 +250,7 @@ func _build_card(st: Dictionary, kind: String) -> void:
 	col.add_child(buttons)
 	var last := _index >= steps.size() - 1
 	if not last:
-		var skip_b := HomePage.button("SKIP", CREAM, 16, 68.0 - ShadowStyle.OFFSET)
+		var skip_b := HomePage.button("SKIP", CREAM, 19, 68.0 - ShadowStyle.OFFSET)
 		skip_b.name = "TourSkip"   # Tour*: the home has its own Prev / Next chevrons
 		skip_b.custom_minimum_size = Vector2(150, 68)
 		skip_b.pressed.connect(skip)
@@ -274,13 +274,13 @@ func _build_card(st: Dictionary, kind: String) -> void:
 	nrow.offset_right = -(22.0 + ShadowStyle.OFFSET)
 	nrow.offset_bottom = -ShadowStyle.OFFSET
 	next_b.add_child(nrow)
-	var nl := _words(cta if cta != "" else "NEXT", 20, true)
+	var nl := _words(cta if cta != "" else "NEXT", 23, true)
 	nl.name = "Cta"
 	nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	nl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	nrow.add_child(nl)
-	var arrow := _words(">", 24, true)
+	var arrow := _words(">", 27, true)
 	arrow.name = "Arrow"
 	arrow.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	nrow.add_child(arrow)
@@ -331,14 +331,6 @@ func _card_height() -> float:
 	return h
 
 
-func _plain_index() -> int:
-	var k := 0
-	for i in range(_index + 1):
-		if str(steps[i].get("kind", "plain")) == "plain":
-			k += 1
-	return k
-
-
 func card_top() -> float:
 	return _card.position.y if _card != null else 0.0
 
@@ -350,7 +342,7 @@ static func _words(text: String, size_: int, display := false) -> Label:
 
 
 static func _big_gold(name_: String, text: String) -> Label:
-	var l := RetroTheme.display(text, 40, GOLD)
+	var l := RetroTheme.display(text, 46, GOLD)
 	l.name = name_
 	l.add_theme_color_override("font_outline_color", RetroTheme.SCENE_OUTLINE)
 	l.add_theme_constant_override("outline_size", RetroTheme.OUTLINE)

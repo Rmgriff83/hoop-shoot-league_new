@@ -10,12 +10,12 @@ func run(t) -> void:
 	# The data.
 	t.eq(Walkthroughs.ids(), ["home"], "one tour today: home")
 	var steps := Walkthroughs.tour("home")
-	t.eq(steps.size(), 7, "seven steps")
-	t.eq(steps.map(func(s): return s["id"]), ["welcome", "three", "league", "level", "online", "locker", "end"], "…in the design's order")
-	t.ok(steps[0]["kind"] == "welcome" and steps[6]["kind"] == "end" and steps[1]["kind"] == "plain", "bookends and plain steps")
-	t.eq(Walkthroughs.plain_count(steps), 5, "five counted steps")
+	t.eq(steps.size(), 6, "six steps (design 36a, 2026-10-30)")
+	t.eq(steps.map(func(s): return s["id"]), ["welcome", "three", "top", "online", "board", "end"], "…in the design's order")
+	t.ok(steps[0]["kind"] == "welcome" and steps[5]["kind"] == "end" and steps[1]["kind"] == "plain", "bookends and plain steps")
+	t.eq(Walkthroughs.plain_count(steps), 4, "four spotlit steps")
 	t.eq(steps[0]["cta"], "LET'S GO", "the welcome's CTA")
-	t.eq(steps[6]["cta"], "LET'S SHOOT", "the end's CTA")
+	t.eq(steps[5]["cta"], "LET'S SHOOT", "the end's CTA")
 	t.eq(Walkthroughs.tour("nope"), [], "an unknown tour is empty")
 	var display := UiFont.display()
 	var bold := UiFont.body_bold()
@@ -25,8 +25,8 @@ func run(t) -> void:
 		for ch in str(s["body"]):
 			t.ok(bold.has_char(ch.unicode_at(0)), "body glyph '%s' (%s)" % [ch, s["id"]])
 	# The overlay over fake rects: one in the top half, one in the bottom half.
-	var rects := {"three": Rect2(36, 800, 648, 400), "league": Rect2(36, 800, 648, 300), "level": Rect2(36, 32, 170, 56),
-		"online": Rect2(486, 230, 132, 56), "locker": Rect2(230, 32, 56, 56)}
+	var rects := {"three": Rect2(36, 1000, 648, 480), "top": Rect2(26, 108, 662, 92),
+		"online": Rect2(486, 300, 200, 92), "board": Rect2(130, 687, 454, 264)}
 	var w := Walkthrough.new()
 	var closed := []
 	w.closed.connect(func(c: bool) -> void: closed.push_back(c))
@@ -39,20 +39,24 @@ func run(t) -> void:
 	t.eq((card.find_child("Cta", true, false) as Label).text, "LET'S GO", "LET'S GO")
 	t.ok((card.find_child("Title", true, false) as Label).text.begins_with("HOOP SHOOT"), "WELCOME TO HOOP SHOOT LEAGUE")
 	w.next()
-	t.eq(w.step_index(), 1, "NEXT → THREE WAYS TO PLAY")
+	t.eq(w.step_index(), 1, "NEXT → DOWN HERE..")
 	card = w.find_child("Card", true, false)
-	t.eq((card.find_child("Title", true, false) as Label).text, "THREE WAYS TO PLAY", "the step's title")
+	t.eq((card.find_child("Title", true, false) as Label).text, "DOWN HERE..", "the step's title")
 	t.eq((card.find_child("Count", true, false) as Label).text, "1 / 5", "counted 1 / 5")
 	t.eq((card.find_child("Cta", true, false) as Label).text, "NEXT", "NEXT by default")
 	t.ok(w.has_spot() and w.spot_rect() == rects["three"], "the spot is the resolved rect")
 	t.ok(w.card_above() and w.card_top() + 10.0 < rects["three"].position.y, "a lower-half spot: the card sits above it")
 	t.ok(card.find_child("TourBack", true, false) != null, "< from the second card")
 	w.next()
+	t.eq(w.step_index(), 2, "→ UP HERE..")
+	t.eq((w.find_child("Count", true, false) as Label).text, "2 / 5", "counted 2 / 5")
+	t.ok(not w.card_above() and w.card_top() > rects["top"].end.y, "an upper-half spot: the card sits below it")
 	w.next()
-	t.eq(w.step_index(), 3, "→ LEVEL UP")
-	t.ok(not w.card_above() and w.card_top() > rects["level"].end.y, "an upper-half spot: the card sits below it")
+	w.next()
+	t.eq(w.step_index(), 4, "→ TOP 5")
+	t.ok(w.spot_rect() == rects["board"], "…spotting the board")
 	w.back()
-	t.eq(w.step_index(), 2, "< goes back")
+	t.eq(w.step_index(), 3, "< goes back")
 	# SKIP marks it seen and closes.
 	save.put_settings(was_settings)
 	t.ok(not app.walkthrough_seen("home"), "not seen yet")
@@ -67,9 +71,9 @@ func run(t) -> void:
 	var closed2 := []
 	w2.closed.connect(func(c: bool) -> void: closed2.push_back(c))
 	w2.start("home", func(id: String) -> Rect2: return rects.get(id, Rect2()))
-	for i in 6:
+	for i in 5:
 		w2.next()
-	t.eq(w2.step_index(), 6, "on THAT'S IT!")
+	t.eq(w2.step_index(), 5, "on THAT'S IT!")
 	card = w2.find_child("Card", true, false)
 	t.ok(card.find_child("TourSkip", true, false) == null and (card.find_child("Cta", true, false) as Label).text == "LET'S SHOOT" and not w2.has_spot(), "the end: no SKIP, LET'S SHOOT, no spotlight")
 	w2.next()
