@@ -8,7 +8,7 @@ const AREAS := ["any", "cage", "beach", "park", "city"]
 
 
 static func title() -> String:
-	return "ONLINE · 1V1"
+	return "ONLINE"
 
 
 ## The court picker's short names (ANY first).
@@ -67,8 +67,12 @@ static func waiting_line(how: String) -> String:
 
 
 ## Under RANKED on the menu (2026-10-19): one global rated queue, any court.
+static func ranked_title() -> String:
+	return "RANKED MATCH"
+
+
 static func ranked_sub() -> String:
-	return "YOUR COURT WHEN YOU BOTH OWN IT · RATED"
+	return "RATED · ONE GLOBAL LADDER"
 
 
 static func found_big() -> String:
@@ -154,7 +158,7 @@ static func leaderboard_head() -> String:
 
 
 static func leaderboard_sub() -> String:
-	return "TOP 3 · RATED 1V1"
+	return "TOP 5 · RATED"
 
 
 static func all_ranks() -> String:
@@ -498,13 +502,6 @@ static func shoot_around_sub(bonus: int) -> String:
 	return "A TIME TRIAL · +%d TICKETS" % bonus
 
 
-## The lobby's REWARDS row: what waits, or what the page is for.
-static func rewards_sub(pending: int) -> String:
-	if pending > 0:
-		return "%d WAITING TO CLAIM" % pending if pending > 1 else "1 WAITING TO CLAIM"
-	return "LOGIN DAYS · MILESTONES · THE METER"
-
-
 static func rewards_title() -> String:
 	return "REWARDS"
 
@@ -554,7 +551,7 @@ static func strings() -> Array:
 		card_place({"town": "SALT HARBOR", "level": 9}), card_place({"level": 7}), card_online({}),
 		card_online({"rank": {"tier": "pro", "division": 2, "wins": 12, "losses": 9, "games": 21}}),
 		card_online({"rank": {"tier": "legend", "division": 1, "position": 12, "wins": 40, "losses": 11, "games": 51}}),
-		waiting_big("ranked"), waiting_line("ranked"), ranked_sub(), "RANKED", prematch_title(), cap_line(3), cap_line(3, true), ready_word(true), ready_word(false),
+		waiting_big("ranked"), waiting_line("ranked"), ranked_sub(), ranked_title(), "RANKED", prematch_title(), cap_line(3), cap_line(3, true), ready_word(true), ready_word(false),
 		timer_line(12.4), ranked_chip(), rank_delta_line({"ranked": true, "rating": {"delta": 18}, "rank": {"tier": "pro", "division": 2}, "events": ["promoted"]}),
 		rank_delta_line({"ranked": true, "rating": {"delta": -7}, "rank": {"tier": "rookie", "division": 3}, "events": ["shielded", "floored", "demoted"]}),
 		rank_delta_line({"ranked": true}),
@@ -572,7 +569,7 @@ static func strings() -> Array:
 		spoils_panel({"ranked": true, "pay": false})["caption"],
 		meter_line({"meter": {"after": 14, "size": 22, "odds": {"common": 0.7, "rare": 0.25, "epic": 0.05}}}),
 		close_loss_line({"online": true, "won": false, "player_score": 20, "ai_score": 22}),
-		shoot_around_title(), shoot_around_sub(5), rewards_sub(0), rewards_sub(1), rewards_sub(3), rewards_title(), meter_head(), meter_caption(),
+		shoot_around_title(), shoot_around_sub(5), rewards_title(), meter_head(), meter_caption(),
 		pending_head(), nothing_pending(), claim_word(true), claim_word(false), login_line(7, 10), login_line(30, 0), milestones_head(), rewards_offline()]
 	out.append_array(MilestoneCopy.strings())
 	for a in AREAS:

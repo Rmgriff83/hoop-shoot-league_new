@@ -1621,9 +1621,16 @@ func _run_multi() -> void:
 	# The menu's card and leaderboard (design 37a) from the fixtures.
 	lobby.set_rank({"tier": "allstar", "division": 1, "games": 48, "position": 18, "wins": 32, "losses": 16, "cons": 1416.0})
 	var ladder: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/ranked_board.json"))
+	if ladder is Dictionary and ladder["rows"].size() < MatchLobbyPage.TOP_N:
+		var extra: Dictionary = ladder["rows"][-1].duplicate()
+		extra["position"] = ladder["rows"].size() + 1
+		extra["name"] = "PIXEL KID"
+		ladder["rows"].push_back(extra)   # a full top five on the snap
 	lobby.set_top(ladder if ladder is Dictionary else {})
+	lobby._set_pending(2)
 	await _sleep(0.2)
 	await _snap("multi_menu")
+	print("QA multi: leaderboard shown %s, rows %d, frame %.0f" % [lobby.leaderboard_shown(), lobby.top_count(), lobby.frame_height()])
 	lobby.show_waiting("create", "ABCDE")
 	await _sleep(0.2)
 	await _snap("multi_code")

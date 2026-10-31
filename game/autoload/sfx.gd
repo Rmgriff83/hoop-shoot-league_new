@@ -22,6 +22,13 @@ const SFX_BUS := "SFX"
 ## Recorded clips peak around −10 dBFS; lift them toward the synthetic set.
 const MAKE_GAIN_DB := 0.0
 const MISS_GAIN_DB := -1.0
+## The match clock's sounds sit this far under their clips' level (Ross:
+## quieter, twice, 2026-10-30): the 3-2-1 beeps, GO, the last-ten-seconds
+## ticking and the time-up ring.
+const BEEP_DB := -8.0
+const GO_DB := -6.0
+const TICK_DB := -10.0
+const RING_DB := -10.0
 ## A rattling ball can hit the rim several times; play the miss clip once per burst.
 const MISS_RATE_LIMIT_S := 0.6
 
@@ -845,29 +852,32 @@ func score_pop(is_swish: bool) -> void:
 
 ## Time up — a match's (each period's) or a time trial's end (Ross,
 ## 2026-10-30): EagleStealthTeam's "Analog Timer" ring (CC0, credited),
-## lowered 5 dB to the chimes' loudness (about -21 LUFS). It replaced the
+## lowered 5 dB to the chimes' loudness (about -21 LUFS), and played a
+## further RING_DB under that (Ross: quieter, 2026-10-30). It replaced the
 ## old buzzer clip.
 func buzzer() -> void:
-	_play("time_up_ring")
+	_play("time_up_ring", RING_DB)
 
 
 ## The match countdown (Ross, 2026-10-30): a single beep on each of 3, 2, 1
 ## (his own clip, no credit), then stomachache's "Countdown Start" (CC0,
 ## credited) on GO.
 func countdown_beep() -> void:
-	_play("countdown_beep", -2.0)
+	_play("countdown_beep", BEEP_DB)
 
 
 func countdown_go() -> void:
-	_play("countdown_go")
+	_play("countdown_go", GO_DB)
 
 
 ## The last ten seconds of a match or a time trial (Ross, 2026-10-30):
-## iainmccurdy's "Timer Ticking" (credited), cut to 10 s and lifted 3 dB to
-## sit with the other clips. One at a time; it pauses with the tree.
+## iainmccurdy's "Timer Ticking" (credited), 11 s sped up 10% to fill 10 s
+## (Ross: a bit faster, 2026-10-30) and lifted 3 dB to
+## sit with the other clips, played TICK_DB under that (Ross: quieter,
+## 2026-10-30). One at a time; it pauses with the tree.
 func timer_tick_start() -> void:
 	if _tick != null and not _tick.playing:
-		_tick.volume_db = gain_db
+		_tick.volume_db = gain_db + TICK_DB
 		_tick.play()
 
 

@@ -1,7 +1,7 @@
 extends RefCounted
 ## The match's countdown and clock sounds (Ross, 2026-10-30): a beep on each
 ## of 3, 2, 1, stomachache's "Countdown Start" on GO, and iainmccurdy's
-## "Timer Ticking" (cut to 10 s, raised 3 dB) under the last ten seconds.
+## "Timer Ticking" (11 s sped up 10% to 10 s, raised 3 dB) under the last ten seconds.
 
 
 func run(t) -> void:
@@ -11,6 +11,7 @@ func run(t) -> void:
 	t.close(tick.get_length(), 10.0, 0.05, "the ticking runs ten seconds, the length of the window it plays in")
 	var tts := load("res://game/screens/time_trial_screen.gd")
 	t.eq(tts.TICK_FROM_S, 10.0, "it starts with ten seconds left")
+	t.ok(Sfx.BEEP_DB < 0.0 and Sfx.GO_DB < 0.0 and Sfx.TICK_DB < 0.0 and Sfx.RING_DB < 0.0, "the clock's sounds play under their clips' level")
 	var credits: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/credits.json"))
 	var titles := []
 	for c in credits["sounds"]:

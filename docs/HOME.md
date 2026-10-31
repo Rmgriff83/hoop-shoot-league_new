@@ -255,13 +255,15 @@ chevron (the footer says START INSIDE).
   2026-10-17 — design "Online Lobby" 37a; copy in `match_copy.gd`;
   docs/BACKEND.md → Phase 3): the ONLINE card beside the area name opens the
   lobby with the locker move (the home slides out left, the lobby in from the
-  right, every face see-through and dotted). `<` ONLINE · 1V1; **COURT**: ANY
+  right, every face see-through and dotted). `<` ONLINE and the rewards
+  trophy (a gold count on its corner while grants wait; 2026-10-30, it
+  replaced the REWARDS row); **COURT**: ANY
   and the four courts in a row (a locked court dimmed with a lock; the whole
   row dimmed and fixed on the cage with `UNLOCK MORE COURTS TO CHOOSE` while
   only the cage is open, else `n OF 4 OWNED`; the chosen one gold, the home's
   court picked at open — the picker steers the casual games, and since
-  2026-10-29 is ranked's preference too); **RANKED** (gold, `YOUR COURT WHEN
-  YOU BOTH OWN IT · RATED`, 2026-10-19: the rated queue, docs/BACKEND.md →
+  2026-10-29 is ranked's preference too); **RANKED MATCH** (orange, inside
+  your card since 2026-10-30, `RATED · ONE GLOBAL LADDER`, 2026-10-19: the rated queue, docs/BACKEND.md →
   Ranked; the server gives the same pick, or one pick over an ANY, else a
   court both own at random); QUICK MATCH
   (orange; `FIRST OPEN MATCH ON YOUR COURTS` / `PLAY WHOEVER IS ON …`), CREATE
@@ -318,11 +320,13 @@ chevron (the footer says START INSIDE).
   `multi_code`, `multi_found`, `multi_failed`, `multi_finding`,
   `multi_rewards`, `multi_rewards_wide`, `multi_prematch`, `multi_prematch_ready`, `online_result`),
   `--qa-heat-result` (`online_result_win`, `online_result_loss`). Since 2026-10-25 (37a's latest pass) the menu opens with your gold
-  player card (the jersey, handle and `#tag`, `TOWN · LVL 07`; your badge and
-  `#18 · 32-16` on the right; a bar through your division, `16 / 50 TO MVP
-  I`, from `RankedRules.division_progress`, hidden at the top tier and
-  before a rated game) and ends with GLOBAL LEADERBOARD · TOP 3 · RATED 1V1:
-  the ladder's top three in a see-through panel and ALL RANKS >, which opens
+  player card (since 2026-10-30: the jersey; your badge at 30 px gold, the
+  handle and `#tag`, `TOWN · LVL 07`; `#18 · 32-16` on a solid gold tag
+  over the card's top right corner; a bar through your division, `16 / 50
+  TO MVP I`, from `RankedRules.division_progress`, hidden at the top tier
+  and before a rated game; RANKED MATCH) and ends with GLOBAL LEADERBOARD ·
+  TOP 5 · RATED: the ladder's top five (rank gold for the top three, the
+  name over the record, the badge gold on the right) in a see-through panel and ALL RANKS >, which opens
   the ranks page on RANKED over the lobby. The title feeds both from `Net`
   (`me_rank`, the cached ranked board); the leaderboard shows only on a
   frame of 1400 px or more (a 9:16 screen has no room for it).

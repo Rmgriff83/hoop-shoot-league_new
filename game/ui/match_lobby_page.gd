@@ -3,11 +3,12 @@ extends FaceOffPage
 ## The 1v1 lobby (design "Online Lobby" 37a, 2026-10-17; docs/HOME.md → 1v1,
 ## docs/BACKEND.md → Phase 3) with the locker treatment: a HomePage over the
 ## area — the home slides out left, this slides in from the right, every
-## face see-through and dotted. `<` ONLINE · 1V1; the COURT picker (ANY and
-## the four courts, locked ones dimmed with a lock; the row itself dimmed
-## while only the cage is open); RANKED (2026-10-19: one global rated queue,
-## any court both own — the picker does not constrain it), QUICK MATCH,
-## CREATE CODE, ENTER CODE + GO. The loadout moved to the pre-match page
+## face see-through and dotted. `<` ONLINE and the rewards trophy (a gold
+## count while grants wait); your gold card with RANKED MATCH inside it
+## (2026-10-30; one global rated queue, the picker a preference); the COURT
+## picker (ANY and the four courts, locked ones dimmed with a lock; the row
+## itself dimmed while only the cage is open), QUICK MATCH, CREATE CODE,
+## ENTER CODE + GO; the ladder's top five at the foot. The loadout moved to the pre-match page
 ## (PreMatchPage). The waits: FINDING A PLAYER… / the big gold
 ## code and WAITING… with CANCEL; PLAYER FOUND; a failure with BACK. The
 ## quick wait and PLAYER FOUND are a face-off (2026-10-18): your card, VS,
@@ -18,7 +19,7 @@ extends FaceOffPage
 ## show_found / show_failed.
 
 signal ranked
-## The REWARDS row (Stage B): the title opens the rewards page.
+## The trophy in the head (Stage B): the title opens the rewards page.
 signal rewards
 ## ALL RANKS > under the leaderboard: the title opens the ranks page on RANKED.
 signal all_ranks
@@ -27,7 +28,7 @@ signal create(area: String)
 signal join(area: String, code: String)
 signal cancel
 
-const BTN_H := 112.0
+const BTN_H := 96.0
 const COURT_H := 60.0
 const FIELD_BG := Color(34.0 / 255.0, 28.0 / 255.0, 24.0 / 255.0, 0.55)
 const BAD := Color("#FF8A6A")
@@ -40,7 +41,13 @@ const POP_S := 0.45        # the found card: 0.85 → 1.04 → 1
 const VS_S := 0.3          # VS from 1.6× in three steps
 const COURT_AT := 0.35     # the court line, after the pop…
 const COURT_S := 0.3       # …sliding in
-const MUTED := Color("#E6D9B8")
+const MUTED := Color("#D9D9D9")
+const RANKED_H := 88.0
+const TOP_N := 5
+const TOP_ROW_H := 62.0
+## The words column on your card: the frame less the card's padding, its
+## shadow, the jersey and the gap.
+const WHO_W := FRAME_SIZE.x - 2.0 * PAD - 44.0 - ShadowStyle.OFFSET - 84.0 - 22.0
 ## The leaderboard at the menu's foot needs this much frame (a 9:16 screen
 ## has no room for it under the buttons; a phone-tall one does).
 const TOP_MIN_FRAME := 1400.0
@@ -51,7 +58,8 @@ var _wait: VBoxContainer
 var _courts: Dictionary = {}
 var _court_note: Label
 var _quick_sub: Label
-var _rewards_sub: Label
+var _rewards: ShadowCard
+var _rewards_badge: PanelContainer
 var _code_edit: LineEdit
 var _code_block: VBoxContainer
 var _code_label: Label
@@ -82,6 +90,7 @@ var _found_t := -1.0       # < 0: no found timeline running
 var _found_area := ""
 var _me_badge: Label
 var _me_line: Label
+var _me_tag: RecordTag
 var _me_bar: Control
 var _me_fill: ColorRect
 var _me_progress: Label
@@ -116,7 +125,7 @@ func _build() -> void:
 	for c in body.get_children():
 		body.remove_child(c)
 		c.queue_free()
-	# Head: < and ONLINE · 1V1.
+	# Head: <, ONLINE and the rewards trophy.
 	var head_ := HBoxContainer.new()
 	head_.name = "Head"
 	head_.add_theme_constant_override("separation", 20)
@@ -132,31 +141,23 @@ func _build() -> void:
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	head_.add_child(title)
+	_build_rewards(head_)
 	# The menu.
 	_menu = VBoxContainer.new()
 	_menu.name = "Menu"
 	_menu.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	_menu.add_theme_constant_override("separation", 16)
+	_menu.add_theme_constant_override("separation", 0)
 	body.add_child(_menu)
+	_menu.add_child(_spacer_v(28))
 	_build_you()
+	_menu.add_child(_spacer_v(48))
 	_build_courts()
-	_menu.add_child(_big_button("Ranked", "RANKED", MatchCopy.ranked_sub(), GOLD, func() -> void: ranked.emit()))
-	# Stage B (docs/BACKEND.md → Ranked → Stage B): the rewards page, with
-	# what waits for a CLAIM on its sub-line.
-	_menu.add_child(_big_button("Rewards", "REWARDS", MatchCopy.rewards_sub(Net.pending_rewards), CREAM, func() -> void: rewards.emit()))
-	_rewards_sub = _menu.get_node("Rewards/Col/Sub")
-	_style_rewards_sub(Net.pending_rewards)
-	var on_badge := func(n: int) -> void:
-		if is_instance_valid(_rewards_sub):
-			_rewards_sub.text = MatchCopy.rewards_sub(n)
-			_style_rewards_sub(n)
-	Net.rewards_badge.connect(on_badge)
-	_menu.tree_exited.connect(func() -> void:
-		if Net.rewards_badge.is_connected(on_badge):
-			Net.rewards_badge.disconnect(on_badge))
+	_menu.add_child(_spacer_v(30))
 	_menu.add_child(_big_button("Quick", "QUICK MATCH", MatchCopy.quick_sub(area_choice), RetroTheme.c("orange"), func() -> void: quick.emit(area_choice)))
 	_quick_sub = _menu.get_node("Quick/Col/Sub")
+	_menu.add_child(_spacer_v(18))
 	_menu.add_child(_big_button("Create", "CREATE CODE", MatchCopy.code_sub(), RetroTheme.c("teal"), func() -> void: create.emit(area_choice)))
+	_menu.add_child(_spacer_v(18))
 	var join_row := HBoxContainer.new()
 	join_row.name = "JoinRow"
 	join_row.add_theme_constant_override("separation", 18)
@@ -202,6 +203,7 @@ func _build() -> void:
 	go.custom_minimum_size = Vector2(160 + ShadowStyle.OFFSET, BTN_H + ShadowStyle.OFFSET)
 	go.pressed.connect(_go)
 	join_row.add_child(go)
+	_menu.add_child(_spacer_v(12))
 	var sub := words(MatchCopy.join_sub(), 16)
 	sub.name = "JoinSub"
 	_menu.add_child(sub)
@@ -210,6 +212,7 @@ func _build() -> void:
 	push.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	push.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_menu.add_child(push)
+	_menu.add_child(_spacer_v(30))
 	_build_top()
 	# The waits.
 	_wait = VBoxContainer.new()
@@ -259,9 +262,69 @@ func _build() -> void:
 	show_menu()
 
 
-## Your card at the top of the menu (design 37a, 2026-10-25): the jersey,
-## your handle and #tag over the town and level; your badge and `#18 ·
-## 32-16` on the right; a bar through your division, `16 / 50 TO MVP I`.
+## The trophy at the head's right (design 37a, 2026-10-30): the rewards
+## page, a gold count on its corner while grants wait for a CLAIM.
+func _build_rewards(head_: HBoxContainer) -> void:
+	_rewards = ShadowCard.new(CREAM)
+	_rewards.name = "Rewards"
+	_rewards.custom_minimum_size = Vector2(56 + ShadowStyle.OFFSET, 56 + ShadowStyle.OFFSET)
+	_rewards.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	_rewards.pressed.connect(func() -> void: rewards.emit())
+	head_.add_child(_rewards)
+	var c := CenterContainer.new()
+	c.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	UiLayout.full_rect(c)
+	c.offset_right = -ShadowStyle.OFFSET
+	c.offset_bottom = -ShadowStyle.OFFSET
+	_rewards.add_child(c)
+	c.add_child(PixelIcon.new("icon_trophy", Vector2(30, 30), 2.0))
+	_rewards_badge = PanelContainer.new()
+	_rewards_badge.name = "Badge"
+	_rewards_badge.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = GOLD
+	sb.border_color = RetroTheme.SCENE_OUTLINE
+	sb.set_border_width_all(2)
+	sb.content_margin_left = 6
+	sb.content_margin_right = 6
+	_rewards_badge.add_theme_stylebox_override("panel", sb)
+	_rewards_badge.custom_minimum_size = Vector2(26, 26)
+	_rewards.add_child(_rewards_badge)
+	var n := Label.new()
+	n.name = "Count"
+	n.add_theme_font_override("font", UiFont.display())
+	n.add_theme_font_size_override("font_size", 12)
+	n.add_theme_color_override("font_color", RetroTheme.SCENE_OUTLINE)
+	n.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	n.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	n.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_rewards_badge.add_child(n)
+	_set_pending(Net.pending_rewards)
+	var on_badge := func(count: int) -> void:
+		if is_instance_valid(_rewards_badge):
+			_set_pending(count)
+	Net.rewards_badge.connect(on_badge)
+	_rewards.tree_exited.connect(func() -> void:
+		if Net.rewards_badge.is_connected(on_badge):
+			Net.rewards_badge.disconnect(on_badge))
+
+
+## The count on the trophy's corner (10 px over its top right edge), none at 0.
+func _set_pending(count: int) -> void:
+	_rewards_badge.visible = count > 0
+	var l := _rewards_badge.get_node("Count") as Label
+	l.text = str(count)
+	_rewards_badge.reset_size()
+	_rewards_badge.position = Vector2(56.0 + 10.0 - _rewards_badge.get_combined_minimum_size().x, -10.0)
+
+
+func pending_text() -> String:
+	return (_rewards_badge.get_node("Count") as Label).text if _rewards_badge != null and _rewards_badge.visible else ""
+
+
+## Your card at the top of the menu (design 37a, 2026-10-30): the jersey;
+## your badge and `#18 · 32-16`, your handle and #tag, the town and level;
+## a bar through your division, `16 / 50 TO MVP I`; RANKED MATCH.
 func _build_you() -> void:
 	var rec := FaceOffPage.you_record()
 	var card := ShadowPanel.new(GOLD, 20.0, ShadowStyle.TINT, 22.0)
@@ -272,10 +335,10 @@ func _build_you() -> void:
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	card.add_child(col)
 	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation", 20)
+	row.add_theme_constant_override("separation", 22)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(row)
-	var jersey := PixelIcon.new("icon_jersey", Vector2(64, 64), 4.0)
+	var jersey := PixelIcon.new("icon_jersey", Vector2(84, 84), 4.0)
 	jersey.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(jersey)
 	var who := VBoxContainer.new()
@@ -284,39 +347,30 @@ func _build_you() -> void:
 	who.add_theme_constant_override("separation", 14)
 	who.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(who)
+	_me_badge = words("", 30, true)
+	_me_badge.name = "Badge"
+	_me_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	_me_badge.add_theme_color_override("font_color", GOLD)
+	who.add_child(_me_badge)
 	var top := HBoxContainer.new()
 	top.add_theme_constant_override("separation", 12)
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	who.add_child(top)
-	var name_l := words("", 20, true)
+	var name_l := words("", 24, true)
 	name_l.name = "Name"
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	name_l.clip_text = true
 	name_l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	top.add_child(name_l)
-	var tag := words(MatchCopy.card_tag(rec), 16)
+	var tag := words(MatchCopy.card_tag(rec), 19)
 	tag.name = "Tag"
 	tag.add_theme_color_override("font_color", MUTED)
 	tag.size_flags_vertical = Control.SIZE_SHRINK_END
 	top.add_child(tag)
-	var place := words(MatchCopy.card_place(rec), 17)
+	var place := words(MatchCopy.card_place(rec), 19)
 	place.name = "Place"
 	place.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	who.add_child(place)
-	var right := VBoxContainer.new()
-	right.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	right.add_theme_constant_override("separation", 12)
-	right.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(right)
-	_me_badge = words("", 24, true)
-	_me_badge.name = "Badge"
-	_me_badge.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	_me_badge.add_theme_color_override("font_color", GOLD)
-	right.add_child(_me_badge)
-	_me_line = words("", 16)
-	_me_line.name = "RankLine"
-	_me_line.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	right.add_child(_me_line)
 	var bar_row := HBoxContainer.new()
 	bar_row.name = "Progress"
 	bar_row.add_theme_constant_override("separation", 14)
@@ -343,21 +397,111 @@ func _build_you() -> void:
 	var frame := XpMeter.Frame.new()
 	UiLayout.full_rect(frame)
 	_me_bar.add_child(frame)
-	_me_progress = words("", 13)
+	_me_progress = words("", 16)
 	_me_progress.name = "ProgressLine"
 	_me_progress.add_theme_color_override("font_color", MUTED)
 	bar_row.add_child(_me_progress)
+	col.add_child(_ranked_button())
+	# The record tag on the card's top right corner (15 px over the top edge,
+	# 5 px past the right): a layer the panel stretches over its content, the
+	# tag placed in it by hand.
+	var layer := Control.new()
+	layer.name = "TagLayer"
+	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	card.add_child(layer)
+	_me_tag = RecordTag.new()
+	_me_tag.name = "RecordTag"
+	layer.add_child(_me_tag)
+	_me_line = _me_tag.label
+	_me_line.name = "RankLine"
+	layer.resized.connect(func() -> void: _place_tag(layer))
 	_set_you_name(name_l, str(rec.get("name", "YOU")), tag)
 	set_rank(Dictionary(rec.get("rank", {})))
 
 
-## The handle at its own width, cut with an ellipsis where the right column starts.
+func _place_tag(layer: Control) -> void:
+	var w := _me_tag.get_combined_minimum_size().x
+	_me_tag.size = Vector2(w, RecordTag.H)
+	_me_tag.position = Vector2(layer.size.x + 22.0 + 5.0 - w, -20.0 - 15.0)
+
+
+## The record on its gold tag: dark words, no outline, a 4 px hard shadow.
+class RecordTag:
+	extends Container
+	const H := 44.0
+	const PAD_X := 14.0
+	var label: Label
+
+	func _init() -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		label = Label.new()
+		label.add_theme_font_override("font", UiFont.display())
+		label.add_theme_font_size_override("font_size", 19)
+		label.add_theme_color_override("font_color", RetroTheme.SCENE_OUTLINE)
+		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(label)
+		label.minimum_size_changed.connect(update_minimum_size)
+
+	func _get_minimum_size() -> Vector2:
+		return Vector2(label.get_combined_minimum_size().x + 2.0 * PAD_X + 4.0, H)
+
+	func _notification(what: int) -> void:
+		if what == NOTIFICATION_SORT_CHILDREN:
+			fit_child_in_rect(label, Rect2(PAD_X + 2.0, 0.0, size.x - 2.0 * PAD_X - 4.0, H))
+
+	func _draw() -> void:
+		var ink := RetroTheme.SCENE_OUTLINE
+		var face := Rect2(Vector2.ZERO, size)
+		draw_rect(Rect2(Vector2(4, 4), size), ink)
+		draw_rect(face, GOLD)
+		draw_rect(face.grow(-1.0), ink, false, 2.0)
+
+
+## RANKED MATCH inside your card: the words on the left, `>` on the right.
+func _ranked_button() -> ShadowCard:
+	var b := ShadowCard.new(RetroTheme.c("orange"))
+	b.name = "Ranked"
+	b.custom_minimum_size = Vector2(0, RANKED_H + ShadowStyle.OFFSET)
+	b.pressed.connect(func() -> void: ranked.emit())
+	var h := HBoxContainer.new()
+	h.name = "Row"
+	h.add_theme_constant_override("separation", 16)
+	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	UiLayout.full_rect(h)
+	h.offset_left = 26
+	h.offset_right = -26 - ShadowStyle.OFFSET
+	h.offset_bottom = -ShadowStyle.OFFSET
+	b.add_child(h)
+	var col := VBoxContainer.new()
+	col.name = "Col"
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	col.add_theme_constant_override("separation", 12)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(col)
+	var t := words(MatchCopy.ranked_title(), 26, true)
+	t.name = "Text"
+	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	col.add_child(t)
+	var s_ := words(MatchCopy.ranked_sub(), 16)
+	s_.name = "Sub"
+	s_.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	col.add_child(s_)
+	var arrow := words(">", 30, true)
+	arrow.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	arrow.size_flags_vertical = Control.SIZE_FILL
+	h.add_child(arrow)
+	return b
+
+
+## The handle at its own width, cut with an ellipsis where the tag would leave the card.
 func _set_you_name(l: Label, text: String, tag: Label) -> void:
 	l.text = text
 	var f := UiFont.display()
-	var w := f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(20)).x + 2.0 * RetroTheme.OUTLINE
-	var tag_w := UiFont.body_bold().get_string_size(tag.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(16)).x
-	l.custom_minimum_size.x = minf(w, maxf(120.0, FRAME_SIZE.x - 2.0 * PAD - 44.0 - 64.0 - 40.0 - 170.0 - tag_w - 12.0))
+	var w := f.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(24)).x + 2.0 * RetroTheme.OUTLINE
+	var tag_w := UiFont.body_bold().get_string_size(tag.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(19)).x + 2.0 * RetroTheme.OUTLINE
+	l.custom_minimum_size.x = minf(w, maxf(120.0, FRAME_SIZE.x - 2.0 * PAD - 44.0 - ShadowStyle.OFFSET - 84.0 - 22.0 - tag_w - 12.0))
 
 
 ## Your ladder line on the card: the badge, `#18 · 32-16`, the division bar
@@ -367,6 +511,10 @@ func set_rank(rank: Dictionary) -> void:
 		return
 	_me_badge.text = MatchCopy.you_badge(rank)
 	_me_line.text = MatchCopy.you_record_line(rank)
+	# A long badge (ALL-STAR I) steps down to 24 px rather than run under the tag.
+	var room := WHO_W + 27.0 - _me_tag.get_combined_minimum_size().x - 12.0
+	var fits := UiFont.display().get_string_size(_me_badge.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(30)).x + 2.0 * RetroTheme.OUTLINE <= room
+	_me_badge.add_theme_font_size_override("font_size", UiFont.snap(30 if fits else 24))
 	var p := RankedRules.division_progress(rank)
 	var bar_row := _me_bar.get_parent() as Control
 	bar_row.visible = not p.is_empty()
@@ -384,8 +532,8 @@ func progress_text() -> String:
 	return _me_progress.text if _me_progress != null and (_me_progress.get_parent() as Control).visible else ""
 
 
-## GLOBAL LEADERBOARD · TOP 3 · RATED 1V1 ——— ALL RANKS >, over the ladder's
-## top three (fed by set_top / set_top_offline). Only on a tall frame.
+## GLOBAL LEADERBOARD · TOP 5 · RATED ——— ALL RANKS >, over the ladder's
+## top five (fed by set_top / set_top_offline). Only on a tall frame.
 func _build_top() -> void:
 	_top_box = VBoxContainer.new()
 	_top_box.name = "Leaderboard"
@@ -400,10 +548,11 @@ func _build_top() -> void:
 	words_col.add_theme_constant_override("separation", 8)
 	words_col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	head_.add_child(words_col)
+	# 16 px, not the design's 20 (which snaps to 24 and pushes the head past the frame).
 	var h := words(MatchCopy.leaderboard_head(), 16, true)
 	h.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	words_col.add_child(h)
-	var sub := words(MatchCopy.leaderboard_sub(), 13)
+	var sub := words(MatchCopy.leaderboard_sub(), 16)
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	sub.add_theme_color_override("font_color", MUTED)
 	words_col.add_child(sub)
@@ -414,10 +563,10 @@ func _build_top() -> void:
 	rule.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	head_.add_child(rule)
-	var all := button(MatchCopy.all_ranks(), CREAM, 12, 34.0)
+	var all := button(MatchCopy.all_ranks(), CREAM, 14, 34.0)
 	all.name = "AllRanks"
 	all.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	all.custom_minimum_size.x = UiFont.display().get_string_size(MatchCopy.all_ranks(), HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(12)).x + 24.0 + 2.0 * RetroTheme.OUTLINE + ShadowStyle.OFFSET
+	all.custom_minimum_size.x = UiFont.display().get_string_size(MatchCopy.all_ranks(), HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(14)).x + 24.0 + 2.0 * RetroTheme.OUTLINE + ShadowStyle.OFFSET
 	all.pressed.connect(func() -> void: all_ranks.emit())
 	head_.add_child(all)
 	var panel := ShadowPanel.new(CREAM, 6.0, 0.24, 20.0)
@@ -441,7 +590,7 @@ func _top_spinner() -> Control:
 	return c
 
 
-## The ladder's answer: its top three (or BE FIRST on an empty ladder).
+## The ladder's answer: its top five (or BE FIRST on an empty ladder).
 func set_top(board: Dictionary) -> void:
 	if _top_rows == null:
 		return
@@ -450,13 +599,13 @@ func set_top(board: Dictionary) -> void:
 	if rows.is_empty():
 		_top_line(MatchCopy.leaderboard_empty())
 		return
-	for i in mini(rows.size(), 3):
+	for i in mini(rows.size(), TOP_N):
 		_top_rows.add_child(_top_row(rows[i], i))
 
 
 func set_top_offline() -> void:
 	if _top_rows == null or top_count() > 0:
-		return   # a cached top three stays
+		return   # a cached top five stays
 	_clear_top()
 	_top_line(MatchCopy.leaderboard_offline())
 
@@ -490,42 +639,63 @@ func _top_line(text: String) -> void:
 	_top_rows.add_child(l)
 
 
-## `#1 · NET DUKE #8021 · LEGEND #1 · 40-11`, a dashed rule over rows 2 and 3.
+## `#1`, `NET DUKE #8021` over `40-11`, `LEGEND #1` in gold on the right
+## (2026-10-30); a dashed rule over rows 2 on; the top three's rank gold.
 func _top_row(r: Dictionary, i: int) -> Control:
 	var box := RanksPage.RowBox.new()
 	box.name = "TopRow%d" % (i + 1)
 	box.rule = i > 0
 	box.me = false
-	box.custom_minimum_size = Vector2(0, 44.0 if i == 0 else 40.0)
+	box.custom_minimum_size = Vector2(0, TOP_ROW_H)
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var h := HBoxContainer.new()
 	h.add_theme_constant_override("separation", 12)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	UiLayout.full_rect(h)
 	box.add_child(h)
-	var rank := words(str(r["rank"]), 16, true)
-	rank.add_theme_color_override("font_color", GOLD)
+	var rank := words(str(r["rank"]), 20, true)
+	rank.add_theme_color_override("font_color", GOLD if i < 3 else CREAM)
 	rank.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	rank.custom_minimum_size = Vector2(56, 0)
+	rank.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	rank.custom_minimum_size = Vector2(62, 0)
 	h.add_child(rank)
-	var name_l := words(str(r["name"]), 17)
+	var mid := VBoxContainer.new()
+	mid.name = "Mid"
+	mid.alignment = BoxContainer.ALIGNMENT_CENTER
+	mid.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	mid.add_theme_constant_override("separation", 7)
+	mid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	h.add_child(mid)
+	var who := HBoxContainer.new()
+	who.add_theme_constant_override("separation", 10)
+	who.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	mid.add_child(who)
+	var name_l := words(str(r["name"]), 21)
 	name_l.name = "Name"
 	name_l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	name_l.clip_text = true
 	name_l.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
-	name_l.custom_minimum_size.x = minf(UiFont.body_bold().get_string_size(name_l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(17)).x + 2.0 * RetroTheme.OUTLINE, 240.0)
-	h.add_child(name_l)
-	var tag := words(str(r.get("tag", "")), 13)
+	who.add_child(name_l)
+	var tag := words(str(r.get("tag", "")), 16)
 	tag.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	tag.size_flags_vertical = Control.SIZE_SHRINK_END
 	tag.add_theme_color_override("font_color", MUTED)
-	tag.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	h.add_child(tag)
-	var score := words(str(r["score"]), 12, true)
+	who.add_child(tag)
+	var parts := str(r["score"]).split(" · ", true, 1)
+	if parts.size() > 1:
+		var rec := words(parts[1], 15, true)
+		rec.name = "ScoreSub"
+		rec.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+		mid.add_child(rec)
+	var score := words(parts[0], 14, true)
 	score.name = "Score"
 	score.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	score.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	score.add_theme_color_override("font_color", GOLD)
 	h.add_child(score)
-	for l in h.get_children():
-		(l as Label).vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	# The name at its own width, up to what the rank, the tag and the badge leave.
+	var room := FRAME_SIZE.x - 2.0 * PAD - 40.0 - ShadowStyle.OFFSET - 62.0 - 24.0 - 10.0 - tag.get_combined_minimum_size().x - score.get_combined_minimum_size().x
+	name_l.custom_minimum_size.x = minf(UiFont.body_bold().get_string_size(name_l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(21)).x + 2.0 * RetroTheme.OUTLINE, maxf(room, 80.0))
 	return box
 
 
@@ -533,7 +703,7 @@ func _top_row(r: Dictionary, i: int) -> Control:
 func _build_courts() -> void:
 	var section := VBoxContainer.new()
 	section.name = "CourtSection"
-	section.add_theme_constant_override("separation", 10)
+	section.add_theme_constant_override("separation", 14)
 	_menu.add_child(section)
 	var head_ := HBoxContainer.new()
 	head_.name = "CourtHead"
@@ -547,7 +717,7 @@ func _build_courts() -> void:
 	var owned := _owned()
 	_court_note = words(MatchCopy.court_note(owned.size()), 16)
 	_court_note.name = "CourtNote"
-	_court_note.add_theme_color_override("font_color", RetroTheme.SCENE_MUTED)
+	_court_note.add_theme_color_override("font_color", MUTED)
 	head_.add_child(_court_note)
 	var row := HBoxContainer.new()
 	row.name = "Courts"
@@ -604,12 +774,6 @@ func _owned() -> Array:
 		if App.area_unlocked(a):
 			out.push_back(a)
 	return out
-
-
-## A pending count turns the REWARDS sub gold.
-func _style_rewards_sub(n: int) -> void:
-	if is_instance_valid(_rewards_sub):
-		_rewards_sub.add_theme_color_override("font_color", GOLD if n > 0 else CREAM)
 
 
 func _big_button(name_: String, text: String, sub: String, fill: Color, on_press: Callable) -> ShadowCard:
@@ -798,6 +962,7 @@ func _go() -> void:
 
 
 func show_menu() -> void:
+	_rewards.visible = true   # the trophy is the menu's alone
 	_state = "menu"
 	_how = ""
 	_menu.visible = true
@@ -807,6 +972,7 @@ func show_menu() -> void:
 
 ## Waiting: FINDING A PLAYER… or the code to pass on and WAITING….
 func show_waiting(how: String, code := "") -> void:
+	_rewards.visible = false   # the trophy is the menu's alone
 	_state = "waiting"
 	_how = how
 	_menu.visible = false
@@ -839,6 +1005,7 @@ func show_waiting(how: String, code := "") -> void:
 ## PLAYER FOUND: the gold card pops in where the reel was (a joiner comes
 ## straight here). `peer` may carry `area` (the court) and `town`.
 func show_found(peer: Dictionary) -> void:
+	_rewards.visible = false   # the trophy is the menu's alone
 	_state = "found"
 	_menu.visible = false
 	_wait.visible = true
@@ -862,6 +1029,7 @@ func show_found(peer: Dictionary) -> void:
 
 
 func show_failed(reason: String) -> void:
+	_rewards.visible = false   # the trophy is the menu's alone
 	_state = "failed"
 	_menu.visible = false
 	_wait.visible = true
