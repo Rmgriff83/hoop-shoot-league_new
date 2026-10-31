@@ -372,7 +372,7 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
   `--qa-heat-result` (`online_result_win`, `online_result_loss`). Since 2026-10-25 (37a's latest pass) the menu opens with your gold
   player card (since 2026-10-30: the jersey; your badge at 30 px gold, the
   handle and `#tag`, `TOWN · LVL 07`; `#18 · 32-16` on a solid gold tag
-  over the card's top right corner; a bar through your division, `16 / 50
+  over the card's top right corner, hidden before a rated game (Ross, 2026-10-30); a bar through your division, `16 / 50
   TO MVP I`, from `RankedRules.division_progress`, hidden at the top tier
   and before a rated game; RANKED MATCH) and ends with GLOBAL LEADERBOARD ·
   TOP 5 · RATED: the ladder's top five (rank gold for the top three, the
@@ -476,7 +476,7 @@ sky shader.
 
 ## Splash (design "Splash Screen" 30a NEON WALL, 2026-10-30)
 
-Before it, the **boot splash** (Ross, 2026-10-30) replaces Godot's logo: the neon ball centred on the brick wall (`assets/splash/boot_splash.png`, 1440×3120, made by `tools/make_boot_splash.gd`; `application/boot_splash/*` — cover, the wall's dark `#1F0F0C` behind it). iOS's launch screen reuses it; Android 12+ shows its system splash (the ball icon) first.
+Before it, Android 12+'s system splash shows the same ball (`assets/splash/android_splash_icon.png`, export option `splash_screen/icon`, sized to land where the boot splash draws it on the 720×1604 phone) on the icon's dark-brick background, then the **boot splash** (Ross, 2026-10-30) replaces Godot's logo: the neon ball centred on the brick wall (`assets/splash/boot_splash.png`, 1440×3120, made by `tools/make_boot_splash.gd`; `application/boot_splash/*` — cover, the wall's dark `#1F0F0C` behind it). iOS's launch screen reuses it; Android 12+ shows its system splash (the ball icon) first.
 
 `game/screens/splash_screen.gd` (the main scene; `App.to_splash()`,
 `tests/test_splash.gd`, QA `--qa-splash`, `--qa-splash --qa-save` for the

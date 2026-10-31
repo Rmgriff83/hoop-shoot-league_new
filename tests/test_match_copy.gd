@@ -81,6 +81,8 @@ func run(t) -> void:
 	t.eq(page.progress_text(), "16 / 50 TO MVP III", "the bar through the division")
 	page.set_rank({})
 	t.eq([page.badge_text(), page.progress_text()], ["UNRANKED", ""], "before a rated game: UNRANKED, no bar")
+	t.ok(not (root.find_child("RecordTag", true, false) as Control).visible, "…and no corner tag (Ross, 2026-10-30)")
+	t.eq(MatchCopy.you_record_line({}), "", "no record line before a rated game")
 	var ladder: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/ranked_board.json"))
 	page.set_top(ladder)
 	t.eq(page.top_count(), mini(ladder["rows"].size(), MatchLobbyPage.TOP_N), "the leaderboard's top five (as many as the ladder has)")

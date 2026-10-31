@@ -136,10 +136,11 @@ static func you_badge(rank: Dictionary) -> String:
 	return RankedRules.badge_text(rank)
 
 
-## Under the badge: `#18 · 32-16` (your ladder position and record).
+## The card's corner tag: `#18 · 32-16` (your ladder position and record);
+## "" before a rated game — the tag hides (Ross, 2026-10-30).
 static func you_record_line(rank: Dictionary) -> String:
 	if rank.is_empty() or int(rank.get("games", 0)) <= 0:
-		return "PLAY A RATED GAME"
+		return ""
 	var bits := []
 	if int(rank.get("position", 0)) > 0:
 		bits.push_back("#" + RetroTheme.thousands(int(rank["position"])))

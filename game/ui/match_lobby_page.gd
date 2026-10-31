@@ -511,8 +511,9 @@ func set_rank(rank: Dictionary) -> void:
 		return
 	_me_badge.text = MatchCopy.you_badge(rank)
 	_me_line.text = MatchCopy.you_record_line(rank)
+	_me_tag.visible = _me_line.text != ""   # no tag before a rated game
 	# A long badge (ALL-STAR I) steps down to 24 px rather than run under the tag.
-	var room := WHO_W + 27.0 - _me_tag.get_combined_minimum_size().x - 12.0
+	var room := WHO_W + 27.0 - (_me_tag.get_combined_minimum_size().x + 12.0 if _me_tag.visible else 0.0)
 	var fits := UiFont.display().get_string_size(_me_badge.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(30)).x + 2.0 * RetroTheme.OUTLINE <= room
 	_me_badge.add_theme_font_size_override("font_size", UiFont.snap(30 if fits else 24))
 	var p := RankedRules.division_progress(rank)
