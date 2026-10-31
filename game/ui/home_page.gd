@@ -265,6 +265,12 @@ func close_button() -> ShadowCard:
 ## over this one closes) and fade the wash up.
 ## `delay` holds the frame off-screen that long first (the season wrap-up
 ## follows the home out by 0.35 s, design 39c).
+## How dark the wash over the area gets (NEW PLAYER keeps the splash's
+## wall bare, design 35a 2026-10-30).
+func wash_alpha() -> float:
+	return WASH.a
+
+
 func slide_in(from_left := false, delay := 0.0) -> void:
 	visible = true
 	set_view_active(true)
@@ -279,7 +285,7 @@ func slide_in(from_left := false, delay := 0.0) -> void:
 	_slide.set_parallel(true)
 	_slide.set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
 	_slide.tween_property(root, "position:x", FRAME_POS.x, OPEN_S)
-	_slide.tween_property(wash, "color:a", WASH.a, OPEN_S)
+	_slide.tween_property(wash, "color:a", wash_alpha(), OPEN_S)
 
 
 ## Slide the frame out (to the right, or to the left under a page opening

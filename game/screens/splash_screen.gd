@@ -184,6 +184,21 @@ func _ready() -> void:
 
 
 func _build_ui() -> void:
+	# The wall on a layer of its own: it stays put while the sign and menu
+	# slide out for NEW PLAYER (design 35a), which sits on it bare.
+	var bg := CanvasLayer.new()
+	bg.name = "Wall"
+	bg.layer = 9
+	UiLayout.anchor_layer(bg)
+	add_child(bg)
+	var dark := ColorRect.new()
+	dark.name = "Dark"
+	dark.color = Color("#17110F")
+	UiLayout.full_rect(dark)
+	dark.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bg.add_child(dark)
+	# The wall from the top, the design's full height (a shorter screen crops its foot).
+	bg.add_child(_image("Bricks", "neon_bg", Vector2.ZERO))
 	_ui = CanvasLayer.new()
 	_ui.name = "Ui"
 	_ui.layer = 10
@@ -191,15 +206,6 @@ func _build_ui() -> void:
 	add_child(_ui)
 	var h := UiLayout.screen_height()
 	var lift := sign_lift(h)
-	var dark := ColorRect.new()
-	dark.name = "Dark"
-	dark.color = Color("#17110F")
-	UiLayout.full_rect(dark)
-	dark.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_ui.add_child(dark)
-	# The wall from the top, the design's full height (a shorter screen crops its foot).
-	var wall := _image("Wall", "neon_bg", Vector2.ZERO)
-	_ui.add_child(wall)
 	# The ball behind the words, one 400 px frame of the roll strip.
 	_ball_tex = AtlasTexture.new()
 	_ball_tex.atlas = load("res://assets/splash/neon_ball_roll.png")

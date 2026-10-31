@@ -27,10 +27,13 @@ func run(t) -> void:
 	t.ok(page.is_valid(), "pre-filled and valid at once (%s)" % str(page.values()))
 	var v: Dictionary = page.values()
 	t.ok(HandleWords.valid(str(v["name"])) and str(v["tag"]).length() == 2 and Towns.valid(str(v["town"])), "a handle with a two-digit tag and a town")
-	var pn: Label = page.find_child("PreviewName", true, false)
-	var pt: Label = page.find_child("PreviewTown", true, false)
-	t.ok(pn.text == str(v["name"]) and pt.text == str(v["town"]), "the gold card previews name over hometown")
-	t.eq((page.find_child("Tag", true, false) as Label).text, str(v["tag"]), "the tag sits after the name")
+	var ne: TextEdit = page.find_child("NameEdit", true, false)
+	var te: LineEdit = page.find_child("TownEdit", true, false)
+	t.ok(ne.text == str(v["name"]) and te.text == str(v["town"]), "typed straight onto the gold card (2026-10-30)")
+	t.ok(page.find_child("Card", true, false).find_child("NameEdit", true, false) != null and page.find_child("Card", true, false).find_child("TownEdit", true, false) != null, "…both fields inside it")
+	t.eq((page.find_child("Tag", true, false) as Label).text, "#" + str(v["tag"]), "the #tag beside PLAYER NAME")
+	t.ok(ne.wrap_mode == TextEdit.LINE_WRAPPING_BOUNDARY, "a long name wraps onto a second line")
+	t.eq(page.wash_alpha(), 0.0, "the splash's wall stays bare behind it")
 	t.eq((page.find_child("Status", true, false) as Label).text, NewPlayerPage.HINT, "the hint while everything is fine")
 	var play: ShadowCard = page.find_child("Play", true, false)
 	t.ok(play != null and not play.disabled and play.modulate.a == 1.0, "LET'S PLAY lit")
@@ -47,25 +50,22 @@ func run(t) -> void:
 	t.eq(same.values(), v, "same seed, same pre-fill")
 	same.free()
 	# Typing: tidied in place; the rules dim LET'S PLAY with a reason.
-	var ne: LineEdit = page.find_child("NameEdit", true, false)
 	ne.text = "ab"
-	ne.text_changed.emit("ab")
+	ne.text_changed.emit()
 	t.eq(ne.text, "AB", "typing is upper-cased")
 	t.eq((page.find_child("Status", true, false) as Label).text, "NAME NEEDS 3 OR MORE LETTERS", "too short")
 	t.ok(play.disabled and play.modulate.a < 1.0, "…LET'S PLAY dimmed")
-	ne.text = "ok  fuck!"
-	ne.text_changed.emit("ok  fuck!")
-	t.eq(ne.text, "OK FUCK", "punctuation and double spaces go")
+	ne.text = "ok  fuck!\n"
+	ne.text_changed.emit()
+	t.eq(ne.text, "OK FUCK", "punctuation, line breaks and double spaces go")
 	t.eq(page.problem(), "NAME NOT ALLOWED", "a blocked word")
 	ne.text = "BRICK BARON "
-	ne.text_changed.emit("BRICK BARON ")
+	ne.text_changed.emit()
 	t.eq(ne.text, "BRICK BARON ", "a trailing space survives while typing")
 	t.eq(page.name_value(), "BRICK BARON", "…and is trimmed in the value")
-	var te: LineEdit = page.find_child("TownEdit", true, false)
 	te.text = ""
 	te.text_changed.emit("")
 	t.eq(page.problem(), "PICK A HOMETOWN", "an empty hometown")
-	t.eq(pt.text, "HOMETOWN", "the card says HOMETOWN until there is one")
 	te.text = "salt harbor"
 	te.text_changed.emit("salt harbor")
 	t.ok(page.is_valid() and page.values()["town"] == "SALT HARBOR", "a typed town")

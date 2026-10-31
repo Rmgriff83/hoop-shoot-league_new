@@ -2081,12 +2081,17 @@ func _run_splash() -> void:
 	await _sleep(0.35)
 	await _snap("new_player_roll")
 	var page: NewPlayerPage = get_tree().root.find_child("NewPlayerPage", true, false)
-	var ne: LineEdit = page.find_child("NameEdit", true, false) if page != null else null
+	var ne: TextEdit = page.find_child("NameEdit", true, false) if page != null else null
 	if ne != null:
 		ne.text = "AB"
-		ne.text_changed.emit("AB")
+		ne.text_changed.emit()
 	await _sleep(0.2)
 	await _snap("new_player_invalid")
+	if ne != null:
+		ne.text = "BOARDWALK PROFESSOR"
+		ne.text_changed.emit()
+	await _sleep(0.2)
+	await _snap("new_player_long")
 	await _click_named("RollName")
 	await _sleep(0.35)
 	await _click_button_named("LET'S PLAY")

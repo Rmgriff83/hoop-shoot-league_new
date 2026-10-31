@@ -143,12 +143,16 @@ chevron (the footer says START INSIDE).
   around a `★` seam and scrolled at 80 px/s.
 - **New player** (design "New Game Flow" 35a, 2026-10-17; `game/ui/new_player_page.gd`
   `NewPlayerPage`, a `HomePage`): on a fresh install the splash's NEW GAME slides the
-  splash out left (sign and all) and the form in from the right. A gold card on top
-  previews name over hometown (`icon_jersey`); PLAYER NAME is pre-filled from
-  `HandleWords.generate` with its two-digit tag shown grey after the field; HOMETOWN
-  from `data/towns.json` (`Towns`, ≤ 16); each has a die (`DieGlyph`, a drawn die that
-  spins a turn) to re-roll, or is typed over — typing is tidied in place (upper-case,
-  A–Z 0–9 and single spaces). The name follows the settings rules (3–24, no blocked
+  sign and menu out left (the brick wall stays, on its own layer) and the form in from
+  the right, bare on the wall (no wash, `wash_alpha` 0). Since the 2026-10-30 pass
+  (35a on the 1560 phone, anchored under the top safe area): `< NEW PLAYER`, a line
+  saying how (type over either line or roll its die), then one gold card with the
+  fields on dashed lines — the jersey beside HOMETOWN (`data/towns.json`, `Towns`,
+  ≤ 16, white) and PLAYER NAME with its `#tag` on the right (`HandleWords.generate`,
+  a two-digit tag; the name in big gold display type, a `TextEdit` that wraps a long
+  name onto a second line) — each with a die (`DieGlyph` at 32 px, spins a turn) to
+  re-roll; typing is tidied in place (upper-case, A–Z 0–9 and single spaces, no line
+  breaks). The name follows the settings rules (3–24, no blocked
   word), the hometown cannot be empty; the status line says why ("NAME NEEDS 3 OR
   MORE LETTERS" / "NAME NOT ALLOWED" / "PICK A HOMETOWN", in `#FF8A6A`) and LET'S PLAY
   dims until both pass. LET'S PLAY → `App.create_player(name, tag, town)`: the name and
