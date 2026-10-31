@@ -53,12 +53,21 @@ func build(rows: Array, open_text: String, can_close := true) -> Control:
 	UiLayout.full_rect(_sheet)
 	_sheet.mouse_filter = Control.MOUSE_FILTER_PASS
 	_root.add_child(_sheet)
+	# The splash's brick wall behind the page (Ross, 2026-10-30): its dark
+	# ground over the whole screen, the wall from the top at the design's height.
 	var bg := ColorRect.new()
 	bg.name = "Bg"
-	bg.color = RetroTheme.c("bg")
+	bg.color = Color("#17110F")
 	UiLayout.full_rect(bg)
 	bg.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_sheet.add_child(bg)
+	var bricks := TextureRect.new()
+	bricks.name = "Bricks"
+	bricks.texture = load("res://assets/splash/neon_bg.png")
+	bricks.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	bricks.size = Vector2(720, 1560)
+	bricks.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_sheet.add_child(bricks)
 	# The header: < AREAS n/3 OPEN.
 	var head := HBoxContainer.new()
 	head.name = "Head"

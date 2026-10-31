@@ -23,7 +23,7 @@ const DESIGN_TOP := 118.0
 const DESIGN_CARDS := 1040.0
 const ZONE_D := 277.0         # the stars + area name zone
 const CHEVRON_D := 697.0      # the < > chevrons
-const BOARD_D := 747.0        # the time-trial board mid-court (Ross, 2026-10-30: 50 px under the chevrons)
+const BOARD_D := 757.0        # the time-trial board mid-court (Ross, 2026-10-30: 60 px under the chevrons)
 const AREA_D := 922.0         # the card area's top (the tabs when the league is open)
 ## Offsets kept from the design: the season chip under the zone, BACK TO HOME
 ## under the chip, the wash a little under the area's top, the floating
@@ -35,7 +35,7 @@ const WASH_DROP := 14.0
 const FLOAT_UP := 155.0
 const LOADOUT_UP := 198.0
 const FLOAT_GAP := 20.0       # BACK TO HOME stays this far above the CARDS float
-const TROPHY_UP := 43.0       # the trophies overhang the league card's top
+const TROPHY_UP := 35.0       # the board may reach this far above the league card (the trophies' first rows)
 const BOARD_GAP := 0.0        # the board may run down to them
 
 

@@ -17,7 +17,7 @@ func run(t) -> void:
 		t.eq(float(l["area_bottom"]), float(l["cards_bottom"]), "%d: the area ends with the cards" % h)
 		t.eq(float(l["chip_y"]), float(l["zone_y"]) + 182.0, "%d: the season chip under the zone" % h)
 		t.ok(float(l["loadout_y"]) < float(l["float_y"]) and float(l["float_y"]) < float(l["area_top"]), "%d: the floating rows sit above the area" % h)
-		t.ok(float(l["board_y"]) + float(l["board_max_h"]) <= float(l["cards_top"]) - 43.0, "%d: the board's room ends at the trophies" % h)
+		t.ok(float(l["board_y"]) + float(l["board_max_h"]) <= float(l["cards_top"]) - 35.0, "%d: the board's room ends at the trophies" % h)
 		if not bool(l["back_inline"]):
 			t.ok(float(l["back_y"]) + 64.0 + 20.0 <= float(l["loadout_y"]), "%d: BACK TO HOME clears the CARDS float" % h)
 		else:
@@ -35,7 +35,7 @@ func run(t) -> void:
 	t.eq(float(n["chip_y"]), 459.0, "notch: the season chip at 459 (design)")
 	t.eq(float(n["back_y"]), 640.0, "notch: BACK TO HOME at 640 (design)")
 	t.eq(float(n["chevron_y"]), 697.0, "notch: the chevrons at 697 (design)")
-	t.eq(float(n["board_y"]), 747.0, "notch: the board at 747 (Ross: 50 px under the design's 697)")
+	t.eq(float(n["board_y"]), 757.0, "notch: the board at 757 (Ross: 60 px under the design's 697)")
 	t.eq(float(n["loadout_y"]), 724.0, "notch: YOUR CARDS floats at 724 (design)")
 	t.eq(float(n["float_y"]), 767.0, "notch: the other floats at 767 (design)")
 	t.eq(float(n["area_top"]), 922.0, "notch: the area from 922 (design)")
