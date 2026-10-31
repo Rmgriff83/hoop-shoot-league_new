@@ -13,7 +13,7 @@ var _label: Label
 var _t := 0.0
 
 
-func _init(p_word: String, height: float) -> void:
+func _init(p_word: String, height: float, spin_px := SPIN, text_size := 18) -> void:
 	word = p_word
 	name = "Loading"
 	custom_minimum_size = Vector2(0, height)
@@ -22,15 +22,15 @@ func _init(p_word: String, height: float) -> void:
 	row.add_theme_constant_override("separation", GAP)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(row)
-	var spin := PixelSpinner.new(SPIN)
+	var spin := PixelSpinner.new(spin_px)
 	spin.name = "Spinner"
 	spin.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(spin)
-	_label = RetroTheme.on_scene(UiFont.label(word + "...", 18, RetroTheme.SCENE_TEXT)) as Label
+	_label = RetroTheme.on_scene(UiFont.label(word + "...", text_size, RetroTheme.SCENE_TEXT)) as Label
 	_label.name = "Word"
 	_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	# The width of the word and all three dots, so the row does not jump.
-	_label.custom_minimum_size.x = UiFont.display().get_string_size(word + "...", HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(18)).x + 2.0 * RetroTheme.OUTLINE
+	_label.custom_minimum_size.x = UiFont.display().get_string_size(word + "...", HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(text_size)).x + 2.0 * RetroTheme.OUTLINE
 	row.add_child(_label)
 	_tick()
 

@@ -800,16 +800,19 @@ func ot_break_shown() -> bool:
 	return _hud.toast_shown()
 
 
-## Card play "deal": the card slides out of its tray slot, grows to the middle
-## of the screen over a dithered ink shadow, then flies to whoever it acts
-## on — your own hoop for a self card, the opponent's window (or its
-## minimized chip) for a card played against them. The opponent's plays run
-## the same path from the window. The caption is the HUD's card toast
-## (design 4a, 2026-10-24): the card's thumb, DEEP FREEZE over PLAYED ON
-## OLLIE, the target badge — blue for your plays, orange for theirs.
-const DEAL_BIG := Vector2(168, 224)
+## Card play "deal": the card slides out of its tray slot, grows to its
+## spot over a dithered ink shadow, then flies to whoever it acts on — the
+## opponent's window (or its minimized chip) for every card you play, your
+## hoop for one they play on you. The opponent's plays run the same path
+## from the window. The caption is the HUD's card toast (design 4a,
+## 2026-10-24): the card's thumb, DEEP FREEZE over PLAYED ON OLLIE, the
+## target badge — blue for your plays, orange for theirs. The spot is above
+## the backboard, between the top row and the scoreboard, and the card is
+## 108×144 — never over the hoop (Ross, 2026-10-31: it was 168×224 at 502,
+## right across your view of the rim).
+const DEAL_BIG := Vector2(108, 144)
 const DEAL_SMALL := Vector2(26, 34)
-const DEAL_CENTRE := Vector2(360, 502)
+const DEAL_CENTRE := Vector2(360, 300)
 const DEAL_OUT_S := 0.35
 const DEAL_HOLD_S := 0.55
 const DEAL_FLY_S := 0.4

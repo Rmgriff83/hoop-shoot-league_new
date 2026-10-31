@@ -712,7 +712,9 @@ func load_board(area: String, period: String, force := false) -> void:
 		if not registered():
 			board_failed.emit.call_deferred(area, period)
 			return
-	var r := await _request("board", HTTPClient.METHOD_GET, "/v1/leaderboard?area=%s&period=%s&limit=50" % [area, period])
+	# One in-flight slot per board: a fetch for the next area is not refused
+	# because the last area's is still out.
+	var r := await _request("board:" + key, HTTPClient.METHOD_GET, "/v1/leaderboard?area=%s&period=%s&limit=50" % [area, period])
 	if r["ok"]:
 		_board_cache[key] = {"at": _now(), "data": r["json"]}
 		_fails = 0

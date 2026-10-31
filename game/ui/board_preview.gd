@@ -35,6 +35,7 @@ var _list: VBoxContainer
 var _you: Control
 var _fade: TextureRect
 var _shown := ROWS_SHOWN
+var _loading_line: LoadingLine
 var _press_at := Vector2.INF
 var _dragged := false
 
@@ -126,7 +127,26 @@ func _init() -> void:
 	_you.name = "YouSlot"
 	_you.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(_you)
+	# While the server's board is on its way (Ross, 2026-10-31: a loading
+	# state, never this phone's own runs in the meantime): the spinner and
+	# LOADING RANKS… where the window and YOUR row go.
+	_loading_line = LoadingLine.new("LOADING RANKS", ROW_H * (ROWS_SHOWN + 1), 24.0, 16)
+	_loading_line.name = "BoardLoading"
+	_loading_line.visible = false
+	col.add_child(_loading_line)
 	_relayout()
+
+
+func set_loading(on: bool) -> void:
+	_loading_line.visible = on
+	_loading_line.custom_minimum_size.y = ROW_H * (_shown + 1)
+	(_scroll.get_parent() as Control).visible = not on
+	_you.visible = not on
+	_relayout()
+
+
+func loading() -> bool:
+	return _loading_line.visible
 
 
 ## The room the board has on this screen: rows come off the window to fit.
@@ -134,6 +154,7 @@ func set_max_height(h: float) -> void:
 	var fixed := PAD_TOP + HEAD_H + HEAD_GAP + 2.0 + ROW_H + PAD_BOTTOM + ShadowStyle.OFFSET
 	_shown = clampi(int(floorf((h - fixed) / ROW_H)), 1, ROWS_SHOWN)
 	(_scroll.get_parent() as Control).custom_minimum_size.y = ROW_H * _shown
+	_loading_line.custom_minimum_size.y = ROW_H * (_shown + 1)
 	_relayout()
 
 
@@ -174,7 +195,7 @@ func set_rows(rows: Array, me: Dictionary = {}) -> void:
 		_you.add_child(yr)
 	_you.custom_minimum_size = Vector2(0, ROW_H if not you.is_empty() else 0.0)
 	_scroll.scroll_vertical = 0
-	_relayout()
+	set_loading(false)
 
 
 ## Rows in the window (YOU's pinned row counted when there is one).

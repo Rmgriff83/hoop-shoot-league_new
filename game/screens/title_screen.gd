@@ -131,6 +131,8 @@ func _ready() -> void:
 				break
 		App.home_card = _index
 	Net.board_loaded.connect(_on_board_for_preview)
+	Net.board_failed.connect(_on_board_fail_for_preview)
+	Net.resumed.connect(_on_resumed_board)
 	Net.score_accepted.connect(_on_score_accepted)
 	rebuild_chrome()
 	_ui.add_child(_cover)
@@ -155,8 +157,10 @@ var _board: BoardPreview
 
 ## The preview's rows: the cached server board for this area — ALL TIME
 ## (Ross, 2026-10-24: the home shows the forever list, not the week's) —
-## else the device's own runs (also while the server's board is still
-## empty, so a fresh server never blanks the runs on this phone). `fetch`
+## else LOADING RANKS while it is asked for (Ross, 2026-10-31: never this
+## phone's own runs in the meantime), and the device's own runs only when
+## it cannot come (no net, a failed fetch) or the server's board is still
+## empty (so a fresh server never blanks the runs on this phone). `fetch`
 ## asks the server when the chrome builds, on every area switch and when
 ## the server accepts a run (Ross, 2026-10-26: the board sat on the old
 ## area's list and on the pre-run list); the board_loaded handler below
@@ -171,17 +175,39 @@ func _refresh_board(fetch := true) -> void:
 	var area := str(CARDS[_index]["area"])
 	var data: Dictionary = Net.cached_board(area, BOARD_PERIOD)
 	var rows: Array = RanksCopy.rows(data) if not data.is_empty() else []
+	var asking := fetch and Net.enabled and Net.registered()
 	if not rows.is_empty():
 		_board.set_rows(rows, Dictionary(data.get("me", {})) if data.get("me") is Dictionary else {})
+	elif asking:
+		_board.set_loading(true)
 	else:
 		_board.set_rows(RanksCopy.local_rows(SaveService.top_scores(RanksCopy.BOARD_SIZE, area)))
-	if fetch and Net.enabled and Net.registered():
+	if asking:
 		Net.load_board(area, BOARD_PERIOD)
 
 
-func _on_board_for_preview(area: String, period: String, _data: Dictionary) -> void:
+func _on_board_for_preview(area: String, period: String, data: Dictionary) -> void:
 	if period == BOARD_PERIOD and _board != null and area == str(CARDS[_index]["area"]):
-		_refresh_board(false)
+		if RanksCopy.rows(data).is_empty():
+			_board_local()   # the server's board is still empty: this phone's runs
+		else:
+			_refresh_board(false)
+
+
+## The fetch failed (no signal, backing off): this phone's runs, if the
+## board is still waiting on it.
+func _on_board_fail_for_preview(area: String, period: String) -> void:
+	if period == BOARD_PERIOD and _board != null and area == str(CARDS[_index]["area"]) and _board.loading():
+		_board_local()
+
+
+func _board_local() -> void:
+	_board.set_rows(RanksCopy.local_rows(SaveService.top_scores(RanksCopy.BOARD_SIZE, str(CARDS[_index]["area"]))))
+
+
+## Back from the background: ask again (a fetch that died asleep said nothing).
+func _on_resumed_board() -> void:
+	_refresh_board()
 
 
 ## The server took a run of ours (NetClient clears its board cache first):
@@ -361,6 +387,10 @@ func _welcome() -> void:
 func _exit_tree() -> void:
 	if Net.board_loaded.is_connected(_on_board_for_preview):
 		Net.board_loaded.disconnect(_on_board_for_preview)
+	if Net.board_failed.is_connected(_on_board_fail_for_preview):
+		Net.board_failed.disconnect(_on_board_fail_for_preview)
+	if Net.resumed.is_connected(_on_resumed_board):
+		Net.resumed.disconnect(_on_resumed_board)
 	if Net.score_accepted.is_connected(_on_score_accepted):
 		Net.score_accepted.disconnect(_on_score_accepted)
 

@@ -276,6 +276,14 @@ func _run_heat() -> void:
 		await _sleep(0.45)
 		await _snap("heat_deal")
 	await _sleep(2.0)
+	# The deal held at its spot, above the backboard (Ross, 2026-10-31).
+	var dsc: Node = get_tree().current_scene
+	if dsc != null and dsc.has_method("_show_card_play"):
+		dsc.call("_show_card_play", "ice", false, Heat.AI)
+		await _sleep(0.5)
+		await _snap("heat_deal_hold")
+		print("QA heat: deal at %s" % str(dsc.call("deal_rect")))
+		await _sleep(1.0)
 	# The Magnet (design "Magnet Card FX" 38b): deploy it from the tray (the
 	# horseshoe pops up, the tag counts down), then a scripted near miss so
 	# the bolt grabs the ball and drops it in.
@@ -2139,6 +2147,10 @@ func _run_title() -> void:
 	# The home board mid-court (design 3a): filled with a stand-in top five
 	# and a YOU row so the look can be judged without a server.
 	var bp: BoardPreview = get_tree().root.find_child("BoardPreview", true, false)
+	if bp != null:
+		bp.set_loading(true)   # LOADING RANKS while the server's board is out (2026-10-31)
+		await _sleep(0.3)
+		await _snap("title_board_loading")
 	var qa_rows := []
 	for r in [["NEON OWL", 41], ["CLUTCH HAWK", 38], ["GLASS DUKE", 36], ["TURBO COMET", 35], ["LUCKY FOX", 34], ["PIXEL BARON", 34],
 			["RIM SHARK", 33], ["BANK PILOT", 33], ["COSMIC KID", 32], ["VELVET ACE", 32], ["HOOK ROVER", 31], ["SPIN WIZARD", 31]]:
