@@ -358,7 +358,7 @@ func _near_miss_launch(g: SimGeometry) -> Dictionary:
 
 ## Click a button by node name (icon buttons carry no text).
 func _click_named(node_name: String) -> void:
-	var b: Button = get_tree().root.find_child(node_name, true, false)
+	var b: Control = get_tree().root.find_child(node_name, true, false) as Control
 	if b == null or not b.is_visible_in_tree():
 		print("QA: no visible button named '%s'" % node_name)
 		return
@@ -1779,7 +1779,10 @@ func _run_ranks() -> void:
 	if archive != null:
 		archive.pick("cage")   # closing the front door leads back to the splash
 		await _sleep(1.0)
-	await _click_named("BoardPreview")
+	# The home board opens its popup since 2026-10-30; RANKS is the lobby's ALL RANKS.
+	var home := get_tree().current_scene
+	if home != null and home.has_method("_open_ranks"):
+		home.call("_open_ranks")
 	await _sleep(0.05)
 	await _snap("ranks_loading")
 	await _sleep(0.5)

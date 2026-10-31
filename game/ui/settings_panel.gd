@@ -78,12 +78,12 @@ func _build() -> void:
 	head_.add_theme_constant_override("separation", 20)
 	head_.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	body.add_child(head_)
-	var back := button("<", CREAM, 24, 56.0 - ShadowStyle.OFFSET)
+	var back := button("<", CREAM, 28, 56.0 - ShadowStyle.OFFSET)
 	back.name = "Back"
 	back.custom_minimum_size = Vector2(56 + ShadowStyle.OFFSET, 56 + ShadowStyle.OFFSET)
 	back.pressed.connect(close)
 	head_.add_child(back)
-	var title := words("SETTINGS", 28, true)
+	var title := words("SETTINGS", 32, true)
 	title.name = "Title"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	title.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -197,7 +197,7 @@ func _picker(name_: String, title: String, sub: String, options: Array, current:
 		b.name = "%s_%s" % [name_, str(value)]
 		b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		b.custom_minimum_size = Vector2(0, OPTION_H + ShadowStyle.OFFSET)
-		var l := words(str(o[1]), 13, true)
+		var l := words(str(o[1]), 15, true)
 		l.name = "Text"
 		l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -256,10 +256,10 @@ func _switch_row(name_: String, title: String, sub: String, on: bool) -> Button:
 	col.add_theme_constant_override("separation", 10)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.add_child(col)
-	var t := words(title, 18)
+	var t := words(title, 21)
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	col.add_child(t)
-	var s := words(sub, 14)
+	var s := words(sub, 16)
 	s.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	s.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	s.add_theme_color_override("font_color", MUTED)
@@ -268,7 +268,7 @@ func _switch_row(name_: String, title: String, sub: String, on: bool) -> Button:
 	sw.name = "Switch"
 	sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(sw)
-	b.custom_minimum_size.y = maxf(b.custom_minimum_size.y, 10.0 + 18.0 + 14.0 * (2.0 if sub.length() > 30 else 1.0) + 8.0)
+	b.custom_minimum_size.y = maxf(b.custom_minimum_size.y, 10.0 + 24.0 + 16.0 * (2.0 if sub.length() > 30 else 1.0) + 8.0)
 	return b
 
 
@@ -334,19 +334,19 @@ func _build_player() -> void:
 	top.add_theme_constant_override("separation", 12)
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	who.add_child(top)
-	_card_name = words("", 20, true)
+	_card_name = words("", 23, true)
 	_card_name.name = "CardName"
 	_card_name.add_theme_color_override("font_color", GOLD)
 	_card_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_card_name.clip_text = true
 	_card_name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	top.add_child(_card_name)
-	_card_tag = words(MatchCopy.card_tag(acct), 16)
+	_card_tag = words(MatchCopy.card_tag(acct), 18)
 	_card_tag.name = "CardTag"
 	_card_tag.add_theme_color_override("font_color", MUTED)
 	_card_tag.size_flags_vertical = Control.SIZE_SHRINK_END
 	top.add_child(_card_tag)
-	_card_town = words("", 16)
+	_card_town = words("", 18)
 	_card_town.name = "CardTown"
 	_card_town.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	who.add_child(_card_town)
@@ -386,17 +386,17 @@ func _build_player() -> void:
 	btns.add_theme_constant_override("separation", 16)
 	btns.mouse_filter = Control.MOUSE_FILTER_PASS
 	col.add_child(btns)
-	var save := button("SAVE", ORANGE, 16, FIELD_H)
+	var save := button("SAVE", ORANGE, 18, FIELD_H)
 	save.name = "Save"
 	save.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	save.pressed.connect(_save_player)
 	btns.add_child(save)
-	var close_b := button("CLOSE", CREAM, 16, FIELD_H)
+	var close_b := button("CLOSE", CREAM, 18, FIELD_H)
 	close_b.name = "CloseEdit"
 	close_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	close_b.pressed.connect(_close_edit)
 	btns.add_child(close_b)
-	_msg = words("", 15)
+	_msg = words("", 17)
 	_msg.name = "PlayerStatus"
 	_msg.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_msg.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -417,7 +417,7 @@ func _field_group(label: String, e: LineEdit, tag: String, edge: Color) -> VBoxC
 	g.name = e.name.trim_suffix("Edit") + "Group"
 	g.add_theme_constant_override("separation", 10)
 	g.mouse_filter = Control.MOUSE_FILTER_PASS
-	var l := words(label, 15)
+	var l := words(label, 17)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	l.add_theme_color_override("font_color", MUTED)
 	g.add_child(l)
@@ -446,7 +446,7 @@ func _field(e: LineEdit, tag: String, edge: Color) -> PanelContainer:
 	e.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(e)
 	if tag != "":
-		var t := words(tag, 16)
+		var t := words(tag, 18)
 		t.name = "FieldTag"
 		t.add_theme_color_override("font_color", Color("#A89E94"))
 		t.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -462,7 +462,7 @@ func _edit(name_: String, text: String, max_len: int, display := false) -> LineE
 	e.max_length = max_len
 	e.custom_minimum_size = Vector2(0, FIELD_H - 4.0)
 	e.add_theme_font_override("font", UiFont.display() if display else UiFont.body_bold())
-	e.add_theme_font_size_override("font_size", UiFont.snap(20 if display else 22))
+	e.add_theme_font_size_override("font_size", UiFont.snap(23 if display else 25))
 	e.add_theme_color_override("font_color", CREAM)
 	e.add_theme_color_override("font_placeholder_color", Color("#A89E94"))
 	e.add_theme_color_override("caret_color", GOLD)
@@ -676,7 +676,7 @@ func _build_danger() -> void:
 			_code_edit.text = cleaned
 			_code_edit.caret_column = mini(caret, cleaned.length()))
 	_code_row.add_child(_field(_code_edit, "", GOLD))
-	var claim := button("CLAIM", ORANGE, 14, FIELD_H)
+	var claim := button("CLAIM", ORANGE, 16, FIELD_H)
 	claim.name = "Claim"
 	claim.custom_minimum_size.x = 112 + ShadowStyle.OFFSET
 	claim.pressed.connect(_claim_code)
@@ -768,7 +768,7 @@ func _section(title: String, note := "", danger := false) -> HBoxContainer:
 	h.name = title.capitalize().replace(" ", "") + "Head"
 	h.add_theme_constant_override("separation", 12)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var t := words(title, 16, true)
+	var t := words(title, 18, true)
 	if danger:
 		t.add_theme_color_override("font_color", BAD)
 	h.add_child(t)
@@ -780,7 +780,7 @@ func _section(title: String, note := "", danger := false) -> HBoxContainer:
 	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(rule)
 	if note != "":
-		var n := words(note, 14)
+		var n := words(note, 16)
 		n.name = "Note"
 		n.add_theme_color_override("font_color", MUTED)
 		h.add_child(n)
@@ -793,11 +793,11 @@ func _title_row(title: String, sub: String) -> HBoxContainer:
 	h.name = "Head"
 	h.add_theme_constant_override("separation", 12)
 	h.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var t := words(title, 18)
+	var t := words(title, 21)
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	h.add_child(t)
-	var s := words(sub, 14)
+	var s := words(sub, 16)
 	s.name = "Sub"
 	s.add_theme_color_override("font_color", MUTED)
 	h.add_child(s)
@@ -823,18 +823,18 @@ func _nav_row(name_: String, title: String, sub: String, colour: Color, chevron 
 	col.add_theme_constant_override("separation", 10)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	h.add_child(col)
-	var t := words(title, 16, true)
+	var t := words(title, 18, true)
 	t.name = "Top"
 	t.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	col.add_child(t)
-	var s := words(sub, 14)
+	var s := words(sub, 16)
 	s.name = "Sub"
 	s.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	s.add_theme_color_override("font_color", MUTED if colour != ORANGE else CREAM)
 	s.visible = sub != ""
 	col.add_child(s)
 	if chevron:
-		var c := words(">", 22, true)
+		var c := words(">", 25, true)
 		c.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		c.size_flags_vertical = Control.SIZE_FILL
 		h.add_child(c)

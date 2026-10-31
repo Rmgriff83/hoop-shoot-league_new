@@ -995,6 +995,7 @@ func _input(event: InputEvent) -> void:
 			var cid := str(_drag["id"])
 			_end_drag(true)
 			if over >= 0 and App.loadout_slots(bucket)[over] == null and App.equip_card(over, cid, bucket):
+				Sfx.click()   # placed (Ross, 2026-10-30: the menus' click on the pick-up and the drop)
 				refresh_cards()
 				picked.emit(slots())
 			get_viewport().set_input_as_handled()
@@ -1006,6 +1007,7 @@ func _start_ghost() -> void:
 	if _drag.is_empty() or bool(_drag.get("moved", false)):
 		return
 	_drag["moved"] = true
+	Sfx.click()   # picked up (a tap's arm and a slot's take-back click as buttons already)
 	var card := CardDefs.get_card(str(_drag["id"]))
 	_ghost = ModeCards.art(card, YOU_SLOT, 8.0)
 	_ghost.name = "Ghost"

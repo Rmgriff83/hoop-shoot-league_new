@@ -131,12 +131,12 @@ func _ready() -> void:
 	head.add_theme_constant_override("separation", 24)
 	head.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(head)
-	var back := HomePage.button("<", CREAM, 28, BACK_PX)
+	var back := HomePage.button("<", CREAM, 32, BACK_PX)
 	back.name = "Back"
 	back.custom_minimum_size.x = BACK_PX + ShadowStyle.OFFSET
 	back.pressed.connect(func() -> void: App.leave_credits())
 	head.add_child(back)
-	var title := RetroTheme.display("CREDITS", 32, CREAM)
+	var title := RetroTheme.display("CREDITS", 37, CREAM)
 	title.name = "Title"
 	RetroTheme.on_scene(title)
 	RetroTheme.dithered(title)
@@ -151,7 +151,7 @@ func _ready() -> void:
 	tools.add_theme_constant_override("separation", 14)
 	tools.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(tools)
-	var built := _words("BUILT WITH", 16)
+	var built := _words("BUILT WITH", 18)
 	built.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	built.size_flags_vertical = Control.SIZE_FILL
 	tools.add_child(built)
@@ -159,7 +159,7 @@ func _ready() -> void:
 		var chip := ShadowPanel.new(GOLD, 0.0, 0.35, 12.0)
 		chip.name = "Tool" + str(n).capitalize()
 		chip.custom_minimum_size = Vector2(0, 40 + ShadowStyle.OFFSET)
-		var l := _display(str(n), 14)
+		var l := _display(str(n), 16)
 		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		chip.add_child(l)
 		tools.add_child(chip)
@@ -185,11 +185,11 @@ func _ready() -> void:
 		UiLayout.full_rect(row)   # inside a Control: no bleed, the offsets below hold
 		row.offset_right = -ShadowStyle.OFFSET
 		row.offset_bottom = -ShadowStyle.OFFSET
-		var name_l := _display(str(s).to_upper(), 16)
+		var name_l := _display(str(s).to_upper(), 18)
 		name_l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		name_l.size_flags_vertical = Control.SIZE_FILL
 		row.add_child(name_l)
-		var count := _words(str((doc.get(s, []) as Array).size()), 15)
+		var count := _words(str((doc.get(s, []) as Array).size()), 17)
 		count.name = "Count"
 		count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		count.size_flags_vertical = Control.SIZE_FILL
@@ -279,11 +279,11 @@ func _card(r: Dictionary) -> Control:
 	col.add_theme_constant_override("separation", 14)
 	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	p.add_child(col)
-	var used := _words(str(r["used"]), 15, GOLD)
+	var used := _words(str(r["used"]), 17, GOLD)
 	used.name = "Used"
 	used.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	col.add_child(used)
-	var title := _display(str(r["title"]), 18)
+	var title := _display(str(r["title"]), 21)
 	title.name = "CreditTitle"
 	title.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 	title.add_theme_constant_override("line_spacing", 7)
@@ -293,7 +293,7 @@ func _card(r: Dictionary) -> Control:
 	by.add_theme_constant_override("v_separation", 10)
 	by.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(by)
-	var author := _words(str(r["author"]), 17)
+	var author := _words(str(r["author"]), 20)
 	author.name = "Author"
 	author.custom_minimum_size.y = 30
 	author.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -309,7 +309,7 @@ func _card(r: Dictionary) -> Control:
 	chip.add_theme_stylebox_override("panel", sb)
 	chip.custom_minimum_size = Vector2(0, 30)
 	chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var lic := _words(str(r["licence"]), 13)
+	var lic := _words(str(r["licence"]), 15)
 	lic.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	# A chip hugs its words; one too long for the card's width wraps across it.
 	var font := lic.get_theme_font("font")
@@ -322,7 +322,7 @@ func _card(r: Dictionary) -> Control:
 		sb.content_margin_bottom = 6
 	chip.add_child(lic)
 	by.add_child(chip)
-	var url := UiFont.label(str(r["url"]), 14, URL_C, UiFont.body())
+	var url := UiFont.label(str(r["url"]), 16, URL_C, UiFont.body())
 	url.name = "Url"
 	RetroTheme.on_scene(url)
 	url.add_theme_color_override("font_color", URL_C)

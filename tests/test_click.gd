@@ -46,6 +46,12 @@ func run(t) -> void:
 	plain.free()
 	var src := FileAccess.get_file_as_string("res://game/autoload/sfx.gd")
 	t.ok(src.find("get_tree().node_added.connect(_on_node_added)") >= 0, "Sfx hooks node_added in _ready")
+	# The pre-match pick (Ross, 2026-10-30): a dragged card clicks as it lifts and as it lands.
+	var pm := FileAccess.get_file_as_string("res://game/ui/pre_match_page.gd")
+	var lift := pm.substr(pm.find("func _start_ghost("), 400)
+	t.ok(lift.find("Sfx.click()") >= 0, "a card picked up off the row clicks")
+	var drop := pm.substr(pm.find("App.equip_card(over, cid, bucket)"), 120)
+	t.ok(drop.find("Sfx.click()") >= 0, "…and clicks again as it lands in a slot")
 	# Credited (Ross, 2026-10-26): TannerSound's pack.
 	var credits: Dictionary = load("res://game/screens/credits_screen.gd").load_credits()
 	var found := false
