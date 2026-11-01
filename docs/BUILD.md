@@ -113,11 +113,12 @@ binaries live outside it like the keystore:
 
 ```
 ~/.config/hoop_shoot/revenuecat/android/revenue_cat/   revenue_cat.debug.aar, revenue_cat.release.aar
-~/.config/hoop_shoot/revenuecat/ios/plugins/revenuecat/ revenue_cat.gdip + GodotxRevenueCat / RevenueCat / RevenueCatUI .xcframework
+~/.config/hoop_shoot/revenuecat/ios/plugins/revenue_cat/ revenue_cat.gdip + GodotxRevenueCat / RevenueCat / RevenueCatUI .xcframework
 ```
 
-(unpacked from the release's `godotx_revenue_cat.zip`). `tools/build.sh`
-copies them into `android/revenue_cat/` and `ios/plugins/revenuecat/`
+(**`tools/fetch_store_plugin.sh`** puts them there: the release zip, pinned by
+version and SHA-256 — Godot's stand-in for a lockfile). `tools/build.sh`
+copies them into `android/revenue_cat/` and `ios/plugins/revenue_cat/`
 (both gitignored) before every export. The Android side rides the **gradle**
 build only — the Play preset; the phone-deploy "Android" preset stays
 gradle-free (Ross, 2026-10-31), so phone deploys run the stub store. The iOS

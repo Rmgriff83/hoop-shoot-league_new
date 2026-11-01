@@ -70,14 +70,14 @@ echo "Hoop Shoot League $VERSION build $BUILD ($MODE)"
 # goes on and the game runs its null store backend (today's stub store).
 STORE_PLUGIN="$HOME/.config/hoop_shoot/revenuecat"
 stage_store_plugin() {
-  if [[ -d "$STORE_PLUGIN/android/revenue_cat" && -d "$STORE_PLUGIN/ios/plugins/revenuecat" ]]; then
-    rm -rf android/revenue_cat ios/plugins/revenuecat
+  if [[ -d "$STORE_PLUGIN/android/revenue_cat" && -d "$STORE_PLUGIN/ios/plugins/revenue_cat" ]]; then
+    rm -rf android/revenue_cat ios/plugins/revenue_cat
     mkdir -p android ios/plugins
     cp -R "$STORE_PLUGIN/android/revenue_cat" android/revenue_cat
-    cp -R "$STORE_PLUGIN/ios/plugins/revenuecat" ios/plugins/revenuecat
+    cp -R "$STORE_PLUGIN/ios/plugins/revenue_cat" ios/plugins/revenue_cat
     echo "staged the RevenueCat plugin from $STORE_PLUGIN"
   else
-    echo "no RevenueCat plugin at $STORE_PLUGIN (android/revenue_cat + ios/plugins/revenuecat): the store runs its stub"
+    echo "no RevenueCat plugin at $STORE_PLUGIN (tools/fetch_store_plugin.sh installs it): the store runs its stub"
   fi
   [[ -f store_keys.json ]] || echo "no store_keys.json (see store_keys.example.json): the store runs its stub"
 }

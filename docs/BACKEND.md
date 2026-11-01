@@ -710,9 +710,10 @@ is a *pending purchase* the phone CLAIMs, like `/v1/rewards/claim`.
   (a `FakeStoreBackend` and a scripted `Net.transport`); QA `--qa-store`
   (the stub) and `--qa-store-live`.
 - **Setup** (Ross; the checklist):
-  1. The plugin binaries: godot-x/revenuecat **2.6.0** (`godotx_revenue_cat.zip`
-     from its GitHub release; MIT) — unpack `android/revenue_cat/` and
-     `ios/plugins/revenuecat/` under **`~/.config/hoop_shoot/revenuecat/`**.
+  1. The plugin binaries: `tools/fetch_store_plugin.sh` (godot-x/revenuecat
+     **2.6.0**, MIT, pinned by SHA-256) puts `android/revenue_cat/` and
+     `ios/plugins/revenue_cat/` under **`~/.config/hoop_shoot/revenuecat/`**
+     (done on Ross's Mac, 2026-11-01).
      `tools/build.sh` stages them into the project (both gitignored) before
      every export; without them the build runs the stub store.
   2. A RevenueCat project with two apps: **iOS** bundle
