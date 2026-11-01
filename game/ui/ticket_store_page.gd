@@ -212,11 +212,11 @@ func _build_pack(i: int) -> void:
 	_areas.push_back(area)
 	_fill(i)
 	if best:
-		var tag := BestTag.new()
+		var tag := CornerTag.new("BEST VALUE")
 		tag.name = "BestValue"
 		_store.add_child(tag)
 		# top −16, right −6 off the face
-		tag.position = Vector2(BODY_W - ShadowStyle.OFFSET + 6.0 - tag.custom_minimum_size.x + BestTag.DROP, panel.position.y - 16.0)
+		tag.position = Vector2(BODY_W - ShadowStyle.OFFSET + 6.0 - tag.custom_minimum_size.x + CornerTag.DROP, panel.position.y - 16.0)
 
 
 # ---- the buy button --------------------------------------------------------------
@@ -454,30 +454,6 @@ func set_tickets() -> void:
 	super()
 	if _chip_count != null and (_flight == null or not _flight.playing()):
 		_chip_count.text = RetroTheme.thousands(App.tickets())
-
-
-## BEST VALUE: butter with a 2 px ink edge and a 4 px ink drop, ink words.
-class BestTag extends Control:
-	const H := 44.0
-	const PAD := 14.0
-	const DROP := 4.0
-	func _init() -> void:
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var l := UiFont.label("BEST VALUE", 16, RetroTheme.SCENE_OUTLINE, UiFont.display())
-		l.name = "Word"
-		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var w := UiFont.display().get_string_size(l.text, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(16)).x
-		l.position = Vector2(PAD, 0)
-		l.size = Vector2(w, H)
-		add_child(l)
-		custom_minimum_size = Vector2(w + 2.0 * PAD + DROP, H + DROP)
-		size = custom_minimum_size
-	func _draw() -> void:
-		var face := Rect2(Vector2.ZERO, size - Vector2.ONE * DROP)
-		draw_rect(Rect2(face.position + Vector2.ONE * DROP, face.size), RetroTheme.SCENE_OUTLINE)
-		draw_rect(face, HI)
-		draw_rect(Rect2(face.position + Vector2.ONE, face.size - Vector2.ONE * 2.0), RetroTheme.SCENE_OUTLINE, false, 2.0)
 
 
 ## tkFly (design 50a): 6 tickets (12 for a pack over 500), 44 px, 0.08 s

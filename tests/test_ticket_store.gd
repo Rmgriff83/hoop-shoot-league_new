@@ -341,7 +341,7 @@ func _page(t, store, app, fake: FakeStoreBackend) -> void:
 	var tag: Control = page.find_child("BestValue", true, false)
 	var pack1: Control = page.find_child("Pack1", true, false)
 	t.close(tag.position.y, pack1.position.y - 16.0, 0.01, "…16 px over the 1000's top")
-	t.close(tag.position.x + tag.size.x - TicketStorePage.BestTag.DROP, pack1.size.x - ShadowStyle.OFFSET + 6.0, 0.01, "…6 px past its right edge")
+	t.close(tag.position.x + tag.size.x - CornerTag.DROP, pack1.size.x - ShadowStyle.OFFSET + 6.0, 0.01, "…6 px past its right edge")
 	# The price button, with the store's own price.
 	var area0: Control = page.find_child("Pack0", true, false).find_child("BuyArea", true, false)
 	t.eq(page.state(0), "idle", "idle at first")

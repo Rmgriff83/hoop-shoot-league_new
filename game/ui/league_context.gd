@@ -393,16 +393,14 @@ func _fill_heat() -> void:
 		)
 		vb.add_child(adv)
 		return
-	var line := ""
+	# The tag's line (v2, 2026-11-01): NEXT GAME in the season, the series and
+	# game in the playoffs — the design dropped the day and home / away.
+	var line := "NEXT GAME"
 	var playoffs: bool = m["phase"] == Season.PHASE_PLAYOFFS
 	if playoffs:
 		var mine := Season.player_series(s, Campaign.PLAYER)
 		var wl := LeagueSummary.series_record(mine)
-		line = "%s · GAME %d · %s" % [LeagueSummary.series_label(s, mine), wl[0] + wl[1] + 1, "HOME" if mine["highSeedId"] == Campaign.PLAYER else "AWAY"]
-	else:
-		var g := Season.player_game_on(s, m["day"], Campaign.PLAYER)
-		var home: bool = not g.is_empty() and g["homeId"] == Campaign.PLAYER
-		line = "DAY %d · %s" % [m["day"], "HOME" if home else "AWAY"]
+		line = "%s · GAME %d" % [LeagueSummary.series_label(s, mine), wl[0] + wl[1] + 1]
 	vb.add_child(_shooter_card(opp_id, line, playoffs))
 
 
@@ -416,27 +414,29 @@ func _table_row(id: String) -> Dictionary:
 	return {"w": 0, "l": 0, "place": 0}
 
 
-## The opponent card (design 3a, 2026-10-30): pine, see-through — the match
-## line, VS., the name and their record (`RECORD · 2ND`, `· 2ND SEED` in the
-## playoffs) on the left, nickname over hometown on the right; ACC / ARC
-## segments and PACE beside PLAY (its gold shine); under a dashed rule the
-## cards they hold for this game.
+## The opponent card (design 3a, 2026-10-30; v2 2026-11-01): pine,
+## see-through, with the match line as a butter tag hung off its top-left
+## corner (NEXT GAME; `SEMI · GAME 3` in the playoffs). VS., the name and
+## their record (`RECORD · 2ND`, `· 2ND SEED` in the playoffs) on the left,
+## nickname over hometown on the right; ACC / ARC segments and PACE beside
+## PLAY (its gold shine); under a dashed rule the cards they hold for this
+## game. Returns the card in a 20 px-topped wrap that makes room for the tag.
 func _shooter_card(opp_id: String, line: String, playoffs: bool) -> Control:
 	var sh := LeagueData.shooter(opp_id)
 	var card := ShadowPanel.new(PINE, 22.0, 0.4, 24.0)
 	card.name = "Opponent"
 	var vb := _vcol(16)
 	card.add_child(vb)
-	# The line and VS. beside the nickname / hometown; the name and record
-	# under them across the card's full width (a long name stays one line).
+	# VS. beside the nickname / hometown (10 px down, under the tag); the
+	# name and record under them across the card's full width (a long name
+	# stays one line).
 	var head := _vcol(16)
-	vb.add_child(_inset(head, 6, 8))
+	vb.add_child(_inset(head, 16, 8))
 	var top := _hrow(16)
 	head.add_child(top)
 	var names := _vcol(16)
 	names.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(names)
-	names.add_child(_text(line, 22))
 	names.add_child(_display("VS.", 22, HI))
 	var nm := _display(str(sh.get("name", "?")).to_upper(), 34)
 	nm.name = "OppName"
@@ -517,7 +517,18 @@ func _shooter_card(opp_id: String, line: String, playoffs: bool) -> Control:
 			chips.add_child(_crop_chip(c))
 	foot.add_child(chips)
 	vb.add_child(_dashed_top(foot))
-	return card
+	# The wrap: the design's margin-top 20; the tag at top −21, left −6 off the face.
+	var wrap := MarginContainer.new()
+	wrap.name = "OpponentWrap"
+	wrap.add_theme_constant_override("margin_top", 20)
+	wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	wrap.add_child(card)
+	var tag := CornerTag.new(line, 40.0, Vector2(-6, -21))
+	tag.name = "HeatTag"
+	tag.size_flags_horizontal = Control.SIZE_SHRINK_BEGIN
+	tag.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
+	wrap.add_child(tag)
+	return wrap
 
 
 ## The opponent's season hand (the deterministic deal App.league_pre_match_info uses).
