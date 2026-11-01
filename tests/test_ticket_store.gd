@@ -295,7 +295,23 @@ func _page(t, store, app, fake: FakeStoreBackend) -> void:
 	fake.settle()
 	t.eq(page.state(0), "idle", "the sheet closed without a sale: back to the price")
 	t.eq(App.tickets(), before, "…and nothing granted")
+	# A failed sale: PURCHASE FAILED with the SDK's own line under it.
+	for c in page.get_children().filter(func(c: Node) -> bool: return c.name.begins_with("StoreToast")):
+		c.free()   # earlier credits toasted too
 	fake.auto = true
+	fake.outcome = "error"
+	page.tap(0)
+	page.confirm(0)
+	t.eq(page.state(0), "idle", "a failed sale goes back to the price")
+	var toast: Node = page.find_child("StoreToast", true, false)
+	t.ok(toast != null, "…and toasts")
+	if toast != null:
+		t.eq((toast.find_child("Title", true, false) as Label).text, StoreCopy.failed(), "…PURCHASE FAILED")
+		var sub: Label = toast.find_child("Sub", true, false)
+		t.eq(sub.text if sub != null else "(no sub)", "STORE_PROBLEM", "…with the store's message")
+		toast.free()
+	t.eq(StoreCopy.detail("  Error fetching product: \u201cx\u201d\n(code 23) "), "ERROR FETCHING PRODUCT: X (CODE 23)", "the detail line: ASCII, upper, tidy")
+	t.eq(StoreCopy.detail("a".repeat(60)).length(), StoreCopy.DETAIL_MAX, "…and capped")
 	fake.outcome = "ok"
 	# A sale through the page: the credit lands, the success plays from the old balance.
 	_srv["pending"] = [_row(20, "tickets_300")]

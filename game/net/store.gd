@@ -32,6 +32,8 @@ var _configured := false
 var _buying := ""
 var _slow_polling := false
 var _syncing := false
+## The SDK's message from the last failed purchase (the page's toast shows it).
+var last_error := ""
 ## Tests: `_sleep` is a coroutine the suite can stub (no timers off-tree).
 var sleep: Callable = Callable()
 
@@ -124,10 +126,12 @@ func _on_purchased(r: Dictionary) -> void:
 	if _buying == "" or (id != "" and id != _buying):
 		return
 	id = _buying
+	last_error = ""
 	if bool(r.get("cancelled", false)):
 		_end(id, false, "cancelled")
 	elif str(r.get("error", "")) != "":
-		push_warning("store: purchase failed: %s" % str(r["error"]))
+		last_error = str(r["error"])
+		push_warning("store: purchase failed: %s" % last_error)
 		_end(id, false, "error")
 	else:
 		_await_credit(id)

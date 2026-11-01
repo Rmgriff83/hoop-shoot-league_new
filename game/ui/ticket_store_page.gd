@@ -259,7 +259,9 @@ func _on_purchase_done(product_id: String, ok: bool, reason: String) -> void:
 	_set_state(i, "idle")
 	match reason:
 		"error":
-			_toast(StoreCopy.failed(), CREAM)
+			_toast(StoreCopy.failed(), CREAM, StoreCopy.detail(Store.last_error))
+		"unavailable":
+			_toast(StoreCopy.unavailable(), CREAM)
 		"slow":
 			_toast(StoreCopy.on_the_way(), RetroTheme.LIGHT["gold"])
 
@@ -290,12 +292,11 @@ func _on_credited(n: int) -> void:
 
 const TOAST_TOP := 44.0
 
-func _toast(text: String, colour: Color) -> void:
-	if not is_inside_tree():
-		return
+## The toast is built off-tree too (tests); `show_once` runs deferred, once the page is up.
+func _toast(text: String, colour: Color, sub := "") -> void:
 	var toast := Toast.new(colour, UiLayout.screen_top() + TOAST_TOP)
 	toast.name = "StoreToast"
-	toast.set_small(text, "", "icon_ticket")
+	toast.set_small(text, sub, "icon_ticket")
 	add_child(toast)
 	toast.show_once.call_deferred()
 
