@@ -25,7 +25,11 @@ func _init() -> void:
 
 
 func available() -> bool:
-	return _rc != null and _key != ""
+	return _rc != null
+
+
+func needs_key() -> bool:
+	return true
 
 
 func configure(api_key: String, user_id: String) -> void:
@@ -40,14 +44,14 @@ func set_user(user_id: String) -> void:
 
 
 func fetch_products(ids: Array) -> void:
-	if not available():
+	if not available() or _key == "":
 		products.emit([], "unavailable")
 		return
 	_rc.call("fetch_products", PackedStringArray(ids))
 
 
 func purchase(id: String) -> void:
-	if not available():
+	if not available() or _key == "":
 		purchased.emit({"product_id": id, "transaction_id": "", "cancelled": false, "error": "unavailable"})
 		return
 	_rc.call("purchase", id)

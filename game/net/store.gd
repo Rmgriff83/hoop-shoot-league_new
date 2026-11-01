@@ -68,7 +68,8 @@ func use_backend(b: StoreBackend) -> void:
 
 ## The SDK knows this player (the app user id is the player id): started
 ## once the account exists, and told when the id changes (a restore, a
-## transfer claim).
+## transfer claim). A backend that needs the dashboard key and has none
+## (store_keys.json unfilled) is never started: the store stays the stub.
 func ensure() -> void:
 	if not backend.available() or not Net.registered():
 		return
@@ -76,7 +77,10 @@ func ensure() -> void:
 	if id == "":
 		return
 	if not _configured:
-		backend.configure(StoreKeys.revenuecat_key(), id)
+		var key := StoreKeys.revenuecat_key()
+		if key == "" and backend.needs_key():
+			return
+		backend.configure(key, id)
 		_configured = true
 		_user = id
 	elif id != _user:
@@ -84,9 +88,9 @@ func ensure() -> void:
 		_user = id
 
 
-## Can a pack be bought here (the plugin, a key, an account)?
+## Can a pack be bought here (the plugin, started with its key, an account)?
 func live() -> bool:
-	return backend.available() and Net.registered()
+	return backend.available() and Net.registered() and _configured
 
 
 func fetch_prices() -> void:

@@ -15,8 +15,15 @@ signal products(items: Array, error: String)
 signal purchased(result: Dictionary)
 
 
-## The plugin is present on this device and a key was given.
+## The plugin is present on this device (before any key: `Store.ensure`
+## hands the key over only to an available backend).
 func available() -> bool:
+	return false
+
+
+## Does `configure` need the dashboard's SDK key (store_keys.json)? The
+## plugin does; the fakes and the null backend do not.
+func needs_key() -> bool:
 	return false
 
 

@@ -78,6 +78,7 @@ func run(t) -> void:
 	_packs(t)
 	_keys(t)
 	_store(t, store, net, save, app, fake)
+	await _plugin(t, store, save, app, fake)
 	_page(t, store, app, fake)
 	_chips(t)
 	_wiring(t)
@@ -241,6 +242,77 @@ func _store(t, store, net, save, app, fake: FakeStoreBackend) -> void:
 	store.use_backend(fake)
 	store.ensure()
 	store.fetch_prices()
+
+
+## A stand-in for the plugin's GodotxRevenueCat singleton (its 2.6.0 shapes).
+class FakeRc extends Object:
+	signal products(data: Dictionary)
+	signal purchase_result(data: Dictionary)
+	var calls: Array = []
+
+	func initialize(key: String, user: String, _debug: bool) -> void:
+		calls.push_back(["initialize", key, user])
+
+	func login(user: String) -> void:
+		calls.push_back(["login", user])
+
+	func fetch_products(ids: PackedStringArray) -> void:
+		calls.push_back(["fetch_products", Array(ids)])
+
+	func purchase(id: String) -> void:
+		calls.push_back(["purchase", id])
+
+
+## The plugin seam: RevenueCatBackend against a stand-in singleton. (The
+## first TestFlight build ran the stub: available() waited on the key that
+## only an available backend is given.)
+func _plugin(t, store, save, app, fake: FakeStoreBackend) -> void:
+	var pid := str(save.get_account()["playerId"])
+	var done: Array = []
+	var on_done := func(id: String, ok: bool, reason: String) -> void: done.push_back([id, ok, reason])
+	store.purchase_done.connect(on_done)
+	var rc := FakeRc.new()
+	Engine.register_singleton(RevenueCatBackend.SINGLETON, rc)
+	var be := RevenueCatBackend.new()
+	t.ok(be.available(), "the singleton present: the backend is available before any key")
+	t.ok(be.needs_key(), "…and wants the dashboard key")
+	store.use_backend(be)
+	StoreKeys.os_for_test = "iOS"
+	store.ensure()
+	t.eq(rc.calls, [["initialize", "appl_test", pid]], "ensure starts the SDK with the iOS key and the player id")
+	t.ok(store.live(), "…live")
+	store.fetch_prices()
+	t.eq(rc.calls.back(), ["fetch_products", TicketShop.ids()], "prices are asked by product id")
+	rc.products.emit({"error": "", "products": [{"id": "tickets_300", "title": "300 Tickets", "price": "€1.19", "amount": 1.19}]})
+	t.eq(TicketShop.price("tickets_300"), "€1.19", "…and the store's own string lands")
+	var before: int = app.tickets()
+	store.purchase("tickets_300")
+	t.eq(rc.calls.back(), ["purchase", "tickets_300"], "BUY opens the sheet by product id")
+	t.eq(store.buying(), "tickets_300", "…and waits on it")
+	rc.purchase_result.emit({"cancelled": true, "error": "Purchase was cancelled.", "product_id": "tickets_300", "transaction_id": "", "active_entitlements": []})
+	t.eq(done.back(), ["tickets_300", false, "cancelled"], "a cancelled sheet: cancelled, the SDK's message dropped")
+	store.purchase("tickets_300")
+	rc.purchase_result.emit({"cancelled": false, "error": "The product is not available.", "product_id": "tickets_300", "transaction_id": "", "active_entitlements": []})
+	t.eq(done.back(), ["tickets_300", false, "error"], "a refused sheet: error…")
+	t.eq(store.last_error, "The product is not available.", "…with the SDK's message kept")
+	t.eq(app.tickets(), before, "…nothing granted either way")
+	# The plugin without a key (store_keys.json unfilled, a desktop OS): the stub.
+	StoreKeys.os_for_test = "macOS"
+	var bare := RevenueCatBackend.new()
+	store.use_backend(bare)
+	store.ensure()
+	t.ok(bare.available() and not store.live(), "the plugin without a key: not live")
+	_slept.clear()
+	await store.purchase("tickets_300")
+	t.eq(done.back(), ["tickets_300", false, "unavailable"], "…the stub, no sheet")
+	t.eq(rc.calls.filter(func(c: Array) -> bool: return c[0] == "purchase").size(), 2, "…the SDK never asked")
+	StoreKeys.os_for_test = ""
+	store.purchase_done.disconnect(on_done)
+	store.use_backend(fake)
+	store.ensure()
+	store.fetch_prices()
+	Engine.unregister_singleton(RevenueCatBackend.SINGLETON)
+	rc.free()
 
 
 func _fill(v: float, n: int) -> Array:

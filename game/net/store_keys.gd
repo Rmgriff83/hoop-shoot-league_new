@@ -11,6 +11,8 @@ const PLACEHOLDER := "REPLACE_ME"
 
 static var _cache: Dictionary = {}
 static var _read := false
+## Tests: the OS name a run pretends to be ("" = this machine's).
+static var os_for_test := ""
 
 
 static func _keys() -> Dictionary:
@@ -24,7 +26,9 @@ static func _keys() -> Dictionary:
 
 
 ## The key for this device's store: iOS → ios, Android → android, else "".
-static func revenuecat_key(os_name := OS.get_name()) -> String:
+static func revenuecat_key(os_name := "") -> String:
+	if os_name == "":
+		os_name = os_for_test if os_for_test != "" else OS.get_name()
 	var which := "ios" if os_name == "iOS" else ("android" if os_name == "Android" else "")
 	var key := str(_keys().get(which, "")) if which != "" else ""
 	return "" if key.contains(PLACEHOLDER) else key
