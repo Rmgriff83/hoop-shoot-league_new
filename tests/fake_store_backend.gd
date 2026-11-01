@@ -13,6 +13,15 @@ var configured: Array = []   # [api_key, user_id] per configure
 var users: Array = []        # set_user calls
 var fetched: Array = []
 var bought: Array = []
+## What the store says this player owns (the entitlement keys).
+var owned_keys: Array = []
+## A bought entitlement product lands in `entitlements` at once (the SDK's own answer).
+var grant_on_buy := true
+## restore_purchases: "found" (what `restore_grants` lists becomes owned) | "none" | "error".
+var restore_outcome := "found"
+var restore_grants: Array = ["remove_ads"]
+var info_fetches := 0
+var restores := 0
 var _pending := ""
 var _tx := 0
 
@@ -58,4 +67,27 @@ func settle() -> void:
 		"error":
 			purchased.emit({"product_id": id, "transaction_id": "", "cancelled": false, "error": "STORE_PROBLEM"})
 		_:
+			if grant_on_buy and TicketShop.is_entitlement(id):
+				var key := str(TicketShop.entitlement(id)["key"])
+				if not owned_keys.has(key):
+					owned_keys.push_back(key)
 			purchased.emit({"product_id": id, "transaction_id": "fake-%d" % _tx, "cancelled": false, "error": ""})
+
+
+func fetch_entitlements() -> void:
+	info_fetches += 1
+	entitlements.emit(owned_keys.duplicate(), "")
+
+
+func restore_purchases() -> void:
+	restores += 1
+	match restore_outcome:
+		"error":
+			restored.emit({"success": false, "restored": false, "error": "RESTORE_PROBLEM"})
+		"none":
+			restored.emit({"success": true, "restored": false, "error": ""})
+		_:
+			for k in restore_grants:
+				if not owned_keys.has(k):
+					owned_keys.push_back(k)
+			restored.emit({"success": true, "restored": not owned_keys.is_empty(), "error": ""})

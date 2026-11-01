@@ -74,16 +74,23 @@ func run(t) -> void:
 	var fake := FakeStoreBackend.new()
 	store.use_backend(fake)
 	store.sleep = func(s: float) -> void: _slept.push_back(s)
+	# Under -s the autoloads' _ready has not run: wire what Store._ready wires.
+	var wired: bool = not net.store_entitlements.is_connected(store._on_server_entitlements)
+	if wired:
+		net.store_entitlements.connect(store._on_server_entitlements)
 
 	_packs(t)
 	_keys(t)
 	_store(t, store, net, save, app, fake)
+	await _entitlements(t, store, net, save, app, fake)
 	await _plugin(t, store, save, app, fake)
-	_page(t, store, app, fake)
+	await _page(t, store, app, fake)
 	_chips(t)
 	_wiring(t)
 
 	# Put the world back.
+	if wired:
+		net.store_entitlements.disconnect(store._on_server_entitlements)
 	store.use_backend(was_backend)
 	store.sleep = Callable()
 	net.transport = Callable()
@@ -97,6 +104,10 @@ func run(t) -> void:
 func _packs(t) -> void:
 	var packs := TicketShop.packs()
 	t.eq(packs.size(), 2, "two packs, from data/store.json")
+	t.eq(TicketShop.entitlements(), [{"id": "remove_ads", "key": "remove_ads", "price": "$4.99"}], "one entitlement: remove_ads for $4.99 (Ross, 2026-11-01)")
+	t.ok(TicketShop.is_entitlement("remove_ads") and not TicketShop.is_entitlement("tickets_300"), "an entitlement is not a pack")
+	t.eq(TicketShop.product_ids(), ["tickets_300", "tickets_1000", "remove_ads"], "every product id, packs first")
+	t.eq(TicketShop.price("remove_ads"), "$4.99", "its US tier")
 	t.eq(int(packs[0]["tickets"]), 300, "300 tickets…")
 	t.eq(str(packs[0]["price"]), "$0.99", "…for $0.99 (the US tier)")
 	t.eq(int(packs[1]["tickets"]), 1000, "1000 tickets…")
@@ -148,7 +159,7 @@ func _store(t, store, net, save, app, fake: FakeStoreBackend) -> void:
 	var changed := [0]
 	store.prices_changed.connect(func() -> void: changed[0] += 1)
 	store.fetch_prices()
-	t.eq(fake.fetched, [["tickets_300", "tickets_1000"]], "fetch_prices asks for both packs")
+	t.eq(fake.fetched, [["tickets_300", "tickets_1000", "remove_ads"]], "fetch_prices asks for every product")
 	t.eq(changed[0], 1, "…and says so")
 	t.eq(TicketShop.price("tickets_300"), "CA$1.39", "the pack shows the store's price…")
 	t.eq(TicketShop.price("tickets_1000"), "CA$3.99", "…in the player's currency")
@@ -248,7 +259,16 @@ func _store(t, store, net, save, app, fake: FakeStoreBackend) -> void:
 class FakeRc extends Object:
 	signal products(data: Dictionary)
 	signal purchase_result(data: Dictionary)
+	signal customer_info(data: Dictionary)
+	signal customer_info_changed(data: Dictionary)
+	signal restore_finished(data: Dictionary)
 	var calls: Array = []
+
+	func get_customer_info() -> void:
+		calls.push_back(["get_customer_info"])
+
+	func restore_purchases() -> void:
+		calls.push_back(["restore_purchases"])
 
 	func initialize(key: String, user: String, _debug: bool) -> void:
 		calls.push_back(["initialize", key, user])
@@ -279,10 +299,38 @@ func _plugin(t, store, save, app, fake: FakeStoreBackend) -> void:
 	store.use_backend(be)
 	StoreKeys.os_for_test = "iOS"
 	store.ensure()
-	t.eq(rc.calls, [["initialize", "appl_test", pid]], "ensure starts the SDK with the iOS key and the player id")
+	t.eq(rc.calls, [["initialize", "appl_test", pid], ["get_customer_info"]], "ensure starts the SDK with the iOS key and the player id, then asks what is owned")
 	t.ok(store.live(), "…live")
 	store.fetch_prices()
-	t.eq(rc.calls.back(), ["fetch_products", TicketShop.ids()], "prices are asked by product id")
+	t.eq(rc.calls.back(), ["fetch_products", TicketShop.product_ids()], "prices are asked by product id, the entitlement too")
+	# Entitlements through the plugin's shapes: customer_info's active_ids, restore_finished.
+	var changed: Array = []
+	var on_changed := func(key: String, owned: bool) -> void: changed.push_back([key, owned])
+	store.entitlement_changed.connect(on_changed)
+	t.ok(not store.owns("remove_ads"), "nothing owned yet")
+	rc.customer_info.emit({"active_entitlements": 1, "active_ids": PackedStringArray(["remove_ads"])})
+	t.ok(store.owns("remove_ads") and changed == [["remove_ads", true]], "customer_info's active_ids → owned")
+	rc.customer_info_changed.emit({"active_entitlements": 0, "active_ids": PackedStringArray()})
+	t.ok(not store.owns("remove_ads") and changed.back() == ["remove_ads", false], "…and customer_info_changed takes it away (a refund)")
+	var restores: Array = []
+	var on_restore := func(ok: bool, found: bool, reason: String) -> void: restores.push_back([ok, found, reason])
+	store.restore_done.connect(on_restore)
+	t.ok(store.restore(), "RESTORE PURCHASES starts on a live store")
+	t.eq(rc.calls.back(), ["restore_purchases"], "…through the SDK")
+	t.ok(not store.restore(), "…once at a time")
+	rc.restore_finished.emit({"success": true, "restored": true, "active_entitlements": 1, "error": ""})
+	t.eq(rc.calls.back(), ["get_customer_info"], "a restore that worked asks for the keys")
+	rc.customer_info.emit({"active_entitlements": 1, "active_ids": PackedStringArray(["remove_ads"])})
+	await Engine.get_main_loop().process_frame
+	t.eq(restores, [[true, true, ""]], "…and ends found, deferred")
+	t.ok(store.owns("remove_ads"), "…owned again")
+	t.ok(store.restore(), "a second restore")
+	rc.restore_finished.emit({"success": false, "restored": false, "active_entitlements": 0, "error": "No receipt."})
+	await Engine.get_main_loop().process_frame
+	t.eq(restores.back(), [false, false, "error"], "a failed restore says so")
+	t.eq(store.last_error, "No receipt.", "…with the SDK's message")
+	store.entitlement_changed.disconnect(on_changed)
+	store.restore_done.disconnect(on_restore)
 	rc.products.emit({"error": "", "products": [{"id": "tickets_300", "title": "300 Tickets", "price": "€1.19", "amount": 1.19}]})
 	t.eq(TicketShop.price("tickets_300"), "€1.19", "…and the store's own string lands")
 	var before: int = app.tickets()
@@ -313,6 +361,90 @@ func _plugin(t, store, save, app, fake: FakeStoreBackend) -> void:
 	store.fetch_prices()
 	Engine.unregister_singleton(RevenueCatBackend.SINGLETON)
 	rc.free()
+
+
+## Remove ads (2026-11-01): owned, not credited — the SDK's word, the Worker's word, the cache.
+func _entitlements(t, store, net, save, app, fake: FakeStoreBackend) -> void:
+	var done: Array = []
+	var changed: Array = []
+	var on_done := func(id: String, ok: bool, reason: String) -> void: done.push_back([id, ok, reason])
+	var on_changed := func(key: String, owned: bool) -> void: changed.push_back([key, owned])
+	store.purchase_done.connect(on_done)
+	store.entitlement_changed.connect(on_changed)
+	t.ok(not store.owns("remove_ads"), "a fresh player owns nothing")
+	t.ok(fake.info_fetches >= 1, "ensure asked the store what is owned")
+	var before: int = app.tickets()
+	var claims_before: int = _srv["claims"].size()
+	# The sheet, then the SDK's word: owned, no credit, no CLAIM.
+	fake.auto = true
+	fake.outcome = "ok"
+	store.purchase("remove_ads")
+	t.eq(fake.bought.back(), "remove_ads", "BUY opens the sheet for remove_ads")
+	t.eq(done.back(), ["remove_ads", true, ""], "…the SDK says it is owned: done, ok")
+	t.ok(store.owns("remove_ads"), "…owned")
+	t.eq(changed, [["remove_ads", true]], "…with the word")
+	t.eq(app.tickets(), before, "…no tickets touched")
+	t.eq(_srv["claims"].size(), claims_before, "…and the Worker was never asked to CLAIM")
+	t.eq(save.get_settings().get("entitlements", []), ["remove_ads"], "the cache: the synced settings carry the key")
+	t.eq(store.owned_keys(), ["remove_ads"], "owned_keys lists it")
+	# A revoke through the Worker's word, then the SDK's.
+	net.store_entitlements.emit([])
+	t.ok(store.owns("remove_ads"), "the Worker saying nothing yet does not take the SDK's word away")
+	fake.owned_keys = []
+	fake.fetch_entitlements()
+	t.ok(not store.owns("remove_ads") and changed.back() == ["remove_ads", false], "both sources empty: gone (a refund)")
+	t.eq(save.get_settings().get("entitlements", []), [], "…and the cache follows")
+	# The Worker's word alone (the webhook landed, the SDK is behind).
+	net.store_entitlements.emit(["remove_ads"])
+	t.ok(store.owns("remove_ads"), "the Worker's entitlements count too")
+	net.store_entitlements.emit([])
+	t.ok(not store.owns("remove_ads"), "…and go when it says so")
+	# The slow path: the sheet took the money, the SDK's answer lacks the key.
+	fake.grant_on_buy = false
+	store.purchase("remove_ads")
+	t.eq(done.back(), ["remove_ads", false, "slow"], "no key in the SDK's answer: slow (the webhook will land it)")
+	t.ok(not store.owns("remove_ads"), "…not owned yet")
+	net.store_entitlements.emit(["remove_ads"])
+	t.ok(store.owns("remove_ads"), "…until /v1/me says so")
+	fake.grant_on_buy = true
+	# The cache stands in at launch: a new Store reads the settings part.
+	store._owned.clear()
+	store._rc_keys = []
+	store._srv_keys = []
+	store._load_owned()
+	t.ok(store.owns("remove_ads"), "a relaunch reads the cache (an owner never sees ads offline)")
+	# Restore through the fake: found / nothing / failed / unavailable.
+	var restores: Array = []
+	var on_restore := func(ok: bool, found: bool, reason: String) -> void: restores.push_back([ok, found, reason])
+	store.restore_done.connect(on_restore)
+	fake.owned_keys = []
+	fake.fetch_entitlements()
+	net.store_entitlements.emit([])
+	t.ok(not store.owns("remove_ads"), "(cleared)")
+	fake.restore_outcome = "found"
+	t.ok(store.restore(), "restore starts")
+	await Engine.get_main_loop().process_frame
+	t.eq(restores, [[true, true, ""]], "found: ok, found")
+	t.ok(store.owns("remove_ads"), "…and owned")
+	fake.restore_outcome = "none"
+	fake.owned_keys = []
+	t.ok(store.restore(), "")
+	await Engine.get_main_loop().process_frame
+	t.eq(restores.back(), [true, false, ""], "nothing to restore: ok, not found")
+	fake.restore_outcome = "error"
+	t.ok(store.restore(), "")
+	await Engine.get_main_loop().process_frame
+	t.eq(restores.back(), [false, false, "error"], "a failed restore")
+	t.eq(store.last_error, "RESTORE_PROBLEM", "…with the store's message")
+	var nul := StoreBackend.new()
+	store.use_backend(nul)
+	t.ok(not store.restore(), "no store: restore cannot start")
+	store.use_backend(fake)
+	store.ensure()
+	store.purchase_done.disconnect(on_done)
+	store.entitlement_changed.disconnect(on_changed)
+	store.restore_done.disconnect(on_restore)
+	fake.restore_outcome = "found"
 
 
 func _fill(v: float, n: int) -> Array:
@@ -417,6 +549,35 @@ func _page(t, store, app, fake: FakeStoreBackend) -> void:
 	page.closed.connect(func() -> void: closed_[0] = true)
 	(page.find_child("Back", true, false) as Button).pressed.emit()
 	t.ok(closed_[0], "BACK closes the store")
+	# The REMOVE ADS tile and the restore row (2026-11-01).
+	var tile: Control = page.find_child("RemoveAds", true, false)
+	t.ok(tile != null and (tile.find_child("Amount", true, false) as Label).text == StoreCopy.remove_ads(), "a third tile: REMOVE ADS")
+	t.ok(tile != null and tile.position.y == TicketStorePage.PACK_Y + 2.0 * (TicketStorePage.PACK_H + TicketStorePage.PACK_GAP), "…under the packs")
+	t.ok(tile != null and tile.find_child("Art", true, false) is TicketStorePage.NoAdsMark, "…with the crossed-out AD")
+	t.eq(page.state(2), "owned" if store.owns("remove_ads") else "idle", "its state follows Store.owns")
+	var restore_row: Control = page.find_child("RestorePurchases", true, false)
+	t.ok(restore_row is ShadowCard and (restore_row.find_child("Word", true, false) as Label).text == StoreCopy.restore(), "RESTORE PURCHASES under the tiles")
+	t.ok(restore_row != null and restore_row.position.y > tile.position.y + TicketStorePage.PACK_H, "…below the tile")
+	if store.owns("remove_ads"):
+		t.ok(tile.find_child("Owned", true, false) != null, "an owner sees OWNED")
+	else:
+		page.tap(2)
+		t.eq(page.state(2), "ask", "a tap asks")
+		t.eq((tile.find_child("Price", true, false) as Label).text, "$4.99", "…at the US tier")
+		page.confirm(2)
+		t.eq(page.state(2), "owned", "BUY → the SDK's word → OWNED")
+		t.ok(tile.find_child("Owned", true, false) != null, "…the face reads OWNED")
+	# Restore from the page: a spinner, then the toast.
+	for c in page.get_children().filter(func(c: Node) -> bool: return c.name.begins_with("StoreToast")):
+		c.free()
+	fake.restore_outcome = "none"
+	page.restore()
+	t.ok(restore_row.find_child("Spin", true, false) != null, "the row spins while the store looks")
+	await Engine.get_main_loop().process_frame
+	var rt: Node = page.find_child("StoreToast", true, false)
+	t.ok(rt != null and (rt.find_child("Title", true, false) as Label).text == StoreCopy.nothing_to_restore(), "nothing to restore: the word")
+	t.ok(restore_row.find_child("Spin", true, false) == null or restore_row.find_child("Spin", true, false).is_queued_for_deletion(), "…the spinner gone")
+	fake.restore_outcome = "found"
 	page.free()
 
 

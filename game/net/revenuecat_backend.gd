@@ -22,6 +22,9 @@ func _init() -> void:
 		_rc = Engine.get_singleton(SINGLETON)
 		_rc.connect("products", _on_products)
 		_rc.connect("purchase_result", _on_purchase_result)
+		_rc.connect("customer_info", _on_customer_info)
+		_rc.connect("customer_info_changed", _on_customer_info)
+		_rc.connect("restore_finished", _on_restore_finished)
 
 
 func available() -> bool:
@@ -55,6 +58,39 @@ func purchase(id: String) -> void:
 		purchased.emit({"product_id": id, "transaction_id": "", "cancelled": false, "error": "unavailable"})
 		return
 	_rc.call("purchase", id)
+
+
+func fetch_entitlements() -> void:
+	if not available() or _key == "":
+		entitlements.emit([], "unavailable")
+		return
+	_rc.call("get_customer_info")
+
+
+func restore_purchases() -> void:
+	if not available() or _key == "":
+		restored.emit({"success": false, "restored": false, "error": "unavailable"})
+		return
+	_rc.call("restore_purchases")
+
+
+## customer_info / customer_info_changed (2.6.0): {active_entitlements: int,
+## active_ids: PackedStringArray, error?}.
+func _on_customer_info(data: Dictionary) -> void:
+	var error := str(data.get("error", ""))
+	var ids: Array = []
+	for id in list_of(data.get("active_ids", [])):
+		ids.push_back(str(id))
+	entitlements.emit(ids, error)
+
+
+## restore_finished (2.6.0): {success, restored, active_entitlements: int, error}.
+func _on_restore_finished(data: Dictionary) -> void:
+	restored.emit({
+		"success": bool(data.get("success", false)),
+		"restored": bool(data.get("restored", false)),
+		"error": str(data.get("error", "")),
+	})
 
 
 func _on_products(data: Dictionary) -> void:

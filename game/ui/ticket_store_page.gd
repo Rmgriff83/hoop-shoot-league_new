@@ -13,6 +13,10 @@ extends HomePage
 ## only shows it: a cancel goes back quietly, an error or a slow credit goes
 ## back with a toast, and `show_bought` plays the success. Without a store
 ## (desktop, QA, no plugin) busy ends in no sale, the old stub.
+##
+## Under the packs (2026-11-01, docs/ECONOMY.md → Remove ads): the REMOVE
+## ADS tile — the same idle → ask → busy run, ending in OWNED (the SDK's
+## word, `Store.owns`) — and the RESTORE PURCHASES row Apple asks for.
 
 const LINE := "SPEND TICKETS ON PEGGY AND IN EACH AREA'S CARD SHOP."
 const BODY_X := 6.0           # the design's 36 px margin inside the 30 px frame
@@ -24,6 +28,8 @@ const PACK_Y := 242.0         # 360
 const PACK_H := 250.0
 const PACK_GAP := 40.0
 const BUY := Vector2(176, 96)
+const RESTORE_H := 64.0
+const RESTORE_GAP := 24.0     # under the last tile's shadow
 const X_W := 72.0
 const CONFIRM_W := 150.0
 const ASK_GAP := 14
@@ -46,7 +52,9 @@ var _chip_count: Label
 var _chip_icon: PixelIcon
 var _packs: Array[ShadowPanel] = []
 var _areas: Array[HBoxContainer] = []
-var _st: Array = []          # per pack: {state: idle | ask | busy | done, until, t}
+var _st: Array = []          # per tile: {state: idle | ask | busy | done | owned, until, t}
+var _items: Array = []       # per tile: the pack ({id, tickets…}) or the entitlement ({id, key…})
+var _restore_row: ShadowCard
 var _clock := 0.0
 var _bump_t := -1.0
 var _flight: StoreFlight
@@ -83,9 +91,16 @@ func _build() -> void:
 	line.position = Vector2(0, LINE_Y)
 	line.size = Vector2(BODY_W, 0)
 	_store.add_child(line)
+	_items = TicketShop.packs() + TicketShop.entitlements()
 	for i in TicketShop.packs().size():
 		_st.push_back({"state": "idle", "until": 0.0, "t": 0.0})
 		_build_pack(i)
+	for j in TicketShop.entitlements().size():
+		var i := TicketShop.packs().size() + j
+		var owned := Store.owns(str(_items[i]["key"]))
+		_st.push_back({"state": "owned" if owned else "idle", "until": 0.0, "t": 0.0})
+		_build_entitlement(i)
+	_build_restore_row()
 	var back := back_button(24, 28, 16, BACK_H)
 	body.add_child(back)
 	var foot := Control.new()
@@ -100,6 +115,8 @@ func _build() -> void:
 	Store.purchase_done.connect(_on_purchase_done)
 	Store.prices_changed.connect(_on_prices)
 	Store.tickets_credited.connect(_on_credited)
+	Store.entitlement_changed.connect(_on_entitlement_changed)
+	Store.restore_done.connect(_on_restore_done)
 	Store.fetch_prices()   # the player's own currency replaces the US tiers
 	Store.sync()           # a credit that landed while the page was away
 
@@ -219,6 +236,148 @@ func _build_pack(i: int) -> void:
 		tag.position = Vector2(BODY_W - ShadowStyle.OFFSET + 6.0 - tag.custom_minimum_size.x + CornerTag.DROP, panel.position.y - 16.0)
 
 
+## The REMOVE ADS tile: the crossed-out AD where a pack has its tickets,
+## the words, and the same buy area (ask → busy → OWNED).
+func _build_entitlement(i: int) -> void:
+	var panel := ShadowPanel.new(CREAM, 0.0, ShadowStyle.TINT)
+	panel.name = "RemoveAds"
+	var sb := ShadowStyle.margins(0.0)
+	sb.content_margin_left = 28.0
+	sb.content_margin_right = 26.0 + ShadowStyle.OFFSET
+	panel.add_theme_stylebox_override("panel", sb)
+	panel.position = Vector2(0, PACK_Y + float(i) * (PACK_H + PACK_GAP))
+	panel.size = Vector2(BODY_W, PACK_H + ShadowStyle.OFFSET)
+	panel.mouse_filter = Control.MOUSE_FILTER_PASS
+	_store.add_child(panel)
+	_packs.push_back(panel)
+	var row := HBoxContainer.new()
+	row.name = "Row"
+	row.add_theme_constant_override("separation", 26)
+	row.mouse_filter = Control.MOUSE_FILTER_PASS
+	panel.add_child(row)
+	var art := NoAdsMark.new()
+	art.name = "Art"
+	art.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(art)
+	var words_box := Control.new()
+	words_box.name = "Words"
+	words_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	words_box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(words_box)
+	# The column spans the box (the words wrap when the ask squeezes them).
+	var col := VBoxContainer.new()
+	col.name = "Col"
+	col.add_theme_constant_override("separation", 12)
+	col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.anchor_left = 0.0
+	col.anchor_right = 1.0
+	col.anchor_top = 0.5
+	col.anchor_bottom = 0.5
+	col.grow_vertical = Control.GROW_DIRECTION_BOTH
+	words_box.add_child(col)
+	var title := words(StoreCopy.remove_ads(), 22, true)
+	title.name = "Amount"
+	title.add_theme_color_override("font_color", HI)
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	title.autowrap_mode = TextServer.AUTOWRAP_WORD
+	col.add_child(title)
+	var sub := words(StoreCopy.remove_ads_sub(), 16)
+	sub.name = "Unit"
+	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	col.add_child(sub)
+	var area := HBoxContainer.new()
+	area.name = "BuyArea"
+	area.add_theme_constant_override("separation", ASK_GAP)
+	area.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	area.mouse_filter = Control.MOUSE_FILTER_PASS
+	row.add_child(area)
+	_areas.push_back(area)
+	_fill(i)
+
+
+## RESTORE PURCHASES (App Store Review 3.1.1): under the tiles, a spinner
+## while the store looks, then a word on the toast.
+func _build_restore_row() -> void:
+	_restore_row = ShadowCard.new(CREAM)
+	_restore_row.name = "RestorePurchases"
+	var top := PACK_Y + float(_items.size()) * (PACK_H + PACK_GAP) - PACK_GAP + ShadowStyle.OFFSET + RESTORE_GAP
+	_restore_row.position = Vector2(0, top)
+	_restore_row.size = Vector2(BODY_W, RESTORE_H + ShadowStyle.OFFSET)
+	var w := words(StoreCopy.restore(), 18, true)
+	w.name = "Word"
+	w.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	w.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	UiLayout.full_rect(w)
+	w.offset_right = -ShadowStyle.OFFSET
+	w.offset_bottom = -ShadowStyle.OFFSET
+	w.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_restore_row.add_child(w)
+	_restore_row.pressed.connect(restore)
+	_store.add_child(_restore_row)
+
+
+## The RESTORE PURCHASES row was tapped.
+func restore() -> void:
+	if _restore_row.find_child("Spin", true, false) != null:
+		return
+	if not Store.restore():
+		_toast(StoreCopy.unavailable(), CREAM)
+		return
+	var w := _restore_row.find_child("Word", true, false) as Label
+	w.self_modulate.a = 0.0
+	var sp := PixelSpinner.new(28.0)
+	sp.name = "Spin"
+	sp.set_anchors_preset(Control.PRESET_CENTER)
+	sp.position = (_restore_row.size - Vector2.ONE * ShadowStyle.OFFSET) * 0.5 - Vector2.ONE * 14.0
+	_restore_row.add_child(sp)
+
+
+func _on_restore_done(ok: bool, found: bool, reason: String) -> void:
+	var sp := _restore_row.find_child("Spin", true, false)
+	if sp != null:
+		sp.queue_free()
+		(_restore_row.find_child("Word", true, false) as Label).self_modulate.a = 1.0
+	if ok:
+		_toast(StoreCopy.restored() if found else StoreCopy.nothing_to_restore(), RetroTheme.LIGHT["gold"] if found else CREAM)
+	elif reason == "unavailable":
+		_toast(StoreCopy.unavailable(), CREAM)
+	else:
+		_toast(StoreCopy.restore_failed(), CREAM, StoreCopy.detail(Store.last_error))
+
+
+## Store.entitlement_changed: a tile's key came or went (a restore, a refund,
+## the Worker's word) — unless that tile is mid-sale, which ends on its own.
+func _on_entitlement_changed(key: String, owned: bool) -> void:
+	for i in _items.size():
+		if str(_items[i].get("key", "")) == key and state(i) != "busy":
+			_set_state(i, "owned" if owned else "idle")
+
+
+## The crossed-out AD in the tile's art box (150 × 150): a ring, the word, the slash.
+class NoAdsMark extends Control:
+	const SIZE := 120.0
+	const RING := 96.0
+	func _init() -> void:
+		custom_minimum_size = Vector2(SIZE, SIZE)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var l := UiFont.label("AD", 32, RetroTheme.SCENE_TEXT, UiFont.display())
+		l.name = "Word"
+		l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		UiLayout.full_rect(l)
+		l.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(l)
+	func _draw() -> void:
+		var c := Vector2.ONE * SIZE * 0.5
+		var orange: Color = RetroTheme.LIGHT["orange"]
+		draw_arc(c, RING * 0.5, 0.0, TAU, 48, RetroTheme.SCENE_OUTLINE, 10.0)
+		draw_arc(c, RING * 0.5, 0.0, TAU, 48, orange, 6.0)
+		var d := Vector2(1, -1).normalized() * RING * 0.5
+		draw_line(c - d, c + d, RetroTheme.SCENE_OUTLINE, 10.0)
+		draw_line(c - d, c + d, orange, 6.0)
+
+
 # ---- the buy button --------------------------------------------------------------
 
 
@@ -242,7 +401,7 @@ func confirm(i: int) -> void:
 	if state(i) != "ask" or Store.buying() != "":
 		return
 	_set_state(i, "busy")
-	Store.purchase(str(TicketShop.packs()[i]["id"]))
+	Store.purchase(str(_items[i]["id"]))
 
 
 ## Store.purchase_done: the credit landed (granted already: count up from
@@ -252,9 +411,12 @@ func _on_purchase_done(product_id: String, ok: bool, reason: String) -> void:
 	var i := _index_of(product_id)
 	if i < 0 or state(i) != "busy":
 		return
-	if ok:
-		var n := int(TicketShop.packs()[i]["tickets"])
+	if ok and _items[i].has("tickets"):
+		var n := int(_items[i]["tickets"])
 		show_bought(i, App.tickets() - n)
+		return
+	if ok:
+		_set_state(i, "owned")
 		return
 	_set_state(i, "idle")
 	match reason:
@@ -267,8 +429,8 @@ func _on_purchase_done(product_id: String, ok: bool, reason: String) -> void:
 
 
 func _index_of(product_id: String) -> int:
-	for i in TicketShop.packs().size():
-		if str(TicketShop.packs()[i]["id"]) == product_id:
+	for i in _items.size():
+		if str(_items[i]["id"]) == product_id:
 			return i
 	return -1
 
@@ -311,6 +473,10 @@ func _exit_tree() -> void:
 		Store.purchase_done.disconnect(_on_purchase_done)
 	if Store.prices_changed.is_connected(_on_prices):
 		Store.prices_changed.disconnect(_on_prices)
+	if Store.entitlement_changed.is_connected(_on_entitlement_changed):
+		Store.entitlement_changed.disconnect(_on_entitlement_changed)
+	if Store.restore_done.is_connected(_on_restore_done):
+		Store.restore_done.disconnect(_on_restore_done)
 	if Store.tickets_credited.is_connected(_on_credited):
 		Store.tickets_credited.disconnect(_on_credited)
 
@@ -352,8 +518,20 @@ func _fill(i: int) -> void:
 	for c in area.get_children():
 		area.remove_child(c)
 		c.queue_free()
-	var price := TicketShop.price(str(TicketShop.packs()[i]["id"]))
+	var price := TicketShop.price(str(_items[i]["id"]))
 	match state(i):
+		"owned":
+			var own := ShadowPanel.new(RetroTheme.LIGHT["gold"], 0.0, 0.5)
+			own.name = "Owned"
+			own.custom_minimum_size = BUY + Vector2.ONE * ShadowStyle.OFFSET
+			var ow := words(StoreCopy.owned(), 22, true)
+			ow.name = "Word"
+			ow.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			ow.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			ow.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			ow.size_flags_vertical = Control.SIZE_EXPAND_FILL
+			own.add_child(ow)
+			area.add_child(own)
 		"ask":
 			var x := button("X", CREAM, 26, BUY.y)
 			x.name = "Cancel"
@@ -396,7 +574,7 @@ func _fill(i: int) -> void:
 			face.size = hold.custom_minimum_size
 			face.pivot_offset = BUY * 0.5
 			hold.add_child(face)
-			var dl := words("+%d" % int(TicketShop.packs()[i]["tickets"]), 24, true)
+			var dl := words("+%d" % int(_items[i].get("tickets", 0)), 24, true)
 			dl.name = "Word"
 			dl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			face.add_child(dl)

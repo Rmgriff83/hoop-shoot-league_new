@@ -34,6 +34,8 @@ signal rewards_changed
 signal rewards_badge(pending: int)
 ## /v1/me said bought tickets wait at the Worker (Store claims them).
 signal store_pending_tickets(n: int)
+## GET /v1/me answered what the player owns outright (the Worker's entitlement books): the keys.
+signal store_entitlements(keys: Array)
 
 const ME_FRESH_S := 60.0   # a /v1/me younger than this needs no LOADING PLAYER
 const FLUSH_GAP_S := 30.0
@@ -272,6 +274,8 @@ func fetch_me() -> void:
 			set_pending_rewards(int(r["json"]["pending"]))
 		if r["json"].has("pendingTickets"):
 			store_pending_tickets.emit(int(r["json"]["pendingTickets"]))
+		if r["json"].get("entitlements") is Array:
+			store_entitlements.emit(Array(r["json"]["entitlements"]))
 	else:
 		if r["code"] == 401:
 			await _recover_identity()

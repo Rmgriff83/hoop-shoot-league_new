@@ -715,6 +715,10 @@ func _widgets(t) -> void:
 	t.ok(panel.delete_armed() and (del_row.find_child("Top", true, false) as Label).text.begins_with("TAP AGAIN"), "the first tap only arms it")
 	t.ok(panel.find_child("Close", true, false) == null and panel.find_child("Back", true, false) != null, "the back square is CLOSE now")
 	t.ok(panel.find_child("Credits", true, false) is ShadowCard, "CREDITS under MORE")
+	var restore_row: ShadowCard = panel.find_child("RestorePurchases", true, false)
+	t.ok(restore_row != null and (restore_row.find_child("Top", true, false) as Label).text == StoreCopy.restore(), "RESTORE PURCHASES beside it (App Store Review 3.1.1)")
+	restore_row.pressed.emit()
+	t.eq(panel.row_sub("RestorePurchases"), StoreCopy.unavailable(), "…which says STORE UNAVAILABLE behind the null backend")
 	var settings_closed := []
 	panel.closed.connect(func() -> void: settings_closed.push_back(true))
 	panel.close()

@@ -17,6 +17,11 @@ signal prices_changed
 signal purchase_done(product_id: String, ok: bool, reason: String)
 ## Bought tickets were granted (a claim landed), `n` of them.
 signal tickets_credited(n: int)
+## Something owned changed hands: `key` (remove_ads) is now owned, or not (a refund).
+signal entitlement_changed(key: String, owned: bool)
+## RESTORE PURCHASES ended (always deferred): ok, whether anything is owned
+## now, and why not — "" | error | unavailable.
+signal restore_done(ok: bool, found: bool, reason: String)
 
 ## The null backend's stub: the spinner, then no sale (desktop, QA).
 const STUB_S := 1.4
@@ -24,6 +29,9 @@ const FAST_TRIES := 8
 const FAST_GAP_S := 1.5
 const SLOW_TRIES := 20
 const SLOW_GAP_S := 5.0
+## The SDK's own answer after a sheet / a restore is awaited this long.
+const ANSWER_WAIT_S := 8.0
+const REMOVE_ADS := "remove_ads"
 
 var backend: StoreBackend = StoreBackend.new()
 var prices: Dictionary = {}
@@ -32,6 +40,14 @@ var _configured := false
 var _buying := ""
 var _slow_polling := false
 var _syncing := false
+## What the player owns: the union of the store SDK's last answer and the
+## Worker's (/v1/me), cached in the synced settings part so an owner never
+## sees ads offline (Ross, 2026-11-01: a hand-edited cache is accepted).
+var _rc_keys: Array = []
+var _srv_keys: Array = []
+var _owned: Dictionary = {}
+var _buying_key := ""
+var _restoring := false
 ## The SDK's message from the last failed purchase (the page's toast shows it).
 var last_error := ""
 ## Tests: `_sleep` is a coroutine the suite can stub (no timers off-tree).
@@ -40,29 +56,41 @@ var sleep: Callable = Callable()
 
 func _ready() -> void:
 	backend = RevenueCatBackend.new()
-	backend.products.connect(_on_products)
-	backend.purchased.connect(_on_purchased)
+	_connect_backend()
+	_load_owned()
 	Net.account_ready.connect(func(_n: String, _t: String) -> void: ensure())
 	Net.resumed.connect(func() -> void: sync())
 	Net.store_pending_tickets.connect(func(n: int) -> void:
 		if n > 0:
 			sync()
 	)
+	Net.store_entitlements.connect(_on_server_entitlements)
 	ensure.call_deferred()
+
+
+func _connect_backend() -> void:
+	backend.products.connect(_on_products)
+	backend.purchased.connect(_on_purchased)
+	backend.entitlements.connect(_on_entitlements)
+	backend.restored.connect(_on_restored)
+
+
+func _disconnect_backend() -> void:
+	for pair in [[backend.products, _on_products], [backend.purchased, _on_purchased], [backend.entitlements, _on_entitlements], [backend.restored, _on_restored]]:
+		if (pair[0] as Signal).is_connected(pair[1]):
+			(pair[0] as Signal).disconnect(pair[1])
 
 
 ## A fake backend (tests, QA) in place of the plugin.
 func use_backend(b: StoreBackend) -> void:
 	if backend != null:
-		if backend.products.is_connected(_on_products):
-			backend.products.disconnect(_on_products)
-		if backend.purchased.is_connected(_on_purchased):
-			backend.purchased.disconnect(_on_purchased)
+		_disconnect_backend()
 	backend = b
-	backend.products.connect(_on_products)
-	backend.purchased.connect(_on_purchased)
+	_connect_backend()
 	_configured = false
 	_user = ""
+	_buying_key = ""
+	_restoring = false
 	prices.clear()
 
 
@@ -83,9 +111,11 @@ func ensure() -> void:
 		backend.configure(key, id)
 		_configured = true
 		_user = id
+		backend.fetch_entitlements()   # what this player owns, the SDK's word
 	elif id != _user:
 		backend.set_user(id)
 		_user = id
+		backend.fetch_entitlements()
 
 
 ## Can a pack be bought here (the plugin, started with its key, an account)?
@@ -96,7 +126,7 @@ func live() -> bool:
 func fetch_prices() -> void:
 	ensure()
 	if live():
-		backend.fetch_products(TicketShop.ids())
+		backend.fetch_products(TicketShop.product_ids())
 
 
 func _on_products(items: Array, error: String) -> void:
@@ -112,9 +142,10 @@ func buying() -> String:
 	return _buying
 
 
-## Buy a pack: the store sheet, then the wait for the Worker's credit.
+## Buy a pack (the store sheet, then the wait for the Worker's credit) or
+## an entitlement (the sheet, then the SDK's own word that it is owned).
 func purchase(id: String) -> void:
-	if _buying != "" or TicketShop.pack(id).is_empty():
+	if _buying != "" or (TicketShop.pack(id).is_empty() and not TicketShop.is_entitlement(id)):
 		return
 	_buying = id
 	ensure()
@@ -137,6 +168,8 @@ func _on_purchased(r: Dictionary) -> void:
 		last_error = str(r["error"])
 		push_warning("store: purchase failed: %s" % last_error)
 		_end(id, false, "error")
+	elif TicketShop.is_entitlement(id):
+		_await_entitlement(id)
 	else:
 		_await_credit(id)
 
@@ -168,8 +201,127 @@ func _slow_poll() -> void:
 
 
 ## Anything waiting at the Worker → claimed → granted. Returns the tickets granted.
+## Also asks the SDK again what is owned (a purchase or refund made elsewhere).
 func sync() -> int:
+	if live():
+		backend.fetch_entitlements()
 	return await _claim_pending()
+
+
+# ---- entitlements (remove_ads): owned, not credited ----------------------------------
+
+
+## Does the player own `key` (remove_ads)? The cache: the SDK's and the Worker's last words, united.
+func owns(key: String) -> bool:
+	return _owned.has(key)
+
+
+func owned_keys() -> Array:
+	var out := _owned.keys()
+	out.sort()
+	return out
+
+
+## The sheet took the money: the SDK's customer info says whether the key is
+## active now (instant, before the webhook). No answer in ANSWER_WAIT_S, or
+## an answer without the key → "slow": the Worker's books land it on the
+## next /v1/me, and `sync()` asks the SDK again.
+func _await_entitlement(id: String) -> void:
+	_buying_key = str(TicketShop.entitlement(id).get("key", id))
+	backend.fetch_entitlements()
+	await _sleep(ANSWER_WAIT_S)
+	if _buying == id and _buying_key != "":
+		_buying_key = ""
+		_end(id, false, "slow")
+
+
+func _on_entitlements(ids: Array, error: String) -> void:
+	if error == "":
+		_rc_keys = ids.duplicate()
+		_merge_owned()
+	if _buying_key != "" and _buying != "":
+		var id := _buying
+		var key := _buying_key
+		_buying_key = ""
+		if error == "" and ids.has(key):
+			_end(id, true, "")
+		else:
+			if error != "":
+				last_error = error
+			_end(id, false, "slow")
+	if _restoring:
+		_restoring = false
+		if error == "":
+			restore_done.emit.call_deferred(true, not ids.is_empty(), "")
+		else:
+			last_error = error
+			restore_done.emit.call_deferred(false, false, "error")
+
+
+func _on_server_entitlements(keys: Array) -> void:
+	_srv_keys = keys.duplicate()
+	_merge_owned()
+
+
+## The union of the two sources, with a word for every key that came or went,
+## written to the synced settings when it changed.
+func _merge_owned() -> void:
+	var next := {}
+	for k in _rc_keys + _srv_keys:
+		next[str(k)] = true
+	var changed: Array = []
+	for k in next.keys():
+		if not _owned.has(k):
+			changed.push_back([k, true])
+	for k in _owned.keys():
+		if not next.has(k):
+			changed.push_back([k, false])
+	if changed.is_empty():
+		return
+	_owned = next
+	var s := SaveService.get_settings()
+	s["entitlements"] = owned_keys()
+	SaveService.put_settings(s)
+	for c in changed:
+		entitlement_changed.emit(c[0], c[1])
+
+
+func _load_owned() -> void:
+	_owned.clear()
+	for k in Array(SaveService.get_settings().get("entitlements", [])):
+		_owned[str(k)] = true
+	_srv_keys = _owned.keys()   # the cache stands in for the Worker's word until it speaks
+
+
+## RESTORE PURCHASES (from a tap only: the OS may ask for a sign-in). False
+## when it cannot start (no live store, or one in flight); otherwise
+## `restore_done` follows, always deferred.
+func restore() -> bool:
+	ensure()
+	if _restoring or not live():
+		return false
+	_restoring = true
+	backend.restore_purchases()
+	_restore_guard()
+	return true
+
+
+func _restore_guard() -> void:
+	await _sleep(ANSWER_WAIT_S)
+	if _restoring:
+		_restoring = false
+		restore_done.emit.call_deferred(false, false, "error")
+
+
+func _on_restored(r: Dictionary) -> void:
+	if not _restoring:
+		return
+	if not bool(r.get("success", false)):
+		_restoring = false
+		last_error = str(r.get("error", ""))
+		restore_done.emit.call_deferred(false, false, "unavailable" if last_error == "unavailable" else "error")
+		return
+	backend.fetch_entitlements()   # the keys: answered on `entitlements`, which ends the restore
 
 
 func _claim_pending() -> int:

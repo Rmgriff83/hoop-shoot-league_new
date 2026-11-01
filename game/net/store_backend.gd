@@ -13,6 +13,13 @@ signal products(items: Array, error: String)
 ## A purchase ended: {product_id, transaction_id, cancelled, error} —
 ## `error` "" and `cancelled` false is a sale the store took.
 signal purchased(result: Dictionary)
+## The store's entitlements for this player (`fetch_entitlements`, a
+## purchase, a restore, or the SDK noticing a change): `ids` = the active
+## entitlement keys, `error` "" when it answered.
+signal entitlements(ids: Array, error: String)
+## RESTORE PURCHASES ended: {success, restored, error} — `restored` true
+## when something is owned afterwards; the keys follow on `entitlements`.
+signal restored(result: Dictionary)
 
 
 ## The plugin is present on this device (before any key: `Store.ensure`
@@ -45,3 +52,13 @@ func fetch_products(_ids: Array) -> void:
 ## Open the store sheet for a product; answered with `purchased`.
 func purchase(_id: String) -> void:
 	pass
+
+
+## Ask the store what this player owns; answered with `entitlements`.
+func fetch_entitlements() -> void:
+	entitlements.emit([], "unavailable")
+
+
+## Apple's required Restore (from a tap only); answered with `restored`, then `entitlements`.
+func restore_purchases() -> void:
+	restored.emit({"success": false, "restored": false, "error": "unavailable"})

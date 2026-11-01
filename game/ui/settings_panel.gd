@@ -119,6 +119,10 @@ func _build() -> void:
 	var credits := _nav_row("Credits", "CREDITS", "", CREAM)
 	credits.pressed.connect(App.to_credits)
 	_list.add_child(credits)
+	# Apple's Restore (App Store Review 3.1.1): remove_ads bought on another phone or install.
+	_restore_row = _nav_row("RestorePurchases", StoreCopy.restore(), RESTORE_SUB, CREAM)
+	_restore_row.pressed.connect(_restore_purchases)
+	_list.add_child(_restore_row)
 	_list.add_child(_spacer(8))
 	_build_danger()
 	# The fade at the list's foot.
@@ -684,6 +688,38 @@ func _build_danger() -> void:
 	_delete = _nav_row("DeleteAccount", "DELETE ACCOUNT", "TWO TAPS · REMOVES YOUR ONLINE ACCOUNT", ORANGE, false)
 	_delete.pressed.connect(_delete_account)
 	_list.add_child(_delete)
+
+
+const RESTORE_SUB := "BOUGHT REMOVE ADS BEFORE? GET IT BACK"
+var _restore_row: ShadowCard
+var _restoring := false
+
+
+## RESTORE PURCHASES: the store looks (a spinner in the sub-line), then the
+## sub-line says what it found.
+func _restore_purchases() -> void:
+	if _restoring:
+		return
+	if not Store.restore():
+		_set_sub(_restore_row, StoreCopy.unavailable(), BAD)
+		return
+	_restoring = true
+	_spin(_restore_row.find_child("Sub", true, false) as Label, true)
+	var r: Array = await Store.restore_done
+	_restoring = false
+	if not is_instance_valid(_restore_row):
+		return
+	_spin(_restore_row.find_child("Sub", true, false) as Label, false)
+	var ok: bool = r[0]
+	var found: bool = r[1]
+	if ok and found:
+		_set_sub(_restore_row, StoreCopy.restored(), GOLD)
+	elif ok:
+		_set_sub(_restore_row, StoreCopy.nothing_to_restore(), MUTED)
+	elif str(r[2]) == "unavailable":
+		_set_sub(_restore_row, StoreCopy.unavailable(), BAD)
+	else:
+		_set_sub(_restore_row, StoreCopy.restore_failed(), BAD)
 
 
 func _move_to_phone() -> void:

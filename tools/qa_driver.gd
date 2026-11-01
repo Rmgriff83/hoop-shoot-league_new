@@ -1498,7 +1498,27 @@ func _run_store_live() -> void:
 	await _snap("store_live_slow")
 	await _sleep(Store.SLOW_GAP_S * 2.0 + 0.6)
 	await _snap("store_live_slow_landed")
-	# Put the world back.
+	# REMOVE ADS (2026-11-01): ask, then OWNED on the SDK's word; the restore row's toast.
+	fake.auto = true
+	fake.outcome = "ok"
+	fake.prices["remove_ads"] = "CA$6.99"
+	store._on_prices()
+	store.tap(2)
+	await _sleep(0.25)
+	await _snap("store_remove_ads_ask")
+	store.confirm(2)
+	await _sleep(0.4)
+	await _snap("store_remove_ads_owned")
+	fake.restore_outcome = "none"
+	store.restore()
+	await _sleep(0.2)
+	await _snap("store_restore_spin")
+	await _sleep(0.6)
+	await _snap("store_restore_toast")
+	await _sleep(2.4)
+	# Put the world back (the fake's remove_ads leaves the cache: clear it).
+	fake.owned_keys = []
+	fake.fetch_entitlements()
 	Store.use_backend(RevenueCatBackend.new())
 	Net.transport = Callable()
 	Net.enabled = was_enabled

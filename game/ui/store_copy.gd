@@ -22,6 +22,41 @@ static func unavailable() -> String:
 	return "STORE UNAVAILABLE"
 
 
+# ---- remove ads (docs/ECONOMY.md → Remove ads, 2026-11-01) ----
+
+static func remove_ads() -> String:
+	return "REMOVE ADS"
+
+
+static func remove_ads_sub() -> String:
+	return "NO MORE ADS BETWEEN GAMES"
+
+
+static func owned() -> String:
+	return "OWNED"
+
+
+static func restore() -> String:
+	return "RESTORE PURCHASES"
+
+
+static func restored() -> String:
+	return "PURCHASES RESTORED"
+
+
+static func nothing_to_restore() -> String:
+	return "NOTHING TO RESTORE"
+
+
+static func restore_failed() -> String:
+	return "RESTORE FAILED"
+
+
+## After an interstitial, every few: the nudge toward the store.
+static func upsell() -> String:
+	return "TIRED OF ADS? REMOVE THEM IN THE TICKET STORE"
+
+
 ## The store SDK's own message under PURCHASE FAILED, made safe for the
 ## pixel font: printable ASCII only, upper case, at most DETAIL_MAX glyphs.
 const DETAIL_MAX := 40
@@ -39,4 +74,4 @@ static func detail(message: String) -> String:
 
 ## Every line, for the glyph test.
 static func strings() -> Array:
-	return [failed(), on_the_way(), credited(1300), unavailable(), detail("Error fetching product: \u201cx\u201d (code 23)")]
+	return [failed(), on_the_way(), credited(1300), unavailable(), detail("Error fetching product: \u201cx\u201d (code 23)"), remove_ads(), remove_ads_sub(), owned(), restore(), restored(), nothing_to_restore(), restore_failed(), upsell()]
