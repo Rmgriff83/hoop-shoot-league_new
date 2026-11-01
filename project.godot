@@ -32,6 +32,7 @@ Net="*res://game/net/net_client.gd"
 Platform="*res://game/net/platform.gd"
 App="*res://game/autoload/app.gd"
 Store="*res://game/net/store.gd"
+Ads="*res://game/ads/ads.gd"
 QaDriver="*res://tools/qa_driver.gd"
 
 [display]

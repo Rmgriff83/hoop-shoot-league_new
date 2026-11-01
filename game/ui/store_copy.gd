@@ -52,9 +52,13 @@ static func restore_failed() -> String:
 	return "RESTORE FAILED"
 
 
-## After an interstitial, every few: the nudge toward the store.
+## After an interstitial, every few: the nudge toward the store (title / sub).
 static func upsell() -> String:
-	return "TIRED OF ADS? REMOVE THEM IN THE TICKET STORE"
+	return "TIRED OF ADS?"
+
+
+static func upsell_sub() -> String:
+	return "REMOVE THEM IN THE TICKET STORE"
 
 
 ## The store SDK's own message under PURCHASE FAILED, made safe for the
@@ -74,4 +78,4 @@ static func detail(message: String) -> String:
 
 ## Every line, for the glyph test.
 static func strings() -> Array:
-	return [failed(), on_the_way(), credited(1300), unavailable(), detail("Error fetching product: \u201cx\u201d (code 23)"), remove_ads(), remove_ads_sub(), owned(), restore(), restored(), nothing_to_restore(), restore_failed(), upsell()]
+	return [failed(), on_the_way(), credited(1300), unavailable(), detail("Error fetching product: \u201cx\u201d (code 23)"), remove_ads(), remove_ads_sub(), owned(), restore(), restored(), nothing_to_restore(), restore_failed(), upsell(), upsell_sub()]

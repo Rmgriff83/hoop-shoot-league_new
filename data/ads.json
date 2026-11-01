@@ -1,0 +1,6 @@
+{
+  "_": "Ads (docs/ADS.md, 2026-11-01): AdMob app and interstitial unit ids per store (public, they ship in the app's plist / manifest anyway) and the policy numbers. A placeholder id (REPLACE_ME) means no ads: the Ads facade runs its null backend.",
+  "ios": {"app_id": "ca-app-pub-REPLACE_ME~REPLACE_ME", "interstitial": "ca-app-pub-REPLACE_ME/REPLACE_ME"},
+  "android": {"app_id": "ca-app-pub-REPLACE_ME~REPLACE_ME", "interstitial": "ca-app-pub-REPLACE_ME/REPLACE_ME"},
+  "policy": {"grace_matches": 6, "min_gap_s": 120, "upsell_every": 5}
+}

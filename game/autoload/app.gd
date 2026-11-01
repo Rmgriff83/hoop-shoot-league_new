@@ -1505,7 +1505,8 @@ func settle_heat(result: Dictionary) -> Dictionary:
 
 
 func to_heat_result() -> void:
-	_move(HEAT_RESULT_SCENE, "postmatch", str(last_heat.get("location", "cage")))
+	# An interstitial first, when the ad policy says so (Ads; owners of remove_ads never see one).
+	Ads.before_results(func() -> void: _move(HEAT_RESULT_SCENE, "postmatch", str(last_heat.get("location", "cage"))))
 
 
 func finish_heat(result: Dictionary) -> void:
@@ -2029,4 +2030,4 @@ func finish_run(run: Dictionary) -> void:
 	# net allows — the results page never waits on it.
 	Net.queue_run(last_run)
 	Net.push_save()
-	_move(RESULTS_SCENE, "results", str(last_run.get("location", "cage")))
+	Ads.before_results(func() -> void: _move(RESULTS_SCENE, "results", str(last_run.get("location", "cage"))))

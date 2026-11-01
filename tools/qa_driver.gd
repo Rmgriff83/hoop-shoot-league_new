@@ -60,7 +60,7 @@ func _ready() -> void:
 		App.loader.instant = _has_prefixed(args, "--qa") and not args.has("--qa-loading")
 		App.loader.force_show = args.has("--qa-loading")
 		PeggyMachine.threaded = not App.loader.instant
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live") or args.has("--qa-ads")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# The splash is the main scene now: every other pass starts from the title.
@@ -105,6 +105,8 @@ func _ready() -> void:
 		_run_peggy.call_deferred()
 	elif args.has("--qa-store-live"):
 		_run_store_live.call_deferred()
+	elif args.has("--qa-ads"):
+		_run_ads.call_deferred()
 	elif args.has("--qa-store"):
 		_run_store.call_deferred()
 	elif args.has("--qa-match-end"):
@@ -2482,6 +2484,67 @@ func _run_title() -> void:
 	await _sleep(0.8)
 	App.save_league_doc(keep_doc, "cage")
 	print("QA title: done")
+	get_tree().quit(0)
+
+
+## Ads (docs/ADS.md, 2026-11-01): the fake network's AD card before a trial's
+## results, the results after it, the store nudge on the 5th ad, and an
+## owner of remove_ads going straight to the results.
+func _run_ads() -> void:
+	await _sleep(0.6)
+	var fake := FakeAdsBackend.new()
+	fake.visual = true
+	fake.auto = false
+	Ads.use_backend(fake)
+	Ads.cfg = Ads._load_cfg()
+	var s := SaveService.get_settings()
+	var was_matches: int = int(s.get("adMatches", 0))
+	s["adMatches"] = 20
+	SaveService.put_settings(s)
+	Store._rc_keys = []
+	Store._srv_keys = []
+	Store._merge_owned()
+	Ads.last_ad_at = -1.0
+	Ads.ads_shown = 0
+	Ads.start_if_needed()
+	var top := SaveService.top_scores(10, "cage")
+	if top.is_empty():
+		SaveService.put_score({"score": 24, "makes": 14, "attempts": 24, "swishes": 4, "bestStreak": 6, "bonus": 5, "iced": 0, "location": "cage"})
+		top = SaveService.top_scores(10, "cage")
+	App.next_mode = "trial"
+	var run: Dictionary = top[0].duplicate()
+	run["tickets"] = 17
+	App.last_run = run
+	App.last_run_was_best = false
+	var to_results := func() -> void: get_tree().change_scene_to_file(App.RESULTS_SCENE)
+	Ads.before_results(to_results)
+	await _sleep(0.5)
+	await _snap("ads_interstitial")
+	fake.close()
+	await _sleep(1.6)
+	await _snap("ads_results")
+	# The 5th ad: the nudge on the results.
+	Ads.ads_shown = 4
+	Ads.last_ad_at = -1.0
+	fake.auto = true
+	Ads.before_results(to_results)
+	await _sleep(1.8)
+	await _snap("ads_upsell")
+	# An owner: no ad, no nudge.
+	Store._srv_keys = ["remove_ads"]
+	Store._merge_owned()
+	Ads.last_ad_at = -1.0
+	Ads.before_results(to_results)
+	await _sleep(1.6)
+	await _snap("ads_owner")
+	# Put the world back.
+	Store._srv_keys = []
+	Store._merge_owned()
+	s = SaveService.get_settings()
+	s["adMatches"] = was_matches
+	SaveService.put_settings(s)
+	Ads.use_backend(AdsBackend.new())
+	print("QA ads: done")
 	get_tree().quit(0)
 
 

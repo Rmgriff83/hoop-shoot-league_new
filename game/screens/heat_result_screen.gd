@@ -63,7 +63,9 @@ func _ready() -> void:
 	add_child(ui)
 	var league := HeatCopy.league_of(heat)
 	var lid := str(league.get("id", ""))
-	ui.add_child(build_chrome(heat, App.league_doc(lid) if lid != "" else {}, LeagueData.league(lid) if lid != "" else {}))
+	var chrome := build_chrome(heat, App.league_doc(lid) if lid != "" else {}, LeagueData.league(lid) if lid != "" else {})
+	ui.add_child(chrome)
+	AdsUpsell.maybe_toast(chrome)
 	_start_fx.call_deferred()
 
 

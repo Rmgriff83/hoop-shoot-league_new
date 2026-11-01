@@ -58,7 +58,8 @@ func _ready() -> void:
 	ui.layer = 10
 	UiLayout.anchor_layer(ui)   # screen coordinates: tall_y spreads the page to the screen
 	add_child(ui)
-	ui.add_child(build_chrome(run, App.last_run_was_best))
+	var chrome := build_chrome(run, App.last_run_was_best)
+	ui.add_child(chrome)
 	# The chime (Ross, 2026-10-26): the big one for an all-time global best,
 	# the small one for a personal best; nothing otherwise.
 	if App.last_run_was_global_best:
@@ -66,6 +67,7 @@ func _ready() -> void:
 	elif App.last_run_was_best:
 		Sfx.chime_win()
 	_start_stream.call_deferred()
+	AdsUpsell.maybe_toast(chrome)
 
 
 ## The tickets stream, once the chrome has laid out: from the score's centre
