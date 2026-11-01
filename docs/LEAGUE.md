@@ -120,10 +120,13 @@ shooters, card hands, pace and style, and only their accuracy was re-levelled
 
 **AI DIFFICULTY** (Settings, `core/ai/ai_difficulty.gd`, the synced `aiDifficulty`
 setting): EASY / NORMAL / HARD shift the opponent's accuracy rating by `AiDifficulty.SHIFT`
-(−0.05 / +0.02 / +0.09; measured 2026-10-19 at n 10 in the cage: 15.7 / 19.5 / 24.6 points — about four to five points a step) for every AI the player faces — league heats (`App.league_heat_config`)
-and quick heats (`App.quick_heat_config`). NORMAL carries a small lift over the roster as
-authored: after a first evening on the flat rosters (−0.08 / 0 / +0.07: cage 14.5 / 17.7 /
-23.3) Ross asked for "the bar of easy, and all the levels accordingly" to come up a little. AI-vs-AI season
+(0 / +0.07 / +0.14; measured 2026-11-01 with `tools/league_lab.gd -- cage --n=10 --level=…`:
+17.7 / 23.3 / 28.3 points — about five points a step) for every AI the player faces — league heats (`App.league_heat_config`)
+and quick heats (`App.quick_heat_config`). EASY is the roster as authored; NORMAL and HARD
+sit a step and two above it. History: a first evening on the flat rosters (−0.08 / 0 / +0.07:
+cage 14.5 / 17.7 / 23.3), then Ross asked for "the bar of easy, and all the levels accordingly"
+to come up a little (−0.05 / +0.02 / +0.09: 15.7 / 19.5 / 24.6), then on 2026-11-01 to
+"tune up all our AI difficulty levels a little" again (+0.05 a level). AI-vs-AI season
 games (`QuickSim`) ignore it, so the standings are the same on every setting; online 1v1
 has no AI. Accuracy is the one rating the calibration maps straight to make share, so the
 step is the same on every court.

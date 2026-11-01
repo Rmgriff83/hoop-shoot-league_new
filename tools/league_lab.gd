@@ -10,6 +10,9 @@ extends SceneTree
 ##   godot --headless --path . -s tools/league_lab.gd            (all leagues)
 ##   godot --headless --path . -s tools/league_lab.gd -- beach   (one league, others kept)
 ##   godot --headless --path . -s tools/league_lab.gd -- --n=20  (quick look)
+##   godot --headless --path . -s tools/league_lab.gd -- cage --n=10 --level=hard
+##       (the AI DIFFICULTY setting's shift on every shooter, in points —
+##        prints only, the ladder file is the unshifted anchor)
 ## Deterministic (seeded): the same n and seed rewrite the same file.
 ## About 0.4 s a heat: n × 21 shooters.
 
@@ -28,8 +31,11 @@ static func reference() -> AiRatings:
 
 
 ## One league's table: {shooters: {id: {ai, ref, win, acc}}, mean, min, max, top, top_id, pushovers, ref_mean}.
-static func measure(league: Dictionary, n: int, seed_value: int) -> Dictionary:
+static func measure(league: Dictionary, n: int, seed_value: int, level := "") -> Dictionary:
 	var ratings := LeagueData.league_ratings(league)
+	if level != "":   # the setting's shift, the way App.league_heat_config applies it
+		for id in ratings.keys():
+			ratings[id] = AiRatings.from_dict(AiDifficulty.apply(LeagueData.shooter(str(id)).get("ratings", {}), level))
 	var ids: Array = ratings.keys()
 	ids.sort()
 	var ref := reference()
@@ -77,13 +83,18 @@ static func measure(league: Dictionary, n: int, seed_value: int) -> Dictionary:
 
 func _initialize() -> void:
 	var n := N
+	var level := ""
 	var only: Array[String] = []
 	for a in OS.get_cmdline_user_args():
 		var arg := str(a)
 		if arg.begins_with("--n="):
 			n = int(arg.trim_prefix("--n="))
+		elif arg.begins_with("--level="):
+			level = AiDifficulty.normalize(arg.trim_prefix("--level="))
 		else:
 			only.push_back(arg)
+	if level != "":
+		print("AI DIFFICULTY %s: accuracy %+.2f on every shooter (printed only, the ladder file untouched)" % [AiDifficulty.label(level), AiDifficulty.shift(level)])
 	var doc := {}
 	if FileAccess.file_exists(OUT):
 		var parsed = JSON.parse_string(FileAccess.get_file_as_string(OUT))
@@ -96,7 +107,7 @@ func _initialize() -> void:
 		var lid := str(league["id"])
 		if not only.is_empty() and not only.has(lid):
 			continue
-		var res := measure(league, n, SEED)
+		var res := measure(league, n, SEED, level)
 		doc["leagues"][lid] = res
 		print("== %s  (err_mult %.2f, reference %.1f pts)" % [lid, res["err_mult"], res["ref_mean"]])
 		var ids: Array = res["shooters"].keys()
@@ -113,6 +124,9 @@ func _initialize() -> void:
 			if doc["leagues"].has(lid):
 				var l: Dictionary = doc["leagues"][lid]
 				print("ladder %s/cage: mean x%.2f  top x%.2f" % [lid, float(l["mean"]) / float(cage["mean"]), float(l["max"]) / float(cage["max"])])
+	if level != "":
+		quit(0)
+		return
 	doc["generated"] = Time.get_date_string_from_system()
 	var f := FileAccess.open(OUT, FileAccess.WRITE)
 	f.store_string(JSON.stringify(doc, "  "))

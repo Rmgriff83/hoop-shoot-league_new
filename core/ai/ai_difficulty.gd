@@ -7,15 +7,19 @@ extends RefCounted
 ## accuracy rating, the one rating the per-hoop calibration maps straight to
 ## its make share, so the step is the same on every court. NORMAL carries a
 ## small lift over the roster as authored (Ross, 2026-10-19 evening: "bring
-## up the bar of easy, and all the levels accordingly, a little").
+## up the bar of easy, and all the levels accordingly, a little"); on
+## 2026-11-01 Ross asked to "tune up all our AI difficulty levels a little"
+## again — +0.05 on every level, so EASY is now the roster as authored and
+## NORMAL / HARD sit a step and two above it.
 ## Applied to the player's league heats and quick heats
 ## only: AI-vs-AI season games (QuickSim) ignore it, so the standings are the
 ## same on every setting. Headless: dictionaries in, dictionaries out.
 
 const LEVELS := ["easy", "normal", "hard"]
 const DEFAULT := "normal"
-## The accuracy shift per level (rating points; sized by tools/league_lab.gd).
-const SHIFT := {"easy": -0.05, "normal": 0.02, "hard": 0.09}
+## The accuracy shift per level (rating points; measured in points by
+## tools/league_lab.gd -- --level=…).
+const SHIFT := {"easy": 0.0, "normal": 0.07, "hard": 0.14}
 const LABELS := {"easy": "EASY", "normal": "NORMAL", "hard": "HARD"}
 
 
