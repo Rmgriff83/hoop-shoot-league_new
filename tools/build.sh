@@ -88,12 +88,45 @@ stage_store_plugin() {
 }
 stage_store_plugin
 
+# The AdMob plugin (docs/BUILD.md → The ads plugin): its GDScript addon is
+# vendored (addons/AdmobPlugin, addons/GMPShared); the binaries live outside
+# the repo like the keystore and are copied in here. The two export .cfg
+# files the addon reads (the app id, ATT) are written from data/ads.json so
+# the ids have one home. Missing binaries: a warning, no ads (the null backend).
+ADS_PLUGIN="$HOME/.config/hoop_shoot/admob"
+stage_ads_plugin() {
+  if [[ -d "$ADS_PLUGIN/android/bin" && -f "$ADS_PLUGIN/ios/plugins/AdmobPlugin.gdip" ]]; then
+    rm -rf addons/AdmobPlugin/bin ios/plugins/AdmobPlugin.gdip ios/plugins/AdmobPlugin.debug.xcframework ios/plugins/AdmobPlugin.release.xcframework
+    mkdir -p ios/plugins
+    cp -R "$ADS_PLUGIN/android/bin" addons/AdmobPlugin/bin
+    cp "$ADS_PLUGIN/ios/plugins/AdmobPlugin.gdip" ios/plugins/
+    cp -R "$ADS_PLUGIN/ios/plugins/AdmobPlugin.debug.xcframework" "$ADS_PLUGIN/ios/plugins/AdmobPlugin.release.xcframework" ios/plugins/
+    touch addons/AdmobPlugin/bin/.gdignore ios/plugins/AdmobPlugin.debug.xcframework/.gdignore ios/plugins/AdmobPlugin.release.xcframework/.gdignore
+    python3 - <<'PY'
+import json
+ads = json.load(open("data/ads.json"))
+att = "Allowing tracking lets the ads between games pay for Hoop Shoot."
+for plat, name in (("ios", "ios_export.cfg"), ("android", "android_export.cfg")):
+    app_id = str(ads.get(plat, {}).get("app_id", ""))
+    lines = ["; Written by tools/build.sh from data/ads.json — do not edit.", "[General]", "is_real=true", "", "[Debug]", 'app_id="%s"' % app_id, "", "[Release]", 'app_id="%s"' % app_id, ""]
+    if plat == "ios":
+        lines += ["[ATT]", "att_enabled=true", 'att_text="%s"' % att, ""]
+    open("addons/AdmobPlugin/" + name, "w").write("\n".join(lines))
+PY
+    echo "staged the AdMob plugin from $ADS_PLUGIN"
+    grep -q REPLACE_ME data/ads.json && echo "data/ads.json still carries placeholder ids: the build shows no ads (the null backend)"
+  else
+    echo "no AdMob plugin at $ADS_PLUGIN (tools/fetch_ads_plugin.sh installs it): no ads"
+  fi
+}
+stage_ads_plugin
+
 godot_export() {  # preset path
   local flag="--export-$MODE"
   "$GODOT" --headless --path "$PROJ" "${INSTALL[@]}" "$flag" "$1" "$2" 2>&1 | tee build/export.log | grep -vE "$NOISE"
   # The plugin's own files must never end up in the pck (see stage_store_plugin).
-  if grep -q 'Storing File: res://ios/plugins/\|Storing File: res://android/revenue_cat/' build/export.log; then
-    echo "the export packed the store plugin's files into the pck (the .gdignore is missing?)"
+  if grep -q 'Storing File: res://ios/plugins/\|Storing File: res://android/revenue_cat/\|Storing File: res://addons/AdmobPlugin/bin/' build/export.log; then
+    echo "the export packed a plugin's binaries into the pck (a .gdignore is missing?)"
     exit 1
   fi
 }
@@ -133,6 +166,12 @@ if [[ "$TARGET" == "ios" || "$TARGET" == "all" ]]; then
   mkdir -p build/ios
   godot_export "iOS" "build/ios/hoop_shoot.ipa"
   [[ -d build/ios/hoop_shoot.xcodeproj ]] || { echo "no Xcode project came out"; exit 1; }
+  # The AdMob plugin pulls the Google Mobile Ads SDK into the Xcode project by
+  # Swift Package Manager (ruby + the xcodeproj gem, at export): check it did.
+  if [[ -f ios/plugins/AdmobPlugin.gdip ]] && ! grep -q "SPM" build/export.log; then
+    echo "the AdMob plugin was staged but added no SPM dependency (is ruby's xcodeproj gem installed? gem install xcodeproj)"
+    exit 1
+  fi
   ARTEFACTS+=("build/ios/hoop_shoot.xcodeproj  → Xcode: Any iOS Device → Product → Archive → Distribute App → App Store Connect")
 fi
 

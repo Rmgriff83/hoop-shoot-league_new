@@ -51,6 +51,8 @@ func run(t) -> void:
 	t.eq(str(cfg.get_value(play, "keystore/release_password", "x")), "", "…nor its password")
 	t.ok(bool(cfg.get_value(ios, "application/export_project_only", false)), "iOS exports the Xcode project (Ross archives by hand)")
 	t.ok(bool(cfg.get_value(ios, "plugins/GodotxRevenueCat", false)), "iOS takes the RevenueCat plugin (ios/plugins/revenuecat, staged by tools/build.sh)")
+	t.ok(bool(cfg.get_value(ios, "plugins/AdmobPlugin", false)), "iOS takes the AdMob plugin (ios/plugins/AdmobPlugin.*, staged by tools/build.sh)")
+	t.eq(str(cfg.get_value(ios, "application/min_ios_version", "")), "15.0", "iOS 15+: the RevenueCat SDK's floor, above the AdMob plugin's 14.3")
 	t.eq(int(cfg.get_value(ios, "application/export_method_release", -1)), 0, "iOS release method is App Store")
 	t.eq(str(cfg.get_value(ios, "application/code_sign_identity_release", "")), "Apple Development", "Release signs as Apple Development: automatic signing swaps in Distribution at upload (an empty field writes Apple Distribution and the archive fails)")
 	t.eq(str(cfg.get_value(by_name["iOS"], "export_path")), "build/ios/hoop_shoot.ipa", "iOS lands under build/ios")

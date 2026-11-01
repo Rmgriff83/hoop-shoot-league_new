@@ -34,6 +34,7 @@ var sleep: Callable = Callable()
 
 func _ready() -> void:
 	cfg = _load_cfg()
+	backend = AdMobBackend.new()   # available only where the plugin was staged in
 	_connect_backend()
 	Net.account_ready.connect(func(_n: String, _t: String) -> void: start_if_needed())
 	start_if_needed.call_deferred()

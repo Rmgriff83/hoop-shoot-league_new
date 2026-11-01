@@ -22,5 +22,10 @@ __pycache__/
 
 # The RevenueCat plugin binaries (godot-x/revenuecat): staged from ~/.config/hoop_shoot/revenuecat by tools/build.sh.
 ios/plugins/
+# The AdMob plugin binaries (godot-admob): staged from ~/.config/hoop_shoot/admob by tools/build.sh,
+# which also writes the addon's export .cfg files from data/ads.json.
+addons/AdmobPlugin/bin/
+addons/AdmobPlugin/ios_export.cfg
+addons/AdmobPlugin/android_export.cfg
 # RevenueCat public SDK keys (appl_/goog_), kept out of git like the keystore; see store_keys.example.json.
 store_keys.json

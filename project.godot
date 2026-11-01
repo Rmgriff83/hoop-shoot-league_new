@@ -22,7 +22,7 @@ boot_splash/image="res://assets/splash/boot_splash.png"
 
 [editor_plugins]
 
-enabled=PackedStringArray("res://addons/godotx_revenue_cat/plugin.cfg")
+enabled=PackedStringArray("res://addons/godotx_revenue_cat/plugin.cfg", "res://addons/AdmobPlugin/plugin.cfg")
 
 [autoload]
 
