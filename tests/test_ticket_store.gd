@@ -379,6 +379,7 @@ func _page(t, store, app, fake: FakeStoreBackend) -> void:
 	t.ok(toast != null, "…and toasts")
 	if toast != null:
 		t.eq((toast.find_child("Title", true, false) as Label).text, StoreCopy.failed(), "…PURCHASE FAILED")
+		t.ok(toast.mode == Toast.Mode.SIDE and toast.side == Hud.toast_side(), "…a match-style side toast from the HUD side")
 		var sub: Label = toast.find_child("Sub", true, false)
 		t.eq(sub.text if sub != null else "(no sub)", "STORE_PROBLEM", "…with the store's message")
 		toast.free()

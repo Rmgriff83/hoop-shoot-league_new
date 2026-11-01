@@ -290,11 +290,16 @@ func _on_credited(n: int) -> void:
 	_toast(StoreCopy.credited(n), RetroTheme.LIGHT["gold"])
 
 
-const TOAST_TOP := 44.0
+## The chip sits this far above BACK's shadow (Ross: "on the bottom").
+const TOAST_GAP := 24.0
 
-## The toast is built off-tree too (tests); `show_once` runs deferred, once the page is up.
+## The page's notices are the match HUD's side toasts (Ross, 2026-11-01):
+## the same chip, sliding in from the HUD SIDE the setting says, down at
+## the bottom just above `< BACK` so the packs stay clear. Built off-tree
+## too (tests); `show_once` runs deferred, once the page is up.
 func _toast(text: String, colour: Color, sub := "") -> void:
-	var toast := Toast.new(colour, UiLayout.screen_top() + TOAST_TOP)
+	var top := UiLayout.screen_bottom() - 60.0 - BACK_H - ShadowStyle.OFFSET - TOAST_GAP - Toast.SIDE_SMALL_H
+	var toast := Toast.new(colour, top, Toast.Mode.SIDE, Hud.toast_side())
 	toast.name = "StoreToast"
 	toast.set_small(text, sub, "icon_ticket")
 	add_child(toast)
