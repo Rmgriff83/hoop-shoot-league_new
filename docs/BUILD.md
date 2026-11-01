@@ -119,7 +119,11 @@ binaries live outside it like the keystore:
 (**`tools/fetch_store_plugin.sh`** puts them there: the release zip, pinned by
 version and SHA-256 — Godot's stand-in for a lockfile). `tools/build.sh`
 copies them into `android/revenue_cat/` and `ios/plugins/revenue_cat/`
-(both gitignored) before every export. The Android side rides the **gradle**
+(both gitignored) before every export, dropping a `.gdignore` into each so
+the editor's resource scan skips the frameworks (without it the 137 MB of
+Swift ABI `.json` inside the xcframeworks lands in the pck — the exports
+find the `.gdip` / `.aar` through the filesystem, so they still ship; the
+script fails the export if a plugin file is packed). The Android side rides the **gradle**
 build only — the Play preset; the phone-deploy "Android" preset stays
 gradle-free (Ross, 2026-10-31), so phone deploys run the stub store. The iOS
 preset carries `plugins/GodotxRevenueCat=true`. Missing binaries are a

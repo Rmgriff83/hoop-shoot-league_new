@@ -75,6 +75,11 @@ stage_store_plugin() {
     mkdir -p android ios/plugins
     cp -R "$STORE_PLUGIN/android/revenue_cat" android/revenue_cat
     cp -R "$STORE_PLUGIN/ios/plugins/revenue_cat" ios/plugins/revenue_cat
+    # .gdignore keeps the editor's resource scan out of the frameworks (their
+    # 137 MB of Swift ABI .json would otherwise be packed into the pck, and
+    # their jpgs imported); the exports find the .gdip / .aar through the
+    # filesystem, so they still ship.
+    touch android/revenue_cat/.gdignore ios/plugins/revenue_cat/.gdignore
     echo "staged the RevenueCat plugin from $STORE_PLUGIN"
   else
     echo "no RevenueCat plugin at $STORE_PLUGIN (tools/fetch_store_plugin.sh installs it): the store runs its stub"
@@ -85,7 +90,12 @@ stage_store_plugin
 
 godot_export() {  # preset path
   local flag="--export-$MODE"
-  "$GODOT" --headless --path "$PROJ" "${INSTALL[@]}" "$flag" "$1" "$2" 2>&1 | grep -vE "$NOISE"
+  "$GODOT" --headless --path "$PROJ" "${INSTALL[@]}" "$flag" "$1" "$2" 2>&1 | tee build/export.log | grep -vE "$NOISE"
+  # The plugin's own files must never end up in the pck (see stage_store_plugin).
+  if grep -q 'Storing File: res://ios/plugins/\|Storing File: res://android/revenue_cat/' build/export.log; then
+    echo "the export packed the store plugin's files into the pck (the .gdignore is missing?)"
+    exit 1
+  fi
 }
 
 ARTEFACTS=()
