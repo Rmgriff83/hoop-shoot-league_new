@@ -51,7 +51,7 @@ func _heats(t) -> void:
 	t.ok(Economy.expected_tickets_per_heat(park) > Economy.expected_tickets_per_heat(beach) and Economy.expected_tickets_per_heat(park) < Economy.expected_tickets_per_heat(city), "the park league's tickets sit between")
 	t.close(Economy.expected_tickets_per_heat(cage), 0.5 * int(r["win_tickets"]) + 0.5 * int(r["loss_tickets"]), 1e-9, "expected tickets at a coin flip")
 	t.close(Economy.expected_tickets_per_heat(cage), 26.0, 1e-9, "the cage heat: 36 / 16 → 26 a heat (2026-10-19)")
-	t.eq(Economy.trial_tickets({"score": 24, "location": "cage"}, false), 15, "a 24-point cage trial pays 15 (base 5 + 0.4 a point)")
+	t.eq(Economy.trial_tickets({"score": 24, "location": "cage"}, false), 17, "a 24-point cage trial pays 17 (base 7 + 0.4 a point; Ross raised the base from 5, 2026-11-01)")
 
 
 func _envelope(t) -> void:
@@ -60,7 +60,7 @@ func _envelope(t) -> void:
 	t.ok(rates.size() >= 4, "two trial rates and two heat rates (%d)" % rates.size())
 	for r in rates:
 		t.ok(float(r["rate"]) >= float(band[0]) and float(r["rate"]) <= float(band[1]), "%s pays inside the band (%.1f/min)" % [r["mode"], r["rate"]])
-	t.ok(EconomyBudget.heat_rate(LeagueData.league("cage")) > EconomyBudget.trial_rate("cage"), "a cage heat out-earns a cage trial a minute (one currency: heats carry the wallet, trials a bit less)")
+	t.ok(absf(EconomyBudget.heat_rate(LeagueData.league("cage")) - EconomyBudget.trial_rate("cage")) <= 1.5, "a cage trial and a cage heat pay about the same a minute (within 1.5; trials were raised to a heat's pace 2026-11-01)")
 	var catalog := EconomyBudget.catalog()
 	t.ok(catalog.size() >= 2, "the priced hoops are in the catalog (%d)" % catalog.size())
 	for item in catalog:

@@ -135,24 +135,27 @@ The ledger prints all of it and exits non-zero on a break:
 
 | Mode | pays | rate |
 |---|---|---|
-| trial, cage | 5 + 0.40/pt (×1.0), +10 new best | 15 a trial, ~10 tickets/min |
-| trial, beach | same ×1.25 | 15 a trial, ~10 tickets/min |
-| trial, park | same ×1.4 (avg 17) | 17 a trial, ~11 tickets/min |
-| trial, city | same ×1.5 (avg 16) | 17 a trial, ~11 tickets/min |
+| trial, cage | 7 + 0.40/pt (×1.0), +10 new best | 17 a trial, ~11.3 tickets/min |
+| trial, beach | same ×1.25 | 18 a trial, ~12 tickets/min |
+| trial, park | same ×1.4 (avg 17) | 19 a trial, ~12.7 tickets/min |
+| trial, city | same ×1.5 (avg 16) | 20 a trial, ~13.3 tickets/min |
 | heat, cage | 36 / 16 / title 150 tickets | 26 a heat, ~10.4 tickets/min |
 | heat, beach | 40 / 18 / title 180 | 29 a heat, ~11.6 tickets/min |
 | heat, park | 43 / 20 / title 200 | 31.5 a heat, ~12.6 tickets/min |
 | heat, city | 47 / 21 / title 220 | 34 a heat, ~13.6 tickets/min |
 | ranked online | 30 win / 14 loss | 22 a match, ~8.8 tickets/min |
-| shoot around | a cage trial + 5 bonus, once a day | 20, ~13.3 tickets/min |
+| shoot around | a cage trial + 5 bonus, once a day | 22, ~14.7 tickets/min |
 
-Rate band 6–14/min. With one wallet the heats carry it and a trial pays a
-bit less than a heat a minute (Ross's call; trials dropped ~15 % from 6 +
-0.45/pt). Tiers in minutes of trials: entry 15–40, mid 40–70, premium
-70–115, grail 115–170. At the ~10.7/min grind rate a PEGGY drop (300
-tickets) is an entry purchase (~28 min), the 102 winnable prizes cost
-~30,600 tickets (~48 h, no drop wasted; 2026-10-25, 91 balls, 14 nets), the hoops (300 / 400) sit at 28 /
-37 min, and the whole catalog is ~49 hours (band 15–50 h, near its ceiling) — something new every few
+Rate band 6–15/min (the ceiling was 14 until 2026-11-01). With one wallet
+the heats and the trials pay about the same a minute: trials ran a bit
+under a heat from 2026-10-25 (base 5), then Ross raised the base to 7 on
+2026-11-01 ("a few more tickets for playing time trials") — a cage trial
+now edges a cage heat (11.3 vs 10.4/min), the test allows 1.5/min either
+way. Tiers in minutes of trials: entry 15–40, mid 40–70, premium
+70–115, grail 115–170. At the ~12.3/min grind rate a PEGGY drop (300
+tickets) is an entry purchase (~24 min), the 104 winnable prizes cost
+~30,600 tickets (~41 h, no drop wasted), the hoops (300 / 400) sit at 24 /
+32 min, and the whole catalog is ~42 hours (band 15–50 h) — something new every few
 sessions, the legends behind level 5. Nets were priced 400–1000 on a counter
 until 2026-10-15; now they are prizes.
 
