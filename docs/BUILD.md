@@ -134,6 +134,43 @@ from **`store_keys.json`** at the project root (gitignored; copy
 `store_keys.example.json`). Absent or unfilled, the store is the stub too.
 docs/BACKEND.md → Ticket store has the dashboard and store-console setup.
 
+### The ads plugin (AdMob, 2026-11-01)
+
+Interstitials (docs/ADS.md) come through **godot-sdk-integrations/godot-admob
+v7.0** (MIT; tested on Godot 4.7; Google Mobile Ads 24.9.0 on Android,
+12.14.0 on iOS). The addon's GDScript is **vendored** — `addons/AdmobPlugin`
+(the `Admob` node, the export plugin, the models) and `addons/GMPShared` —
+and enabled in project.godot; the binaries live outside the repo:
+
+```
+~/.config/hoop_shoot/admob/android/bin/{debug,release}/AdmobPlugin-*.aar
+~/.config/hoop_shoot/admob/ios/plugins/AdmobPlugin.gdip + AdmobPlugin.{debug,release}.xcframework
+```
+
+**`tools/fetch_ads_plugin.sh`** puts them there (the release zip, pinned by
+version and SHA-256; `--vendor` re-copies the addon for a new release).
+`tools/build.sh` copies the .aar pair into `addons/AdmobPlugin/bin/` and the
+iOS files into `ios/plugins/` (all gitignored, `.gdignore`d so nothing of
+them is packed), and **writes `addons/AdmobPlugin/{ios,android}_export.cfg`
+from `data/ads.json`** (the AdMob app id, `is_real`, the ATT text) — the
+ids have one home. The iOS preset carries `plugins/AdmobPlugin=true` and
+`application/min_ios_version="15.0"` (RevenueCat's floor; the AdMob plugin
+wants 14.3+). Missing binaries: a warning, no ads.
+
+Two things happen at the iOS export that the RevenueCat plugin never
+needed: the export plugin injects `GADApplicationIdentifier`,
+`NSUserTrackingUsageDescription` (ATT), the SKAdNetwork ids and an ATS
+allowance into the plist, and it pulls the **Google Mobile Ads SDK into
+the Xcode project by Swift Package Manager** — a Ruby script using the
+`xcodeproj` gem (this Mac has it from CocoaPods; `gem install xcodeproj`
+otherwise), then `xcodebuild -resolvePackageDependencies` (network).
+`build.sh` fails the export when the plugin was staged but no SPM line
+shows in the log. Xcode resolves the package again when the project opens.
+The Android side rides the gradle (Play) build only, like the store; phone
+deploys show no ads. With placeholder ids in `data/ads.json` the plugin
+ships inert: `AdMobBackend.available()` is true on the phone but
+`Ads.platform_cfg()` is empty, so the SDK never starts.
+
 ## The icon
 
 `assets/icon/icon_1024.png` is Ross's final icon (design 46b NEON BALL,

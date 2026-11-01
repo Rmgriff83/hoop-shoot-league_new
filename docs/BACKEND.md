@@ -750,3 +750,32 @@ is a *pending purchase* the phone CLAIMs, like `/v1/rewards/claim`.
      kill the app mid-sheet and relaunch (the SDK re-posts, `sync` claims),
      a sandbox refund (`refunded_at` in the ledger).
 
+### Entitlements: remove_ads (2026-11-01; docs/ADS.md)
+
+The other kind of sale: **owned**, not credited. `data/store.json →
+entitlements` lists `remove_ads` (key `remove_ads`, $4.99); migration 0011
+adds `entitlements(player_id, key, product_id, store, transaction_id,
+environment, granted_at, event_id, created_at, revoked_at)`, one row per
+store transaction (`UNIQUE (store, transaction_id)`), index
+`(player_id, revoked_at)`. The webhook (`handleEvent`):
+
+- `NON_RENEWING_PURCHASE` of an entitlement product → `INSERT OR IGNORE` →
+  `granted` | `duplicate_transaction`; the same 500s as a pack
+  (`no_transaction`, `unknown_player`, nothing recorded) so the retry lands.
+  An unknown product is still a 500: **deploy the Worker before a product
+  goes live**.
+- `CANCELLATION` → `revoked_at` on the matching row → `revoked` (tickets
+  are still never clawed back; an entitlement is).
+- `TRANSFER` (a restore on another player id — a reinstalled phone;
+  RevenueCat's default "transfer to new App User ID") → the live rows of
+  every `transferred_from` id move to the first `transferred_to` id that
+  exists in `players` → `transferred` (+ `moved`); none exists → 500
+  `unknown_player` (the retry lands once the phone registers); nothing to
+  move → `ignored`. Ticket `purchases` never move.
+
+`GET /v1/me` answers `entitlements: string[]` (the live keys); account
+deletion drops the rows. The phone unites this with the SDK's own
+entitlements (`Store.owns`). Deploy: `npx wrangler d1 migrations apply
+hoop_shoot --env production --remote` (0011), `npx wrangler deploy --env
+production`.
+

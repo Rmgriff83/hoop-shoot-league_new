@@ -70,8 +70,13 @@ the balance chip and it counts up from the old balance) → idle. A cancel
 goes back quietly; an error shows PURCHASE FAILED; the slow case shows
 TICKETS ON THE WAY and later +N TICKETS (`StoreCopy`). Without a store (the
 desktop, QA, the gradle-free phone preset) busy ends in no sale: the stub.
-Only consumables are sold, so there is no Restore button (Apple 3.1.1 asks
-for one for non-consumables and subscriptions only).
+**Remove ads (2026-11-01; docs/ADS.md):** the one non-consumable,
+`remove_ads` at $4.99 (`data/store.json → entitlements`), owned forever:
+the Ticket Store's third tile (ask → busy → OWNED) and the RESTORE
+PURCHASES row Apple 3.1.1 asks for (also in Settings → MORE). It buys
+silence between games and nothing else — no tickets, no cards; and no
+ticket pack removes ads. The Worker books it as an entitlement (revoked by
+a refund, moved by a restore), the phone caches `Store.owns`.
 
 ## Earning
 
