@@ -2,7 +2,7 @@ import { SELF, env } from "cloudflare:test";
 import { beforeEach, describe, expect, it } from "vitest";
 import { app } from "../src/index";
 import { resetMemoryLimits } from "../src/limits";
-import { PACKS, packOf } from "../src/store_data";
+import { ENTITLEMENTS, PACKS, entitlementOf, packOf } from "../src/store_data";
 import { sameSecret } from "../src/store_routes";
 
 const uuid = () => crypto.randomUUID();
@@ -188,7 +188,7 @@ describe("webhook", () => {
   });
   it("other event types are recorded and ignored", async () => {
     const p = await register();
-    const ev = sale(p, { type: "TRANSFER" });
+    const ev = sale(p, { type: "BILLING_ISSUE" });
     expect(((await (await hook(ev)).json()) as any).status).toBe("ignored");
     expect(await rows(p)).toHaveLength(0);
     expect((await events()).some((e) => e.id === ev.event.id)).toBe(true);
@@ -248,5 +248,122 @@ describe("pending and claim", () => {
     expect(await rows(p)).toHaveLength(1);
     expect((await SELF.fetch("https://api/v1/me", { method: "DELETE", headers: auth(p) })).status).toBe(200);
     expect(await rows(p)).toHaveLength(0);
+  });
+});
+
+const ents = (p: Player) => env.DB.prepare("SELECT * FROM entitlements WHERE player_id = ?1 ORDER BY id").bind(p.playerId).all<any>().then((r) => r.results ?? []);
+const me = async (p: Player) => (await (await SELF.fetch("https://api/v1/me", { headers: auth(p) })).json()) as any;
+/** A RevenueCat TRANSFER: no transaction, no app_user_id, only the ids the entitlements leave and reach. */
+const transfer = (from: string[], to: string[]) => ({
+  api_version: "1.0",
+  event: { id: uuid(), type: "TRANSFER", app_id: "app1", event_timestamp_ms: Date.now(), store: "APP_STORE", environment: "SANDBOX", transferred_from: from, transferred_to: to },
+});
+
+describe("entitlements (remove_ads)", () => {
+  it("come from data/store.json: remove_ads for $4.99, its own key", () => {
+    expect(ENTITLEMENTS.map((e) => [e.id, e.key, e.priceUsd])).toEqual([["remove_ads", "remove_ads", "$4.99"]]);
+    expect(entitlementOf("remove_ads")?.key).toBe("remove_ads");
+    expect(entitlementOf("tickets_300")).toBeUndefined();
+    expect(packOf("remove_ads")).toBeUndefined();
+  });
+  it("a sale is owned, not credited: a row, /v1/me lists the key, nothing pending", async () => {
+    const p = await register();
+    expect((await me(p)).entitlements).toEqual([]);
+    const ev = sale(p, { product_id: "remove_ads", price: 4.99, entitlement_ids: ["remove_ads"] });
+    expect(((await (await hook(ev)).json()) as any).status).toBe("granted");
+    const r = await ents(p);
+    expect(r).toHaveLength(1);
+    expect([r[0].key, r[0].product_id, r[0].store, r[0].transaction_id, r[0].environment, r[0].event_id]).toEqual(["remove_ads", "remove_ads", "APP_STORE", ev.event.transaction_id, "SANDBOX", ev.event.id]);
+    expect(r[0].revoked_at).toBeNull();
+    expect(await rows(p)).toHaveLength(0);
+    expect((await pending(p)).json.pending).toHaveLength(0);
+    const m = await me(p);
+    expect(m.entitlements).toEqual(["remove_ads"]);
+    expect(m.pendingTickets).toBe(0);
+  });
+  it("the same event again is already processed; the same transaction under a new id is a duplicate", async () => {
+    const p = await register();
+    const ev = sale(p, { product_id: "remove_ads" });
+    expect(((await (await hook(ev)).json()) as any).status).toBe("granted");
+    expect(((await (await hook(ev)).json()) as any).status).toBe("already_processed");
+    const again = sale(p, { product_id: "remove_ads", transaction_id: ev.event.transaction_id });
+    expect(((await (await hook(again)).json()) as any).status).toBe("duplicate_transaction");
+    expect(await ents(p)).toHaveLength(1);
+    expect((await me(p)).entitlements).toEqual(["remove_ads"]);
+  });
+  it("needs a transaction and a known player, like a pack (500, nothing recorded)", async () => {
+    const p = await register();
+    const noTx = sale(p, { product_id: "remove_ads", transaction_id: "" });
+    expect((await hook(noTx)).status).toBe(500);
+    const ghost = sale(uuid(), { product_id: "remove_ads" });
+    const res = await hook(ghost);
+    expect(res.status).toBe(500);
+    expect(((await res.json()) as any).error).toBe("unknown_player");
+    expect((await events()).some((e) => e.id === ghost.event.id || e.id === noTx.event.id)).toBe(false);
+    expect(await ents(p)).toHaveLength(0);
+  });
+  it("a refund revokes it (tickets are never clawed back, an entitlement is)", async () => {
+    const p = await register();
+    const ev = sale(p, { product_id: "remove_ads" });
+    await hook(ev);
+    expect((await me(p)).entitlements).toEqual(["remove_ads"]);
+    const refund = { api_version: "1.0", event: { ...ev.event, id: uuid(), type: "CANCELLATION", cancel_reason: "CUSTOMER_SUPPORT" } };
+    expect(((await (await hook(refund)).json()) as any).status).toBe("revoked");
+    expect((await ents(p))[0].revoked_at).not.toBeNull();
+    expect((await me(p)).entitlements).toEqual([]);
+    // A second refund of the same transaction has nothing left to do.
+    const again = { api_version: "1.0", event: { ...ev.event, id: uuid(), type: "CANCELLATION" } };
+    expect(((await (await hook(again)).json()) as any).status).toBe("ignored");
+  });
+  it("a TRANSFER moves the live rows to the new player (a restore on a reinstalled phone)", async () => {
+    const a = await register();
+    const b = await register();
+    const ev = sale(a, { product_id: "remove_ads" });
+    await hook(ev);
+    const tr = transfer([a.playerId, `$RCAnonymousID:${uuid()}`], [b.playerId]);
+    const res = await hook(tr);
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as any)).toEqual({ status: "transferred", moved: 1 });
+    expect(await ents(a)).toHaveLength(0);
+    expect((await ents(b)).map((r) => [r.key, r.transaction_id])).toEqual([["remove_ads", ev.event.transaction_id]]);
+    expect((await me(a)).entitlements).toEqual([]);
+    expect((await me(b)).entitlements).toEqual(["remove_ads"]);
+    expect(((await (await hook(tr)).json()) as any).status).toBe("already_processed");
+    // Tickets stay where they were claimed from.
+    const t = sale(a);
+    await hook(t);
+    await hook(transfer([a.playerId], [b.playerId]));
+    expect(await rows(a)).toHaveLength(1);
+    expect(await rows(b)).toHaveLength(0);
+  });
+  it("a TRANSFER to a player the server has not met is retried; one with nothing to move is ignored", async () => {
+    const a = await register();
+    await hook(sale(a, { product_id: "remove_ads" }));
+    const ghost = transfer([a.playerId], [uuid()]);
+    const res = await hook(ghost);
+    expect(res.status).toBe(500);
+    expect(((await res.json()) as any).error).toBe("unknown_player");
+    expect((await events()).some((e) => e.id === ghost.event.id)).toBe(false);
+    expect(await ents(a)).toHaveLength(1);
+    const b = await register();
+    const nothing = transfer([uuid(), `$RCAnonymousID:${uuid()}`], [b.playerId]);
+    expect(((await (await hook(nothing)).json()) as any).status).toBe("ignored");
+    expect((await events()).some((e) => e.id === nothing.event.id)).toBe(true);
+    // A revoked row does not travel.
+    const ev2 = sale(a, { product_id: "remove_ads" });
+    await hook(ev2);
+    await hook({ api_version: "1.0", event: { ...ev2.event, id: uuid(), type: "CANCELLATION" } });
+    const c = await register();
+    const r = await (await hook(transfer([a.playerId], [c.playerId]))).json() as any;
+    expect(r.moved).toBe(1);   // the first, live row; not the revoked second
+    expect((await me(c)).entitlements).toEqual(["remove_ads"]);
+  });
+  it("account deletion drops the rows", async () => {
+    const p = await register();
+    await hook(sale(p, { product_id: "remove_ads" }));
+    expect(await ents(p)).toHaveLength(1);
+    const res = await SELF.fetch("https://api/v1/me", { method: "DELETE", headers: auth(p) });
+    expect(res.status).toBe(200);
+    expect(await ents(p)).toHaveLength(0);
   });
 });

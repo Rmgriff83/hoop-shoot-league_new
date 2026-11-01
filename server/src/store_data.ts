@@ -16,3 +16,14 @@ export const PACKS: readonly Pack[] = (store.packs as Array<Record<string, unkno
 }));
 
 export const packOf = (id: string): Pack | undefined => PACKS.find((p) => p.id === id);
+
+/** A one-time purchase the player owns (remove_ads): the key is the RevenueCat entitlement. */
+export interface Entitlement { id: string; key: string; priceUsd: string }
+
+export const ENTITLEMENTS: readonly Entitlement[] = ((store as { entitlements?: Array<Record<string, unknown>> }).entitlements ?? []).map((e) => ({
+  id: String(e.id),
+  key: String(e.key),
+  priceUsd: String(e.priceUsd),
+}));
+
+export const entitlementOf = (id: string): Entitlement | undefined => ENTITLEMENTS.find((e) => e.id === id);

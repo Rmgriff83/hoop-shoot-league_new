@@ -11,7 +11,7 @@ import type { Env, PlayerRow } from "./env";
 import { authenticate, matchSecret, replaceSecretsStatements, secretsOf, sha256Hex } from "./auth";
 import { deleteAccountStatements, link, providersOf } from "./platform_routes";
 import { store } from "./store_routes";
-import { pendingTicketsOf } from "./store";
+import { pendingTicketsOf, entitlementsOf } from "./store";
 import { minuteLimit, longLimit, type Verdict } from "./limits";
 import {
   AREAS, SCORE_FIELDS, SECRET_RE, TAG_RE, UUID_RE, normalizeName, onlyFields, plausible, validName, weekOf,
@@ -113,8 +113,8 @@ app.get("/v1/me", authenticate, async (c) => {
   const p = c.get("player");
   const lim = await minuteLimit(c.env.RL_ME, `me:${p.id}`, 5);
   if (!lim.allowed) return throttled(c, lim);
-  const [providers, rating, grants, pendingTickets] = await Promise.all([
-    providersOf(c.env.DB, p.id), db.ratingOf(c.env.DB, p.id), grantsOf(c.env.DB, p.id), pendingTicketsOf(c.env.DB, p.id),
+  const [providers, rating, grants, pendingTickets, entitlements] = await Promise.all([
+    providersOf(c.env.DB, p.id), db.ratingOf(c.env.DB, p.id), grantsOf(c.env.DB, p.id), pendingTicketsOf(c.env.DB, p.id), entitlementsOf(c.env.DB, p.id),
   ]);
   return c.json({
     playerId: p.id, name: p.name, tag: p.tag, level: p.level ?? 1, providers, rank: rating ? await rankOf(c.env.DB, rating) : null,
@@ -123,6 +123,8 @@ app.get("/v1/me", authenticate, async (c) => {
     pending: grants.filter((g) => g.claimed_at === null).length,
     // The ticket store: bought tickets waiting for the phone's CLAIM (store.ts).
     pendingTickets,
+    // What the player owns outright (remove_ads): the webhook's books, the phone's second source of truth.
+    entitlements,
   });
 });
 

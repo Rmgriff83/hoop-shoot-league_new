@@ -3,5 +3,9 @@
   "packs": [
     {"id": "tickets_300", "tickets": 300, "priceUsd": "$0.99"},
     {"id": "tickets_1000", "tickets": 1000, "priceUsd": "$2.99", "best": true}
+  ],
+  "_entitlements": "One-time purchases the player OWNS (docs/ECONOMY.md → Remove ads): `key` is the RevenueCat entitlement the product is attached to; the Worker books an entitlements row per sale, revokes it on refund and moves it on a TRANSFER.",
+  "entitlements": [
+    {"id": "remove_ads", "key": "remove_ads", "priceUsd": "$4.99"}
   ]
 }
