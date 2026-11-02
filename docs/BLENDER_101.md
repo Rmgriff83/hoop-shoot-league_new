@@ -1437,6 +1437,12 @@ boards, the marquee bulbs, the runner lights) is untouched. `build_cage.py`:
   (64 warm bulbs in one mesh along the back wall / ceiling corner at x 11.92,
   y 6.92 — just above the 6.9 m the cage's back panel hides from the key;
   ArcadeFx gives them an unshaded warm material).
+- **The carpet** (2026-11-02): `HallFloor` is the design's blacklight carpet,
+  `cage_neon_carpet.png` (a pixel-exact port of its canvas code) tiled every 1.6 m as albedo
+  and emission at 0.85. `CourtGeometry` makes it matte (the specular lobe laid a grey veil
+  over the near-black) and turns its mipmaps off (they averaged the 1 px specks to grey past
+  a few metres; the design has none). `cage_carpet.png`, the old maroon one, only backs the
+  match-end overlay now.
 - **The back wall** (2026-11-02): `HallBack` is the splash's Pizza Doggy brick floor to
   ceiling, `cage_brick.png` tiled every 3.2 m (`BRICK_TILE_M`), written by
   `tools/render_brick_wall.gd` (`CAGE_DARK` 0.6 lifts it through the slate mesh). The neon

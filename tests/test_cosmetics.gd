@@ -314,6 +314,17 @@ func _street_and_arenas(t) -> void:
 		t.ok(cage_scene.find_child("HallBackUpper", true, false) == null and cage_scene.find_child("HallNeon", true, false) != null,
 			"…floor to ceiling, with the neon line its own strip")
 		t.ok(cage.emissive_nodes.has("HallBack"), "…and unshaded, so it shows the tile's own colours")
+		var floor_mesh := cage_scene.find_child("HallFloor", true, false) as MeshInstance3D
+		var floor_mat := floor_mesh.get_active_material(0) as BaseMaterial3D if floor_mesh != null else null
+		t.ok(floor_mat != null and floor_mat.albedo_texture != null and floor_mat.albedo_texture.get_width() == 128 and floor_mat.emission_enabled and floor_mat.emission_texture != null,
+			"the hall floor is the blacklight carpet, its 128 px tile glowing through the emission map")
+		var court := CourtGeometry.new()
+		court._arena = cage_scene
+		court._matte("HallFloor")
+		court._no_mipmaps("HallFloor")
+		t.ok(floor_mat != null and floor_mat.metallic_specular == 0.0 and floor_mat.texture_filter == BaseMaterial3D.TEXTURE_FILTER_NEAREST,
+			"…matte, and with no mipmaps to grey its specks")
+		court.free()
 		cage_scene.free()
 		var park := CosmeticLibrary.get_arena("park")
 		t.ok(park != null and park.validate() == PackedStringArray() and park.snow and park.sky == "partly_cloudy" and park.parked_cars.size() == 1 and park.tree_layout != "",

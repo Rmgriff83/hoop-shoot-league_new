@@ -299,6 +299,8 @@ func _build_arena_model() -> bool:
 	for n in arena_set.emissive_nodes:
 		_unshade(n)
 	_matte("BackPad")   # the cage's foam: no specular, whatever the importer kept
+	_matte("HallFloor")        # the cage's blacklight carpet: near-black needs no sheen over it…
+	_no_mipmaps("HallFloor")   # …and its neon stays sharp at any distance
 	_build_interactables(arena_set)
 	if arena_set.ocean:
 		_beach_fx = BeachFx.new()
@@ -880,6 +882,20 @@ func _matte(node_name: String) -> void:
 		if m is BaseMaterial3D:
 			(m as BaseMaterial3D).metallic_specular = 0.0
 			(m as BaseMaterial3D).roughness = 1.0
+
+
+## Mipmaps average a tile of 1 px neon specks into grey a few metres out, where
+## the design (which has none) keeps them sharp on black. Shared resource, like
+## _matte.
+func _no_mipmaps(node_name: String) -> void:
+	var mi := _arena.find_child(node_name, true, false)
+	if not (mi is MeshInstance3D) or (mi as MeshInstance3D).mesh == null:
+		return
+	var mesh := (mi as MeshInstance3D).mesh
+	for i in mesh.get_surface_count():
+		var m := mesh.surface_get_material(i)
+		if m is BaseMaterial3D:
+			(m as BaseMaterial3D).texture_filter = BaseMaterial3D.TEXTURE_FILTER_NEAREST
 
 
 ## The score on every board the court has: the LED's idle line (SCORE 12 x2)

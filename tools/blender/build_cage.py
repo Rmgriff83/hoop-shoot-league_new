@@ -114,6 +114,7 @@ HALL_HALF_W = 8.0
 HALL_H = 7.0
 FPS = 30
 HALL_WALL_SPLIT = 2.2               # side walls: textured cabinets below (2.2 m tall), dark above
+CARPET_TILE_M = 1.6                 # the blacklight carpet's repeat: 128 px, 80 px/m
 BRICK_TILE_M = 3.2                  # the back wall's brick repeat: bricks about 30 x 12.5 cm
 NEON_Y0, NEON_Y1 = 1.99, 2.06       # the neon line along the back wall, where cage_hall.png painted it
 MESH_REPEATS_PER_M = 2.5            # 32-px tiles with 16-px diamonds (2 cells) -> 20 cm cells (finer shimmers on a phone; Ross kept these over the design's 40 cm, 2026-10-16)
@@ -146,7 +147,7 @@ def mat_flat(name, rgb, roughness=1.0):
     return m
 
 
-def mat_tex(name, path, alpha_clip=False, double_sided=False, emissive=False, matte=False):
+def mat_tex(name, path, alpha_clip=False, double_sided=False, emissive=False, matte=False, emission_strength=1.0):
     m = bpy.data.materials.get(name) or bpy.data.materials.new(name)
     m.use_nodes = True
     nodes, links = m.node_tree.nodes, m.node_tree.links
@@ -170,7 +171,7 @@ def mat_tex(name, path, alpha_clip=False, double_sided=False, emissive=False, ma
     if emissive:
         # glTF emissiveTexture: the surface glows on its own (marquee, neon).
         links.new(tex.outputs["Color"], b.inputs["Emission Color"])
-        b.inputs["Emission Strength"].default_value = 1.0
+        b.inputs["Emission Strength"].default_value = emission_strength
     if alpha_clip:
         clip = nodes.new("ShaderNodeMath")
         clip.operation = "GREATER_THAN"
@@ -481,7 +482,7 @@ def build():
     gate_frame = mat_flat("Gate_Frame", (69, 78, 88), roughness=0.9)
     ceiling_bulb = mat_flat("Hall_LightBulb", (255, 230, 176), roughness=0.4)
     ceiling_wire = mat_flat("Hall_LightWire", (26, 22, 18))
-    carpet = mat_tex("Hall_Carpet", TEX("cage_carpet.png"))
+    carpet = mat_tex("Hall_NeonCarpet", TEX("cage_neon_carpet.png"), emissive=True, emission_strength=0.85)
     hall = mat_tex("Hall_Wall", TEX("cage_hall.png"), emissive=True)
     brick = mat_tex("Hall_Brick", TEX("cage_brick.png"))               # unshaded in Godot (emissive_nodes)
     neon = mat_tex("Hall_Neon", TEX("cage_neon.png"), emissive=True)
@@ -596,8 +597,10 @@ def build():
     # The dark runner rug along the back row of cabinets (design 32a).
     add_quad("HallRug", [(9.5, 0.004, -7.6), (11.2, 0.004, -7.6), (11.2, 0.004, 7.6), (9.5, 0.004, 7.6)],
              (0, 1, 0), rug, c_hall, cage, (1.0, 15.2))
-    add_quad("HallFloor", [(HALL_X0, -0.02, -hw), (HALL_X1, -0.02, -hw), (HALL_X1, -0.02, hw), (HALL_X0, -0.02, hw)],
-             (0, 1, 0), carpet, c_hall, cage, ((HALL_X1 - HALL_X0) * 0.6, 2.0 * hw * 0.6))
+    # The blacklight carpet (design 32a): corners from z +hw so the exported UVs
+    # come out as the design's (x / 1.6, z / 1.6), the pattern where it put it.
+    add_quad("HallFloor", [(HALL_X0, -0.02, hw), (HALL_X1, -0.02, hw), (HALL_X1, -0.02, -hw), (HALL_X0, -0.02, -hw)],
+             (0, 1, 0), carpet, c_hall, cage, ((HALL_X1 - HALL_X0) / CARPET_TILE_M, 2.0 * hw / CARPET_TILE_M))
     ys = HALL_WALL_SPLIT
     # The back wall is the splash's brick, floor to ceiling (Ross, 2026-11-02).
     add_quad("HallBack", [(HALL_X1, 0, -hw), (HALL_X1, 0, hw), (HALL_X1, HALL_H, hw), (HALL_X1, HALL_H, -hw)],

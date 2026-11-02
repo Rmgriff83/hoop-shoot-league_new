@@ -179,6 +179,94 @@ do
   save(spr, "cage_carpet.png")
 end
 
+-- cage_neon_carpet.png 128x128 — the hall floor's blacklight carpet (Ross's
+-- "Arcade Cage Concept" 32a, 2026-11-02): near-black with neon specks, squiggles,
+-- rings, triangles, squares and plus-stars. A pixel-exact port of the design's
+-- canvas code, so the draws keep its order, its seed and JS Math.round. Tiles
+-- every 1.6 m; build_cage.py uses it as albedo and emissive map.
+do
+  local S = 128
+  local spr, img = newImage(S, S)
+  local seed = 911
+  local function r()
+    seed = (seed * 16807) % 2147483647
+    return seed / 2147483647
+  end
+  fill(img, 0, 0, S - 1, S - 1, pc.rgba(7, 6, 12, 255))
+  local pile1, pile2 = pc.rgba(20, 16, 30, 255), pc.rgba(14, 11, 22, 255)
+  for i = 1, 260 do                                  -- pile texture
+    local col = (r() < 0.5) and pile1 or pile2
+    local X = math.floor(r() * S)
+    local Y = math.floor(r() * S)
+    img:drawPixel(X, Y, col)
+  end
+  local pink, green = pc.rgba(255, 46, 154, 255), pc.rgba(61, 255, 110, 255)
+  local NEON = { pink, green, pc.rgba(255, 242, 58, 255), pc.rgba(46, 200, 255, 255),
+                 pc.rgba(255, 138, 30, 255), pc.rgba(180, 77, 255, 255), pink, green }
+  local function px(X, Y, col)
+    img:drawPixel(math.floor(X + 0.5) % S, math.floor(Y + 0.5) % S, col)
+  end
+  local function pick() return NEON[math.floor(r() * #NEON) + 1] end
+  for i = 1, 90 do                                   -- specks + chunky dots
+    local col = pick()
+    local X = r() * S
+    local Y = r() * S
+    px(X, Y, col)
+    if r() < 0.35 then px(X + 1, Y, col); px(X, Y + 1, col); px(X + 1, Y + 1, col) end
+  end
+  for i = 1, 8 do                                    -- squiggles
+    local col = pick()
+    local X = r() * S
+    local Y = r() * S
+    local L = 9 + r() * 9
+    local a = r() * math.pi
+    local amp = 1.5 + r() * 1.5
+    local f = 0.6 + r() * 0.4
+    local t = 0.0
+    while t <= L do
+      local w = math.sin(t * f) * amp
+      px(X + math.cos(a) * t - math.sin(a) * w, Y + math.sin(a) * t + math.cos(a) * w, col)
+      t = t + 0.5
+    end
+  end
+  for i = 1, 4 do                                    -- rings
+    local col = pick()
+    local X = r() * S
+    local Y = r() * S
+    local R = 2 + math.floor(r() * 2)
+    for k = 0, 23 do
+      local a = k / 24 * math.pi * 2
+      px(X + math.cos(a) * R, Y + math.sin(a) * R, col)
+    end
+  end
+  for i = 1, 3 do                                    -- triangles
+    local col = pick()
+    local X = math.floor(r() * S)
+    local Y = math.floor(r() * S)
+    for yy = 0, 3 do
+      for xx = -yy, yy do px(X + xx, Y + yy, col) end
+    end
+  end
+  for i = 1, 3 do                                    -- squares / hollow squares
+    local col = pick()
+    local X = math.floor(r() * S)
+    local Y = math.floor(r() * S)
+    local hollow = r() < 0.5
+    for yy = 0, 2 do
+      for xx = 0, 2 do
+        if not hollow or yy ~= 1 or xx ~= 1 then px(X + xx, Y + yy, col) end
+      end
+    end
+  end
+  for i = 1, 2 do                                    -- little plus-stars
+    local col = pick()
+    local X = math.floor(r() * S)
+    local Y = math.floor(r() * S)
+    px(X, Y, col); px(X + 1, Y, col); px(X - 1, Y, col); px(X, Y + 1, col); px(X, Y - 1, col)
+  end
+  save(spr, "cage_neon_carpet.png")
+end
+
 -- cage_hall.png 256x64 — black hall wall with six arcade cabinets in
 -- silhouette (glowing screens) and a neon line along the top. Tiled 4x.
 do
