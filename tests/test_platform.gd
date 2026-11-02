@@ -44,15 +44,25 @@ func run(t) -> void:
 	var fake := FakePlatformBackend.new()
 	plat.use_backend(fake)
 	# Stage B (docs/BACKEND.md → Ranked → Stage B): milestone keys from the
-	# server reach the backend once each and stay in the account part.
+	# server are announced once each and stay in the account part; the
+	# ones with an achievement reach the backend as Apple ids through
+	# `Achievements` (docs/ACHIEVEMENTS.md).
 	var acc0: Dictionary = save.get_account()
 	acc0.erase("milestones")
+	acc0.erase("achievements")
+	acc0.erase("achievementsPending")
 	save.put_account(acc0)
+	var heard: Array = []
+	var hear := func(k: String) -> void: heard.push_back(k)
+	plat.milestone_unlocked.connect(hear)
 	plat.note_milestones(["first_login", "first_ranked_win"])
-	t.eq(fake.unlocked, ["first_login", "first_ranked_win"], "new milestone keys reach the backend")
+	t.eq(heard, ["first_login", "first_ranked_win"], "new milestone keys are announced")
+	t.eq(fake.unlocked, ["hs.ach.debut_dub"], "…the mirrored one reaches the backend as its Apple id (first_login has none)")
 	plat.note_milestones(["first_login", "first_ranked_win", "tier_pro"])
-	t.eq(fake.unlocked, ["first_login", "first_ranked_win", "tier_pro"], "…each once")
+	t.eq(heard, ["first_login", "first_ranked_win", "tier_pro"], "…each once")
+	t.eq(fake.unlocked, ["hs.ach.debut_dub", "hs.ach.tier_pro"], "…and so does each award")
 	t.eq(plat.unlocked(), ["first_login", "first_ranked_win", "tier_pro"], "…and the cache keeps them")
+	plat.milestone_unlocked.disconnect(hear)
 
 	# The null backend: never available, never linked, nothing to sync.
 	var nul := PlatformBackend.new()

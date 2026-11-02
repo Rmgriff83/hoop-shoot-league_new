@@ -1,0 +1,477 @@
+{
+  "_": "Game Center achievements (design 'Achievement Roster', Ross's sheet 2026-11-02; docs/ACHIEVEMENTS.md). Rules live in core/achievements/achievement_rules.gd; the autoload game/autoload/achievements.gd decides and reports. apple_id is permanent once created in App Store Connect (tools/asc_achievements.mjs). play_id is Google-generated, filled in when Play Games lands. Icons: art/achievements/<key>.png (1024x1024).",
+  "categories": [
+    {
+      "id": "start",
+      "label": "Getting started",
+      "colour": "#FFFFFF"
+    },
+    {
+      "id": "areas",
+      "label": "Areas & level",
+      "colour": "#3F8C7A"
+    },
+    {
+      "id": "leagues",
+      "label": "Leagues",
+      "colour": "#F0B84A"
+    },
+    {
+      "id": "shoot",
+      "label": "Shooting",
+      "colour": "#E8703A"
+    },
+    {
+      "id": "online",
+      "label": "Online ranked",
+      "colour": "#5B8FD0"
+    },
+    {
+      "id": "collect",
+      "label": "Collection & cards",
+      "colour": "#9C6BD6"
+    }
+  ],
+  "achievements": [
+    {
+      "key": "nothing_but_net",
+      "name": "NOTHING BUT NET",
+      "category": "start",
+      "unlock": "First swish",
+      "points": 5,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.nothing_but_net",
+      "play_id": ""
+    },
+    {
+      "key": "on_the_clock",
+      "name": "ON THE CLOCK",
+      "category": "start",
+      "unlock": "Finish a time trial",
+      "points": 5,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.on_the_clock",
+      "play_id": ""
+    },
+    {
+      "key": "opening_night",
+      "name": "OPENING NIGHT",
+      "category": "start",
+      "unlock": "Win your first league heat",
+      "points": 10,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.opening_night",
+      "play_id": ""
+    },
+    {
+      "key": "ace_up_the_sleeve",
+      "name": "ACE UP THE SLEEVE",
+      "category": "start",
+      "unlock": "Play your first power-up card",
+      "points": 5,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.ace_up_the_sleeve",
+      "play_id": ""
+    },
+    {
+      "key": "beach_bound",
+      "name": "BEACH BOUND",
+      "category": "areas",
+      "unlock": "Unlock the Beach",
+      "points": 15,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.beach_bound",
+      "play_id": ""
+    },
+    {
+      "key": "park_regular",
+      "name": "PARK REGULAR",
+      "category": "areas",
+      "unlock": "Unlock the Park",
+      "points": 15,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.park_regular",
+      "play_id": ""
+    },
+    {
+      "key": "city_lights",
+      "name": "CITY LIGHTS",
+      "category": "areas",
+      "unlock": "Unlock the City",
+      "points": 20,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.city_lights",
+      "play_id": ""
+    },
+    {
+      "key": "hall_of_famer",
+      "name": "HALL OF FAMER",
+      "category": "areas",
+      "unlock": "Reach level 7",
+      "points": 30,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.hall_of_famer",
+      "play_id": ""
+    },
+    {
+      "key": "cage_champion",
+      "name": "CAGE CHAMPION",
+      "category": "leagues",
+      "unlock": "Win the Arcade League title",
+      "points": 20,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.cage_champion",
+      "play_id": ""
+    },
+    {
+      "key": "beach_champion",
+      "name": "BEACH CHAMPION",
+      "category": "leagues",
+      "unlock": "Win the Beach League title",
+      "points": 25,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.beach_champion",
+      "play_id": ""
+    },
+    {
+      "key": "park_champion",
+      "name": "PARK CHAMPION",
+      "category": "leagues",
+      "unlock": "Win the Park League title",
+      "points": 30,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.park_champion",
+      "play_id": ""
+    },
+    {
+      "key": "city_champion",
+      "name": "CITY CHAMPION",
+      "category": "leagues",
+      "unlock": "Win the City League title",
+      "points": 35,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.city_champion",
+      "play_id": ""
+    },
+    {
+      "key": "hard_way",
+      "name": "HARD WAY",
+      "category": "leagues",
+      "unlock": "Win a league title on HARD difficulty",
+      "points": 40,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.hard_way",
+      "play_id": ""
+    },
+    {
+      "key": "bonus_basketball",
+      "name": "BONUS BASKETBALL",
+      "category": "leagues",
+      "unlock": "Win a league heat in overtime",
+      "points": 10,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.bonus_basketball",
+      "play_id": ""
+    },
+    {
+      "key": "never_out_of_it",
+      "name": "NEVER OUT OF IT",
+      "category": "leagues",
+      "unlock": "Win after trailing at halftime",
+      "points": 15,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.never_out_of_it",
+      "play_id": ""
+    },
+    {
+      "key": "heating_up",
+      "name": "HEATING UP",
+      "category": "shoot",
+      "unlock": "10 makes in a row",
+      "points": 10,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.heating_up",
+      "play_id": ""
+    },
+    {
+      "key": "on_fire",
+      "name": "ON FIRE",
+      "category": "shoot",
+      "unlock": "25 makes in a row",
+      "points": 25,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.on_fire",
+      "play_id": ""
+    },
+    {
+      "key": "pure",
+      "name": "PURE",
+      "category": "shoot",
+      "unlock": "5 swishes in a row",
+      "points": 20,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.pure",
+      "play_id": ""
+    },
+    {
+      "key": "sharpshooter_1",
+      "name": "SHARPSHOOTER I",
+      "category": "shoot",
+      "unlock": "Score 20 in a time trial",
+      "points": 10,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.sharpshooter_1",
+      "play_id": ""
+    },
+    {
+      "key": "sharpshooter_2",
+      "name": "SHARPSHOOTER II",
+      "category": "shoot",
+      "unlock": "Score 30 in a time trial",
+      "points": 15,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.sharpshooter_2",
+      "play_id": ""
+    },
+    {
+      "key": "sharpshooter_3",
+      "name": "SHARPSHOOTER III",
+      "category": "shoot",
+      "unlock": "Score 40 in a time trial",
+      "points": 30,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.sharpshooter_3",
+      "play_id": ""
+    },
+    {
+      "key": "perfect_run",
+      "name": "PERFECT RUN",
+      "category": "shoot",
+      "unlock": "A full time trial with no misses",
+      "points": 40,
+      "hidden": true,
+      "source": "phone",
+      "apple_id": "hs.ach.perfect_run",
+      "play_id": ""
+    },
+    {
+      "key": "board_member",
+      "name": "BOARD MEMBER",
+      "category": "shoot",
+      "unlock": "Top 100 on any weekly time-trial board",
+      "points": 20,
+      "hidden": false,
+      "source": "server",
+      "apple_id": "hs.ach.board_member",
+      "play_id": ""
+    },
+    {
+      "key": "number_one",
+      "name": "NUMBER ONE",
+      "category": "shoot",
+      "unlock": "#1 on any weekly time-trial board",
+      "points": 40,
+      "hidden": true,
+      "source": "server",
+      "apple_id": "hs.ach.number_one",
+      "play_id": ""
+    },
+    {
+      "key": "debut_dub",
+      "name": "DEBUT DUB",
+      "category": "online",
+      "unlock": "First ranked win",
+      "points": 10,
+      "hidden": false,
+      "source": "server",
+      "apple_id": "hs.ach.debut_dub",
+      "play_id": ""
+    },
+    {
+      "key": "spoils",
+      "name": "SPOILS",
+      "category": "online",
+      "unlock": "First capture",
+      "points": 10,
+      "hidden": false,
+      "source": "server",
+      "apple_id": "hs.ach.spoils",
+      "play_id": ""
+    },
+    {
+      "key": "tier_starter",
+      "name": "STARTER",
+      "category": "online",
+      "unlock": "Reach the STARTER tier",
+      "points": 10,
+      "hidden": false,
+      "source": "server",
+      "apple_id": "hs.ach.tier_starter",
+      "play_id": ""
+    },
+    {
+      "key": "tier_pro",
+      "name": "PRO",
+      "category": "online",
+      "unlock": "Reach the PRO tier",
+      "points": 15,
+      "hidden": false,
+      "source": "server",
+      "apple_id": "hs.ach.tier_pro",
+      "play_id": ""
+    },
+    {
+      "key": "tier_allstar",
+      "name": "ALL-STAR",
+      "category": "online",
+      "unlock": "Reach the ALL-STAR tier",
+      "points": 25,
+      "hidden": false,
+      "source": "server",
+      "apple_id": "hs.ach.tier_allstar",
+      "play_id": ""
+    },
+    {
+      "key": "tier_mvp",
+      "name": "MVP",
+      "category": "online",
+      "unlock": "Reach the MVP tier",
+      "points": 40,
+      "hidden": false,
+      "source": "server",
+      "apple_id": "hs.ach.tier_mvp",
+      "play_id": ""
+    },
+    {
+      "key": "tier_legend",
+      "name": "LEGEND",
+      "category": "online",
+      "unlock": "Reach the LEGEND tier",
+      "points": 60,
+      "hidden": false,
+      "source": "server",
+      "apple_id": "hs.ach.tier_legend",
+      "play_id": ""
+    },
+    {
+      "key": "ranked_wins_10",
+      "name": "10 RANKED WINS",
+      "category": "online",
+      "unlock": "Win 10 ranked matches",
+      "points": 10,
+      "hidden": false,
+      "source": "server",
+      "apple_id": "hs.ach.ranked_wins_10",
+      "play_id": ""
+    },
+    {
+      "key": "ranked_wins_50",
+      "name": "50 RANKED WINS",
+      "category": "online",
+      "unlock": "Win 50 ranked matches",
+      "points": 20,
+      "hidden": false,
+      "source": "server",
+      "apple_id": "hs.ach.ranked_wins_50",
+      "play_id": ""
+    },
+    {
+      "key": "ranked_wins_100",
+      "name": "100 RANKED WINS",
+      "category": "online",
+      "unlock": "Win 100 ranked matches",
+      "points": 40,
+      "hidden": false,
+      "source": "server",
+      "apple_id": "hs.ach.ranked_wins_100",
+      "play_id": ""
+    },
+    {
+      "key": "run_it_back",
+      "name": "RUN IT BACK",
+      "category": "online",
+      "unlock": "Win a rematch",
+      "points": 10,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.run_it_back",
+      "play_id": ""
+    },
+    {
+      "key": "big_steal",
+      "name": "BIG STEAL",
+      "category": "online",
+      "unlock": "Capture a Magnet card",
+      "points": 20,
+      "hidden": true,
+      "source": "server",
+      "apple_id": "hs.ach.big_steal",
+      "play_id": ""
+    },
+    {
+      "key": "drop_it",
+      "name": "DROP IT",
+      "category": "collect",
+      "unlock": "First PEGGY prize",
+      "points": 5,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.drop_it",
+      "play_id": ""
+    },
+    {
+      "key": "jackpot",
+      "name": "JACKPOT",
+      "category": "collect",
+      "unlock": "First epic prize from PEGGY",
+      "points": 15,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.jackpot",
+      "play_id": ""
+    },
+    {
+      "key": "golden_drop",
+      "name": "GOLDEN DROP",
+      "category": "collect",
+      "unlock": "First legend prize from PEGGY",
+      "points": 25,
+      "hidden": false,
+      "source": "phone",
+      "apple_id": "hs.ach.golden_drop",
+      "play_id": ""
+    },
+    {
+      "key": "cold_shoulder",
+      "name": "COLD SHOULDER",
+      "category": "collect",
+      "unlock": "Deep Freeze an opponent on a 3+ make streak",
+      "points": 10,
+      "hidden": true,
+      "source": "phone",
+      "apple_id": "hs.ach.cold_shoulder",
+      "play_id": ""
+    }
+  ]
+}

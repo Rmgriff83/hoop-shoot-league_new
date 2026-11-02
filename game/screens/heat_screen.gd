@@ -691,9 +691,11 @@ func _on_card_tapped(i: int) -> void:
 func _deploy(i: int, id: String, receipted := false) -> void:
 	_dealt_slot = i
 	_dealt_from = Rect2(_tray[i].position, TRAY_CARD)
+	var opp_streak: int = heat.ai.streak if heat.ai != null else 0   # before the ice lands
 	if heat.play_card(Heat.PLAYER, id):
 		_tray_ids[i] = "used"
 		var kind := str(CardDefs.get_card(id).get("effect", {}).get("kind", ""))
+		Achievements.note_card(kind, opp_streak)
 		if kind == "fire":
 			_fire_slot = i   # stays in the tray while it burns
 		elif kind == "magnet":

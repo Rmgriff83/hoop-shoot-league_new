@@ -804,6 +804,7 @@ func peggy_drop(aim_x: float) -> Dictionary:
 	last_prize = {"slot": int(result["slot"]), "base": plate.get("base", ""), "rarity": plate.get("rarity", ""),
 		"kind": kind, "id": id, "refund": refund, "drop_index": index, "aim": aim_x, "result": result,
 		"owned_after": owned_count(kind), "roster_size": roster_size, "plates": plates}
+	Achievements.note_prize(last_prize)
 	return last_prize
 
 
@@ -1197,6 +1198,7 @@ func settled_online(msg: Dictionary) -> void:
 	# and settle_heat lands second.
 	if msg.has("tickets") and int(msg["tickets"]) > 0:
 		grant_tickets(int(msg["tickets"]))
+	Achievements.note_settle(msg, match_how)
 	_merge_online_settle()
 	# The ledger's word after every online match, casual or rated (Ross,
 	# 2026-10-26: a played card must never come back to its player): the
@@ -1864,6 +1866,8 @@ func _apply_league_heat(result: Dictionary) -> void:
 	last_heat["drop_reason"] = str(drop["reason"])
 	last_heat["bright"] = BrightSpots.note(doc, result)
 	save_league_doc(doc)
+	Achievements.note_league_heat({"won": won, "ot": ctx["ot"], "trailing_at_half": ctx["trailing_at_half"],
+		"title": title, "league_id": str(cfg["id"]), "difficulty": ai_difficulty, "level_after": int(xp_info["level_after"])})
 
 
 ## What the match-end page (game/ui/match_end_overlay.gd) needs from the
@@ -2026,6 +2030,7 @@ func finish_run(run: Dictionary) -> void:
 		last_run["shoot_bonus"] = shoot   # (`bonus` is the run's streak points)
 	grant_tickets(earned)
 	last_run["tickets"] = earned
+	Achievements.note_run(last_run)
 	# The global board (docs/BACKEND.md): queued in the outbox, sent when the
 	# net allows — the results page never waits on it.
 	Net.queue_run(last_run)

@@ -1416,6 +1416,7 @@ func _handle_event(ev: Dictionary) -> void:
 	match ev["kind"]:
 		"go":
 			_court.arcade_chase()
+			Achievements.reset_streaks()
 			if not _practice:
 				Sfx.countdown_go()
 				_hud.banner("GO!", Color(0.4, 0.9, 0.55))
@@ -1528,6 +1529,11 @@ func _on_outcome(outcome: Dictionary, buzzer_beater: bool) -> void:
 	var streak: int = outcome.get("streak", trial.streak)
 	var pts: int = outcome["points"]
 	var accent := _court.info.accent_color
+	if not _practice and not tutorial_running():
+		# Achievements (docs/ACHIEVEMENTS.md): the player's shots only; an
+		# iced-out make is a miss to the streaks.
+		Achievements.note_shot(bool(outcome["made"]) and not bool(outcome.get("iced_out", false)),
+			outcome["type"] == ShotClassify.SWISH)
 	if outcome.get("iced_out", false):
 		# The ball went in but only cleared the ice (the ice_break event just
 		# announced it). Net/rim react; nothing to score.

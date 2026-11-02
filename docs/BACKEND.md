@@ -543,8 +543,12 @@ Migration `0009_online_progress.sql`: `online_progress`, `grants`,
 
 ## Platform identity (prep 2026-10-17; Game Center live on iOS 2026-11-01)
 
-Groundwork for Game Center (iOS) and Play Games (Android) sign-in: no store
-plugin, achievements or leaderboards yet. A platform link is an optional
+Groundwork for Game Center (iOS) and Play Games (Android) sign-in — and
+since 2026-11-02 the achievements over it (docs/ACHIEVEMENTS.md: the
+`Achievements` autoload reports through `Platform.backend.unlock`, the
+server milestones reach it through `Platform.milestone_unlocked`, the weekly
+board ranks through `Net.score_accepted` / `board_loaded`; no leaderboards
+on the platform side). A platform link is an optional
 upgrade on top of the anonymous account, never a requirement; when the
 plugins land, all that is left is "get a proof from the platform, hand it to
 the server". Ross's calls: per-device secrets, deletion wipes the phone too,

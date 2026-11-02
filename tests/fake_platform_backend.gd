@@ -8,7 +8,15 @@ var available := true
 var signed := true
 var proof := {"subject": "fake-1"}
 var sign_in_calls := 0
+## The ids awarded, in order; `banners` the banner flag beside each.
 var unlocked: Array = []
+var banners: Array = []
+## What unlock() answers (false: the platform refused the call).
+var accept_awards := true
+## What load_achievements() answers.
+var remote := {"ok": true, "earned": []}
+var load_calls := 0
+var sheet_shown := 0
 var proof_calls := 0
 
 
@@ -39,5 +47,23 @@ func get_identity_proof() -> Dictionary:
 	return proof.duplicate()
 
 
-func unlock(key: String) -> void:
-	unlocked.push_back(key)
+func unlock(id: String, banner := true) -> bool:
+	if not accept_awards:
+		return false
+	unlocked.push_back(id)
+	banners.push_back(banner)
+	return true
+
+
+func load_achievements() -> Dictionary:
+	load_calls += 1
+	return remote.duplicate(true)
+
+
+func has_achievements_sheet() -> bool:
+	return true
+
+
+func show_achievements() -> bool:
+	sheet_shown += 1
+	return true

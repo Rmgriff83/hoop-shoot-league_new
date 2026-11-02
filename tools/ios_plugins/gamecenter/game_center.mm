@@ -211,6 +211,7 @@ Error GameCenter::award_achievement(Dictionary p_params) {
 				withCompletionHandler:^(NSError *error) {
 					Dictionary ret;
 					ret["type"] = "award_achievement";
+					ret["name"] = name; // hoop_shoot (2026-11-02): which award answered
 					if (error == nil) {
 						ret["result"] = "ok";
 					} else {

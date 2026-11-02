@@ -507,6 +507,11 @@ static func rewards_title() -> String:
 	return "REWARDS"
 
 
+## The rewards head's button onto the platform's achievements sheet.
+static func achievements_word() -> String:
+	return "ACHIEVEMENTS"
+
+
 static func pending_head() -> String:
 	return "WAITING FOR YOU"
 

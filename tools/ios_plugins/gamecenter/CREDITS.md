@@ -19,7 +19,10 @@
   - `capabilities=["gamekit"]` dropped from the .gdip (no
     `UIRequiredDeviceCapabilities` constraint); GameKit still links through
     `system=["GameKit.framework"]`.
+  - The `award_achievement` event carries `name` (the achievement id it
+    answers for), 2026-11-02.
 - **Used by:** `game/net/game_center_backend.gd` (`authenticate`,
   `is_authenticated`, `request_identity_verification_signature`,
-  `get_pending_event_count`, `pop_pending_event`). Scores and achievements
-  are compiled in but unused.
+  `get_pending_event_count`, `pop_pending_event`; since 2026-11-02
+  `award_achievement`, `request_achievements`, `show_game_center` —
+  docs/ACHIEVEMENTS.md). Scores are compiled in but unused.

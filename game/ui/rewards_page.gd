@@ -110,6 +110,12 @@ func _build_head() -> void:
 	t.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	t.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	h.add_child(t)
+	# ACHIEVEMENTS (Ross, 2026-11-02): Apple's sheet, where there is one.
+	if Achievements.can_show():
+		var ach := button(MatchCopy.achievements_word(), GOLD, 16, 56.0 - ShadowStyle.OFFSET)
+		ach.name = "AchievementsButton"
+		ach.pressed.connect(func() -> void: Achievements.show_sheet())
+		h.add_child(ach)
 
 
 ## A section head: the words, a rule to the note, the note in grey.

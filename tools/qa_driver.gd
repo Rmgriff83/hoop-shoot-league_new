@@ -63,6 +63,8 @@ func _ready() -> void:
 	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live") or args.has("--qa-ads") or args.has("--qa-platform")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
+	# Achievements earned during a pass, in the log (docs/ACHIEVEMENTS.md).
+	Achievements.unlocked.connect(func(k: String) -> void: print("QA: achievement %s" % k))
 	# The splash is the main scene now: every other pass starts from the title.
 	if not args.has("--qa-splash"):
 		App.to_title.call_deferred()

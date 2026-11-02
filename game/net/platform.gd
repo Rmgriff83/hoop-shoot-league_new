@@ -21,8 +21,13 @@ extends Node
 signal conflict(info: Dictionary)
 signal link_changed
 ## A milestone the server witnessed reached this device for the first time
-## (the future achievement mirror; docs/BACKEND.md → Ranked → Stage B).
+## (`Achievements` mirrors the ones with an achievement; docs/BACKEND.md →
+## Ranked → Stage B).
 signal milestone_unlocked(key: String)
+## The backend's player signed in (relayed, so listeners survive use_backend).
+signal signed_in
+## An award the backend accepted but the platform then refused (its id).
+signal achievement_failed(id: String)
 
 var backend: PlatformBackend = PlatformBackend.new()
 var _pending_conflict := {}
@@ -40,12 +45,20 @@ func _ready() -> void:
 func _connect_backend() -> void:
 	if not backend.signed_in.is_connected(_on_signed_in):
 		backend.signed_in.connect(_on_signed_in)
+	if backend.has_signal("achievement_failed") and not backend.is_connected("achievement_failed", _on_achievement_failed):
+		backend.connect("achievement_failed", _on_achievement_failed)
+
+
+func _on_achievement_failed(id: String) -> void:
+	achievement_failed.emit(id)
 
 
 ## A fake backend (tests, QA) in place of the plugin's.
 func use_backend(b: PlatformBackend) -> void:
 	if backend.signed_in.is_connected(_on_signed_in):
 		backend.signed_in.disconnect(_on_signed_in)
+	if backend.has_signal("achievement_failed") and backend.is_connected("achievement_failed", _on_achievement_failed):
+		backend.disconnect("achievement_failed", _on_achievement_failed)
 	backend = b
 	_connect_backend()
 	_pending_conflict = {}
@@ -58,6 +71,7 @@ func start() -> void:
 
 
 func _on_signed_in() -> void:
+	signed_in.emit()
 	if Net.registered():
 		sync_link()
 	elif not App.player_created():
@@ -77,7 +91,8 @@ func unlocked() -> Array:
 	return Array(Net.account().get("milestones", []))
 
 
-## New keys from the server: remember them and hand each to the backend once.
+## New keys from the server: remember them and announce each once
+## (`Achievements` turns the mirrored ones into platform awards).
 func note_milestones(keys: Array) -> void:
 	var had := unlocked()
 	var fresh := []
@@ -92,7 +107,6 @@ func note_milestones(keys: Array) -> void:
 	a["milestones"] = all
 	SaveService.put_account(a)
 	for k in fresh:
-		backend.unlock(str(k))
 		milestone_unlocked.emit(str(k))
 
 

@@ -39,7 +39,26 @@ func get_identity_proof() -> Dictionary:
 	return {}
 
 
-## A server milestone to mirror as a platform achievement (docs/BACKEND.md →
-## Ranked → Stage B). The null backend has nowhere to put it.
-func unlock(_key: String) -> void:
-	pass
+## Award an achievement by its platform id (AchievementDefs.apple_id;
+## docs/ACHIEVEMENTS.md): true when the platform took the call (its own
+## completion banner when `banner`). The null backend has nowhere to put it,
+## so `Achievements` parks the key until a platform signs in.
+func unlock(_id: String, _banner := true) -> bool:
+	return false
+
+
+## The player's earned achievements on the platform: {ok, earned: [ids]}
+## — `ok` false when it could not be read (nothing is then re-reported).
+## A coroutine on a real backend.
+func load_achievements() -> Dictionary:
+	return {"ok": false, "earned": []}
+
+
+## The platform has an achievements sheet to show.
+func has_achievements_sheet() -> bool:
+	return false
+
+
+## Open it: true when the call went out.
+func show_achievements() -> bool:
+	return false

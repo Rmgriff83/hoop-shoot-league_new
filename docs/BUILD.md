@@ -200,7 +200,8 @@ That repo publishes binaries for Godot 3 only, so its six source files are
 never scans them, no export packs them; `CREDITS.md` lists the commit and
 our three patches — GameKit imported before Godot's headers, the root view
 controller through the window scene, the signature event handed to the main
-queue; the `.gdip` drops `capabilities=["gamekit"]`) and built here:
+queue, the `award_achievement` event naming its achievement; the `.gdip`
+drops `capabilities=["gamekit"]`) and built here:
 
 ```
 tools/build_gamecenter_plugin.sh      # once per source/engine change (--force to redo)
