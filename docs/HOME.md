@@ -512,13 +512,16 @@ sky shader.
 
 ## Splash (design "Splash Screen" 30a NEON WALL, 2026-10-30)
 
-Before it, Android 12+'s system splash (it can't be removed, and can't show a picture) shows nothing: a fully clear icon (`assets/splash/android_splash_icon.png`, export option `splash_screen/icon`) over the wall's dark (`splash_screen/background_color`; a plain APK keeps the icon's dark-brick background) — Ross, 2026-10-30. Then the **boot splash** (Ross, 2026-10-30) replaces Godot's logo: the neon ball centred on the brick wall (`assets/splash/boot_splash.png`, 1440×3120, made by `tools/make_boot_splash.gd`; `application/boot_splash/*` — cover, the wall's dark `#1F0F0C` behind it). iOS's launch screen reuses it; Android 12+ shows its system splash (the ball icon) first.
+Before it, Android 12+'s system splash (it can't be removed, and can't show a picture) shows nothing: a fully clear icon (`assets/splash/android_splash_icon.png`, export option `splash_screen/icon`) over the wall's dark (`splash_screen/background_color`; a plain APK keeps the icon's dark-brick background) — Ross, 2026-10-30. Then the **boot splash** (Ross, 2026-10-30) replaces Godot's logo: the neon ball centred on the brick wall (`assets/splash/boot_splash.png`, 1440×3120, made by `tools/make_boot_splash.gd`; `application/boot_splash/*` — cover, the wall's edge average `#1D1613` behind it). iOS's launch screen reuses it; Android 12+ shows its system splash (the ball icon) first.
 
 `game/screens/splash_screen.gd` (the main scene; `App.to_splash()`,
 `tests/test_splash.gd`, QA `--qa-splash`, `--qa-splash --qa-save` for the
 CONTINUE card): the first screen on launch and where the area archive's `<`
 leads. The 3D neon sign (29a) is gone: the app icon's look blown up, drawn
-in an anchored layer from `assets/splash/` — the brick wall (`neon_bg`),
+in an anchored layer from `assets/splash/` — the brick wall (`neon_bg`: since
+2026-11-01 Pizza Doggy's `brick_wall_pt_2` tile from `art/third_party/pizza_doggy`
+at 4x nearest, darkened to a mean of ~24/255 by `tools/render_brick_wall.gd` (Ross, 2026-11-01: "a touch brighter" than the old wall's 18);
+`BrickWall` repeats it every 1024 px on tall screens),
 HOOP SHOOT LEAGUE as full-frame pixel neon (`neon_text_off` under
 `neon_text_on`, both at y −40) and the orange neon ball between the wall and
 the words (`neon_ball_roll`, twelve 400 px frames; the strip was rebuilt from

@@ -52,6 +52,12 @@ func run(t) -> void:
 			bat = true
 	t.ok(bat, "the park's trees credit DanglingBat's PSX Trees")
 	t.ok(FileAccess.file_exists("res://assets/arena/park/trees/pine_tree_01_a.glb"), "the conformed trees ship")
+	var doggy := false
+	for c in models:
+		if str(c.get("author", "")) == "Pizza Doggy" and str(c.get("used_for", "")).find("splash") >= 0:
+			doggy = true
+	t.ok(doggy, "the splash's brick wall credits Pizza Doggy's PSX Textures II")
+	t.ok(FileAccess.file_exists("res://assets/splash/neon_bg.png"), "the rendered wall ships")
 	var fonts: Array = credits.get("fonts", [])
 	t.ok(fonts.size() >= 1 and str(fonts[0]["title"]) == "Caveat", "the chalk font is credited")
 	t.ok(FileAccess.file_exists("res://assets/fonts/caveat/Caveat.ttf") and FileAccess.file_exists("res://assets/fonts/caveat/OFL.txt"), "font and its licence ship together")

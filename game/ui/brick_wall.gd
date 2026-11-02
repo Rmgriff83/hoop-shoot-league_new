@@ -1,16 +1,17 @@
 class_name BrickWall
 extends Control
-## The splash's brick wall (assets/splash/neon_bg.png, 720×1560: a mortar
-## line every 48 px, the staggered rows repeating every 96) from the top of
-## the screen and on to its foot: on a screen taller than the design (the
-## moto is 1604) the rows under 1560 are the image's own, taken from whole
-## 96 px periods above its foot so the bond carries on without a seam (Ross,
-## 2026-10-31: the bricks stopped short of the bottom on the splash and the
-## area archive). Used by SplashScreen and AreaArchivePage.
+## The splash's brick wall (assets/splash/neon_bg.png, 720×1560: Pizza
+## Doggy's brick_wall_pt_2 tile at 4x, rendered by tools/render_brick_wall.gd,
+## so the image repeats every 1024 px) from the top of the screen and on to
+## its foot: on a screen taller than the design (the moto is 1604) the rows
+## under 1560 are the image's own, taken from whole tile periods above its
+## foot so the bond carries on without a seam (Ross, 2026-10-31: the bricks
+## stopped short of the bottom on the splash and the area archive). Used by
+## SplashScreen and AreaArchivePage.
 
 const TEX := "res://assets/splash/neon_bg.png"
 const DESIGN := Vector2(720, 1560)
-const PERIOD := 96.0
+const PERIOD := 1024.0
 
 
 func _init(screen_h: float) -> void:

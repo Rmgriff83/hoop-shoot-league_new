@@ -227,6 +227,13 @@
       "url": "https://danglingbat.itch.io/",
       "license": "DanglingBat's Game Assets CC License Agreement (attribution appreciated)",
       "used_for": "The trees, stumps, rocks and the fallen log in the park"
+    },
+    {
+      "title": "PSX Textures II",
+      "author": "Pizza Doggy",
+      "url": "https://pizzadoggy.itch.io/psx-textures-2",
+      "license": "Pizza Doggy's Game Assets License Agreement (attribution appreciated)",
+      "used_for": "The brick wall behind the splash, the new player page and the area archive"
     }
   ]
 }
