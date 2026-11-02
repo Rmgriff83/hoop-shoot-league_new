@@ -181,8 +181,13 @@ func _autoload(t) -> void:
 	net.score_accepted.emit("cage", {"accepted": true, "weekRank": null})
 	# The moments.
 	ach.reset_streaks()
-	ach.note_shot(true, true)
-	t.ok(ach.has("nothing_but_net"), "a swish noted → Nothing But Net")
+	t.eq(ach.note_shot(true, false, false), [], "a practice make: nothing")
+	t.eq(ach.note_shot(true, true, false), ["nothing_but_net"], "a practice swish → Nothing But Net (Ross, 2026-11-02)")
+	for i in 5:
+		t.eq(ach.note_shot(true, true, false), [], "…more practice swishes: no Pure")
+	t.eq(ach.tracker.swishes, 0, "…the streaks untouched by practice")
+	t.eq(ach.note_shot(true, true), [], "a timed swish counts toward the streaks")
+	t.eq(ach.tracker.swishes, 1, "…")
 	t.eq(ach.note_run({"score": 40, "makes": 10, "attempts": 10}), ["on_the_clock", "sharpshooter_1", "sharpshooter_2", "sharpshooter_3", "perfect_run"], "a run noted: the new keys")
 	t.eq(ach.note_card("ice", 4), ["ace_up_the_sleeve", "cold_shoulder"], "a card noted")
 	t.eq(ach.note_prize({"id": "b", "rarity": "legend"}), ["golden_drop"], "a prize noted (Drop It already held)")

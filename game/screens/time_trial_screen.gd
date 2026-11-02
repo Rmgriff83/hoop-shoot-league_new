@@ -1529,11 +1529,12 @@ func _on_outcome(outcome: Dictionary, buzzer_beater: bool) -> void:
 	var streak: int = outcome.get("streak", trial.streak)
 	var pts: int = outcome["points"]
 	var accent := _court.info.accent_color
-	if not _practice and not tutorial_running():
+	if not tutorial_running():
 		# Achievements (docs/ACHIEVEMENTS.md): the player's shots only; an
-		# iced-out make is a miss to the streaks.
+		# iced-out make is a miss to the streaks; practice (Ross, 2026-11-02)
+		# earns the first swish but not the streaks.
 		Achievements.note_shot(bool(outcome["made"]) and not bool(outcome.get("iced_out", false)),
-			outcome["type"] == ShotClassify.SWISH)
+			outcome["type"] == ShotClassify.SWISH, not _practice)
 	if outcome.get("iced_out", false):
 		# The ball went in but only cleared the ice (the ice_break event just
 		# announced it). Net/rim react; nothing to score.

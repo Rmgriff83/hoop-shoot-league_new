@@ -197,9 +197,12 @@ func reset_streaks() -> void:
 	tracker.reset()
 
 
-## One of the player's shots landed (never practice or the tutorial): an
-## iced-out make counts as a miss.
-func note_shot(made: bool, swish: bool) -> Array:
+## One of the player's shots landed (never the tutorial's): an iced-out
+## make counts as a miss. `timed` false (practice, no clock) earns only the
+## first swish; the streaks want a time trial or a heat.
+func note_shot(made: bool, swish: bool, timed := true) -> Array:
+	if not timed:
+		return unlock_all(["nothing_but_net"]) if made and swish else []
 	return unlock_all(tracker.note(made, swish))
 
 
