@@ -114,7 +114,9 @@ for plat, name in (("ios", "ios_export.cfg"), ("android", "android_export.cfg"))
     open("addons/AdmobPlugin/" + name, "w").write("\n".join(lines))
 PY
     echo "staged the AdMob plugin from $ADS_PLUGIN"
-    grep -q REPLACE_ME data/ads.json && echo "data/ads.json still carries placeholder ids: the build shows no ads (the null backend)"
+    python3 -c 'import json,sys; a=json.load(open("data/ads.json")); print(" ".join(p for p in ("ios","android") if "REPLACE_ME" in json.dumps(a.get(p,{}))))' | while read -r plats; do
+      [[ -n "$plats" ]] && echo "data/ads.json still carries placeholder ids for: $plats (those builds show no ads, the null backend)"
+    done
   else
     echo "no AdMob plugin at $ADS_PLUGIN (tools/fetch_ads_plugin.sh installs it): no ads"
   fi
