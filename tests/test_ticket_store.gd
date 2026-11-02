@@ -448,9 +448,22 @@ func _entitlements(t, store, net, save, app, fake: FakeStoreBackend) -> void:
 	t.ok(store.owns("remove_ads"), "…and owned")
 	fake.restore_outcome = "none"
 	fake.owned_keys = []
+	me_before = _srv["me_gets"]
 	t.ok(store.restore(), "")
 	await Engine.get_main_loop().process_frame
 	t.eq(restores.back(), [true, false, ""], "nothing to restore: ok, not found")
+	t.eq(int(_srv["me_gets"]) - me_before, store.ENT_TRIES, "…after the Worker was asked ENT_TRIES times too")
+	# The SDK has nothing but the Worker does (a TRANSFER that landed there —
+	# Ross, 2026-11-01: a reinstall's restore said "nothing"): found.
+	_srv["entitlements"] = ["remove_ads"]
+	t.ok(store.restore(), "")
+	await Engine.get_main_loop().process_frame
+	t.eq(restores.back(), [true, true, ""], "the Worker's key lands the restore")
+	t.ok(store.owns("remove_ads"), "…owned")
+	_srv["entitlements"] = []
+	net.store_entitlements.emit([])
+	fake.owned_keys = []
+	fake.fetch_entitlements()
 	fake.restore_outcome = "error"
 	t.ok(store.restore(), "")
 	await Engine.get_main_loop().process_frame

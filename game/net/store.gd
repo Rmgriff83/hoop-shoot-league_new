@@ -54,6 +54,7 @@ var _srv_keys: Array = []
 var _owned: Dictionary = {}
 var _buying_key := ""
 var _restoring := false
+var _restore_answered := false
 ## The SDK's message from the last failed purchase (the page's toast shows it).
 var last_error := ""
 ## Tests: `_sleep` is a coroutine the suite can stub (no timers off-tree).
@@ -253,18 +254,21 @@ func _on_entitlements(ids: Array, error: String) -> void:
 		last_error = error
 	_land_buy(ids if error == "" else [])
 	if _restoring:
-		_restoring = false
-		if error == "":
-			restore_done.emit.call_deferred(true, not ids.is_empty(), "")
-		else:
+		if error != "":
+			_restoring = false
 			last_error = error
 			restore_done.emit.call_deferred(false, false, "error")
+		elif not ids.is_empty():
+			_end_restore(true)
+		# Empty and no error: the Worker may still know (a TRANSFER landing); _await_restore ends it.
 
 
 func _on_server_entitlements(keys: Array) -> void:
 	_srv_keys = keys.duplicate()
 	_merge_owned()
 	_land_buy(keys)
+	if _restoring and not keys.is_empty():
+		_end_restore(true)
 
 
 ## A pending entitlement buy ends well the moment either source lists its key
@@ -314,14 +318,16 @@ func restore() -> bool:
 	if _restoring or not live():
 		return false
 	_restoring = true
+	_restore_answered = false
 	backend.restore_purchases()
 	_restore_guard()
 	return true
 
 
+## The SDK never said whether the restore ran.
 func _restore_guard() -> void:
 	await _sleep(ANSWER_WAIT_S)
-	if _restoring:
+	if _restoring and not _restore_answered:
 		_restoring = false
 		restore_done.emit.call_deferred(false, false, "error")
 
@@ -329,12 +335,33 @@ func _restore_guard() -> void:
 func _on_restored(r: Dictionary) -> void:
 	if not _restoring:
 		return
+	_restore_answered = true
 	if not bool(r.get("success", false)):
 		_restoring = false
 		last_error = str(r.get("error", ""))
 		restore_done.emit.call_deferred(false, false, "unavailable" if last_error == "unavailable" else "error")
 		return
-	backend.fetch_entitlements()   # the keys: answered on `entitlements`, which ends the restore
+	backend.fetch_entitlements()   # the SDK's word, on `entitlements`
+	_await_restore()
+
+
+## The Worker's word too (the webhook's grant, a TRANSFER that just landed —
+## Ross, 2026-11-01: a reinstall's restore said "nothing" while the Worker
+## knew): /v1/me every ENT_GAP_S, ENT_TRIES times; the first source with a
+## key ends it found, else it ends with nothing to restore.
+func _await_restore() -> void:
+	for _i in ENT_TRIES:
+		Net.fetch_me()
+		await _sleep(ENT_GAP_S)
+		if not _restoring:
+			return
+	if _restoring:
+		_end_restore(not _owned.is_empty())
+
+
+func _end_restore(found: bool) -> void:
+	_restoring = false
+	restore_done.emit.call_deferred(true, found, "")
 
 
 func _claim_pending() -> int:
