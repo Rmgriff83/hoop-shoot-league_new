@@ -13,6 +13,7 @@ config_version=5
 config/name="Hoop Shoot League"
 config/version="1.0.0"
 run/main_scene="res://game/screens/splash_screen.tscn"
+run/flush_stdout_on_print=true
 config/features=PackedStringArray("4.7")
 config/icon="res://assets/icon/icon_1024.png"
 boot_splash/bg_color=Color(0.11372549, 0.08627451, 0.07450980, 1)
