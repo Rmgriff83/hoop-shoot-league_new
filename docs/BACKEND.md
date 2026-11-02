@@ -541,7 +541,7 @@ Migration `0009_online_progress.sql`: `online_progress`, `grants`,
   --remote` (0009), `wrangler deploy --env production` (`FEATURE_DROPS = "on"`
   is in wrangler.toml).
 
-## Platform identity (prep, 2026-10-17)
+## Platform identity (prep 2026-10-17; Game Center live on iOS 2026-11-01)
 
 Groundwork for Game Center (iOS) and Play Games (Android) sign-in: no store
 plugin, achievements or leaderboards yet. A platform link is an optional
@@ -602,12 +602,45 @@ the server". Ross's calls: per-device secrets, deletion wipes the phone too,
   deactivation; this is Settings → PLAYER → DELETE ACCOUNT (two taps).
 
 **Verifiers (`server/src/platform.ts`).** `ProofVerifier.verify(proof) →
-{subject, displayName?, meta?}`; `gamecenter` and `playgames` throw
-`NotImplemented` (→ 501) with the real check written out in their comment
-blocks; `test` exists only when `PLATFORM_TEST_VERIFIER = "on"`, a Miniflare
-binding in `vitest.config.ts` that is never a wrangler var, so every flow is
-under test now (`server/test/platform.test.ts`: link, 409, restore,
-per-device vs transfer, cap, unlink, deletion, throttles, kill switch, 501).
+{subject, displayName?, meta?}`. `gamecenter` is real (below); `playgames`
+throws `NotImplemented` (→ 501) with the real check written out in its
+comment block; `test` exists only when `PLATFORM_TEST_VERIFIER = "on"`, a
+Miniflare binding in `vitest.config.ts` that is never a wrangler var, so
+every flow is under test (`server/test/platform.test.ts`: link, 409,
+restore, per-device vs transfer, cap, unlink, deletion, throttles, kill
+switch, 501).
+
+**The Game Center verifier (`GameCenterVerifier`, 2026-11-01).** The proof
+is `{publicKeyURL, signature, salt, timestamp, teamPlayerID}` — what
+`GKLocalPlayer.fetchItems(forIdentityVerificationSignature:)` hands the
+phone (signature and salt base64, the timestamp in ms exactly as GameKit
+gave it; no other field is accepted). In order, each failure a 401
+`proof_rejected`:
+1. `publicKeyURL` must be https on **`static.gc.apple.com`** exactly
+   (`GC_HOST`). Apple's own host over TLS stands in for a chain check —
+   Workers have no X.509 library — so the certificate is parsed only far
+   enough (`src/der.ts`: tbsCertificate → validity, subjectPublicKeyInfo),
+   its dates checked on every use, and cached a day per URL in the module
+   (`resetCertCache()`; `setCertFetcher()` is the test seam that serves a
+   hand-built certificate).
+2. `timestamp` within **10 min** of now (`GC_MAX_AGE_MS`), at most 60 s ahead.
+3. `signature` verifies, RSASSA-PKCS1-v1_5 / SHA-256, over
+   `UTF-8(teamPlayerID) ‖ UTF-8(APPLE_BUNDLE_ID) ‖ timestamp as a big-endian
+   UInt64 ‖ salt`. The bundle id is the Worker's own var
+   (`APPLE_BUNDLE_ID`, wrangler.toml, every env), never the client's claim;
+   unset → 500, never a silent accept.
+4. **Each signature is taken once**: its SHA-256 goes into `platform_proofs`
+   (migration **0012**; the cron drops rows older than an hour) and a second
+   insert is refused. `/v1/link/restore` has no bearer, so a replayed proof
+   inside the window would otherwise be an account takeover — which is also
+   why the game asks GameKit for a fresh proof before USE IT.
+`subject` = `teamPlayerID`; the plugin does not expose `gamePlayerID`, so
+`meta` stays empty. `server/test/gamecenter.test.ts` signs real payloads
+with a WebCrypto RSA key inside a hand-built DER certificate: accept, cache,
+tampered / other key / other bundle, host and shape refusals without a
+fetch, stale and future timestamps, an expired or junk certificate, the
+replay, the missing var, and the routes end to end (link → 409 → restore
+onto a new phone with `remove_ads` still listed by `/v1/me`).
 
 **Game.**
 - `Platform` (autoload, `game/net/platform.gd`) owns one `PlatformBackend`
@@ -616,9 +649,18 @@ per-device vs transfer, cap, unlink, deletion, throttles, kill switch, 501).
   A real backend implements `provider_id()`, `display_name()`,
   `is_available()`, `is_signed_in()`, `sign_in()`, `get_identity_proof()`
   and emits `signed_in`.
-- Flow: launch → `Net.ensure_account` as today (then `fetch_me` refreshes
-  the linked providers onto the account part — names only, never a proof)
-  → `Platform.sync_link()`: signed in and not linked → `Net.link_platform`.
+- Flow: launch → `Platform.start()` (deferred from `_ready`): the backend
+  signs in — Game Center's banner, or its sheet the first time — while
+  `Net.ensure_account` runs as today (then `fetch_me` refreshes the linked
+  providers onto the account part — names only, never a proof). The
+  backend's `signed_in` → registered: `Platform.sync_link()` (not linked →
+  `Net.link_platform`); **a fresh install** (no player made, nothing
+  registered): `restore_first_launch()` → `POST /v1/link/restore` straight
+  away, so a reinstall gets its account and save back before NEW GAME is
+  ever tapped (the splash swaps NEW GAME for the save card in place; a 404
+  means a new player, as before); registration still pending: the link
+  waits in the outbox. `Net.account_ready` (a registration, a restore)
+  runs `sync_link()` again for a sign-in that landed too early.
   409 → `conflict` + the `AccountFoundSheet` ("FOUND YOUR ACCOUNT · BRICK
   BARON 42 · LVL 7 · USE IT?"). USE IT → `Platform.accept_conflict()` →
   `Net.restore_from_platform` (a new device secret on that account, the
@@ -632,25 +674,40 @@ per-device vs transfer, cap, unlink, deletion, throttles, kill switch, 501).
   from the platform when linked and signed in, else a fresh identity
   (`Net._recover_identity`, `_mint_fresh`).
 - Settings → PLAYER: `PlatformLink` (LINK GAME CENTER / LINKED · GAME CENTER,
-  tap unlinks; hidden while the backend is null) and `DeleteAccount` (first
+  tap unlinks; hidden while the backend is null; a tap on an unsigned
+  backend opens the platform's sheet and waits up to `LINK_WAIT_S` for the
+  link Platform then makes, and the row follows `Platform.link_changed`) and
+  `DeleteAccount` (first
   tap arms "TAP AGAIN TO DELETE EVERYTHING" for 8 s, second tap →
   `Net.delete_account` → `SaveService.wipe_all()` → the title; the next
   `ensure_account` mints a new identity).
+- iOS: `GameCenterBackend` (`game/net/game_center_backend.gd`) over the
+  vendored godot-ios-plugins `GameCenter` singleton (docs/BUILD.md → The
+  Game Center plugin): `authenticate` / `is_authenticated` /
+  `request_identity_verification_signature`, answered through the plugin's
+  event queue, which the backend drains every `POLL_S` while something is
+  pending (`SIGN_IN_WAIT_S`, `PROOF_WAIT_S` guards). `Platform._ready` always
+  constructs it; without the singleton it is the null backend.
 - Tests: `tests/test_platform.gd` drives it with `FakePlatformBackend`
-  (`tests/fake_platform_backend.gd`) and `Net.transport`, a scripted stand-in
-  for HTTPRequest; `tests/test_account.gd` covers `linked`, `pendingLink`,
-  `wipe_all`.
+  (`tests/fake_platform_backend.gd`, via `Platform.use_backend`) and
+  `Net.transport`, a scripted stand-in for HTTPRequest — the launch link,
+  `account_ready`, the fresh-install restore and its 404, the fresh proof
+  before USE IT; `tests/test_game_center_backend.gd` drives the real backend
+  over a stand-in `GameCenter` singleton; `tests/test_account.gd` covers
+  `linked`, `pendingLink`, `wipe_all`. QA: `--qa-platform` (the FOUND YOUR
+  ACCOUNT sheet, the settings row, LINKED).
 
-**What is left, per platform.**
-- iOS: a GameKit plugin (GDExtension or the iOS export plugin) exposing
-  `authenticate` and `fetchItems(forIdentityVerificationSignature:)` →
-  `GameCenterBackend` (`provider_id "gamecenter"`, proof `{publicKeyURL,
-  signature, salt, timestamp, teamPlayerID, gamePlayerID, bundleID}`); Game
-  Center enabled on the app record in App Store Connect; the verifier:
-  fetch + validate the Apple certificate (apple.com host, chain, expiry,
-  cached), RSA-SHA256 over `teamPlayerID ‖ bundleID ‖ timestamp (big-endian
-  UInt64) ‖ salt`, timestamp freshness, our bundle id; the deletion flow
-  needs nothing extra (no Sign in with Apple tokens to revoke).
+**What is left.**
+- iOS, Ross's side: Game Center switched on for the app in App Store Connect
+  (and on the version page); the App ID's Game Center capability (on by
+  default; Xcode's automatic signing refreshes the profile). The export
+  carries `entitlements/game_center=true`, so `hoop_shoot.entitlements`
+  holds `com.apple.developer.game-center`. Deploy: `cd server && npx wrangler
+  d1 migrations apply hoop_shoot --env production --remote` (0012), `npx
+  wrangler deploy --env production` (the `APPLE_BUNDLE_ID` var rides along).
+  An account from before 2026-11-01 was never linked and cannot be found by
+  a reinstall; everything registered from the first Game Center build
+  (2026-11-01) on can.
 - Android: the Play Games Services v2 plugin → `PlayGamesBackend`
   (`provider_id "playgames"`, proof `{serverAuthCode, playerId}` from
   `GamesSignInClient.requestServerSideAccess(WEB_CLIENT_ID, false)`); in the
@@ -658,9 +715,8 @@ per-device vs transfer, cap, unlink, deletion, throttles, kill switch, 501).
   become Worker secrets (`wrangler secret put`); the verifier: exchange the
   code at `https://oauth2.googleapis.com/token`, `GET
   https://www.googleapis.com/games/v1/players/me`, subject = its `playerId`,
-  equal to the client's claim.
-- Both: flip the verifier from `NotImplemented` to real, keep the `test`
-  one Vitest-only, run the Worker migration `0005` and deploy (Ross).
+  equal to the client's claim — then flip it from `NotImplemented` to real,
+  keeping the `test` one Vitest-only.
 
 ## Ticket store (built 2026-10-31): RevenueCat, the webhook, pending → CLAIM
 

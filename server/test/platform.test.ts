@@ -82,11 +82,11 @@ describe("link", () => {
     expect((await link(p, { provider: "test" })).status).toBe(400);
     expect(((await (await me(p)).json()) as any).providers).toEqual([]);
   });
-  it("gamecenter and playgames answer 501 until their verifiers exist", async () => {
+  it("gamecenter checks its proof (gamecenter.test.ts); playgames answers 501 until its verifier exists", async () => {
     const p = await register();
-    const gc = await link(p, { provider: "gamecenter", proof: { publicKeyURL: "https://static.gc.apple.com/x", signature: "", salt: "", timestamp: 1, teamPlayerID: "T:1", bundleID: "b" } });
-    expect(gc.status).toBe(501);
-    expect(((await gc.json()) as any).error).toBe("not_implemented");
+    const gc = await link(p, { provider: "gamecenter", proof: { publicKeyURL: "https://static.gc.apple.com/x", signature: "", salt: "", timestamp: 1, teamPlayerID: "T:1" } });
+    expect(gc.status).toBe(401);
+    expect(((await gc.json()) as any).error).toBe("proof_rejected");
     expect((await link(p, { provider: "playgames", proof: { serverAuthCode: "4/abc", playerId: "g1" } })).status).toBe(501);
     expect((await restore("10.3.1.1", { provider: "playgames", proof: { serverAuthCode: "4/abc" }, newSecret: secret() })).status).toBe(501);
   });

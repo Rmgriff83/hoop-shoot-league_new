@@ -22,6 +22,8 @@ export interface Env {
   FEATURE_IAP?: string;
   /** A Worker secret (`wrangler secret put`): the Authorization header value RevenueCat sends with every webhook. */
   REVENUECAT_WEBHOOK_AUTH?: string;
+  /** The iOS bundle id the Game Center signature covers (platform.ts); a wrangler var, the same in every env. */
+  APPLE_BUNDLE_ID?: string;
   /** Vitest only: enables the `test` proof verifier (platform.ts). Never a wrangler var. */
   PLATFORM_TEST_VERIFIER?: string;
   /** Per-IP wall on every /v1 route (layer 2: a workers.dev host has no WAF). */

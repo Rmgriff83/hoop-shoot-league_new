@@ -108,6 +108,7 @@ export async function prune(db: D1Database, now: number): Promise<void> {
     db.prepare("DELETE FROM tt_week_best WHERE played_at < ?1").bind(now - 8 * 7 * day),
     db.prepare("DELETE FROM online_ledger WHERE at < ?1").bind(now - 90 * day),
     db.prepare("DELETE FROM ranked_rooms WHERE created_at < ?1").bind(now - day),
+    db.prepare("DELETE FROM platform_proofs WHERE seen_at < ?1").bind(now - 3_600_000), // spent Game Center signatures (platform.ts GC_PROOF_KEEP_MS)
   ]);
 }
 
