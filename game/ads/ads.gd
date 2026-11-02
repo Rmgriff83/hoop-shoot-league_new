@@ -124,8 +124,10 @@ func due() -> bool:
 ## The gate before a results screen: `then` moves there, after the ad or at once.
 func before_results(then: Callable) -> void:
 	var show := not _showing and due()
+	print("move: ads decision show=", show, " showing=", _showing, " started=", _started, " available=", backend.available(), " ready=", backend.ready(), " played=", matches_played(), " owner=", owner())
 	_count_match()   # after the decision: the grace is the results BEFORE this one
 	if not show:
+		print("move: ads → then")
 		then.call()
 		return
 	_then = then

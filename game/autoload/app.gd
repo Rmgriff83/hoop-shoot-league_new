@@ -1342,6 +1342,7 @@ func _move(path: String, kind: String, area: String, extra := "") -> void:
 	if ball_set != null and ball_set.model_path != "":
 		extras.push_back(ball_set.model_path)
 	var art := "res://assets/ui/areas/area_%s_tall.png" % area if arena != null else ""
+	print("move: _move ", path, " area=", area, " extras=", extras, " loader=", loader != null)
 	if loader == null:
 		get_tree().change_scene_to_file(path)
 		return
@@ -1506,7 +1507,10 @@ func settle_heat(result: Dictionary) -> Dictionary:
 
 func to_heat_result() -> void:
 	# An interstitial first, when the ad policy says so (Ads; owners of remove_ads never see one).
-	Ads.before_results(func() -> void: _move(HEAT_RESULT_SCENE, "postmatch", str(last_heat.get("location", "cage"))))
+	print("move: to_heat_result → before_results")
+	Ads.before_results(func() -> void:
+		print("move: heat then")
+		_move(HEAT_RESULT_SCENE, "postmatch", str(last_heat.get("location", "cage"))))
 
 
 func finish_heat(result: Dictionary) -> void:
@@ -2030,4 +2034,7 @@ func finish_run(run: Dictionary) -> void:
 	# net allows — the results page never waits on it.
 	Net.queue_run(last_run)
 	Net.push_save()
-	Ads.before_results(func() -> void: _move(RESULTS_SCENE, "results", str(last_run.get("location", "cage"))))
+	print("move: finish_run → before_results")
+	Ads.before_results(func() -> void:
+		print("move: results then")
+		_move(RESULTS_SCENE, "results", str(last_run.get("location", "cage"))))

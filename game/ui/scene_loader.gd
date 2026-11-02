@@ -26,6 +26,7 @@ var _screen: LoadingScreen
 var _dest: Dictionary = {}
 var _art := ""
 var _shown_at := -1.0
+var _last_log := -1
 
 
 func _ready() -> void:
@@ -43,6 +44,7 @@ func screen() -> LoadingScreen:
 ## Move to `path`. `dest` from LoadingCopy.dest (the screen's words), `art`
 ## the destination picture, `extras` the resources its _ready will load.
 func go(path: String, dest: Dictionary, art := "", extras: Array = []) -> void:
+	print("move: loader.go ", path, " busy=", busy(), " (", _path, ") instant=", instant, " in_tree=", is_inside_tree())
 	if busy():
 		return
 	if instant or not is_inside_tree():
@@ -61,6 +63,7 @@ func go(path: String, dest: Dictionary, art := "", extras: Array = []) -> void:
 	for r in _requests:
 		if ResourceLoader.load_threaded_request(r, "", true) != OK:
 			_requests.erase(r)
+	print("move: loader requests ", _requests)
 	if not _requests.has(path):
 		_fallback()
 		return
@@ -77,6 +80,13 @@ func _process(dt: float) -> void:
 	_t += dt
 	var total := 0.0
 	var loaded := true
+	if int(_t) != _last_log:
+		_last_log = int(_t)
+		var sts: Array = []
+		for r in _requests:
+			var pr: Array = []
+			sts.push_back([r.get_file(), ResourceLoader.load_threaded_get_status(r, pr), pr])
+		print("move: loader t=", _last_log, " ", sts, " screen=", _screen != null)
 	for r in _requests:
 		var prog: Array = []
 		var st := ResourceLoader.load_threaded_get_status(r, prog)
@@ -108,6 +118,7 @@ func _show() -> void:
 
 
 func _finish() -> void:
+	print("move: loader finish")
 	set_process(false)
 	var packed := ResourceLoader.load_threaded_get(_path) as PackedScene
 	for r in _requests:
@@ -128,6 +139,7 @@ func _finish() -> void:
 
 
 func _fallback() -> void:
+	print("move: loader fallback ", _path)
 	set_process(false)
 	var p := _path
 	_path = ""

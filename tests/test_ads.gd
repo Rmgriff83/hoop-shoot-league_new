@@ -59,7 +59,12 @@ func _facade(t, ads, store, save) -> void:
 	t.eq(ads.policy("grace_matches"), 6, "data/ads.json: 6 results of grace")
 	t.eq(ads.policy("min_gap_s"), 120, "…120 s between ads")
 	t.eq(ads.policy("upsell_every"), 5, "…the nudge every 5")
+	t.eq(str(ads.platform_cfg("iOS").get("app_id", "")), "ca-app-pub-3569871537594448~6449564013", "data/ads.json: the iOS AdMob app id")
+	t.ok(str(ads.platform_cfg("iOS").get("interstitial", "")).begins_with("ca-app-pub-3940256099942544/"), "…with Google's test interstitial unit for the TestFlight round")
+	var real_cfg: Dictionary = ads.cfg
+	ads.cfg = {"ios": {"app_id": "ca-app-pub-REPLACE_ME~REPLACE_ME", "interstitial": "ca-app-pub-REPLACE_ME/REPLACE_ME"}, "policy": real_cfg.get("policy", {})}
 	t.eq(ads.platform_cfg("iOS"), {}, "placeholder ids are no ids")
+	ads.cfg = real_cfg
 	t.ok(not ads.started(), "nothing started yet")
 	ads.start_if_needed()
 	t.ok(ads.started() and fake.starts.size() == 1, "start_if_needed starts the network once…")
@@ -162,7 +167,7 @@ func _facade(t, ads, store, save) -> void:
 func _seams(t) -> void:
 	var src := FileAccess.get_file_as_string("res://game/autoload/app.gd")
 	t.eq(src.count("Ads.before_results("), 2, "finish_run and to_heat_result both go through Ads.before_results")
-	t.ok(src.contains("Ads.before_results(func() -> void: _move(RESULTS_SCENE") and src.contains("Ads.before_results(func() -> void: _move(HEAT_RESULT_SCENE"), "…wrapping the two scene moves")
+	t.ok(src.count("Ads.before_results(func() -> void:") == 2 and src.contains("_move(RESULTS_SCENE, \"results\"") and src.contains("_move(HEAT_RESULT_SCENE, \"postmatch\""), "…wrapping the two scene moves")
 	var rs := FileAccess.get_file_as_string("res://game/screens/results_screen.gd")
 	var hs := FileAccess.get_file_as_string("res://game/screens/heat_result_screen.gd")
 	t.ok(rs.contains("AdsUpsell.maybe_toast(chrome)") and hs.contains("AdsUpsell.maybe_toast(chrome)"), "both results screens ask for the nudge (on the chrome, a full-rect control: a side toast needs one)")
