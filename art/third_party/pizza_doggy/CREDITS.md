@@ -16,7 +16,9 @@
 - **Used for:** the brick wall behind the splash, the new player page and the area
   archive (`tools/render_brick_wall.gd` tiles the png at 4x nearest, darkens it to a mean of ~24/255 and
   writes `assets/splash/neon_bg.png`; `tools/make_boot_splash.gd` then rebuilds the
-  boot splash from it).
+  boot splash from it). The same tool writes the tile on its own darkening
+  (`CAGE_DARK` 0.6) to `assets/textures/cage_brick.png` for the back wall behind the
+  arcade cage's cabinet row (`tools/blender/build_cage.py`, embedded in `cage.glb`).
 
 ## What's here
 

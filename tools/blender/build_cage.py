@@ -102,8 +102,8 @@ HANGER_LEN = 0.71                   # rail (3.5) down to the hoop's arm (2.79)
 # from the shooter, so on screen it covers everything on the hall's back wall
 # below ~6.9 m. The hall's whole upper wall is behind it. The band that IS
 # visible from inside the cage is the one the cabinets already glow in, just
-# outboard of the cage's mesh sides — so the lights go there, on the dark upper
-# wall (HALL_WALL_SPLIT 2.2) right above the machines.
+# outboard of the cage's mesh sides — so the lights go there, on the brick
+# right above the machines.
 BULB_Y = 2.5
 BULB_SPACING = 0.7
 BULB_R = 0.12
@@ -113,7 +113,9 @@ HALL_X0, HALL_X1 = -8.0, 12.0
 HALL_HALF_W = 8.0
 HALL_H = 7.0
 FPS = 30
-HALL_WALL_SPLIT = 2.2               # textured cabinets below (2.2 m tall), dark above
+HALL_WALL_SPLIT = 2.2               # side walls: textured cabinets below (2.2 m tall), dark above
+BRICK_TILE_M = 3.2                  # the back wall's brick repeat: bricks about 30 x 12.5 cm
+NEON_Y0, NEON_Y1 = 1.99, 2.06       # the neon line along the back wall, where cage_hall.png painted it
 MESH_REPEATS_PER_M = 2.5            # 32-px tiles with 16-px diamonds (2 cells) -> 20 cm cells (finer shimmers on a phone; Ross kept these over the design's 40 cm, 2026-10-16)
 
 
@@ -481,6 +483,8 @@ def build():
     ceiling_wire = mat_flat("Hall_LightWire", (26, 22, 18))
     carpet = mat_tex("Hall_Carpet", TEX("cage_carpet.png"))
     hall = mat_tex("Hall_Wall", TEX("cage_hall.png"), emissive=True)
+    brick = mat_tex("Hall_Brick", TEX("cage_brick.png"))               # unshaded in Godot (emissive_nodes)
+    neon = mat_tex("Hall_Neon", TEX("cage_neon.png"), emissive=True)
     bulb = mat_flat("Cage_Bulb", (255, 206, 140), roughness=0.4)   # ArcadeFx twinkles these
     dark = mat_flat("Hall_Dark", (12, 10, 10))
     metal_dark = mat_flat("Cage_MetalDark", (30, 28, 28), roughness=0.8)
@@ -595,10 +599,12 @@ def build():
     add_quad("HallFloor", [(HALL_X0, -0.02, -hw), (HALL_X1, -0.02, -hw), (HALL_X1, -0.02, hw), (HALL_X0, -0.02, hw)],
              (0, 1, 0), carpet, c_hall, cage, ((HALL_X1 - HALL_X0) * 0.6, 2.0 * hw * 0.6))
     ys = HALL_WALL_SPLIT
-    add_quad("HallBack", [(HALL_X1, 0, -hw), (HALL_X1, 0, hw), (HALL_X1, ys, hw), (HALL_X1, ys, -hw)],
-             (-1, 0, 0), hall, c_hall, cage, (4.0, 1.0))
-    add_quad("HallBackUpper", [(HALL_X1, ys, -hw), (HALL_X1, ys, hw), (HALL_X1, HALL_H, hw), (HALL_X1, HALL_H, -hw)],
-             (-1, 0, 0), dark, c_hall, cage)
+    # The back wall is the splash's brick, floor to ceiling (Ross, 2026-11-02).
+    add_quad("HallBack", [(HALL_X1, 0, -hw), (HALL_X1, 0, hw), (HALL_X1, HALL_H, hw), (HALL_X1, HALL_H, -hw)],
+             (-1, 0, 0), brick, c_hall, cage, (2.0 * hw / BRICK_TILE_M, HALL_H / BRICK_TILE_M))
+    xn = HALL_X1 - 0.01
+    add_quad("HallNeon", [(xn, NEON_Y0, -hw), (xn, NEON_Y0, hw), (xn, NEON_Y1, hw), (xn, NEON_Y1, -hw)],
+             (-1, 0, 0), neon, c_hall, cage)
     for j, (z, toward) in enumerate(((-hw, (0, 0, 1)), (hw, (0, 0, -1)))):
         add_quad("HallSide%d" % j, [(HALL_X0, 0, z), (HALL_X1, 0, z), (HALL_X1, ys, z), (HALL_X0, ys, z)],
                  toward, hall, c_hall, cage, (5.0, 1.0))

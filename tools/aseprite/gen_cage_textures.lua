@@ -216,6 +216,16 @@ do
   save(spr, "cage_hall.png")
 end
 
+-- cage_neon.png 4x3 — the neon line along the back wall (HallNeon), the same
+-- rows cage_hall.png paints: two of orange, one of its glow below.
+do
+  local W, H = 4, 3
+  local spr, img = newImage(W, H)
+  fill(img, 0, 0, W - 1, 1, pc.rgba(220, 90, 50, 255))
+  fill(img, 0, 2, W - 1, 2, pc.rgba(70, 30, 20, 255))
+  save(spr, "cage_neon.png")
+end
+
 
 -- cage_pad.png 32x32 — the design's open-cell foam over the egg-crate pad:
 -- a near-white speckle with pores and a few bright cells, pre-multiplied by

@@ -584,9 +584,11 @@ metres: walls at z ±1.4, length −1.8 … 4.4, rails at 3.5 m. Scripts convert
 2. *See-through walls.* The chain-link is a texture with transparent holes. The material feeds
    alpha through a Math **Greater Than 0.5** node (glTF "mask" mode, Godot alpha scissor) and
    has backface culling **off**, so you see the far wall through both layers of mesh.
-3. *Things that glow.* The marquee and the hall's neon strip link their texture into
-   **Emission Color** as well as Base Color. glTF exports that as an emissive texture; Godot
-   then marks those two surfaces unshaded so they read at full brightness in the dim hall.
+3. *Things that glow.* The marquee and the hall's neon strip (`HallNeon`) link their texture
+   into **Emission Color** as well as Base Color. glTF exports that as an emissive texture, so
+   they read at full brightness in the dim hall. The surfaces in the arena set's
+   `emissive_nodes` (the brick `HallBack`) are marked unshaded in Godot and show their
+   texture's own colours.
 
 **Opening it.** File > Open > `art/blender/cage.blend`. The Outliner shows one collection,
 `Cage`, with sub-collections you can hide while you work: `Frame` (tubes, rails, the `Cage`
@@ -1435,6 +1437,11 @@ boards, the marquee bulbs, the runner lights) is untouched. `build_cage.py`:
   (64 warm bulbs in one mesh along the back wall / ceiling corner at x 11.92,
   y 6.92 — just above the 6.9 m the cage's back panel hides from the key;
   ArcadeFx gives them an unshaded warm material).
+- **The back wall** (2026-11-02): `HallBack` is the splash's Pizza Doggy brick floor to
+  ceiling, `cage_brick.png` tiled every 3.2 m (`BRICK_TILE_M`), written by
+  `tools/render_brick_wall.gd` (`CAGE_DARK` 0.6 lifts it through the slate mesh). The neon
+  line above the cabinets is its own strip, `HallNeon` (`cage_neon.png`). The side walls keep
+  `cage_hall.png`; no camera sees them.
 
 ## 31. The beach's production pass: the skins, the 3D palms, the umbrellas (2026-10-16)
 

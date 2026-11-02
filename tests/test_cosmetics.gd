@@ -306,6 +306,15 @@ func _street_and_arenas(t) -> void:
 		t.ok(city != null and city.validate() == PackedStringArray() and city.traffic and not beach.traffic and not cage.traffic,
 			"the city resolves, validates, and is the one with traffic")
 		t.ok(not cage.emissive_nodes.has("Marquee"), "the HOOP SHOOT sign is gone (string lights replace it)")
+		var cage_scene: Node = load(cage.model_path).instantiate()
+		var back := cage_scene.find_child("HallBack", true, false) as MeshInstance3D
+		var back_mat := back.get_active_material(0) as BaseMaterial3D if back != null else null
+		t.ok(back_mat != null and back_mat.albedo_texture != null and back_mat.albedo_texture.get_width() == 256 and back_mat.albedo_texture.get_height() == 256,
+			"the cage's back wall carries the 256 px brick tile")
+		t.ok(cage_scene.find_child("HallBackUpper", true, false) == null and cage_scene.find_child("HallNeon", true, false) != null,
+			"…floor to ceiling, with the neon line its own strip")
+		t.ok(cage.emissive_nodes.has("HallBack"), "…and unshaded, so it shows the tile's own colours")
+		cage_scene.free()
 		var park := CosmeticLibrary.get_arena("park")
 		t.ok(park != null and park.validate() == PackedStringArray() and park.snow and park.sky == "partly_cloudy" and park.parked_cars.size() == 1 and park.tree_layout != "",
 			"the park resolves, validates, snows, has a sky, one parked car and a tree layout")
