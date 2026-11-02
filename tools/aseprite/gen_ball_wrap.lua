@@ -218,6 +218,8 @@ local STYLES = {
   {id="polka_yellow", name="Yellow Polka", rarity="epic", kind="file"},
   {id="polka_black", name="Black Polka", rarity="epic", kind="file"},
   {id="pineapple", name="Pineapple", rarity="epic", kind="file"},
+  {id="blacklight", name="Blacklight", rarity="epic", kind="file"},
+  {id="blacklight_white", name="Blacklight White", rarity="epic", kind="file"},
   {id="watermelon", name="Watermelon", rarity="epic", kind="stripes",
    base={86, 168, 66}, stripe={34, 88, 40}, stripes=14, seam={46, 92, 44}},
   {id="galaxy", name="Galaxy", rarity="epic", kind="blotch",

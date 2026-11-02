@@ -150,7 +150,7 @@ ledger (the price must land in a tier and keep the catalog in band).
   their own — and every plate that would otherwise be empty hides a net
   too. Only when nothing unowned is left at your level does a plate pay
   **150 back**.
-- A win pops the card: NEW BALL · name · rarity · n/91 BALLS · **SET AS
+- A win pops the card: NEW BALL · name · rarity · n/93 BALLS · **SET AS
   YOUR BALL?** or NEW NET · name · n/8 NETS · **HANG IT ON YOUR COURTS?** —
   EQUIP / KEEP · AGAIN · 300 (AGAIN is the PLAY path). An epic or legend
   plate takes the screen with rotating rays (`game/ui/prize_rays.gd`) and
@@ -198,17 +198,16 @@ lvl 1 rare 13 / 27 %; lvl 3 epic 13 / 27 %, rare 19 / 28 %; lvl 5 legend
 ## The economy
 
 Balls and nets are priced 0 (`NetSet.stock` marks the free pair);
-`EconomyBudget.peggy_roster()` is the 91 balls plus the 14 nets,
+`EconomyBudget.peggy_roster()` is the 93 balls plus the 14 nets,
 `peggy_tickets()` the expected cost of winning everything from a fresh save
 (`PeggyPrizes.expected_tickets_to_complete`, 60 seeded collection runs at
 the centre aim) and `catalog_hours()` is the priced hoops plus that.
-Shipped (2026-10-25, Ross's 44 new balls and 5 new nets in): 102 prizes to
-win (90 balls, 12 nets), 30,600 tickets expected (300 a prize — no drop is
-wasted), 47.8 h; with the hoops 48.9 h, inside the 15–50 h band (widened
-from 15–35 with Ross's OK: the bigger collection simply takes longer — and
-now close to its ceiling: the next prizes need the band or the drop price
-looked at). At level 1 the 51 reachable prizes take 15,300 tickets; at
-level 3, 84 prizes 25,200. Rules in `EconomyBudget.problems()`: a drop is
+Shipped (2026-11-02, Blacklight and Blacklight White in): 104 prizes to
+win (92 balls, 12 nets), 31,200 tickets expected (300 a prize — no drop is
+wasted), 42.2 h; with the hoops 43.1 h, inside the 15–50 h band (widened
+from 15–35 with Ross's OK: the bigger collection simply takes longer). At
+level 1 the 51 reachable prizes take 15,300 tickets; at level 3, 86 prizes
+25,800. Rules in `EconomyBudget.problems()`: a drop is
 an entry purchase, the roster is payable, a prize costs at most 1.35 drops,
 every ball is rated and unpriced, every net is unpriced with one stock net
 per kind.

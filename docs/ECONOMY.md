@@ -159,8 +159,8 @@ now edges a cage heat (11.3 vs 10.4/min), the test allows 1.5/min either
 way. Tiers in minutes of trials: entry 15–40, mid 40–70, premium
 70–115, grail 115–170. At the ~12.3/min grind rate a PEGGY drop (300
 tickets) is an entry purchase (~24 min), the 104 winnable prizes cost
-~30,600 tickets (~41 h, no drop wasted), the hoops (300 / 400) sit at 24 /
-32 min, and the whole catalog is ~42 hours (band 15–50 h) — something new every few
+~31,200 tickets (~42 h, no drop wasted), the hoops (300 / 400) sit at 24 /
+32 min, and the whole catalog is ~43 hours (band 15–50 h) — something new every few
 sessions, the legends behind level 5. Nets were priced 400–1000 on a counter
 until 2026-10-15; now they are prizes.
 

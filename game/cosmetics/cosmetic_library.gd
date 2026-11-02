@@ -75,6 +75,8 @@ const BALLS: Array[String] = [
 	"res://assets/balls/polka_yellow/ball_set.tres",
 	"res://assets/balls/polka_black/ball_set.tres",
 	"res://assets/balls/pineapple/ball_set.tres",
+	"res://assets/balls/blacklight/ball_set.tres",
+	"res://assets/balls/blacklight_white/ball_set.tres",
 	"res://assets/balls/watermelon/ball_set.tres",
 	"res://assets/balls/galaxy/ball_set.tres",
 	"res://assets/balls/galaxy_rose/ball_set.tres",

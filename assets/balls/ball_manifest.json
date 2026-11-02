@@ -61,6 +61,8 @@
   {"id": "polka_yellow", "name": "Yellow Polka", "rarity": "epic", "price": 0, "skin": "res://assets/textures/balls/polka_yellow.png"},
   {"id": "polka_black", "name": "Black Polka", "rarity": "epic", "price": 0, "skin": "res://assets/textures/balls/polka_black.png"},
   {"id": "pineapple", "name": "Pineapple", "rarity": "epic", "price": 0, "skin": "res://assets/textures/balls/pineapple.png"},
+  {"id": "blacklight", "name": "Blacklight", "rarity": "epic", "price": 0, "skin": "res://assets/textures/balls/blacklight.png"},
+  {"id": "blacklight_white", "name": "Blacklight White", "rarity": "epic", "price": 0, "skin": "res://assets/textures/balls/blacklight_white.png"},
   {"id": "watermelon", "name": "Watermelon", "rarity": "epic", "price": 0, "skin": "res://assets/textures/balls/watermelon.png"},
   {"id": "galaxy", "name": "Galaxy", "rarity": "epic", "price": 0, "skin": "res://assets/textures/balls/galaxy.png"},
   {"id": "galaxy_rose", "name": "Galaxy Rose", "rarity": "epic", "price": 0, "skin": "res://assets/textures/balls/galaxy_rose.png"},
