@@ -541,7 +541,8 @@ archive as the front door) — or, on a fresh install, NEW GAME with the neon
 ball (→ the NEW PLAYER form, design 35a); SETTINGS; CREDITS (`App.to_credits`
 remembers where it was opened from, so its back returns to the splash). A
 reinstall signed into Game Center gets its account back while NEW GAME is
-up (`Net.account_ready`, docs/BACKEND.md → Platform identity): the save
+up (`Net.account_ready`, then the pull's `Net.save_pulled`, which is when
+the phone has a player; docs/BACKEND.md → Platform identity): the save
 card takes NEW GAME's place, the rows below moving down to fit. On a
 9:16 screen the sign block rides up 170 px (`sign_lift`). A tap on the sign
 replays everything. Title music starts here and carries into the title.

@@ -258,6 +258,7 @@ func _build_ui() -> void:
 		_buttons.push_back(b)
 		y += b.size.y - ShadowStyle.OFFSET + MENU_GAP
 	Net.account_ready.connect(_on_account_ready)
+	Net.save_pulled.connect(_on_save_pulled)
 
 
 func _image(name_: String, file: String, at: Vector2) -> TextureRect:
@@ -415,7 +416,18 @@ func replay() -> void:
 ## An account arrived while the menu is up — a first-launch restore from the
 ## platform (Game Center, docs/BACKEND.md → Platform identity): NEW GAME
 ## becomes the save card in place, the rows below it moving down to fit.
+## `account_ready` comes before the restore's pull, when the phone still
+## has no save (Ross, 2026-11-02: NEW GAME stayed until a relaunch), so the
+## pull's `save_pulled` asks again.
 func _on_account_ready(_n: String, _t: String) -> void:
+	_refresh_primary()
+
+
+func _on_save_pulled(_parts: Array) -> void:
+	_refresh_primary()
+
+
+func _refresh_primary() -> void:
 	if _leaving or _new_player != null or _buttons.is_empty() or not App.player_created():
 		return
 	var old := _buttons[0]

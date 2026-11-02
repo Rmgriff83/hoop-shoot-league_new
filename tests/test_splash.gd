@@ -76,10 +76,12 @@ func run(t) -> void:
 	var settings_y: float = (splash.find_child("Settings", true, false) as Control).position.y
 	net.account_ready.emit("BRICK BARON", "42")
 	t.ok(splash.find_child("Primary", true, false) == primary, "no player yet (a 404): NEW GAME stays")
-	app_node.qa_fresh = false
 	st["playerCreated"] = true
 	save.put_settings(st)
-	net.account_ready.emit("BRICK BARON", "42")
+	app_node.qa_fresh = false
+	net.account_ready.emit("BRICK BARON", "42")   # before the pull: still no player here
+	t.ok(splash.find_child("Primary", true, false) == primary, "account_ready alone (the pull still to come): NEW GAME stays")
+	net.save_pulled.emit(["settings"])
 	await Engine.get_main_loop().process_frame
 	var swapped: Control = splash.find_child("Primary", true, false)
 	t.ok(swapped != null and swapped != primary and swapped.find_child("Label", true, false) == null and swapped.position == primary.position if is_instance_valid(primary) else true, "the account arrived: the save card in NEW GAME's place")
