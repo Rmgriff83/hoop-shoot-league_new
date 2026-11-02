@@ -31,6 +31,12 @@ const SLOW_TRIES := 20
 const SLOW_GAP_S := 5.0
 ## The SDK's own answer after a sheet / a restore is awaited this long.
 const ANSWER_WAIT_S := 8.0
+## After an entitlement buy the Worker is asked (/v1/me) this many times, this
+## far apart: the webhook's grant lands in seconds, and the SDK's own word
+## only matches when the RevenueCat entitlement id equals the key (Ross,
+## 2026-11-01: the first remove_ads buy showed OWNED only after a relaunch).
+const ENT_TRIES := 3
+const ENT_GAP_S := 3.0
 const REMOVE_ADS := "remove_ads"
 
 var backend: StoreBackend = StoreBackend.new()
@@ -228,8 +234,12 @@ func owned_keys() -> Array:
 ## next /v1/me, and `sync()` asks the SDK again.
 func _await_entitlement(id: String) -> void:
 	_buying_key = str(TicketShop.entitlement(id).get("key", id))
-	backend.fetch_entitlements()
-	await _sleep(ANSWER_WAIT_S)
+	backend.fetch_entitlements()   # the SDK's word, if its entitlement id is the key
+	for _i in ENT_TRIES:
+		Net.fetch_me()              # the Worker's word: the webhook's grant
+		await _sleep(ENT_GAP_S)
+		if _buying != id:
+			return
 	if _buying == id and _buying_key != "":
 		_buying_key = ""
 		_end(id, false, "slow")
@@ -239,16 +249,9 @@ func _on_entitlements(ids: Array, error: String) -> void:
 	if error == "":
 		_rc_keys = ids.duplicate()
 		_merge_owned()
-	if _buying_key != "" and _buying != "":
-		var id := _buying
-		var key := _buying_key
-		_buying_key = ""
-		if error == "" and ids.has(key):
-			_end(id, true, "")
-		else:
-			if error != "":
-				last_error = error
-			_end(id, false, "slow")
+	if error != "":
+		last_error = error
+	_land_buy(ids if error == "" else [])
 	if _restoring:
 		_restoring = false
 		if error == "":
@@ -261,6 +264,16 @@ func _on_entitlements(ids: Array, error: String) -> void:
 func _on_server_entitlements(keys: Array) -> void:
 	_srv_keys = keys.duplicate()
 	_merge_owned()
+	_land_buy(keys)
+
+
+## A pending entitlement buy ends well the moment either source lists its key
+## (an answer without it keeps waiting: the other source, or "slow").
+func _land_buy(keys: Array) -> void:
+	if _buying_key != "" and _buying != "" and keys.has(_buying_key):
+		var id := _buying
+		_buying_key = ""
+		_end(id, true, "")
 
 
 ## The union of the two sources, with a word for every key that came or went,

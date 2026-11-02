@@ -425,7 +425,7 @@ func _on_purchase_done(product_id: String, ok: bool, reason: String) -> void:
 		"unavailable":
 			_toast(StoreCopy.unavailable(), CREAM)
 		"slow":
-			_toast(StoreCopy.on_the_way(), RetroTheme.LIGHT["gold"])
+			_toast(StoreCopy.entitlement_on_the_way() if TicketShop.is_entitlement(product_id) else StoreCopy.on_the_way(), RetroTheme.LIGHT["gold"])
 
 
 func _index_of(product_id: String) -> int:

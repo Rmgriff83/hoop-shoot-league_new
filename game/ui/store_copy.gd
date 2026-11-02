@@ -14,6 +14,11 @@ static func on_the_way() -> String:
 	return "TICKETS ON THE WAY"
 
 
+## An entitlement bought, no word yet from the SDK or the Worker: it lands at launch.
+static func entitlement_on_the_way() -> String:
+	return "REMOVE ADS ON THE WAY"
+
+
 static func credited(n: int) -> String:
 	return "+%s TICKETS" % RetroTheme.thousands(n)
 
@@ -78,4 +83,4 @@ static func detail(message: String) -> String:
 
 ## Every line, for the glyph test.
 static func strings() -> Array:
-	return [failed(), on_the_way(), credited(1300), unavailable(), detail("Error fetching product: \u201cx\u201d (code 23)"), remove_ads(), remove_ads_sub(), owned(), restore(), restored(), nothing_to_restore(), restore_failed(), upsell(), upsell_sub()]
+	return [failed(), on_the_way(), entitlement_on_the_way(), credited(1300), unavailable(), detail("Error fetching product: \u201cx\u201d (code 23)"), remove_ads(), remove_ads_sub(), owned(), restore(), restored(), nothing_to_restore(), restore_failed(), upsell(), upsell_sub()]

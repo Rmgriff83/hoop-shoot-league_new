@@ -10,7 +10,7 @@ extends RefCounted
 
 
 var _calls: Array = []
-var _srv := {"pending": [], "claims": [], "gets": 0, "appear_at": -1, "row": {}}
+var _srv := {"pending": [], "claims": [], "gets": 0, "appear_at": -1, "row": {}, "entitlements": [], "me_gets": 0}
 var _slept: Array = []
 
 
@@ -45,6 +45,9 @@ func _transport(method: int, path: String, body: Variant, headers: PackedStringA
 			return {"code": 200, "json": {"claimed": claimed, "tickets": sum}}
 		"GET /v1/save":
 			return {"code": 200, "json": {"parts": {}, "now": 0}}
+		"GET /v1/me":
+			_srv["me_gets"] = int(_srv["me_gets"]) + 1
+			return {"code": 200, "json": {"entitlements": Array(_srv["entitlements"]).duplicate()}}
 	return {"code": 404, "json": {"error": "not_found"}}
 
 
@@ -399,10 +402,27 @@ func _entitlements(t, store, net, save, app, fake: FakeStoreBackend) -> void:
 	t.ok(store.owns("remove_ads"), "the Worker's entitlements count too")
 	net.store_entitlements.emit([])
 	t.ok(not store.owns("remove_ads"), "…and go when it says so")
-	# The slow path: the sheet took the money, the SDK's answer lacks the key.
+	# The SDK's answer lacks the key (its entitlement id is not the key, or it
+	# is behind) but the Worker's /v1/me has the webhook's grant: owned at once.
 	fake.grant_on_buy = false
+	_srv["entitlements"] = ["remove_ads"]
+	var me_before: int = _srv["me_gets"]
+	_slept.clear()
 	store.purchase("remove_ads")
-	t.eq(done.back(), ["remove_ads", false, "slow"], "no key in the SDK's answer: slow (the webhook will land it)")
+	t.eq(done.back(), ["remove_ads", true, ""], "the Worker's word lands the buy (Ross, 2026-11-01: OWNED only after a relaunch before)")
+	t.ok(store.owns("remove_ads"), "…owned")
+	t.eq(int(_srv["me_gets"]) - me_before, 1, "…after one /v1/me ask")
+	t.ok(_slept.is_empty() or float(_slept[0]) == store.ENT_GAP_S, "…the polls are ENT_GAP_S apart")
+	# Neither source has it: slow after ENT_TRIES asks (it lands at launch).
+	net.store_entitlements.emit([])
+	fake.owned_keys = []
+	fake.fetch_entitlements()
+	t.ok(not store.owns("remove_ads"), "both sources empty again")
+	_srv["entitlements"] = []
+	me_before = _srv["me_gets"]
+	store.purchase("remove_ads")
+	t.eq(done.back(), ["remove_ads", false, "slow"], "no key from the SDK or the Worker: slow")
+	t.eq(int(_srv["me_gets"]) - me_before, store.ENT_TRIES, "…after ENT_TRIES asks of /v1/me")
 	t.ok(not store.owns("remove_ads"), "…not owned yet")
 	net.store_entitlements.emit(["remove_ads"])
 	t.ok(store.owns("remove_ads"), "…until /v1/me says so")

@@ -752,6 +752,13 @@ is a *pending purchase* the phone CLAIMs, like `/v1/rewards/claim`.
 
 ### Entitlements: remove_ads (2026-11-01; docs/ADS.md)
 
+After the sheet, the phone asks both sources: the SDK's customer info (whose
+`active_ids` are RevenueCat **entitlement identifiers**, so the dashboard's
+entitlement must be named exactly the key, `remove_ads`) and `/v1/me` three
+times, 3 s apart, for the webhook's grant; either listing the key ends the
+buy as owned, otherwise REMOVE ADS ON THE WAY and it lands at the next launch
+(Ross, 2026-11-01: the first sandbox buy showed OWNED only after a relaunch).
+
 The other kind of sale: **owned**, not credited. `data/store.json →
 entitlements` lists `remove_ads` (key `remove_ads`, $4.99); migration 0011
 adds `entitlements(player_id, key, product_id, store, transaction_id,
