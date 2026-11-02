@@ -34,6 +34,8 @@ const FIELD_BG := Color(34.0 / 255.0, 28.0 / 255.0, 24.0 / 255.0, 0.55)
 const FADE_C := Color(27.0 / 255.0, 22.0 / 255.0, 19.0 / 255.0, 0.95)
 const OPTION_H := 56.0
 const NAV_H := 76.0
+## LINK GAME CENTER: how long the row waits for the platform's sheet, then the link.
+const LINK_WAIT_S := 30.0
 const FIELD_H := 64.0
 const FADE_H := 120.0
 const SHOT_SUBS := ["NO AIM HELP", "POWER + ANGLE", "POWER + ANGLE + PATH"]
@@ -411,6 +413,7 @@ func _build_player() -> void:
 	_link_row.visible = Platform.backend.is_available()
 	_link_row.pressed.connect(_toggle_link)
 	_list.add_child(_link_row)
+	Platform.link_changed.connect(_refresh_link_row)
 	_refresh_card()
 
 
@@ -586,14 +589,41 @@ func _toggle_link() -> void:
 		top.text = _link_text() if ok else "NO SIGNAL · TRY AGAIN LATER"
 		_tone(_link_row, Platform.is_linked())
 		return
-	if not Platform.backend.is_signed_in():
-		Platform.backend.sign_in()
 	_spin(top, true)
-	await Platform.sync_link()
+	if not Platform.backend.is_signed_in():
+		# The platform's sheet first; its `signed_in` runs the link through
+		# Platform itself, so this row only waits for the outcome.
+		Platform.backend.sign_in()
+		var waited := 0.0
+		while waited < LINK_WAIT_S and is_instance_valid(_link_row) and not Platform.backend.is_signed_in():
+			await get_tree().create_timer(0.25).timeout
+			waited += 0.25
+		if not is_instance_valid(_link_row):
+			return
+		if not Platform.backend.is_signed_in():
+			_spin(top, false)
+			top.text = "NO SIGNAL · TRY AGAIN LATER"
+			return
+		waited = 0.0
+		while waited < LINK_WAIT_S and is_instance_valid(_link_row) and not Platform.is_linked() and not Platform.has_conflict():
+			await get_tree().create_timer(0.25).timeout
+			waited += 0.25
+	else:
+		await Platform.sync_link()
 	if not is_instance_valid(_link_row):
 		return
 	_spin(top, false)
 	top.text = _link_text()
+	_tone(_link_row, Platform.is_linked())
+
+
+## The link landed elsewhere (a launch link, the FOUND YOUR ACCOUNT sheet).
+func _refresh_link_row() -> void:
+	if _link_row == null or not is_instance_valid(_link_row):
+		return
+	var top := _link_row.find_child("Top", true, false) as Label
+	if top != null:
+		top.text = _link_text()
 	_tone(_link_row, Platform.is_linked())
 
 

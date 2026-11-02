@@ -1,14 +1,21 @@
 extends Node
 ## `Platform` (autoload, docs/BACKEND.md → Platform identity): the facade the
-## game talks to about store sign-in. One `backend` (PlatformBackend: the null
-## one until the Game Center / Play Games plugins land) and the link flow on
-## top of the anonymous account:
-##   launch → Net.ensure_account as today → sync_link(): if the platform is
-##   signed in and its provider is not linked, link. 409 (the identity already
-##   belongs to another account) → `conflict` with that account's handle and
-##   level, and the AccountFoundSheet asks "USE IT?"; accept_conflict() runs
-##   restore_from_platform (a new device secret, the account rewritten, a forced
-##   save pull — the claimed-code path); decline keeps this account unlinked.
+## game talks to about store sign-in. One `backend` — GameCenterBackend on an
+## iPhone with the plugin, the null PlatformBackend everywhere else (desktop,
+## headless, QA, Android until Play Games) — and the link flow on top of the
+## anonymous account:
+##   launch → start(): the backend signs in (Game Center's banner or sheet).
+##   signed in, registered → sync_link(): the provider not linked yet → link.
+##   409 (the identity already belongs to another account) → `conflict` with
+##   that account's handle and level, and the AccountFoundSheet asks "USE IT?";
+##   accept_conflict() runs restore_from_platform (a new device secret, the
+##   account rewritten, a forced save pull — the claimed-code path); decline
+##   keeps this account unlinked.
+##   signed in on a fresh install (no player made, nothing registered) →
+##   restore_first_launch(): POST /v1/link/restore straight away — a reinstall
+##   gets its account back before NEW GAME is ever tapped (404: a new player).
+##   Net.account_ready (a registration, a restore) → sync_link() again, for a
+##   sign-in that landed before the account existed.
 ## The handle stays ours; the platform's display name is never adopted.
 
 signal conflict(info: Dictionary)
@@ -20,10 +27,43 @@ signal milestone_unlocked(key: String)
 var backend: PlatformBackend = PlatformBackend.new()
 var _pending_conflict := {}
 var _sheet: Node
+var _restoring_first := false
 
 
 func _ready() -> void:
-	backend.signed_in.connect(func() -> void: sync_link())
+	backend = GameCenterBackend.new()   # the null backend wherever the plugin is absent
+	_connect_backend()
+	Net.account_ready.connect(func(_n: String, _t: String) -> void: sync_link())
+	start.call_deferred()
+
+
+func _connect_backend() -> void:
+	if not backend.signed_in.is_connected(_on_signed_in):
+		backend.signed_in.connect(_on_signed_in)
+
+
+## A fake backend (tests, QA) in place of the plugin's.
+func use_backend(b: PlatformBackend) -> void:
+	if backend.signed_in.is_connected(_on_signed_in):
+		backend.signed_in.disconnect(_on_signed_in)
+	backend = b
+	_connect_backend()
+	_pending_conflict = {}
+
+
+## Launch: the platform's own sign-in, once, where there is a platform.
+func start() -> void:
+	if backend.is_available() and not backend.is_signed_in():
+		backend.sign_in()
+
+
+func _on_signed_in() -> void:
+	if Net.registered():
+		sync_link()
+	elif not App.player_created():
+		restore_first_launch()
+	else:
+		sync_link()   # registration pending: the link waits in the outbox
 
 
 ## Providers linked to this account, from the account part (never a proof).
@@ -80,6 +120,24 @@ func sync_link() -> void:
 		_show_sheet()
 
 
+## A fresh install with a signed-in platform player: the account that player
+## owns, if any, before NEW GAME — true when one came down.
+func restore_first_launch() -> bool:
+	if _restoring_first or Net.registered() or App.player_created():
+		return false
+	if not backend.is_available() or not backend.is_signed_in() or backend.provider_id() == "":
+		return false
+	_restoring_first = true
+	var proof: Dictionary = await backend.get_identity_proof()
+	var ok := false
+	if not proof.is_empty():
+		ok = await Net.restore_from_platform(backend.provider_id(), proof)
+	_restoring_first = false
+	if ok:
+		link_changed.emit()
+	return ok
+
+
 func has_conflict() -> bool:
 	return not _pending_conflict.is_empty()
 
@@ -89,13 +147,18 @@ func pending_conflict() -> Dictionary:
 
 
 ## USE IT: become the account the platform knows (a new device secret added
-## there; this phone's old identity is left behind), then its progress.
+## there; this phone's old identity is left behind), then its progress. The
+## proof is asked for afresh — the one the link sent is spent (the Worker
+## takes each signature once) — with the stored one as the fallback.
 func accept_conflict() -> bool:
 	if _pending_conflict.is_empty():
 		return false
 	var c := _pending_conflict
 	_pending_conflict = {}
-	var ok: bool = await Net.restore_from_platform(str(c["provider"]), c["proof"])
+	var proof: Dictionary = await backend.get_identity_proof()
+	if proof.is_empty():
+		proof = c["proof"]
+	var ok: bool = await Net.restore_from_platform(str(c["provider"]), proof)
 	if ok:
 		link_changed.emit()
 	return ok
@@ -126,3 +189,7 @@ func _show_sheet() -> void:
 	sheet.closed.connect(func() -> void: _sheet = null)
 	_sheet = sheet
 	get_tree().root.add_child(sheet)
+
+
+func sheet() -> Node:
+	return _sheet if _sheet != null and is_instance_valid(_sheet) else null

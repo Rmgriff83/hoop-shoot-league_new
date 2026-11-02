@@ -58,6 +58,38 @@ func run(t) -> void:
 	fits.free()
 	for n in ["icon_discord", "icon_reddit", "icon_gear", "icon_jersey", "icon_neonball"]:
 		t.ok(PixelIcon.tex(n) != null, "%s ships" % n)
+	# A first-launch restore from the platform (Game Center, 2026-11-01): the
+	# account lands while NEW GAME is up → the save card takes its place.
+	var root = Engine.get_main_loop().root
+	var app_node: Node = root.get_node("App")
+	var save: Node = root.get_node("SaveService")
+	var net: Node = root.get_node("Net")
+	var was_fresh: bool = app_node.qa_fresh
+	var st: Dictionary = save.get_settings()
+	var was_created: bool = bool(st.get("playerCreated", false))
+	app_node.qa_fresh = true
+	var splash: Node = load("res://game/screens/splash_screen.tscn").instantiate()
+	root.add_child(splash)
+	await Engine.get_main_loop().process_frame
+	var primary: Control = splash.get_node("UI").get_node_or_null("Primary") if splash.has_node("UI") else splash.find_child("Primary", true, false)
+	t.ok(primary != null and primary.find_child("Label", true, false) != null and (primary.find_child("Label", true, false) as Label).text == "NEW GAME", "fresh: NEW GAME")
+	var settings_y: float = (splash.find_child("Settings", true, false) as Control).position.y
+	net.account_ready.emit("BRICK BARON", "42")
+	t.ok(splash.find_child("Primary", true, false) == primary, "no player yet (a 404): NEW GAME stays")
+	app_node.qa_fresh = false
+	st["playerCreated"] = true
+	save.put_settings(st)
+	net.account_ready.emit("BRICK BARON", "42")
+	await Engine.get_main_loop().process_frame
+	var swapped: Control = splash.find_child("Primary", true, false)
+	t.ok(swapped != null and swapped != primary and swapped.find_child("Label", true, false) == null and swapped.position == primary.position if is_instance_valid(primary) else true, "the account arrived: the save card in NEW GAME's place")
+	t.ok((splash.find_child("Settings", true, false) as Control).position.y >= settings_y, "…the rows below moved down to fit")
+	splash.queue_free()
+	await Engine.get_main_loop().process_frame
+	st = save.get_settings()
+	st["playerCreated"] = was_created
+	save.put_settings(st)
+	app_node.qa_fresh = was_fresh
 	var app = Engine.get_main_loop().root.get_node_or_null("App")
 	if app != null:
 		t.eq(str(ProjectSettings.get_setting("application/run/main_scene")), app.SPLASH_SCENE, "the splash is the main scene")

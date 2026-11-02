@@ -60,7 +60,7 @@ func _ready() -> void:
 		App.loader.instant = _has_prefixed(args, "--qa") and not args.has("--qa-loading")
 		App.loader.force_show = args.has("--qa-loading")
 		PeggyMachine.threaded = not App.loader.instant
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live") or args.has("--qa-ads")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live") or args.has("--qa-ads") or args.has("--qa-platform")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# The splash is the main scene now: every other pass starts from the title.
@@ -105,6 +105,8 @@ func _ready() -> void:
 		_run_peggy.call_deferred()
 	elif args.has("--qa-store-live"):
 		_run_store_live.call_deferred()
+	elif args.has("--qa-platform"):
+		_run_platform.call_deferred()
 	elif args.has("--qa-ads"):
 		_run_ads.call_deferred()
 	elif args.has("--qa-store"):
@@ -2490,6 +2492,79 @@ func _run_title() -> void:
 ## Ads (docs/ADS.md, 2026-11-01): the fake network's AD card before a trial's
 ## results, the results after it, the store nudge on the 5th ad, and an
 ## owner of remove_ads going straight to the results.
+## A scripted Worker for the platform pass: every link is a 409 (the identity
+## belongs to BRICK BARON 42) until `_qa_link_ok`, restores succeed.
+var _qa_link_ok := false
+
+
+func _qa_platform_transport(method: int, path: String, _body: Variant, _headers: PackedStringArray) -> Dictionary:
+	if method == HTTPClient.METHOD_POST and path == "/v1/link":
+		if _qa_link_ok:
+			return {"code": 200, "json": {"linked": true, "provider": "test"}}
+		return {"code": 409, "json": {"error": "conflict", "provider": "test", "name": "BRICK BARON", "tag": "42", "level": 7}}
+	if method == HTTPClient.METHOD_POST and path == "/v1/link/restore":
+		return {"code": 200, "json": {"playerId": SaveService.uuid4(), "name": "BRICK BARON", "tag": "42"}}
+	if method == HTTPClient.METHOD_GET and path == "/v1/save":
+		return {"code": 200, "json": {"parts": {}, "now": 0}}
+	if method == HTTPClient.METHOD_GET and path == "/v1/me":
+		return {"code": 200, "json": {"providers": ["test"] if _qa_link_ok else []}}
+	return {"code": 404, "json": {"error": "not_found"}}
+
+
+## --qa-platform (2026-11-01): the Game Center link over the fake backend —
+## the FOUND YOUR ACCOUNT sheet from a 409, then Settings → PLAYER with the
+## LINK GAME CENTER row live, tapped to LINKED.
+func _run_platform() -> void:
+	await _sleep(1.0)
+	await _close_archive()
+	var was_account: Dictionary = SaveService.get_account()
+	var was_enabled: bool = Net.enabled
+	Net.enabled = true
+	Net.transport = _qa_platform_transport
+	_qa_link_ok = false
+	SaveService.put_account({"playerId": SaveService.uuid4(), "secret": "s".repeat(40), "name": "QA", "tag": "00", "registered": true})
+	var fake: PlatformBackend = load("res://tests/fake_platform_backend.gd").new()   # by path: tests/ is not exported
+	Platform.use_backend(fake)
+	await Platform.sync_link()
+	await _sleep(0.8)
+	await _snap("platform_found_sheet")
+	var sheet: Node = Platform.sheet()
+	Platform.decline_conflict()
+	if sheet != null:
+		sheet.call("close")
+	await _sleep(0.7)
+	# Settings → PLAYER: the row waits no more.
+	var menu: Button = get_tree().root.find_child("Menu", true, false)
+	if menu != null:
+		var c := _win_of(menu)
+		_mouse_button(c, true)
+		await _sleep(0.08)
+		_mouse_button(c, false)
+		await _sleep(0.8)
+	var sp: Node = get_tree().root.find_child("SettingsPanel", true, false)
+	var row: Control = sp.find_child("PlatformLink", true, false) if sp != null else null
+	var scroll: ScrollContainer = sp.find_child("Scroll", true, false) if sp != null else null
+	if row != null and scroll != null:
+		scroll.ensure_control_visible(row)
+		await _sleep(0.4)
+	await _snap("platform_settings_row")
+	_qa_link_ok = true
+	if row != null:
+		await _click_named("PlatformLink")
+		await _sleep(0.8)
+	await _snap("platform_settings_linked")
+	if sp != null:
+		sp.call("close")
+	await _sleep(0.5)
+	# Put the world back.
+	Platform.use_backend(GameCenterBackend.new())
+	Net.transport = Callable()
+	Net.enabled = was_enabled
+	SaveService.put_account(was_account if not was_account.is_empty() else {})
+	print("QA platform: done")
+	get_tree().quit(0)
+
+
 func _run_ads() -> void:
 	await _sleep(0.6)
 	var fake: AdsBackend = load("res://tests/fake_ads_backend.gd").new()   # by path: tests/ is not exported

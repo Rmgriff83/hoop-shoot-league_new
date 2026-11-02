@@ -257,6 +257,7 @@ func _build_ui() -> void:
 		_ui.add_child(b)
 		_buttons.push_back(b)
 		y += b.size.y - ShadowStyle.OFFSET + MENU_GAP
+	Net.account_ready.connect(_on_account_ready)
 
 
 func _image(name_: String, file: String, at: Vector2) -> TextureRect:
@@ -409,6 +410,30 @@ func replay() -> void:
 	_t = 0.0
 	_risen = false
 	_apply()
+
+
+## An account arrived while the menu is up — a first-launch restore from the
+## platform (Game Center, docs/BACKEND.md → Platform identity): NEW GAME
+## becomes the save card in place, the rows below it moving down to fit.
+func _on_account_ready(_n: String, _t: String) -> void:
+	if _leaving or _new_player != null or _buttons.is_empty() or not App.player_created():
+		return
+	var old := _buttons[0]
+	if old.find_child("Label", true, false) == null:
+		return   # already the save card
+	var card := _save_card()
+	card.name = "Primary"
+	card.pressed.connect(_continue)
+	card.position = old.position
+	card.modulate = old.modulate
+	card.mouse_filter = old.mouse_filter
+	_ui.add_child(card)
+	_ui.move_child(card, old.get_index())
+	var grew := card.size.y - old.size.y
+	for i in range(1, _buttons.size()):
+		_buttons[i].position.y += grew
+	_buttons[0] = card
+	old.queue_free()
 
 
 func _open_credits() -> void:

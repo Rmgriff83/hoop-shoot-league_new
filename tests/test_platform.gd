@@ -42,7 +42,7 @@ func run(t) -> void:
 	net._blocked_until = 0.0
 	net._fails = 0
 	var fake := FakePlatformBackend.new()
-	plat.backend = fake
+	plat.use_backend(fake)
 	# Stage B (docs/BACKEND.md → Ranked → Stage B): milestone keys from the
 	# server reach the backend once each and stay in the account part.
 	var acc0: Dictionary = save.get_account()
@@ -93,8 +93,10 @@ func run(t) -> void:
 		return {"code": 200, "json": {"playerId": owner_id, "name": "BRICK BARON", "tag": "42"}}
 	_answers["GET /v1/save"] = {"code": 200, "json": {"parts": {}, "now": 0}}
 	_calls.clear()
+	var proofs_before: int = fake.proof_calls
 	var ok: bool = await plat.accept_conflict()
 	t.ok(ok, "USE IT restores")
+	t.eq(fake.proof_calls - proofs_before, 1, "…with a fresh proof (the link's is spent)")
 	var restore_call: Dictionary = _calls[0]
 	t.ok(restore_call["key"] == "POST /v1/link/restore" and restore_call["headers"].is_empty(), "restore is unauthenticated")
 	t.ok(str(restore_call["body"]["newSecret"]) != old_secret and str(restore_call["body"]["newSecret"]).length() >= 32, "…with a fresh device secret")
@@ -151,6 +153,54 @@ func run(t) -> void:
 	await Engine.get_main_loop().process_frame
 	t.ok(save.pending_link() == "" and plat.is_linked(), "flush registers, then the waiting link goes out (%s)" % str(_calls.map(func(c): return c["key"])))
 
+	# Game Center on iOS (2026-11-01): a sign-in on a registered account links
+	# by itself; account_ready (a registration) retries a link that signed in
+	# too early; a fresh install restores before NEW GAME.
+	save.put_account({"playerId": SaveService.uuid4(), "secret": "c" .repeat(40), "name": "NEW GUY", "tag": "07", "registered": true})
+	_answers["POST /v1/link"] = {"code": 200, "json": {"linked": true, "provider": "test"}}
+	fake.signed = false
+	_calls.clear()
+	fake.sign_in()
+	await Engine.get_main_loop().process_frame
+	t.ok(_calls.size() == 1 and _calls[0]["key"] == "POST /v1/link" and plat.is_linked(), "signed_in on a registered account → the link goes out")
+	a = save.get_account()
+	a["linked"] = []
+	save.put_account(a)
+	_calls.clear()
+	net.account_ready.emit("NEW GUY", "07")
+	await Engine.get_main_loop().process_frame
+	t.ok(_calls.size() == 1 and _calls[0]["key"] == "POST /v1/link", "account_ready → sync_link")
+	# A fresh install: no player made, nothing registered — the platform's
+	# account comes down through /v1/link/restore, no registration first.
+	st = save.get_settings()
+	st["playerCreated"] = false
+	save.put_settings(st)
+	save.put_account({"playerId": SaveService.uuid4(), "secret": "d" .repeat(40), "name": "DRAFT", "tag": "01", "registered": false})
+	var theirs := SaveService.uuid4()
+	_answers["POST /v1/link/restore"] = {"code": 200, "json": {"playerId": theirs, "name": "BRICK BARON", "tag": "42"}}
+	_answers["GET /v1/save"] = {"code": 200, "json": {"parts": {}, "now": 0}}
+	fake.signed = false
+	_calls.clear()
+	fake.sign_in()
+	await Engine.get_main_loop().process_frame
+	await Engine.get_main_loop().process_frame
+	t.ok(_calls.size() >= 2 and _calls[0]["key"] == "POST /v1/link/restore" and _calls[0]["headers"].is_empty() and _calls[1]["key"] == "GET /v1/save", "a fresh install's sign-in restores (unauthenticated), then pulls (%s)" % str(_calls.map(func(c): return c["key"])))
+	a = save.get_account()
+	t.ok(a["playerId"] == theirs and a["name"] == "BRICK BARON" and a["registered"] == true and Array(a["linked"]) == ["test"], "…their account is this phone's now")
+	t.ok(not plat.has_conflict(), "…no sheet: nothing to choose between")
+	# Nobody there: a 404 leaves the draft alone (a new player, as before).
+	save.put_account({"playerId": SaveService.uuid4(), "secret": "e" .repeat(40), "name": "DRAFT", "tag": "01", "registered": false})
+	_answers["POST /v1/link/restore"] = {"code": 404, "json": {"error": "not_found"}}
+	fake.signed = false
+	_calls.clear()
+	fake.sign_in()
+	await Engine.get_main_loop().process_frame
+	a = save.get_account()
+	t.ok(_calls.size() == 1 and a["name"] == "DRAFT" and a["registered"] == false, "404: no account there, the draft stays unregistered")
+	st = save.get_settings()
+	st["playerCreated"] = true
+	save.put_settings(st)
+
 	# Delete: the server account, then a wiped phone.
 	save.put_settings({"updatedAt": 1, "shotHelp": 2})
 	_answers["DELETE /v1/me"] = {"code": 200, "json": {"deleted": true}}
@@ -170,7 +220,7 @@ func run(t) -> void:
 	app_node.qa_fresh = was_fresh
 	net.transport = Callable()
 	net.enabled = was_enabled
-	plat.backend = was_backend
+	plat.use_backend(was_backend)
 	save.wipe_all()
 	if not was_account.is_empty():
 		save.put_account(was_account)

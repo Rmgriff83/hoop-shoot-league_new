@@ -283,7 +283,9 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
     HOMETOWN, tidied as you type, the card following; SAVE checks both
     (`NAME NOT ALLOWED · A-Z, 0-9, 3-24`, `PICK A HOMETOWN`), renames on the
     server when the name changed and closes; CLOSE drops the changes. The
-    platform link row waits, hidden, for a store backend.
+    platform link row (LINK GAME CENTER / LINKED · GAME CENTER, 2026-11-01;
+    docs/BACKEND.md → Platform identity) shows on an iPhone with the plugin
+    and stays hidden elsewhere.
   - **DEV** (debug builds only): TUNING and LEVEL GATES as switches.
   - **MORE**: CREDITS.
   - **DANGER ZONE**, last, in red over an orange rule: MOVE TO NEW PHONE
@@ -537,7 +539,10 @@ Discord / Reddit icons at 3 s). The menu sits 535 px above the screen's foot
 badge in butter when rated, `LVL n`, `>` (CONTINUE → the title with the
 archive as the front door) — or, on a fresh install, NEW GAME with the neon
 ball (→ the NEW PLAYER form, design 35a); SETTINGS; CREDITS (`App.to_credits`
-remembers where it was opened from, so its back returns to the splash). On a
+remembers where it was opened from, so its back returns to the splash). A
+reinstall signed into Game Center gets its account back while NEW GAME is
+up (`Net.account_ready`, docs/BACKEND.md → Platform identity): the save
+card takes NEW GAME's place, the rows below moving down to fit. On a
 9:16 screen the sign block rides up 170 px (`sign_lift`). A tap on the sign
 replays everything. Title music starts here and carries into the title.
 
