@@ -66,7 +66,45 @@ func run(t) -> void:
 	var code_i := int(str(cfg.get_value(ios, "application/version", "-3")))
 	t.ok(code_a > 0 and code_a == code_p, "both Android presets carry one build number (%d / %d)" % [code_a, code_p])
 	t.ok(code_i == code_a or code_i == 0, "iOS carries the same build number (%d) or none yet" % code_i)
+	# tests/ is left out of every export (exclude_filter), so a shipped script
+	# that names a class_name defined there fails to compile on the device —
+	# and a release build reports nothing (Build 390, 2026-11-01: the Ads
+	# autoload died over FakeAdsBackend and every match end stalled). Fakes
+	# are reached by load("res://tests/…") at run time, never by class.
+	var test_classes: Array[String] = []
+	for f in DirAccess.get_files_at("res://tests"):
+		if f.ends_with(".gd"):
+			var m := RegEx.create_from_string("(?m)^class_name\\s+(\\w+)").search(FileAccess.get_file_as_string("res://tests/" + f))
+			if m != null:
+				test_classes.push_back(m.get_string(1))
+	t.ok(test_classes.size() >= 3, "tests/ defines the fake backends (%s)" % str(test_classes))
+	for ex in ["art/*", "docs/*", "tests/*"]:
+		for p in by_name.values():
+			t.ok(str(cfg.get_value(p, "exclude_filter", "")).contains(ex), "preset %s leaves %s out" % [cfg.get_value(p, "name"), ex])
+	var offenders: Array[String] = []
+	for dir in ["res://game", "res://core", "res://tools"]:
+		for path in _gd_files(dir):
+			var src := FileAccess.get_file_as_string(path)
+			for cls in test_classes:
+				if RegEx.create_from_string("(?m)^[^#\\n]*\\b%s\\b" % cls).search(src) != null:
+					offenders.push_back("%s → %s" % [path, cls])
+	t.eq(offenders, [], "no shipped script names a tests/ class (they are left out of the exports)")
 	# The script itself: present, executable, and the only writer of the presets.
 	var script := ProjectSettings.globalize_path("res://tools/build.sh")
 	t.ok(FileAccess.file_exists(script), "tools/build.sh exists")
 	t.ok(FileAccess.get_unix_permissions(script) & 64, "tools/build.sh is executable")
+
+
+static func _gd_files(dir: String) -> Array[String]:
+	var out: Array[String] = []
+	for f in DirAccess.get_files_at(dir):
+		if f.ends_with(".gd"):
+			out.push_back(dir.path_join(f))
+	for d in DirAccess.get_directories_at(dir):
+		if d.begins_with("."):
+			continue
+		var sub := dir.path_join(d)
+		if sub in ["res://tools/aseprite", "res://tools/blender"]:
+			continue
+		out.append_array(_gd_files(sub))
+	return out

@@ -134,6 +134,24 @@ from **`store_keys.json`** at the project root (gitignored; copy
 `store_keys.example.json`). Absent or unfilled, the store is the stub too.
 docs/BACKEND.md → Ticket store has the dashboard and store-console setup.
 
+### What the exports leave out (and the silent failure it causes)
+
+Every preset's `exclude_filter` drops `art/*`, `docs/*`, `tests/*`,
+`tools/aseprite/*`, `tools/blender/*` and `build/*`. A shipped script that
+names a `class_name` defined under `tests/` (the fake backends) therefore
+**fails to compile on the device**, taking its autoload and every script
+that depends on it down with it — and a release export template reports
+nothing: GDScript runtime errors are only printed in debug builds, so the
+calling function just stops. That was Build 390's stall at every match end
+(2026-11-01): `Ads` named `FakeAdsBackend`, the `Ads` autoload never
+existed, and `App.finish_run` died silently at `Ads.before_results`. The
+rules now: fakes are reached by `load("res://tests/…")` at run time, never
+by class (`tools/qa_driver.gd` ships as an autoload, so this holds for it
+too); `tests/test_build_config.gd` fails on any `game/`, `core/` or `tools/`
+script that names a `tests/` class. When a device build misbehaves with no
+error in Xcode's console, suspect a compile failure first: hide the
+excluded files and `load()` the script headless to reproduce.
+
 ### The ads plugin (AdMob, 2026-11-01)
 
 Interstitials (docs/ADS.md) come through **godot-sdk-integrations/godot-admob

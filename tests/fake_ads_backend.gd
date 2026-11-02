@@ -18,6 +18,10 @@ var _up := false
 var _card: CanvasLayer
 
 
+func accepts_empty_cfg() -> bool:
+	return true
+
+
 func available() -> bool:
 	return available_
 

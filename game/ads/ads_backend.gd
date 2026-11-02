@@ -30,6 +30,14 @@ func ready() -> bool:
 	return false
 
 
+## True only for a fake (tests, QA): it may start without real ids. Kept
+## here as a virtual so `Ads` never names a tests/ class — tests/ is left
+## out of the exports, and a script that mentions a missing global class
+## fails to compile on the device (Build 390's silent stall, 2026-11-01).
+func accepts_empty_cfg() -> bool:
+	return false
+
+
 func load_interstitial() -> void:
 	pass
 

@@ -87,7 +87,7 @@ func start_if_needed() -> void:
 	if _started or owner() or not backend.available():
 		return
 	var pc := platform_cfg()
-	if pc.is_empty() and not (backend is FakeAdsBackend):
+	if pc.is_empty() and not backend.accepts_empty_cfg():
 		return
 	_started = true
 	backend.start(pc)
@@ -114,37 +114,18 @@ func _now() -> float:
 
 ## Would the next results show an ad (the policy, right now)?
 func due() -> bool:
-	print("move: due owner")
-	var own := owner()
-	print("move: due available")
-	var avail := backend.available() and _started
-	print("move: due ready")
-	var rdy := backend.ready()
-	print("move: due played")
-	var played := matches_played()
-	print("move: due policy")
-	var grace := policy("grace_matches")
-	var gap := policy("min_gap_s")
-	print("move: due now")
-	var now := _now()
-	print("move: due should_show")
-	var show := AdPolicy.should_show({
-		"owner": own, "available": avail, "ready": rdy,
-		"matches_played": played, "grace_matches": grace,
-		"last_ad_at": last_ad_at, "now": now, "min_gap_s": gap,
+	return AdPolicy.should_show({
+		"owner": owner(), "available": backend.available() and _started, "ready": backend.ready(),
+		"matches_played": matches_played(), "grace_matches": policy("grace_matches"),
+		"last_ad_at": last_ad_at, "now": _now(), "min_gap_s": policy("min_gap_s"),
 	})
-	print("move: due = ", show)
-	return show
 
 
 ## The gate before a results screen: `then` moves there, after the ad or at once.
 func before_results(then: Callable) -> void:
-	print("move: before_results showing=", _showing)
 	var show := not _showing and due()
-	print("move: ads decision show=", show)
 	_count_match()   # after the decision: the grace is the results BEFORE this one
 	if not show:
-		print("move: ads → then")
 		then.call()
 		return
 	_then = then

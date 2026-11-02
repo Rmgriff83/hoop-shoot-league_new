@@ -1456,7 +1456,7 @@ func _run_store_live() -> void:
 	Net.transport = _qa_transport
 	if not Net.registered():
 		SaveService.put_account({"playerId": SaveService.uuid4(), "secret": "s".repeat(40), "name": "QA", "tag": "00", "registered": true})
-	var fake := FakeStoreBackend.new()
+	var fake: StoreBackend = load("res://tests/fake_store_backend.gd").new()   # by path: tests/ is not exported
 	fake.prices = {"tickets_300": "CA$1.39", "tickets_1000": "CA$3.99"}
 	Store.use_backend(fake)
 	ts.call("_open_store")
@@ -2492,7 +2492,7 @@ func _run_title() -> void:
 ## owner of remove_ads going straight to the results.
 func _run_ads() -> void:
 	await _sleep(0.6)
-	var fake := FakeAdsBackend.new()
+	var fake: AdsBackend = load("res://tests/fake_ads_backend.gd").new()   # by path: tests/ is not exported
 	fake.visual = true
 	fake.auto = false
 	Ads.use_backend(fake)
