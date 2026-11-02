@@ -123,6 +123,25 @@ PY
 }
 stage_ads_plugin
 
+# The Game Center plugin (docs/BUILD.md → The Game Center plugin): built from
+# the vendored source by tools/build_gamecenter_plugin.sh into
+# ~/.config/hoop_shoot/gamecenter, copied in here like the other two. Missing:
+# a warning, and the platform runs its null backend (no sign-in, no restore).
+GC_PLUGIN="$HOME/.config/hoop_shoot/gamecenter"
+stage_gamecenter_plugin() {
+  if [[ -f "$GC_PLUGIN/ios/plugins/gamecenter.gdip" && -d "$GC_PLUGIN/ios/plugins/gamecenter.release.xcframework" ]]; then
+    rm -rf ios/plugins/gamecenter.gdip ios/plugins/gamecenter.debug.xcframework ios/plugins/gamecenter.release.xcframework
+    mkdir -p ios/plugins
+    cp "$GC_PLUGIN/ios/plugins/gamecenter.gdip" ios/plugins/
+    cp -R "$GC_PLUGIN/ios/plugins/gamecenter.debug.xcframework" "$GC_PLUGIN/ios/plugins/gamecenter.release.xcframework" ios/plugins/
+    touch ios/plugins/gamecenter.debug.xcframework/.gdignore ios/plugins/gamecenter.release.xcframework/.gdignore
+    echo "staged the Game Center plugin from $GC_PLUGIN"
+  else
+    echo "no Game Center plugin at $GC_PLUGIN (tools/build_gamecenter_plugin.sh builds it): no Game Center sign-in"
+  fi
+}
+stage_gamecenter_plugin
+
 godot_export() {  # preset path
   local flag="--export-$MODE"
   "$GODOT" --headless --path "$PROJ" "${INSTALL[@]}" "$flag" "$1" "$2" 2>&1 | tee build/export.log | grep -vE "$NOISE"

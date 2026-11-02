@@ -189,6 +189,42 @@ deploys show no ads. With placeholder ids in `data/ads.json` the plugin
 ships inert: `AdMobBackend.available()` is true on the phone but
 `Ads.platform_cfg()` is empty, so the SDK never starts.
 
+### The Game Center plugin (2026-11-01)
+
+Game Center sign-in (docs/BACKEND.md → Platform identity) rides the official
+**godotengine/godot-ios-plugins `gamecenter`** plugin (MIT), whose
+`request_identity_verification_signature` is exactly Apple's
+`fetchItems(forIdentityVerificationSignature:)` with the team player id.
+That repo publishes binaries for Godot 3 only, so its six source files are
+**vendored** in `tools/ios_plugins/gamecenter/` (`.gdignore`d: the editor
+never scans them, no export packs them; `CREDITS.md` lists the commit and
+our three patches — GameKit imported before Godot's headers, the root view
+controller through the window scene, the signature event handed to the main
+queue; the `.gdip` drops `capabilities=["gamekit"]`) and built here:
+
+```
+tools/build_gamecenter_plugin.sh      # once per source/engine change (--force to redo)
+~/.config/hoop_shoot/gamecenter/src/godot          the Godot 4.7.1-stable source (headers only; ~70 MB, fetched once, SHA-256 pinned)
+~/.config/hoop_shoot/gamecenter/ios/plugins/gamecenter.gdip + gamecenter.{debug,release}.xcframework
+```
+
+The script needs Xcode's command line tools and `scons` (`brew install
+scons`) — scons only writes the engine's three generated headers
+(`core/version_generated.gen.h`, `core/extension/gdextension_interface.gen.h`,
+`core/disabled_classes.gen.h`), never a full engine build; clang then
+compiles the plugin for `arm64` at `-miphoneos-version-min=15.0` with
+`-fobjc-arc` (the source uses `__weak`), `libtool` and `xcodebuild
+-create-xcframework` wrap it (device slice only: the archive needs no
+simulator). The output is stamped with the vendored source's hash and the
+engine tag, so a re-run is a no-op until one changes. `tools/build.sh`
+copies the three files into `ios/plugins/` (gitignored, `.gdignore`d) like
+the other two plugins; missing, it warns and the game runs the null
+platform backend (no sign-in, no restore). The iOS preset carries
+`plugins/GameCenter=true` and **`entitlements/game_center=true`** — GameKit
+refuses to authenticate without `com.apple.developer.game-center` in the
+entitlements — and Ross switches Game Center on for the app in App Store
+Connect. GameKit links through the `.gdip`'s `system=["GameKit.framework"]`.
+
 ## The icon
 
 `assets/icon/icon_1024.png` is Ross's final icon (design 46b NEON BALL,
