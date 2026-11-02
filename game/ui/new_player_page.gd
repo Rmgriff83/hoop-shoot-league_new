@@ -383,6 +383,14 @@ func _lets_play() -> void:
 	if _leaving or not is_valid():
 		return
 	_leaving = true
+	if Net.registered():
+		# A Game Center restore landed while the form was open (docs/BACKEND.md
+		# → Platform identity, 2026-11-02): the account and its name exist
+		# already — never rename them over with this form's. Straight in.
+		slide_out(true, false)
+		App.show_archive = true
+		App.to_title("continue")
+		return
 	var v := values()
 	slide_out(true, false)
 	App.create_player(str(v["name"]), str(v["tag"]), str(v["town"]))

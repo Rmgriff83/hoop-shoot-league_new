@@ -132,6 +132,7 @@ func _ready() -> void:
 		App.home_card = _index
 	Net.board_loaded.connect(_on_board_for_preview)
 	Net.board_failed.connect(_on_board_fail_for_preview)
+	Net.account_ready.connect(_on_account_for_preview)
 	Net.resumed.connect(_on_resumed_board)
 	Store.tickets_credited.connect(_on_tickets_credited)
 	Net.score_accepted.connect(_on_score_accepted)
@@ -204,6 +205,13 @@ func _on_board_fail_for_preview(area: String, period: String) -> void:
 
 func _board_local() -> void:
 	_board.set_rows(RanksCopy.local_rows(SaveService.top_scores(RanksCopy.BOARD_SIZE, str(CARDS[_index]["area"]))))
+
+
+## The account arrived after the board was asked for — a registration, or a
+## Game Center restore on a fresh install (Ross, 2026-11-02: the board sat on
+## this phone's runs until a relaunch): ask again, as a registered player now.
+func _on_account_for_preview(_n: String, _t: String) -> void:
+	_refresh_board(true)
 
 
 ## Back from the background: ask again (a fetch that died asleep said nothing).
@@ -390,6 +398,8 @@ func _exit_tree() -> void:
 		Net.board_loaded.disconnect(_on_board_for_preview)
 	if Net.board_failed.is_connected(_on_board_fail_for_preview):
 		Net.board_failed.disconnect(_on_board_fail_for_preview)
+	if Net.account_ready.is_connected(_on_account_for_preview):
+		Net.account_ready.disconnect(_on_account_for_preview)
 	if Net.resumed.is_connected(_on_resumed_board):
 		Net.resumed.disconnect(_on_resumed_board)
 	if Net.score_accepted.is_connected(_on_score_accepted):
