@@ -60,7 +60,7 @@ func _ready() -> void:
 		App.loader.instant = _has_prefixed(args, "--qa") and not args.has("--qa-loading")
 		App.loader.force_show = args.has("--qa-loading")
 		PeggyMachine.threaded = not App.loader.instant
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live") or args.has("--qa-ads") or args.has("--qa-platform")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-pause-practice") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live") or args.has("--qa-ads") or args.has("--qa-platform")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# Achievements earned during a pass, in the log (docs/ACHIEVEMENTS.md).
@@ -91,6 +91,8 @@ func _ready() -> void:
 		_run_tutorial.call_deferred()
 	elif args.has("--qa-hud"):
 		_run_hud.call_deferred()
+	elif args.has("--qa-pause-practice"):
+		_run_pause_practice.call_deferred()
 	elif args.has("--qa-heat"):
 		_run_heat.call_deferred()
 	elif args.has("--qa-cards"):
@@ -982,6 +984,30 @@ func _run_hud() -> void:
 		await _sleep(0.4)
 		await _snap("hud_practice30")
 	print("QA hud: done")
+	get_tree().quit(0)
+
+
+## The practice pause page (43a): the design's numbers, then a long session's.
+func _run_pause_practice() -> void:
+	await _sleep(1.2)
+	await _close_archive()
+	await _click_button_named("PRACTICE")
+	await _sleep(1.2)
+	var prac := get_tree().current_scene
+	var pp: Button = get_tree().root.find_child("PauseButton", true, false)
+	for nums in [[23, 34, 9, "hud_pause_practice"], [123, 456, 78, "hud_pause_practice_long"]]:
+		prac.trial.makes = nums[0]
+		prac.trial.attempts = nums[1]
+		prac.trial.swishes = nums[2]
+		var c := _win_of(pp)
+		_mouse_button(c, true)
+		await _sleep(0.08)
+		_mouse_button(c, false)
+		await _sleep(0.5)
+		await _snap(str(nums[3]))
+		await _click_button_named("RESUME")
+		await _sleep(0.5)
+	print("QA pause practice: done")
 	get_tree().quit(0)
 
 

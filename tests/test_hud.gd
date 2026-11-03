@@ -259,7 +259,9 @@ func _widgets(t) -> void:
 	t.eq(HudCopy.pause_context_match("ARCADE LEAGUE", "po-sf-2", "OLLIE", 1), "ARCADE LEAGUE · SEMIFINAL · GAME 2 · VS OLLIE · OT1", "a playoff game in overtime")
 	t.eq(HudCopy.pause_context_match("ONLINE", "", "DRE"), "ONLINE · VS DRE", "an online match")
 	t.eq(HudCopy.pause_stats_trial(18, 23.4, 31), {"rows": [{"name": "SCORE", "score": "18", "mine": true}, {"name": "YOUR BEST", "score": "31", "mine": false}], "clock": "23.4", "clock_label": "TIME LEFT"}, "a trial's box (43a, 2026-10-30)")
-	t.eq(HudCopy.pause_stats_practice(7, 4)["clock"], "", "practice has no clock in the box")
+	t.eq(HudCopy.pause_stats_practice(23, 34, 9), {"rows": [{"name": "MADE", "score": "23 / 34", "mine": true}, {"name": "SWISHES", "score": "9", "mine": false}], "clock": "68%", "clock_label": "FG%"}, "practice's box: made of attempts, swishes, FG% where the clock would be")
+	t.eq(HudCopy.pause_stats_practice(0, 0, 0)["clock"], "0%", "…0% before the first shot")
+	t.eq(HudCopy.pause_stats_practice(99, 100, 9)["rows"][0]["score"], "99/100", "…a long session drops the spaces so MADE keeps its room")
 	t.eq(HudCopy.pause_quit_warning("THIS RUN WON'T COUNT"), "TAP AGAIN\nTHIS RUN WON'T COUNT", "the armed QUIT's warning")
 	t.eq(HudCopy.pause_quit_warning(""), "TAP AGAIN", "…alone when quitting costs nothing")
 	pm.open({"context": HudCopy.pause_context_match("ARCADE LEAGUE", "d5", "OLLIE"), "stats": HudCopy.pause_stats_match(12, 9, "OLLIE", 41.7), "quit_note": HudCopy.pause_quit_note("league")})
@@ -267,6 +269,8 @@ func _widgets(t) -> void:
 	t.eq(pm.info_texts(), ["YOU 12", "OLLIE 9", "41.7 TIME LEFT"], "the info box: your line over theirs, then the time left")
 	t.ok(pm.find_child("Info", true, false) is ShadowPanel and pm.find_child("OptionsHead", true, false) == null, "an orange box; no OPTIONS head (2026-10-30)")
 	t.eq((pm.find_child("Ball", true, false) as Control).size.y, PauseMenu.TILE_H + ShadowStyle.OFFSET, "the tiles are 240 tall")
+	var tile_glow := pm.find_child("BallIcon", true, false).get_node("Glow") as TextureRect
+	t.ok(tile_glow.show_behind_parent and tile_glow.size.x == PauseMenu.TILE_ICON + 60.0, "the tile's glow sits behind its picture, 30 px past it")
 	t.eq(HudCopy.pause_resume_sub(-1.0), "BACK TO PRACTICE · NO CLOCK", "practice has no clock")
 	# HUD SIDE (43a, later 2026-10-27): its row opens LEFT / RIGHT above it; a pick sets it, says so and closes.
 	var was_hud: String = app.hud_side

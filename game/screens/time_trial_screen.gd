@@ -576,8 +576,8 @@ func pause_game() -> void:
 func _pause_info() -> Dictionary:
 	var where := str(_arena_set.display_name).to_upper() if _arena_set != null else ""
 	if _practice:
-		return {"context": HudCopy.pause_context([where, "PRACTICE"]), "stats": HudCopy.pause_stats_practice(trial.score, trial.makes),
-			"quit_note": ""}
+		return {"context": HudCopy.pause_context([where, "PRACTICE", str(_spots[_spot_index]["name"])]),
+			"stats": HudCopy.pause_stats_practice(trial.makes, trial.attempts, trial.swishes), "quit_note": ""}
 	return {"context": HudCopy.pause_context([where, "TIME TRIAL"]),
 		"stats": HudCopy.pause_stats_trial(trial.score, trial.time_left, _best_score()), "quit_note": HudCopy.pause_quit_note("trial")}
 

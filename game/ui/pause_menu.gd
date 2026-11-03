@@ -35,6 +35,10 @@ extends CanvasLayer
 ## clock and TIME LEFT on the right; OPTIONS · TAP TO CHANGE is gone; the
 ## tiles grow to 240 with a 116 picture, and everything under them moves
 ## down 30; the popover's cells glow behind their thumbnails.
+##
+## 2026-11-02 update of 43a: practice's box reads MADE 23 / 34, SWISHES 9 and
+## 68% FG% (HudCopy.pause_stats_practice) with its spot on the line under
+## PAUSED; the three tiles get a white glow behind their pictures.
 
 signal resumed
 signal quit
@@ -68,6 +72,8 @@ const QUIT_BOTTOM := 60.0
 const WARN := Color("#FFB08A")
 const TILES_Y := 456.0
 const TILE_H := 240.0
+## How far the tile's glow reaches past its picture on each side.
+const TILE_GLOW_BLEED := 30.0
 const TILE_ICON := 116.0
 const TILE_GAP := 20.0
 const POP_Y := 724.0
@@ -267,7 +273,8 @@ func _ready() -> void:
 
 ## The info box from `stats` ({rows: [{name, score, mine}], clock, clock_label},
 ## HudCopy.pause_stats_*): your row first, white over gold; a later row
-## under a rule, muted. No clock (practice) drops the clock column.
+## under a rule, muted. Practice's right column is its FG% (`clock_label`); no
+## `clock` at all drops the column.
 func _fill_info(stats: Dictionary) -> void:
 	if _info_rows == null:
 		return
@@ -397,6 +404,16 @@ func _tile(name_: String, label: String, face_w: float) -> Dictionary:
 	icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(icon)
+	var glow := TextureRect.new()
+	glow.name = "Glow"
+	glow.texture = _tile_glow()
+	glow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	glow.stretch_mode = TextureRect.STRETCH_SCALE
+	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	glow.show_behind_parent = true
+	glow.position = Vector2.ONE * -TILE_GLOW_BLEED
+	glow.size = Vector2.ONE * (TILE_ICON + 2.0 * TILE_GLOW_BLEED)
+	icon.add_child(glow)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 8)
@@ -411,6 +428,23 @@ func _tile(name_: String, label: String, face_w: float) -> Dictionary:
 	caret.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	row.add_child(caret)
 	return {"card": card, "icon": icon, "value": value, "caret": caret, "face_w": face_w}
+
+
+## The glow behind a tile's picture: the design's radial ellipse at (50 %, 46 %),
+## 75 % → 40 % at 34 % → clear by 68 %. CSS's farthest-corner ellipse is 0.71 of
+## the box across and 0.76 down; one radius between them stays within 4 px.
+static func _tile_glow() -> GradientTexture2D:
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array([0.0, 0.34, 0.68])
+	g.colors = PackedColorArray([Color(CREAM, 0.75), Color(CREAM, 0.4), Color(CREAM, 0.0)])
+	var t := GradientTexture2D.new()
+	t.gradient = g
+	t.fill = GradientTexture2D.FILL_RADIAL
+	t.fill_from = Vector2(0.5, 0.46)
+	t.fill_to = Vector2(0.5 + 0.735, 0.46)
+	t.width = 64
+	t.height = 64
+	return t
 
 
 ## The ▾ under a tile with choices (drawn: the pixel fonts have no ▾).

@@ -142,10 +142,16 @@ static func pause_stats_trial(score: int, left: float, best: int) -> Dictionary:
 		"clock": "%.1f" % maxf(left, 0.0), "clock_label": "TIME LEFT"}
 
 
-## Practice: SCORE / MADE, no clock.
-static func pause_stats_practice(score: int, makes: int) -> Dictionary:
-	return {"rows": [{"name": "SCORE", "score": str(score), "mine": true}, {"name": "MADE", "score": str(makes), "mine": false}],
-		"clock": "", "clock_label": ""}
+## Practice: MADE 23 / 34 / SWISHES 9 · 68% FG% (no clock, so the box's right
+## column carries the shooting percentage; 0% before the first shot). Past
+## seven characters the spaces go (123/456), or MADE has no room beside it.
+static func pause_stats_practice(makes: int, attempts: int, swishes: int) -> Dictionary:
+	var fg := roundi(100.0 * makes / attempts) if attempts > 0 else 0
+	var made := "%d / %d" % [makes, attempts]
+	if made.length() > 7:
+		made = "%d/%d" % [makes, attempts]
+	return {"rows": [{"name": "MADE", "score": made, "mine": true}, {"name": "SWISHES", "score": str(swishes), "mine": false}],
+		"clock": "%d%%" % fg, "clock_label": "FG%"}
 
 
 ## The warning over an armed QUIT: `TAP AGAIN` and what it costs.
