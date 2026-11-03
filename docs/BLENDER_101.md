@@ -1468,8 +1468,11 @@ sky cylinder, the towels and cooler and the sky life stay as they were.
   the board-formed one that was there, now only skins the city. New `beach_curb.png` (pale speckled concrete, 64²)
   skins the `WallCap%d` boxes (0.5 m tiles) AND the `CourtApron` (0.5 m tiles; it was flat
   blacktop). `beach_sand.png` gets diagonal wind ripples, grain and shell bits, and since 2026-11-02
-  `tools/render_beach_sand.gd` multiplies Pizza Doggy's `dirt_pt_5.png` grain into it
-  (`beach_sand_dirt.png`, 3 m tiles, `SAND_TILE_M`), the colour staying the sand's;
+  `tools/render_beach_grain.gd` multiplies Pizza Doggy's `dirt_pt_5.png` grain into it
+  (`beach_sand_dirt.png`, 3 m tiles, `SAND_TILE_M`), the colour staying the sand's; the same tool
+  puts `dirt_pt_10.png` faintly (0.25) into the GREY of `beach_court.png` and `street_board.png`
+  (`*_grain.png`; lines, patches, frame and shooter square stay clean). The hoop takes its board
+  through `tools/blender/reskin_street_hoop.py`: `build_street_hoop.py -- --force` loses the `Miss` clip;
   `beach_court.png` gets aggregate speckle, seven meandering cracks that keep out of the key,
   and paint wear along the lines. The old fence material (cage_mesh.png) is gone with it.
 - **The palms** are 3D now. `build_palm_model()` builds a unit-height tree in its own

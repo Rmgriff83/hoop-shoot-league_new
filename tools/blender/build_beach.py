@@ -356,8 +356,8 @@ def build():
     c_court, c_sand, c_sea = cage.sub(coll, "Court"), cage.sub(coll, "Sand"), cage.sub(coll, "Sea")
     c_sky, c_props, c_pole = cage.sub(coll, "Sky"), cage.sub(coll, "Props"), cage.sub(coll, "Pole")
 
-    court = cage.mat_tex("Beach_Court", TEX("beach_court.png"))
-    sand = cage.mat_tex("Beach_Sand", TEX("beach_sand_dirt.png"))   # tools/render_beach_sand.gd
+    court = cage.mat_tex("Beach_Court", TEX("beach_court_grain.png"))   # tools/render_beach_grain.gd
+    sand = cage.mat_tex("Beach_Sand", TEX("beach_sand_dirt.png"))   # tools/render_beach_grain.gd
     water = cage.mat_tex("Beach_Water", TEX("beach_water.png"), double_sided=True)
     foam = cage.mat_tex("Beach_Foam", TEX("beach_foam.png"), double_sided=True)
     sky = cage.mat_tex("Beach_Sky", TEX("beach_sky.png"), emissive=True)

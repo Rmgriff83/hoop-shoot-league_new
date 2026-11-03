@@ -113,6 +113,20 @@ func run(t) -> void:
 	var sand_mesh := beach.find_child("Sand", true, false) as MeshInstance3D
 	var sand_mat := sand_mesh.get_active_material(0) as BaseMaterial3D if sand_mesh != null else null
 	t.ok(sand_mat != null and sand_mat.albedo_texture != null and sand_mat.albedo_texture.get_width() == 512, "the sand carries the dirt's grain at 512 px")
+	var board_src := Image.load_from_file("res://assets/textures/street_board.png")
+	var board_out := Image.load_from_file("res://assets/textures/street_board_grain.png")
+	t.ok(board_out.get_pixel(4, 4).is_equal_approx(board_src.get_pixel(4, 4)), "the grain leaves the board's pale frame alone")
+	var orange := Vector2i(-1, -1)
+	for y in board_src.get_height():
+		if board_src.get_pixel(192, y).s > 0.6:
+			orange = Vector2i(192, y)
+			break
+	t.ok(orange.y >= 0 and board_out.get_pixelv(orange).is_equal_approx(board_src.get_pixelv(orange)), "…and the orange square")
+	var face_diff := 0
+	for x in 40:
+		if not board_out.get_pixel(30 + x, 60).is_equal_approx(board_src.get_pixel(30 + x, 60)):
+			face_diff += 1
+	t.ok(face_diff > 20, "…but the graphite face takes it")
 	var palm: Node = load("res://assets/arena/beach/palm.glb").instantiate()
 	var fronds := palm.find_child("PalmFronds", true, false) as MeshInstance3D
 	t.ok(palm.find_child("PalmTrunk", true, false) is MeshInstance3D and fronds != null, "palm.glb: PalmTrunk + PalmFronds")

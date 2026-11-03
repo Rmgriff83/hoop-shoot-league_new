@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://oxe2ha5feunq"
-path="res://.godot/imported/hoop_street_board.png-52dd2efa29f33de4515bc39d59d453bd.ctex"
+uid="uid://dar8jkqxps6de"
+path="res://.godot/imported/hoop_street_board_grain.png-e3a828fca7fc7673a00825ccf502b1ee.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "f04246ca766b50068c434dc93fcb4201"
+"md5": "6dd52eee802cb52f5b7960fc0f9c9d7a"
 }
 
 [deps]
 
-source_file="res://assets/hoops/street/hoop_street_board.png"
-dest_files=["res://.godot/imported/hoop_street_board.png-52dd2efa29f33de4515bc39d59d453bd.ctex"]
+source_file="res://assets/hoops/street/hoop_street_board_grain.png"
+dest_files=["res://.godot/imported/hoop_street_board_grain.png-e3a828fca7fc7673a00825ccf502b1ee.ctex"]
 
 [params]
 

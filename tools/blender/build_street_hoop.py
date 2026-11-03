@@ -58,7 +58,7 @@ def build():
     bh.link_obj(root, coll)
 
     body = bh.mat_flat("Street_Body", (238, 240, 244))
-    face = bh.mat_tex("Street_Face", TEX("street_board.png"))
+    face = bh.mat_tex("Street_Face", TEX("street_board_grain.png"))   # tools/render_beach_grain.gd
     metal = bh.mat_flat("Street_Metal", (60, 64, 72))
     rim_mat = bh.mat_tex("Rim", TEX("hoop_rim.png"))
     net_mat = bh.mat_tex("Net", TEX("hoop_net.png"), alpha_clip=True, double_sided=True)

@@ -2,19 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://daeyppnxq8yac"
-path="res://.godot/imported/beach_beach_court.png-c59625cda4e60191cb83c1759b5e8abb.ctex"
+uid="uid://c4jpsqfcxpqjg"
+path="res://.godot/imported/street_board_grain.png-6c9ded7862c29c6988577f5e97922306.ctex"
 metadata={
 "vram_texture": false
-}
-generator_parameters={
-"md5": "a3cbf89ca24c178e52cc6b7c8994ec5a"
 }
 
 [deps]
 
-source_file="res://assets/arena/beach/beach_beach_court.png"
-dest_files=["res://.godot/imported/beach_beach_court.png-c59625cda4e60191cb83c1759b5e8abb.ctex"]
+source_file="res://assets/textures/street_board_grain.png"
+dest_files=["res://.godot/imported/street_board_grain.png-6c9ded7862c29c6988577f5e97922306.ctex"]
 
 [params]
 
@@ -26,7 +23,7 @@ compress/rdo_quality_loss=0.0
 compress/hdr_compression=1
 compress/normal_map=0
 compress/channel_pack=0
-mipmaps/generate=true
+mipmaps/generate=false
 mipmaps/limit=-1
 roughness/mode=0
 roughness/src_normal=""
