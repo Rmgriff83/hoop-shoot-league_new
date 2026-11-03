@@ -1769,7 +1769,6 @@ func league_pre_match_info(doc: Dictionary, cfg: Dictionary) -> Dictionary:
 	return {
 		"peer": {"id": opp_id, "name": str(shooter.get("name", "THEM")), "tag": "%02d" % int(shooter.get("number", 0)),
 			"town": str(shooter.get("hometown", shooter.get("town", ""))).to_upper(),
-			"place_text": "%s · %s" % [str(cfg.get("name", "LEAGUE")).to_upper(), str(shooter.get("nickname", "")).to_upper()],
 			"online_text": "%d-%d THIS SEASON" % [int(rec[0]), int(rec[1])]},
 		"you": {"online_text": "%d-%d THIS SEASON" % [int(mine.get("w", 0)), int(mine.get("l", 0))]},
 		"league_stats": {"opp": _league_streak(MatchCopy.league_stats(opp_row), opp_id, season),
@@ -1777,6 +1776,7 @@ func league_pre_match_info(doc: Dictionary, cfg: Dictionary) -> Dictionary:
 		"cap": level(), "seconds": float(CardDefs.prematch_seconds("league")), "bucket": str(cfg["id"]),
 		"countdown_s": float(RankedRules.prematch_cfg().get("countdown_s", 5)),
 		"ai_hand": _ai_hand_for(season, cfg, opp_id),
+		"series": MatchCopy.prematch_series(Season.player_series(season, Campaign.PLAYER), Campaign.PLAYER) if season.has("series") else {},
 		"side": "a", "league": true,
 	}
 

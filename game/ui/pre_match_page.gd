@@ -7,8 +7,7 @@ extends FaceOffPage
 ## behind it), never over the home; the match's own 3-2-1 follows it. Card
 ## arming lives here; the league CARDS tab is the shop only.
 ##
-## Top: OPPONENT — their name and town (league: the league · nickname) in a
-## dark box with the jersey, their three stats under a rule (league: RECORD ·
+## Top: OPPONENT — their name and town in a dark box with the jersey, their three stats under a rule (league: RECORD ·
 ## SEED · AVG PTS; online: RANK · RATING · RECORD), THEIR LOADOUT filling
 ## live as they pick (the AI in a league, the other phone online; the slot
 ## they are picking next blinks "?"), their gold READY chip hanging off the
@@ -21,13 +20,19 @@ extends FaceOffPage
 ## the one under the card fills gold with ARM; let go to arm it, drop
 ## anywhere else and it snaps back; a plain tap arms it into the first open
 ## slot. A spare above the cap wears its level and refuses. READY (a 428 ×
-## 184 block, bottom right, a shine sweeping the orange face) locks the
+## 184 block, bottom right, no line under the word since 2026-11-03, a shine
+## sweeping the orange face) locks the
 ## loadout (your gold panel takes a slow light sweep while you are ready);
 ## tap again to unlock while the other side is still deciding. The stats
 ## stand in three centred columns, the value over its label (2026-10-26).
 ## Both ready → the button turns gold into MATCH STARTS IN over the big
 ## count (data: prematch.countdown_s), then GO and `go`. The room's deadline
 ## (`seconds`) still readies the page silently at zero, so both phones agree.
+##
+## A playoff game (2026-11-03, `series` from MatchCopy.prematch_series): the round
+## on a tag beside OPPONENT (white, gold in the finals), a glow behind the VS, one
+## pip per win the series needs on each side of it (yours gold, filled as won;
+## theirs white) and SERIES 1-0 under it.
 ##
 ## Laid out in the design's 720-wide column from the OPPONENT tab down to
 ## READY; on a screen too short for it the column scales down to fit.
@@ -54,6 +59,15 @@ const FADE_C := Color(40.0 / 255.0, 30.0 / 255.0, 18.0 / 255.0, 0.92)
 const STREAK_W := Color("#5BD16B")
 const STREAK_L := Color("#FF6A5A")
 const STREAK_BG := Color("#1B1512")
+const INK := Color("#221C18")
+const PIP_EMPTY := Color(14.0 / 255.0, 11.0 / 255.0, 9.0 / 255.0, 0.5)
+const PIP := 26.0
+const SERIES_GLOW := Color(1, 1, 1, 0.16)
+const FINALS_GLOW := Color(240.0 / 255.0, 184.0 / 255.0, 74.0 / 255.0, 0.35)
+## The glow: 240 tall, 65 above the VS row; CSS's ellipse is √2 × the half box, clear by 62 %.
+const GLOW_H := 240.0
+const GLOW_UP := 65.0
+const ROUND_TAG_RIGHT := 48.0
 ## The column, in the design's px with y from the OPPONENT tab (design y 124).
 const COL_W := 720.0
 const PANEL_X := 36.0
@@ -123,7 +137,6 @@ var _ready_btn: ShadowCard
 var _shine: Shine
 var _you_shine: Shine   # the slow sweep over your panel while you are ready
 var _ready_top: Label
-var _ready_sub: Label
 var _ready_mark: Label
 var _opp_name_l: Label
 var _opp_town_l: Label
@@ -249,6 +262,7 @@ func _build() -> void:
 	_tab(MatchCopy.prematch_tab_opp(), CREAM, Vector2(PANEL_X + 22.0, 0.0))
 	_build_opponent()
 	_build_vs()
+	_build_round_tag()
 	_you_tab = _tab(MatchCopy.prematch_tab_you(), GOLD, Vector2(PANEL_X + 22.0, 600.0))
 	_build_you()
 	_build_ready()
@@ -256,6 +270,75 @@ func _build() -> void:
 	_fit()
 	_fit.call_deferred()   # the fonts settle a frame late
 	picked.emit(slots())   # the provisional pick: a timeout starts with it
+
+
+## What the page knows about a playoff series ({} outside one).
+func _series() -> Dictionary:
+	return _info["series"] if _info.get("series") is Dictionary else {}
+
+
+## The round on a tag level with OPPONENT, at the panel's right.
+func _build_round_tag() -> void:
+	var series := _series()
+	if series.is_empty():
+		return
+	var tag := RoundTag.new()
+	tag.name = "RoundTag"
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = GOLD if bool(series.get("finals", false)) else CREAM
+	sb.border_color = INK
+	sb.set_border_width_all(2)
+	sb.content_margin_left = 12
+	sb.content_margin_right = 12
+	tag.add_theme_stylebox_override("panel", sb)
+	tag.custom_minimum_size = Vector2(0, 34)
+	tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tag.z_index = 4
+	tag.anchor_left = 1.0
+	tag.anchor_right = 1.0
+	tag.offset_left = -ROUND_TAG_RIGHT
+	tag.offset_right = -ROUND_TAG_RIGHT
+	tag.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation", 10)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tag.add_child(row)
+	var cup := PixelIcon.new("icon_trophy", Vector2(18, 18))
+	cup.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(cup)
+	var l := words(str(series.get("label", "")), 15, true)
+	l.name = "RoundLabel"
+	l.add_theme_color_override("font_color", INK)
+	l.add_theme_constant_override("outline_size", 0)
+	l.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	row.add_child(l)
+	_stage.add_child(tag)
+
+
+## The tag's hard 3 px shadow, outside its box.
+class RoundTag extends PanelContainer:
+	func _draw() -> void:
+		draw_rect(Rect2(size.x, 3.0, 3.0, size.y), INK)
+		draw_rect(Rect2(3.0, size.y, size.x - 3.0, 3.0), INK)
+
+
+## One win of a series: a 26 px square, filled once won, its hard shadow outside it.
+class Pip extends Control:
+	var colour := Color.WHITE
+	var won := false
+
+	func _init(p_colour: Color, p_won: bool) -> void:
+		colour = p_colour
+		won = p_won
+		custom_minimum_size = Vector2(PIP, PIP)
+		size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	func _draw() -> void:
+		draw_rect(Rect2(PIP, 3.0, 3.0, PIP), INK)
+		draw_rect(Rect2(3.0, PIP, PIP - 3.0, 3.0), INK)
+		draw_rect(Rect2(0.0, 0.0, PIP, PIP), colour if won else PIP_EMPTY)
+		draw_rect(Rect2(1.5, 1.5, PIP - 3.0, PIP - 3.0), colour, false, 3.0)
 
 
 ## A tab word on a panel's top edge: dark, a 2 px edge in the colour.
@@ -505,7 +588,7 @@ func _build_opponent() -> void:
 	var col: VBoxContainer = pc[1]
 	var rec := _opp_record()
 	# Online the tag rides the town line (`SALT HARBOR · #07`) so the name keeps its room.
-	var town := str(rec.get("place_text", "")) if is_league() else str(rec.get("town", "")).to_upper()
+	var town := str(rec.get("town", "")).to_upper()
 	var tag := MatchCopy.card_tag(rec) if not is_league() and str(rec.get("tag", "")) != "" else ""
 	if tag != "":
 		town = (town + " · " + tag) if town != "" else tag
@@ -566,11 +649,11 @@ func _build_vs() -> void:
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	row.position = Vector2(PANEL_X, 0)
 	row.size = Vector2(COL_W - PANEL_X - READY_RIGHT, VS_H)
+	var series := _series()
+	if not series.is_empty():
+		_vs.add_child(_series_glow(bool(series.get("finals", false))))
 	_vs.add_child(row)
-	var left := _rule(Color(CREAM, 0.4))
-	left.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	left.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(left)
+	row.add_child(_vs_side("YouPip", true, GOLD, int(series.get("you", 0)), int(series.get("need", 0))))
 	_vs_word = RetroTheme.display(MatchCopy.vs_word(), 64, GOLD)
 	_vs_word.name = "VsWord"
 	_vs_word.add_theme_color_override("font_outline_color", RetroTheme.SCENE_OUTLINE)
@@ -578,11 +661,65 @@ func _build_vs() -> void:
 	_vs_word.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_vs_word.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 	RetroTheme.dithered(_vs_word, Vector2(6, 6))
-	row.add_child(_vs_word)
-	var right := _rule(Color(CREAM, 0.4))
-	right.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	right.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	row.add_child(right)
+	if series.is_empty():
+		row.add_child(_vs_word)
+	else:
+		var mid := VBoxContainer.new()
+		mid.add_theme_constant_override("separation", 12)
+		mid.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		mid.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		_vs_word.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		mid.add_child(_vs_word)
+		var score := words(str(series.get("score", "")), 17, true)
+		score.name = "SeriesScore"
+		score.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		mid.add_child(score)
+		row.add_child(mid)
+	row.add_child(_vs_side("OppPip", false, CREAM, int(series.get("them", 0)), int(series.get("need", 0))))
+
+
+## One side of the VS: its rule, with the series' pips next to the word.
+func _vs_side(pip_name: String, rule_first: bool, colour: Color, won: int, need: int) -> Control:
+	var side := HBoxContainer.new()
+	side.add_theme_constant_override("separation", 12)
+	side.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	side.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	side.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var rule := _rule(Color(CREAM, 0.4))
+	rule.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rule.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	if rule_first:
+		side.add_child(rule)
+	for i in need:
+		var pip := Pip.new(colour, i < won)
+		pip.name = "%s%d" % [pip_name, i]
+		side.add_child(pip)
+	if not rule_first:
+		side.add_child(rule)
+	return side
+
+
+func _series_glow(finals: bool) -> TextureRect:
+	var c := FINALS_GLOW if finals else SERIES_GLOW
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array([0.0, 0.62])
+	g.colors = PackedColorArray([c, Color(c, 0.0)])
+	var t := GradientTexture2D.new()
+	t.gradient = g
+	t.fill = GradientTexture2D.FILL_RADIAL
+	t.fill_from = Vector2(0.5, 0.5)
+	t.fill_to = Vector2(0.5 + 0.7071, 0.5)
+	t.width = 128
+	t.height = 64
+	var glow := TextureRect.new()
+	glow.name = "SeriesGlow"
+	glow.texture = t
+	glow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	glow.stretch_mode = TextureRect.STRETCH_SCALE
+	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	glow.position = Vector2(0.0, -GLOW_UP)
+	glow.size = Vector2(COL_W, GLOW_H)
+	return glow
 
 
 func _build_you() -> void:
@@ -776,13 +913,6 @@ func _build_ready() -> void:
 	_count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_count_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_count_box.add_child(_count_label)
-	_ready_sub = words("", 17)
-	_ready_sub.name = "ReadySub"
-	_ready_sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	_ready_sub.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	_ready_sub.custom_minimum_size = Vector2(370, 0)
-	_ready_sub.add_theme_constant_override("line_spacing", 6)
-	col.add_child(_ready_sub)
 	_ready_btn.pressed.connect(press_ready)
 
 
@@ -1300,16 +1430,14 @@ func _refresh_ready() -> void:
 	for s in slots():
 		if s != null:
 			set_count += 1
-	var rb := MatchCopy.ready_button(state, set_count, _opp_name, ceili(_count_left))
+	var rb := MatchCopy.ready_button(state, ceili(_count_left))
 	_ready_top.text = str(rb["top"])
-	_ready_sub.text = str(rb["sub"])
 	_ready_mark.text = str(rb["mark"])
 	_ready_mark.visible = str(rb["mark"]) != ""
 	var big_count := _counting or _went
 	_top_row.visible = not big_count
 	_count_box.visible = big_count
 	(_count_box.get_node("StartsIn") as Control).visible = _counting and not _went
-	_ready_sub.visible = _ready_sub.text != ""   # none once both are ready (2026-10-26)
 	_ready_btn.color = GOLD if bool(rb["gold"]) else ORANGE
 	_ready_btn.disabled = _went or _counting
 	_shine.visible = not bool(rb["gold"])
@@ -1423,7 +1551,3 @@ func you_stat(i: int) -> String:
 
 func ready_top() -> String:
 	return _ready_top.text
-
-
-func ready_sub() -> String:
-	return _ready_sub.text

@@ -417,13 +417,27 @@ static func league_stats(row: Dictionary) -> Array:
 ## The READY button by state: {top, sub, mark, gold}. `pick` (orange: READY · n OF 3
 ## CARDS SET · >), `ready` (gold: WAITING FOR NAME · TAP TO
 ## UNLOCK), `count` (STARTING IN n, no sub-line), `go` (TIP-OFF, no sub-line).
-static func ready_button(state: String, n: int, opp_name: String, left: int) -> Dictionary:
+static func ready_button(state: String, left: int) -> Dictionary:
 	match state:
-		# Both ready (design 37a, 2026-10-26): the count stands alone, no sub-line.
-		"go": return {"top": "TIP-OFF", "sub": "", "mark": "", "gold": true}
-		"count": return {"top": "STARTING IN %d" % left, "sub": "", "mark": "", "gold": true}
-		"ready": return {"top": "READY", "sub": "WAITING FOR %s · TAP TO UNLOCK" % opp_name.split(" #")[0], "mark": "", "gold": true}
-	return {"top": "READY", "sub": "%d OF %d CARDS SET" % [n, CardDefs.SLOTS], "mark": ">", "gold": false}
+		"go": return {"top": "TIP-OFF", "mark": "", "gold": true}
+		"count": return {"top": "STARTING IN %d" % left, "mark": "", "gold": true}
+		"ready": return {"top": "READY", "mark": "", "gold": true}
+	return {"top": "READY", "mark": ">", "gold": false}
+
+
+## A playoff game on the pre-match page (design 37a, 2026-11-03): where the series
+## stands for the player, {} outside one. `need` = the wins that take it, one pip each.
+static func prematch_series(series: Dictionary, player_id: String) -> Dictionary:
+	if series.is_empty():
+		return {}
+	var high := str(series.get("highSeedId", "")) == player_id
+	var hi := int(series.get("highWins", 0))
+	var lo := int(series.get("lowWins", 0))
+	var you := hi if high else lo
+	var them := lo if high else hi
+	var finals := str(series.get("round", "")) == "final"
+	return {"label": "%s · GAME %d" % ["FINALS" if finals else "SEMIS", hi + lo + 1], "finals": finals,
+		"you": you, "them": them, "need": int(series.get("bestOf", 1)) / 2 + 1, "score": "SERIES %d-%d" % [you, them]}
 
 
 # ---- the post-match payout (docs/BACKEND.md → Ranked → Stage B) ----------------------------
@@ -598,8 +612,9 @@ static func strings() -> Array:
 		header({"location": "beach"}), header({"location": "city", "reason": "forfeit"}), header({"location": "cage", "reason": "void"}),
 		prematch_tab_opp(), prematch_tab_you(), their_loadout().replace("\n", " "), your_loadout().replace("\n", " "), load_count(2), your_cards_hint(), opp_status(true), opp_status(false), "×2",
 		starts_in(), go_word(), arm_word(), thousands(1480), "RANK", "RATING", "RECORD", "SEED", "AVG PTS", "NEW", "#142",
-		ready_button("pick", 2, "JUNIE SAP", 0)["sub"], ready_button("ready", 2, "JUNIE SAP #4471", 0)["sub"], ready_button("count", 3, "X", 7)["top"],
-		ready_button("count", 3, "X", 7)["sub"], ready_button("go", 3, "X", 0)["top"], ready_button("go", 3, "X", 0)["sub"],
+		ready_button("count", 7)["top"], ready_button("go", 0)["top"],
+		prematch_series({"round": "semifinal", "bestOf": 3, "highSeedId": "a", "highWins": 1}, "a")["label"],
+		prematch_series({"round": "final", "bestOf": 5, "highSeedId": "a", "lowWins": 1}, "a")["score"],
 		spoils_panel({"ranked": true, "granted": [{"why": "meter", "card": "ice"}]})["caption"],
 		spoils_panel({"ranked": true, "granted": [{"why": "loss_streak", "card": "ice"}]})["caption"],
 		spoils_panel({"ranked": true, "spoils": {"captured": ["ice", "fire7"], "lost": [], "insured": null}})["caption"],

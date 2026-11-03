@@ -60,7 +60,7 @@ func _ready() -> void:
 		App.loader.instant = _has_prefixed(args, "--qa") and not args.has("--qa-loading")
 		App.loader.force_show = args.has("--qa-loading")
 		PeggyMachine.threaded = not App.loader.instant
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-pause-practice") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live") or args.has("--qa-ads") or args.has("--qa-platform")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-pause-practice") or args.has("--qa-prematch-series") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live") or args.has("--qa-ads") or args.has("--qa-platform")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# Achievements earned during a pass, in the log (docs/ACHIEVEMENTS.md).
@@ -91,6 +91,8 @@ func _ready() -> void:
 		_run_tutorial.call_deferred()
 	elif args.has("--qa-hud"):
 		_run_hud.call_deferred()
+	elif args.has("--qa-prematch-series"):
+		_run_prematch_series.call_deferred()
 	elif args.has("--qa-pause-practice"):
 		_run_pause_practice.call_deferred()
 	elif args.has("--qa-heat"):
@@ -984,6 +986,33 @@ func _run_hud() -> void:
 		await _sleep(0.4)
 		await _snap("hud_practice30")
 	print("QA hud: done")
+	get_tree().quit(0)
+
+
+## The pre-match page's playoff states (37a): a semi at 1-0, the decider, the final.
+func _run_prematch_series() -> void:
+	await _sleep(1.2)
+	await _close_archive()
+	await _sleep(0.6)
+	var states := {
+		"prematch_semi2": {"round": "semifinal", "bestOf": 3, "highSeedId": "you", "lowSeedId": "x", "highWins": 1, "lowWins": 0},
+		"prematch_semi3": {"round": "semifinal", "bestOf": 3, "highSeedId": "x", "lowSeedId": "you", "highWins": 1, "lowWins": 1},
+		"prematch_final": {"round": "final", "bestOf": 5, "highSeedId": "you", "lowSeedId": "x", "highWins": 2, "lowWins": 1},
+	}
+	for snap_name in states:
+		var staged := QaFakePeer.new()
+		var matched: Dictionary = staged.matched_message()
+		staged.free()
+		matched["side"] = "a"
+		matched["series"] = MatchCopy.prematch_series(states[snap_name], "you")
+		var pre := PreMatchPage.new()
+		pre.build(matched, Net.ONLINE_BUCKET)
+		add_child(pre)
+		await _sleep(0.5)
+		await _snap(snap_name)
+		pre.queue_free()
+		await _sleep(0.2)
+	print("QA prematch series: done")
 	get_tree().quit(0)
 
 

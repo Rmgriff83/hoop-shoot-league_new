@@ -460,9 +460,9 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
     tag and refuses; everything dims while you are READY, and your gold
     READY chip sits on the panel's top-right corner.
   - **READY**, a 428×184 block at the bottom right (orange, a shine sweeping
-    it: `READY >` over `n OF 3 CARDS SET`) locks the loadout and turns gold
+    it: `READY >`, no line under it since 2026-11-03) locks the loadout and turns gold
     (your panel takes a slow light sweep while you are ready)
-    (`WAITING FOR GLASS WIZARD · TAP TO UNLOCK` — tap again to unlock while
+    (tap again to unlock while
     they are still deciding); both ready → the button becomes `MATCH STARTS
     IN` over the big 5 s count (`data/ranked.json → prematch.countdown_s`;
     online the room's `start` carries it, a league counts on its own), then
