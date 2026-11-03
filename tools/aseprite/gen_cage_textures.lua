@@ -183,9 +183,11 @@ end
 -- "Arcade Cage Concept" 32a, 2026-11-02): near-black with neon specks, squiggles,
 -- rings, triangles, squares and plus-stars. A pixel-exact port of the design's
 -- canvas code, so the draws keep its order, its seed and JS Math.round. Tiles
--- every 1.6 m; build_cage.py uses it as albedo and emissive map.
+-- every 1.6 m; build_cage.py uses it as albedo and emissive map. NEON_DIM turns
+-- the coloured specks down from the design's (Ross, 2026-11-02); the base stays.
 do
   local S = 128
+  local NEON_DIM = 0.8
   local spr, img = newImage(S, S)
   local seed = 911
   local function r()
@@ -200,9 +202,13 @@ do
     local Y = math.floor(r() * S)
     img:drawPixel(X, Y, col)
   end
-  local pink, green = pc.rgba(255, 46, 154, 255), pc.rgba(61, 255, 110, 255)
-  local NEON = { pink, green, pc.rgba(255, 242, 58, 255), pc.rgba(46, 200, 255, 255),
-                 pc.rgba(255, 138, 30, 255), pc.rgba(180, 77, 255, 255), pink, green }
+  local function neon(R, G, B)                       -- the design's neon, turned down
+    local D = NEON_DIM
+    return pc.rgba(math.floor(R * D + 0.5), math.floor(G * D + 0.5), math.floor(B * D + 0.5), 255)
+  end
+  local pink, green = neon(255, 46, 154), neon(61, 255, 110)
+  local NEON = { pink, green, neon(255, 242, 58), neon(46, 200, 255),
+                 neon(255, 138, 30), neon(180, 77, 255), pink, green }
   local function px(X, Y, col)
     img:drawPixel(math.floor(X + 0.5) % S, math.floor(Y + 0.5) % S, col)
   end

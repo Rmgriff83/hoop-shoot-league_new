@@ -1438,7 +1438,8 @@ boards, the marquee bulbs, the runner lights) is untouched. `build_cage.py`:
   y 6.92 — just above the 6.9 m the cage's back panel hides from the key;
   ArcadeFx gives them an unshaded warm material).
 - **The carpet** (2026-11-02): `HallFloor` is the design's blacklight carpet,
-  `cage_neon_carpet.png` (a pixel-exact port of its canvas code) tiled every 1.6 m as albedo
+  `cage_neon_carpet.png` (a pixel-exact port of its canvas code, except that `NEON_DIM` 0.8
+  turns the coloured specks down; the base is untouched) tiled every 1.6 m as albedo
   and emission at 0.85. `CourtGeometry` makes it matte (the specular lobe laid a grey veil
   over the near-black) and turns its mipmaps off (they averaged the 1 px specks to grey past
   a few metres; the design has none). `cage_carpet.png`, the old maroon one, only backs the
