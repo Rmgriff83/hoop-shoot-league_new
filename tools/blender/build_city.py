@@ -203,7 +203,7 @@ def build():
                   (0, 1, 0), asphalt, c_court, root, ((ap_x1 - ap_x0) / GROUND_TILE_M, 2 * ap_w / GROUND_TILE_M))
     cage.add_quad("Court", [(COURT_X0, 0, -w), (COURT_X1, 0, -w), (COURT_X1, 0, w), (COURT_X0, 0, w)],
                   (0, 1, 0), asphalt, c_court, root, ((COURT_X1 - COURT_X0) / GROUND_TILE_M, 2 * w / GROUND_TILE_M))
-    # Its lines and leaves (city_court_paint.png) join the asphalt in Godot's
+    # Its lines (city_court_paint.png) join the asphalt in Godot's
     # city_court.gdshader, CourtGeometry._paint_city_court.
     # The ground everywhere else: dark wet asphalt out past the sky cylinder.
     cage.add_quad("Ground", [(-GROUND, -0.01, -GROUND), (GROUND, -0.01, -GROUND), (GROUND, -0.01, GROUND), (-GROUND, -0.01, GROUND)],

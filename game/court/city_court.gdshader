@@ -1,4 +1,4 @@
-// The city court: the asphalt tile and the painted lines and leaves in one pass.
+// The city court: the asphalt tile and the painted lines in one pass.
 // They were two meshes, the paint a full-court alpha-cut quad over the asphalt,
 // which lit every court pixel twice (about 1 ms on the phone, 2026-11-03).
 shader_type spatial;

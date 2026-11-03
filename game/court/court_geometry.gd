@@ -893,7 +893,7 @@ func _matte(node_name: String) -> void:
 			(m as BaseMaterial3D).roughness = 1.0
 
 
-## The city's court draws its asphalt and its painted lines and leaves in one
+## The city's court draws its asphalt and its painted lines in one
 ## pass (city_court.gdshader). Shared with the PiP's copy of the court.
 func _paint_city_court() -> void:
 	if arena_set == null or arena_set.id != "city":

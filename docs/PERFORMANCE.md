@@ -585,3 +585,6 @@ Two-layer vs one-pass, same session, alternating, 48 s rows, 30-31 °C (trial, h
 The earlier 24 s rows, 29 °C: trial GPU 18.9 → 15.8. In the heat, frame times hold and main-view
 GPU reads about 0.7 ms higher, unexplained. Two 24 s rows showed 9.3 spikes a minute; the 48 s
 rows show that was sampling. City heat p50 sits on the 22.7 limit on a warm phone, as it did before.
+
+The leaves came off the court the same day (Ross), so `city_court_paint.png` went back to 480x512.
+The rows above were measured with them on; the shader and its fetches are unchanged.

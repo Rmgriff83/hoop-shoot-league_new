@@ -333,7 +333,8 @@ func _city(t) -> void:
 	# One pass (2026-11-03): an alpha-cut quad over the court lit every pixel twice.
 	t.eq(city.find_child("CourtPaint", true, false), null, "no paint layer over the court")
 	var city_paint := Image.load_from_file("res://assets/textures/city_court_paint.png")
-	t.ok(city_paint.get_width() == 960 and city_paint.detect_alpha() != Image.ALPHA_NONE, "the lines and leaves are a cut-out for the court's shader")
+	t.ok(city_paint.get_width() == 480 and city_paint.detect_alpha() != Image.ALPHA_NONE, "the lines are a cut-out for the court's shader")
+	t.ok(not FileAccess.file_exists("res://art/third_party/pizza_doggy/dry_leaves_tr_1.png"), "the leaves came off the court (Ross, 2026-11-03)")
 	var court_src := FileAccess.get_file_as_string("res://game/court/city_court.gdshader")
 	t.ok(court_src.contains("uniform sampler2D paint") and court_src.contains("uniform sampler2D asphalt"), "…which draws them with the asphalt")
 	# Pigeons: a loose bunch crosses over the street now and then (a
