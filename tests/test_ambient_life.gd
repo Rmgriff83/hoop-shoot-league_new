@@ -330,8 +330,12 @@ func _city(t) -> void:
 	for n in ["Court", "CourtApron", "Ground", "Fence"]:
 		var ground_mat := (city.find_child(n, true, false) as MeshInstance3D).get_active_material(0) as BaseMaterial3D
 		t.ok(ground_mat.albedo_texture != null and ground_mat.albedo_texture.get_width() == 512, "the city's %s wears the 512 px asphalt" % n)
-	var paint_mat := (city.find_child("CourtPaint", true, false) as MeshInstance3D).get_active_material(0) as BaseMaterial3D
-	t.ok(paint_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR, "the court's lines and leaves are cut out over it")
+	# One pass (2026-11-03): an alpha-cut quad over the court lit every pixel twice.
+	t.eq(city.find_child("CourtPaint", true, false), null, "no paint layer over the court")
+	var city_paint := Image.load_from_file("res://assets/textures/city_court_paint.png")
+	t.ok(city_paint.get_width() == 960 and city_paint.detect_alpha() != Image.ALPHA_NONE, "the lines and leaves are a cut-out for the court's shader")
+	var court_src := FileAccess.get_file_as_string("res://game/court/city_court.gdshader")
+	t.ok(court_src.contains("uniform sampler2D paint") and court_src.contains("uniform sampler2D asphalt"), "…which draws them with the asphalt")
 	# Pigeons: a loose bunch crosses over the street now and then (a
 	# different bird from the beach's gulls), glides included, freed past the edge.
 	t.ok(FileAccess.file_exists("res://assets/textures/city_pigeon.png"), "pigeon sheet generated")

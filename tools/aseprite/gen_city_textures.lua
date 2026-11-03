@@ -67,7 +67,6 @@ end
 -- transparent everywhere else.
 do
   local W, H = 480, 512
-  local LEAF_DENSITY = 2
   local spr, img = newImage(W, H)
   local px = W / 14.6
   local function col(x) return math.floor((x + 9.9) * px + 0.5) end
@@ -98,7 +97,8 @@ do
   -- Leaves in a few DRIFTS (Ross, 2026-10-02), not an even sprinkle: each a
   -- blob in a corner or along the fence side, packed with small leaves densest
   -- at its heart, with a handful of strays just outside. Each leaf is a little
-  -- ellipse of the tile, read every other pixel so it repeats about every 3.9 m.
+  -- ellipse of the tile, read pixel for pixel so its grain stays large (Ross,
+  -- 2026-11-03: read at half size it was small and noisy); it repeats every 7.8 m.
   local LEAF_TILE = app.fs.joinPath(app.fs.filePath(OUT), "..", "art", "third_party", "pizza_doggy", "dry_leaves_tr_1.png")
   local tile = Image{fromFile = LEAF_TILE}
   local DRIFTS = {
@@ -109,7 +109,9 @@ do
     {col(2.2), row(-0.4), 24, 26}, {col(-0.2), row(3.3), 26, 30},
   }
   for d, drift in ipairs(DRIFTS) do
-    local cx, cy, r, n = drift[1] * 2, drift[2] * 2, drift[3] * 2, drift[4] * LEAF_DENSITY
+    -- Fewer and further apart (Ross, 2026-11-03): two thirds of the old count over
+    -- a drift a quarter wider, so the asphalt shows between the leaves.
+    local cx, cy, r, n = drift[1] * 2, drift[2] * 2, drift[3] * 2.5, math.floor(drift[4] * 2 / 3)
     for i = 0, n + 7 do
       local stray = i >= n
       local ang = noise(i, d, 175) * 6.2832
@@ -117,7 +119,7 @@ do
       local lx = math.floor(cx + math.cos(ang) * rad)
       local ly = math.floor(cy + math.sin(ang) * rad * 0.8)
       local turn = noise(i, d, 177) * 3.1416
-      local long = 3.0 + noise(i, d, 179) * 3.5   -- half length: 5 to 10 cm leaves
+      local long = 4.5 + noise(i, d, 179) * 4.5   -- half length: 7 to 14 cm leaves
       local c, s = math.cos(turn), math.sin(turn)
       local reach = math.ceil(long)
       for y = ly - reach, ly + reach do
@@ -125,7 +127,7 @@ do
           local u, v = (x - lx) * c + (y - ly) * s, (y - ly) * c - (x - lx) * s
           if x >= 0 and y >= 0 and x < out.width and y < out.height
               and u * u / (long * long) + v * v / (long * long * 0.36) <= 1.0 then
-            out:drawPixel(x, y, tile:getPixel((x * 2) % tile.width, (y * 2) % tile.height))
+            out:drawPixel(x, y, tile:getPixel(x % tile.width, y % tile.height))
           end
         end
       end

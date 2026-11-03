@@ -26,11 +26,15 @@ var profile := Profile.FULL
 ## they are measured), "no_fill" (no fill light), "no_omni" (every omni / spot
 ## light hidden), "no_sky" (a flat background instead of the shader sky),
 ## "no_fog", "scale85" (render scale 0.85), "shadow1024" (a 1024 atlas),
+## "no_fence" (the city's alpha-cut fence hidden),
 ## "fill_light" (the arena's fill as a second DirectionalLight3D, the way it
 ## shipped before 2026-10-24 — the before shot and the A/B base), "sky_fbm"
 ## (the sky's clouds computed per pixel instead of fetched from the baked
 ## texture, likewise). Empty in the game.
 static var ab: Dictionary = {}
+const CITY_COURT_SHADER := preload("res://game/court/city_court.gdshader")
+const CITY_COURT_PAINT := preload("res://assets/textures/city_court_paint.png")
+static var _city_court_mat: ShaderMaterial
 
 ## How the arena's fill folds into the ambient: the ambient colour moves this
 ## far toward the fill's, the energy gains this share of the fill's (matched by
@@ -301,7 +305,7 @@ func _build_arena_model() -> bool:
 	_matte("BackPad")   # the cage's foam: no specular, whatever the importer kept
 	_matte("HallFloor")        # the cage's blacklight carpet: near-black needs no sheen over it…
 	_no_mipmaps("HallFloor")   # …and its neon stays sharp at any distance
-	_no_mipmaps("CourtPaint")  # the city's lines: mips would average them under the alpha cut
+	_paint_city_court()
 	_build_interactables(arena_set)
 	if arena_set.ocean:
 		_beach_fx = BeachFx.new()
@@ -339,6 +343,10 @@ func _build_arena_model() -> bool:
 		for fx in [_beach_fx, _arcade_fx, _city_fx, _park_fx]:
 			if fx != null:
 				fx.freeze()
+	if bool(ab.get("no_fence", false)):
+		var fence := _arena.find_child("Fence", true, false) as Node3D
+		if fence != null:
+			fence.visible = false
 	if bool(ab.get("no_omni", false)):
 		for l in find_children("*", "Light3D", true, false):
 			if l is OmniLight3D or l is SpotLight3D:
@@ -883,6 +891,25 @@ func _matte(node_name: String) -> void:
 		if m is BaseMaterial3D:
 			(m as BaseMaterial3D).metallic_specular = 0.0
 			(m as BaseMaterial3D).roughness = 1.0
+
+
+## The city's court draws its asphalt and its painted lines and leaves in one
+## pass (city_court.gdshader). Shared with the PiP's copy of the court.
+func _paint_city_court() -> void:
+	if arena_set == null or arena_set.id != "city":
+		return
+	var court := _arena.find_child("Court", true, false) as MeshInstance3D
+	if court == null or court.mesh == null:
+		return
+	var skin := court.mesh.surface_get_material(0) as BaseMaterial3D
+	if skin == null:
+		return
+	if _city_court_mat == null:
+		_city_court_mat = ShaderMaterial.new()
+		_city_court_mat.shader = CITY_COURT_SHADER
+		_city_court_mat.set_shader_parameter("asphalt", skin.albedo_texture)
+		_city_court_mat.set_shader_parameter("paint", CITY_COURT_PAINT)
+	court.material_override = _city_court_mat
 
 
 ## Mipmaps average a tile of 1 px neon specks into grey a few metres out, where

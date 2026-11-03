@@ -168,8 +168,6 @@ def build():
     c_court, c_street, c_blocks = cage.sub(coll, "Court"), cage.sub(coll, "Street"), cage.sub(coll, "Blocks")
     c_sky, c_props = cage.sub(coll, "Sky"), cage.sub(coll, "Props")
 
-    # The court's lines and leaves, over the ground's asphalt.
-    court_paint = cage.mat_tex("City_CourtPaint", TEX("city_court_paint.png"), alpha_clip=True)
     asphalt = cage.mat_tex("City_Asphalt", GROUND_TEX)
     kerb = cage.mat_tex("City_Kerb", TEX("city_kerb.png"))
     walk = cage.mat_tex("City_Walk", TEX("beach_concrete.png"))
@@ -205,8 +203,8 @@ def build():
                   (0, 1, 0), asphalt, c_court, root, ((ap_x1 - ap_x0) / GROUND_TILE_M, 2 * ap_w / GROUND_TILE_M))
     cage.add_quad("Court", [(COURT_X0, 0, -w), (COURT_X1, 0, -w), (COURT_X1, 0, w), (COURT_X0, 0, w)],
                   (0, 1, 0), asphalt, c_court, root, ((COURT_X1 - COURT_X0) / GROUND_TILE_M, 2 * w / GROUND_TILE_M))
-    cage.add_quad("CourtPaint", [(COURT_X0, 0.004, -w), (COURT_X1, 0.004, -w), (COURT_X1, 0.004, w), (COURT_X0, 0.004, w)],
-                  (0, 1, 0), court_paint, c_court, root, (1.0, 1.0))
+    # Its lines and leaves (city_court_paint.png) join the asphalt in Godot's
+    # city_court.gdshader, CourtGeometry._paint_city_court.
     # The ground everywhere else: dark wet asphalt out past the sky cylinder.
     cage.add_quad("Ground", [(-GROUND, -0.01, -GROUND), (GROUND, -0.01, -GROUND), (GROUND, -0.01, GROUND), (-GROUND, -0.01, GROUND)],
                   (0, 1, 0), asphalt, c_street, root, (GROUND, GROUND))

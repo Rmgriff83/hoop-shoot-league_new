@@ -49,6 +49,7 @@ TEX = lambda name: os.path.join(ROOT, "assets", "textures", name)  # noqa: E731
 PARK_DIST = 3.70
 COURT_X0, COURT_X1, COURT_HALF_W = -7.0, 6.80, 6.0      # the slab; its sides are the sim's soft walls
 SNOW_TILE_M = 4.0                                        # Pizza Doggy's snow tile, laid flat from above, repeats this often
+SNOWMAN_TILE_M = 2.0                                     # …and tighter on the snowman, or a ball shows one blank patch of it
 FAR_SNOW_TILE_M = 8.0                                    # …and further apart on the far disc, where a repeat would show
 COURT_TILE_M = 1.0                                       # the slab's 512 px stones repeat this often (stones about 5 cm)
 FENCE_X = 6.20                                           # SimGeometry.PARK_FENCE_X: the slab runs 0.6 m past it
@@ -476,26 +477,41 @@ def add_flip_board(coll, root, face_mat, cards_mat, card_back, board_back, vcol)
     return board
 
 
-def add_snowman(coll, root, vcol, lying):
+def box_uv(me, tile_m):
+    """UVs by each face's own plane, for round shapes: from above a ball's sides
+    would smear. The faces are flat-shaded, so the seams read as facets."""
+    uvl = me.uv_layers.new(name="UVMap")
+    for poly in me.polygons:
+        axis = max(range(3), key=lambda a: abs(poly.normal[a]))
+        a, b = [c for c in range(3) if c != axis]
+        for li in poly.loop_indices:
+            co = me.vertices[me.loops[li].vertex_index].co
+            uvl.data[li].uv = (co[a] / tile_m, co[b] / tile_m)
+
+
+def add_snowman(coll, root, vcol, lying, snow):
     """The half-melted snowman (the design's primitive list, verbatim): a melt
     puddle, three slumped lumpy balls, a top hat with a plaid band and snow on
     it, a drooping carrot, coal eyes, cheeks, a sad five-coal mouth, three
     buttons, a scarf with its tail slumped down one side, two sagging twig
-    arms. One vertex-coloured mesh, turned to face the court."""
-    SNOW, SLUSH, COAL, HAT, SCARF, PLAID = 0xF1F4F7, 0xD9E3EA, 0x1E1C1E, 0x1A1718, 0x4A4648, 0x9A2E2A
+    arms. Turned to face the court: the snow is one mesh in the lying snow's
+    texture (SnowmanBody, Ross 2026-11-03), everything else one vertex-coloured mesh.
+    Not merged into SnowLying, which the opponent window hides."""
+    COAL, HAT, SCARF, PLAID = 0x1E1C1E, 0x1A1718, 0x4A4648, 0x9A2E2A
     sx, sz = SNOWMAN
     world = (("ry", math.atan2(-sx, -sz)), ("t", (sx, -.02, sz)))
-    m = VcolMerge()
+    m, body = VcolMerge(), VcolMerge()
     A = lambda prim, col, ops=(): m.add(prim, hexrgb(col), tuple(ops) + world)  # noqa: E731
-    A(P_circle(.95, 11), SLUSH, [("rx", -math.pi / 2), ("s", (1.25, 1, 1)), ("t", (0, .006, .05))])
-    A(P_sphere(.62, 10, 6), SNOW, [("lump", .06), ("s", (1.18, .42, 1)), ("t", (0, .12, 0))])
-    A(P_sphere(.4, 9, 6), SNOW, [("lump", .06), ("s", (1, .72, .95)), ("t", (.02, .42, .03))])
-    A(P_sphere(.22, 8, 6), SNOW, [("lump", .05), ("s", (1, .9, 1)), ("rz", .14), ("t", (.05, .76, .06))])
+    S = lambda prim, ops=(): body.add(prim, hexrgb(0xFFFFFF), tuple(ops) + world)  # noqa: E731
+    S(P_circle(.95, 11), [("rx", -math.pi / 2), ("s", (1.25, 1, 1)), ("t", (0, .006, .05))])
+    S(P_sphere(.62, 10, 6), [("lump", .06), ("s", (1.18, .42, 1)), ("t", (0, .12, 0))])
+    S(P_sphere(.4, 9, 6), [("lump", .06), ("s", (1, .72, .95)), ("t", (.02, .42, .03))])
+    S(P_sphere(.22, 8, 6), [("lump", .05), ("s", (1, .9, 1)), ("rz", .14), ("t", (.05, .76, .06))])
     hat = lambda y, pre=(): list(pre) + [("t", (0, y - .94, 0)), ("rz", .07), ("t", (.05, .94, .06))]  # noqa: E731
     A(P_cyl(.21, .21, .025, 12), HAT, hat(.955))
     A(P_cyl(.125, .135, .34, 12), HAT, hat(1.14))
     A(P_cyl(.14, .14, .055, 12), PLAID, hat(.995))
-    A(P_sphere(.14, 8, 4, math.pi / 2), SNOW, hat(1.305, [("lump", .1), ("s", (1, .55, 1))]))
+    S(P_sphere(.14, 8, 4, math.pi / 2), hat(1.305, [("lump", .1), ("s", (1, .55, 1))]))
     A(P_cyl(0, .035, .14, 5), 0xE8703A, [("rx", math.pi / 2 + .25), ("t", (.06, .74, .3))])
     for s_ in (-1, 1):
         A(P_box(.04, .04, .03), COAL, [("t", (.06 + s_ * .075, .82, .25))])
@@ -514,6 +530,7 @@ def add_snowman(coll, root, vcol, lying):
         A(P_cyl(.012, .018, .58, 4), 0x5A4030, [("rz", rz), ("ry", ry), ("t", (x, .3, .02))])
         A(P_cyl(.007, .01, .16, 4), 0x5A4030, [("rz", rz + (.7 if x < 0 else -.7)), ("ry", ry), ("t", (x * 1.32, .38, .02))])
     m.finish("Snowman", coll, root, vcol)
+    box_uv(body.finish("SnowmanBody", coll, root, snow).data, SNOWMAN_TILE_M)
     lying.drift(sx - .5, sz + .7, .45, .07, .35)
     lying.patch(sx + .3, sz - .6, .7, .004)
 
@@ -637,7 +654,7 @@ def build():
                 lying.box((0.05, 0.025, L * R(.55, .85)), (FENCE_X, y + sag + .07, (z0 + z1) / 2 + R(-.3, .3)))
     wood.finish("SplitRailFence", cedar, c_props, root)
     add_flip_board(c_props, root, face_mat, cards_mat, card_back, board_back, vcol)
-    add_snowman(c_props, root, vcol, lying)
+    add_snowman(c_props, root, vcol, lying, snow)
     lying.finish("SnowLying", snow, c_snow, root)
 
     # The far snow disc, the sky dome, the treeline ring.

@@ -1049,9 +1049,10 @@ The area archive's cards show the real courts: after rebuilding any area
 `beach_court.png` carries a few sand patches (blobs near the edges, corners
 and the baseline, the asphalt blended toward the sand with a lighter grain,
 sand re-covering the paint at a blob's heart); `city_court_paint.png` (since 2026-11-02
-transparent over Pizza Doggy's asphalt, the `CourtPaint` quad, no teal or darker lane) scatters
-its leaves in five drifts (warm browns and oranges, a few green, densest at
-each heart, strays outside) instead of an even sprinkle. Both are
+transparent over Pizza Doggy's asphalt, no teal or darker lane; drawn with the asphalt in one
+pass by `game/court/city_court.gdshader` since 2026-11-03) scatters
+its leaves in drifts, each leaf cut from Pizza Doggy's `dry_leaves_tr_1`,
+instead of an even sprinkle. Both are
 `gen_*_textures.lua` passes; rebuild the area and re-run `--qa-area-snaps`
 after changing them.
 

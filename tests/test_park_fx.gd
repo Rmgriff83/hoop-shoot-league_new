@@ -92,9 +92,12 @@ func run(t) -> void:
 	var sc: Vector3 = snowman.get_aabb().get_center() if snowman != null else Vector3.ZERO
 	t.ok(snowman != null and absf(sc.x - 11.4) < 0.5 and absf(sc.z + 3.2) < 0.5, "the snowman slumps on the lawn back-left (built in place: %s)" % str(sc))
 	t.ok(snowman != null and snowman.mesh.get_surface_count() == 1 and (snowman.mesh.surface_get_format(0) & Mesh.ARRAY_FORMAT_COLOR) != 0, "…one vertex-coloured surface")
+	var man_body: MeshInstance3D = inst.find_child("SnowmanBody", true, false)
+	var man_mat := man_body.get_active_material(0) as BaseMaterial3D if man_body != null else null
+	t.ok(man_mat != null and man_mat.albedo_texture != null, "the snowman's snow wears the snow tile (Ross, 2026-11-03)")
 	var hard: MeshInstance3D = inst.find_child("ScoreboardHardware", true, false)
 	t.ok(hard != null and (hard.mesh.surface_get_format(0) & Mesh.ARRAY_FORMAT_COLOR) != 0, "the board's stacks, rings and hooks: one vertex-coloured mesh")
-	var sa: AABB = snowman.get_aabb() if snowman != null else AABB()
+	var sa: AABB = snowman.get_aabb().merge(man_body.get_aabb()) if snowman != null and man_body != null else AABB()
 	t.ok(sa.size.y > 1.0 and sa.size.y < 1.6 and sa.size.x > 1.5, "…a slumped, hatted size (%.2f tall, %.2f wide)" % [sa.size.y, sa.size.x])
 	t.eq(fx.snow_count(), 300, "three hundred flakes (toned down from 500, Ross 2026-10-16)")
 	t.ok(fx.has_sky() and fx.sky_resource() is Sky and (fx.sky_resource() as Sky).sky_material is ShaderMaterial, "the design's sky shader is a Sky resource for the court's Environment")

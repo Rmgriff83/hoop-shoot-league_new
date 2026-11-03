@@ -560,3 +560,28 @@ next two: noise.
 QA quirk, both builds: after a launch on the phone, the sweep's first two scenarios log "did not
 start" and are skipped, so the mode order decides which rows you get. Put the mode you want
 third (`--qa-perf-mode=trial,heat_min,heat_pip`); the driver's repeat of the first mode still runs.
+
+## City court in one pass (2026-11-03)
+
+A sweep of all areas put the city over budget (21-23.5 ms main-view GPU). Not today's work:
+builds 449 and 455 read the same, and the city is the most heat-sensitive area, so running it
+last in a long sweep inflates it. Sweep it first or alone. A fresh lever run on the phone, 3.5
+minutes back to back (trial, main-view GPU, ms; the drift across the run is about 2 ms):
+
+    base 16.95 → no_paint 15.83 → flat_ground 16.94 → no_fence 15.74 → base 16.35
+
+So the 2026-11-02 `CourtPaint` alpha-cut quad over the court cost about 1 ms, the alpha-cut fence
+about the same, and the 512 px asphalt tile nothing. `game/court/city_court.gdshader` now draws
+asphalt and paint in one pass on `Court`. The fence stays: it is the area's look.
+
+Two-layer vs one-pass, same session, alternating, 48 s rows, 30-31 °C (trial, heat with PiP):
+
+    build      trial p50  p95   GPU    | heat p50   p95   GPU   spk60  script p95
+    two-layer    20.0    25.7  17.5    |  22.9     28.7  16.4    0.0    8.8
+    two-layer    20.0    25.1  17.7    |  21.7     29.4  16.6    3.5    8.0
+    one-pass     19.2    23.6  16.8    |  22.3     29.2  16.9    0.0    8.9
+    one-pass     18.9    20.8  16.0    |  22.7     29.2  17.4    1.2    8.1
+
+The earlier 24 s rows, 29 °C: trial GPU 18.9 → 15.8. In the heat, frame times hold and main-view
+GPU reads about 0.7 ms higher, unexplained. Two 24 s rows showed 9.3 spikes a minute; the 48 s
+rows show that was sampling. City heat p50 sits on the 22.7 limit on a warm phone, as it did before.
