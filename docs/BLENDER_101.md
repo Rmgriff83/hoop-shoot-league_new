@@ -1424,8 +1424,10 @@ boards, the marquee bulbs, the runner lights) is untouched. `build_cage.py`:
   tall) **is the sim's lip** (`ARCADE_LIP_X 1.25`, `ARCADE_LIP_H 0.6`): a
   roll-out stops behind it. The two return arrows past it went
   (`ARROW_XS` 7 steps, `ArcadeFx.ARROW_STEPS`).
-- **Skins**: the sides hang `cage_mesh_slate.png` (matte slate), the roof
-  `cage_mesh_galv.png` (rough galvanised with pitting) — 32-px tiles, two
+- **Skins** (fences since 2026-11-02): the sides, roof and gate leaves hang
+  `cage_fence_asphalt.png` from `tools/render_cage_fence.gd`, the same wires cut from Pizza
+  Doggy's asphalt tile, 512 px = 16 of the old tiles (the slate and galvanised tiles are gone;
+  the gate's tube frames stay slate). The wire pattern is 32-px tiles, two
   diagonal wire families, 2.5 repeats/m for 20 cm cells (Ross kept the
   finer cells over the design's 40 cm); `cage_pad.png` is
   the open-cell foam (near-white speckle pre-multiplied by charcoal

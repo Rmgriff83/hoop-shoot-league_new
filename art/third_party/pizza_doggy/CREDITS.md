@@ -21,7 +21,9 @@
   arcade cage's cabinet row (`tools/blender/build_cage.py`, embedded in `cage.glb`).
   `asphalt_old_tr_1.png` (Ross supplied it 2026-11-02 as Pizza Doggy's; the pack it came
   from was not recorded) skins the beach's embankment walls as is, tiled every metre
-  (`tools/blender/build_beach.py`, embedded in `beach.glb`).
+  (`tools/blender/build_beach.py`, embedded in `beach.glb`). `tools/render_cage_fence.gd`
+  cuts the chain-link out of it for the arcade cage's side and top fences and its gate
+  (`assets/textures/cage_fence_asphalt.png`, embedded in `cage.glb`).
 
 ## What's here
 

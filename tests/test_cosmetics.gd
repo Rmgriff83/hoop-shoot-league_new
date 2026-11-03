@@ -314,6 +314,11 @@ func _street_and_arenas(t) -> void:
 		t.ok(cage_scene.find_child("HallBackUpper", true, false) == null and cage_scene.find_child("HallNeon", true, false) != null,
 			"…floor to ceiling, with the neon line its own strip")
 		t.ok(cage.emissive_nodes.has("HallBack"), "…and unshaded, so it shows the tile's own colours")
+		for fence_name in ["MeshWallL", "MeshWallR", "MeshTop", "GateMesh0", "GateMesh1"]:
+			var fence := cage_scene.find_child(fence_name, true, false) as MeshInstance3D
+			var fence_mat := fence.get_active_material(0) as BaseMaterial3D if fence != null else null
+			t.ok(fence_mat != null and fence_mat.albedo_texture != null and fence_mat.albedo_texture.get_width() == 512 and fence_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR,
+				"%s is the see-through chain-link on the 512 px asphalt tile" % fence_name)
 		var floor_mesh := cage_scene.find_child("HallFloor", true, false) as MeshInstance3D
 		var floor_mat := floor_mesh.get_active_material(0) as BaseMaterial3D if floor_mesh != null else null
 		t.ok(floor_mat != null and floor_mat.albedo_texture != null and floor_mat.albedo_texture.get_width() == 128 and floor_mat.emission_enabled and floor_mat.emission_texture != null,

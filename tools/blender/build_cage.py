@@ -118,6 +118,7 @@ CARPET_TILE_M = 1.6                 # the blacklight carpet's repeat: 128 px, 80
 BRICK_TILE_M = 3.2                  # the back wall's brick repeat: bricks about 30 x 12.5 cm
 NEON_Y0, NEON_Y1 = 1.99, 2.06       # the neon line along the back wall, where cage_hall.png painted it
 MESH_REPEATS_PER_M = 2.5            # 32-px tiles with 16-px diamonds (2 cells) -> 20 cm cells (finer shimmers on a phone; Ross kept these over the design's 40 cm, 2026-10-16)
+FENCE_TILE_CELLS = 16                # cage_fence_asphalt.png: 512 px = 16 of those 32-px tiles (tools/render_cage_fence.gd)
 
 
 def s2b(p):
@@ -359,7 +360,7 @@ def add_funnel(coll, parent, red):
 
 
 def add_gate(coll, parent, frame_mat, mesh_mat):
-    """The ball gate across the deck (design 32a; the sim's lip): two slate
+    """The ball gate across the deck (design 32a; the sim's lip): two asphalt
     chain-link leaves on slate tube frames with a centre latch, at the
     funnel's gate x."""
     F = FUNNEL
@@ -381,7 +382,7 @@ def add_gate(coll, parent, frame_mat, mesh_mat):
         zc = s * (W / 4.0 + 0.008)
         z0, z1 = zc - leaf / 2.0, zc + leaf / 2.0
         add_quad("GateMesh%d" % j, [(X, 0.02, z0), (X, 0.02, z1), (X, 0.02 + H - 0.04, z1), (X, 0.02 + H - 0.04, z0)],
-                 (-1, 0, 0), mesh_mat, coll, gate, (leaf / 0.12, (H - 0.04) / 0.12), origin=(X, 0.0, 0.0))
+                 (-1, 0, 0), mesh_mat, coll, gate, (leaf / 0.12 / FENCE_TILE_CELLS, (H - 0.04) / 0.12 / FENCE_TILE_CELLS), origin=(X, 0.0, 0.0))
     return gate
 
 
@@ -475,8 +476,7 @@ def build():
     c_lights, c_hall, c_carriage = sub(coll, "Lights"), sub(coll, "Hall"), sub(coll, "Carriage")
 
     steel = mat_tex("Cage_Tube", TEX("cage_tube.png"))
-    mesh_side = mat_tex("Cage_Mesh_Slate", TEX("cage_mesh_slate.png"), alpha_clip=True, double_sided=True)
-    mesh_top = mat_tex("Cage_Mesh_Galv", TEX("cage_mesh_galv.png"), alpha_clip=True, double_sided=True)
+    fence = mat_tex("Cage_Fence_Asphalt", TEX("cage_fence_asphalt.png"), alpha_clip=True, double_sided=True)
     hardwood = mat_tex("Cage_Hardwood", TEX("cage_hardwood.png"))
     rug = mat_tex("Hall_Rug", TEX("cage_rug.png"))
     gate_frame = mat_flat("Gate_Frame", (69, 78, 88), roughness=0.9)
@@ -510,15 +510,16 @@ def build():
         add_box("FrameTube_TX%d" % j, (xl, TUBE, TUBE), (xm, CAGE_H, z), accent, c_frame, cage)
     for i, x in enumerate((CAGE_X0, CAGE_X1)):
         add_box("FrameTube_TZ%d" % i, (TUBE, TUBE, 2.0 * w + TUBE), (x, CAGE_H, 0.0), steel, c_frame, cage)
-    # Mesh walls (double-sided, alpha-scissor): sides, top, back.
-    reps_x = xl * MESH_REPEATS_PER_M
-    reps_y = CAGE_H * MESH_REPEATS_PER_M
+    # Mesh walls (double-sided, alpha-scissor): sides and top. Their tile holds
+    # FENCE_TILE_CELLS of the old 32 px tile, so the wires are where they were.
+    reps_x = xl * MESH_REPEATS_PER_M / FENCE_TILE_CELLS
+    reps_y = CAGE_H * MESH_REPEATS_PER_M / FENCE_TILE_CELLS
     add_quad("MeshWallL", [(CAGE_X0, 0, -w), (CAGE_X1, 0, -w), (CAGE_X1, CAGE_H, -w), (CAGE_X0, CAGE_H, -w)],
-             (0, 0, 1), mesh_side, c_walls, cage, (reps_x, reps_y))
+             (0, 0, 1), fence, c_walls, cage, (reps_x, reps_y))
     add_quad("MeshWallR", [(CAGE_X0, 0, w), (CAGE_X1, 0, w), (CAGE_X1, CAGE_H, w), (CAGE_X0, CAGE_H, w)],
-             (0, 0, -1), mesh_side, c_walls, cage, (reps_x, reps_y))
+             (0, 0, -1), fence, c_walls, cage, (reps_x, reps_y))
     add_quad("MeshTop", [(CAGE_X0, CAGE_H, -w), (CAGE_X1, CAGE_H, -w), (CAGE_X1, CAGE_H, w), (CAGE_X0, CAGE_H, w)],
-             (0, -1, 0), mesh_top, c_walls, cage, (reps_x, 2.0 * w * MESH_REPEATS_PER_M))
+             (0, -1, 0), fence, c_walls, cage, (reps_x, 2.0 * w * MESH_REPEATS_PER_M / FENCE_TILE_CELLS))
     add_box("BackPanel", (0.04, CAGE_H, 2.0 * w), (CAGE_X1, CAGE_H / 2.0, 0.0), panel, c_walls, cage)
     # Egg-crate foam over the panel, from just above the ramp's top to just
     # under the roof tube, inboard of the corner posts.
@@ -547,7 +548,7 @@ def build():
     # The deck's gutters funnel in to the gate (DeckFunnel / DeckFunnelFill),
     # and the ball gate stands across the lane — both in the sim too.
     add_funnel(c_deck, cage, accent)
-    add_gate(c_deck, cage, gate_frame, mesh_side)
+    add_gate(c_deck, cage, gate_frame, fence)
     add_box("TrayLip", (0.06, 0.45, 2.0 * w), (DECK_X0, 0.225, 0.0), lip, c_deck, cage)
     # Return arrows down the centre lane (DeckArrow00 at the top of the ramp,
     # numbered toward the shooter): decals a few mm above the surface, the ones

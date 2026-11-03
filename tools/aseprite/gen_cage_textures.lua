@@ -47,35 +47,6 @@ local function lcg(seed)
   return function() s = (s * 16807) % 2147483647; return s / 2147483647 end
 end
 
--- cage_mesh_slate.png / cage_mesh_galv.png 32x32 RGBA — the design's
--- chain-link (Arcade Cage Concept 32a): two diagonal wire families -> 16 px
--- diamonds, a light upper edge and a dark lower one; the sides matte slate,
--- the roof rough galvanised with pitting. Tiled 2.5 repeats/m -> 20 cm cells.
-local function fence(name, wire, hi, lo, spots)
-  local W, H = 32, 32
-  local spr = Sprite(W, H, ColorMode.RGBA)
-  local img = spr.cels[1].image
-  local r = lcg(37)
-  fill(img, 0, 0, W - 1, H - 1, pc.rgba(0, 0, 0, 0))
-  for yy = 0, H - 1 do
-    for xx = 0, W - 1 do
-      local u = (xx + yy) % 16
-      local v = (xx - yy + 32) % 16
-      if not (u > 1 and v > 1) then
-        local col = wire
-        if u == 0 or v == 0 then col = hi elseif u == 1 and v == 1 then col = lo end
-        if spots > 0 and r() < spots then
-          if r() < 0.5 then col = lo else col = "#8A8A86" end
-        end
-        img:drawPixel(xx, yy, hex(col))
-      end
-    end
-  end
-  save(spr, name)
-end
-fence("cage_mesh_slate.png", "#454E58", "#5E6872", "#2C333B", 0)
-fence("cage_mesh_galv.png", "#C4C8CC", "#ECEFF2", "#7E8388", 0.08)
-
 -- cage_tube.png 32x8 — cool steel band wrapping the frame boxes.
 do
   local spr, img = newImage(32, 8)

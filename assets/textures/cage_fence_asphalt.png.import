@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://ciicu78f35xs7"
-path="res://.godot/imported/cage_mesh_slate.png-d07b96c4961fa8d8df100674f2c6f01e.ctex"
+uid="uid://dym7ftbja3pkg"
+path="res://.godot/imported/cage_fence_asphalt.png-f9368596b0b28c31537338258390289a.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/textures/cage_mesh_slate.png"
-dest_files=["res://.godot/imported/cage_mesh_slate.png-d07b96c4961fa8d8df100674f2c6f01e.ctex"]
+source_file="res://assets/textures/cage_fence_asphalt.png"
+dest_files=["res://.godot/imported/cage_fence_asphalt.png-f9368596b0b28c31537338258390289a.ctex"]
 
 [params]
 

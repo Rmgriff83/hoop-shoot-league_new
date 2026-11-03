@@ -37,9 +37,9 @@ func run(t) -> void:
 	var deck_m := (cage.find_child("Deck", true, false) as MeshInstance3D).mesh.surface_get_material(0)
 	var ramp_m := (cage.find_child("Ramp", true, false) as MeshInstance3D).mesh.surface_get_material(0)
 	t.ok(deck_m != null and deck_m == ramp_m, "the deck and the ramp share the hardwood")
-	for gone in ["cage_deck.png", "cage_ramp.png", "cage_mesh.png"]:
-		t.ok(not FileAccess.file_exists("res://assets/textures/" + gone), "%s is gone (the hardwood and the slate / galvanised mesh replaced it)" % gone)
-	for kept in ["cage_hardwood.png", "cage_mesh_slate.png", "cage_mesh_galv.png", "cage_rug.png", "cage_pad.png", "cage_arrow.png"]:
+	for gone in ["cage_deck.png", "cage_ramp.png", "cage_mesh.png", "cage_mesh_slate.png", "cage_mesh_galv.png"]:
+		t.ok(not FileAccess.file_exists("res://assets/textures/" + gone), "%s is gone (the hardwood and the asphalt fence replaced it)" % gone)
+	for kept in ["cage_hardwood.png", "cage_fence_asphalt.png", "cage_rug.png", "cage_pad.png", "cage_arrow.png"]:
 		t.ok(FileAccess.file_exists("res://assets/textures/" + kept), "%s ships" % kept)
 	# The front console (2026-10-04) came out again on 2026-10-07: nothing of it in the glb.
 	t.eq(cage.find_child("ConsoleBody", true, false), null, "no console in the cage glb")
