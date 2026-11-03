@@ -358,7 +358,7 @@ def build():
 
     court = cage.mat_tex("Beach_Court", TEX("beach_court_grain.png"))   # tools/render_beach_grain.gd
     sand = cage.mat_tex("Beach_Sand", TEX("beach_sand_dirt.png"))   # tools/render_beach_grain.gd
-    water = cage.mat_tex("Beach_Water", TEX("beach_water.png"), double_sided=True)
+    water = cage.mat_tex("Beach_Water", TEX("beach_water_grain.png"), double_sided=True)   # tools/render_beach_grain.gd
     foam = cage.mat_tex("Beach_Foam", TEX("beach_foam.png"), double_sided=True)
     sky = cage.mat_tex("Beach_Sky", TEX("beach_sky.png"), emissive=True)
     pole_tex = cage.mat_tex("Beach_Pole", TEX("beach_pole.png"))

@@ -1471,7 +1471,8 @@ sky cylinder, the towels and cooler and the sky life stay as they were.
   `tools/render_beach_grain.gd` multiplies Pizza Doggy's `dirt_pt_5.png` grain into it
   (`beach_sand_dirt.png`, 3 m tiles, `SAND_TILE_M`), the colour staying the sand's; the same tool
   puts `dirt_pt_10.png` faintly (0.25) into the GREY of `beach_court.png` and `street_board.png`
-  (`*_grain.png`; lines, patches, frame and shooter square stay clean). The hoop takes its board
+  (`*_grain.png`; lines, patches, frame and shooter square stay clean), and `water_2.png` into
+  `beach_water.png` (`beach_water_grain.png`). The hoop takes its board
   through `tools/blender/reskin_street_hoop.py`: `build_street_hoop.py -- --force` loses the `Miss` clip;
   `beach_court.png` gets aggregate speckle, seven meandering cracks that keep out of the key,
   and paint wear along the lines. The old fence material (cage_mesh.png) is gone with it.

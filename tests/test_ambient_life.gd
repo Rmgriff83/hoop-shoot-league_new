@@ -113,6 +113,9 @@ func run(t) -> void:
 	var sand_mesh := beach.find_child("Sand", true, false) as MeshInstance3D
 	var sand_mat := sand_mesh.get_active_material(0) as BaseMaterial3D if sand_mesh != null else null
 	t.ok(sand_mat != null and sand_mat.albedo_texture != null and sand_mat.albedo_texture.get_width() == 512, "the sand carries the dirt's grain at 512 px")
+	var ocean_mesh := beach.find_child("Ocean", true, false) as MeshInstance3D
+	var ocean_mat := ocean_mesh.mesh.surface_get_material(0) as BaseMaterial3D if ocean_mesh != null else null
+	t.ok(ocean_mat != null and ocean_mat.albedo_texture != null and ocean_mat.albedo_texture.get_width() == 256, "the water carries water_2's grain at 256 px")
 	var board_src := Image.load_from_file("res://assets/textures/street_board.png")
 	var board_out := Image.load_from_file("res://assets/textures/street_board_grain.png")
 	t.ok(board_out.get_pixel(4, 4).is_equal_approx(board_src.get_pixel(4, 4)), "the grain leaves the board's pale frame alone")

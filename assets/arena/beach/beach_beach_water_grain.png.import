@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://d351d2c52cwy0"
-path="res://.godot/imported/beach_beach_water.png-eec9f4ddbee2a762033b029e42410cfd.ctex"
+uid="uid://5ub8t77md2xo"
+path="res://.godot/imported/beach_beach_water_grain.png-b2ace34b480a9e788487f38cdc1785e0.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "77fd2640e11678571f5ae35fddc3385b"
+"md5": "df88642c190af40a142eaafffefdb9c9"
 }
 
 [deps]
 
-source_file="res://assets/arena/beach/beach_beach_water.png"
-dest_files=["res://.godot/imported/beach_beach_water.png-eec9f4ddbee2a762033b029e42410cfd.ctex"]
+source_file="res://assets/arena/beach/beach_beach_water_grain.png"
+dest_files=["res://.godot/imported/beach_beach_water_grain.png-b2ace34b480a9e788487f38cdc1785e0.ctex"]
 
 [params]
 

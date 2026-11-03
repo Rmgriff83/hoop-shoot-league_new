@@ -8,6 +8,9 @@ extends SceneTree
 ##          dirt every 3 m, on the grey asphalt only.
 ##   board  street_board.png + dirt_pt_10 (210 px/m), the dirt every metre, on the
 ##          graphite only.
+##   water  beach_water.png + water_2 (Ross, 2026-11-03), doubled to 256, the tile
+##          whole. ocean.gdshader averages two drifting layers, which halves the
+##          grain again, so this one runs at full strength.
 ## "Grey only" (Ross): the white lines, sand patches, pale frame and orange square
 ## stay as they were, told apart by saturation and brightness.
 ## → assets/textures/*_grain.png + beach_sand_dirt.png (build_beach.py,
@@ -16,11 +19,13 @@ extends SceneTree
 
 const TEXTURES := "res://assets/textures/"
 const PIZZA := "res://art/third_party/pizza_doggy/"
+const WATER := "res://art/third_party/water_2/"
 ## base, dirt, out, base scale, dirt tile in output pixels, detail, grey only
 const JOBS := [
-	["beach_sand.png", "dirt_pt_5.png", "beach_sand_dirt.png", 2, 512, 0.8, false],
-	["beach_court.png", "dirt_pt_10.png", "beach_court_grain.png", 2, 203, 0.25, true],
-	["street_board.png", "dirt_pt_10.png", "street_board_grain.png", 1, 210, 0.25, true],
+	["beach_sand.png", PIZZA + "dirt_pt_5.png", "beach_sand_dirt.png", 2, 512, 0.8, false],
+	["beach_court.png", PIZZA + "dirt_pt_10.png", "beach_court_grain.png", 2, 203, 0.25, true],
+	["street_board.png", PIZZA + "dirt_pt_10.png", "street_board_grain.png", 1, 210, 0.25, true],
+	["beach_water.png", WATER + "water_2.png", "beach_water_grain.png", 2, 256, 1.0, false],
 ]
 ## Grey fades out across these (the board's graphite is a cool 0.16 saturated).
 const GREY_SAT := Vector2(0.20, 0.30)
@@ -31,7 +36,7 @@ func _initialize() -> void:
 	var failed := false
 	for job in JOBS:
 		var err := _render(job[0], job[1], job[2], job[3], job[4], job[5], job[6])
-		print("%s + %s → %s (%s)" % [job[0], job[1], job[2], error_string(err)])
+		print("%s + %s → %s (%s)" % [job[0], str(job[1]).get_file(), job[2], error_string(err)])
 		failed = failed or err != OK
 	quit(1 if failed else 0)
 
@@ -43,7 +48,7 @@ static func _grey(c: Color) -> float:
 
 func _render(base_name: String, dirt_name: String, out_name: String, base_scale: int, tile: int, detail: float, grey_only: bool) -> int:
 	var base := Image.load_from_file(TEXTURES + base_name)
-	var dirt := Image.load_from_file(PIZZA + dirt_name)
+	var dirt := Image.load_from_file(dirt_name)
 	base.convert(Image.FORMAT_RGB8)
 	dirt.convert(Image.FORMAT_RGB8)
 	var w := base.get_width() * base_scale
