@@ -38,7 +38,8 @@ extends CanvasLayer
 ##
 ## 2026-11-02 update of 43a: practice's box reads MADE 23 / 34, SWISHES 9 and
 ## 68% FG% (HudCopy.pause_stats_practice) with its spot on the line under
-## PAUSED; the three tiles get a white glow behind their pictures.
+## PAUSED; the three tiles get a white glow behind their pictures. The NET
+## tile's picture is larger and sits higher, cut to its 116 box like the design.
 
 signal resumed
 signal quit
@@ -74,6 +75,9 @@ const TILES_Y := 456.0
 const TILE_H := 240.0
 ## How far the tile's glow reaches past its picture on each side.
 const TILE_GLOW_BLEED := 30.0
+## The NET tile's thumbnail: the design's background-size 145 %, moved up 14 px.
+const NET_TILE_ZOOM := 1.45
+const NET_TILE_LIFT := 14.0
 const TILE_ICON := 116.0
 const TILE_GAP := 20.0
 const POP_Y := 724.0
@@ -395,25 +399,28 @@ func _tile(name_: String, label: String, face_w: float) -> Dictionary:
 	var l := _text(label, 20, MUTED)
 	l.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	col.add_child(l)
-	var icon := TextureRect.new()
-	icon.name = name_ + "Icon"
-	icon.custom_minimum_size = Vector2(TILE_ICON, TILE_ICON)
-	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	icon.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	col.add_child(icon)
+	var holder := Control.new()
+	holder.custom_minimum_size = Vector2(TILE_ICON, TILE_ICON)
+	holder.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	holder.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(holder)
 	var glow := TextureRect.new()
 	glow.name = "Glow"
 	glow.texture = _tile_glow()
 	glow.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	glow.stretch_mode = TextureRect.STRETCH_SCALE
 	glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	glow.show_behind_parent = true
 	glow.position = Vector2.ONE * -TILE_GLOW_BLEED
 	glow.size = Vector2.ONE * (TILE_ICON + 2.0 * TILE_GLOW_BLEED)
-	icon.add_child(glow)
+	holder.add_child(glow)
+	var icon := TextureRect.new()
+	icon.name = name_ + "Icon"
+	icon.size = Vector2(TILE_ICON, TILE_ICON)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	holder.add_child(icon)
 	var row := HBoxContainer.new()
 	row.alignment = BoxContainer.ALIGNMENT_CENTER
 	row.add_theme_constant_override("separation", 8)
@@ -552,7 +559,8 @@ func _refresh_values() -> void:
 	var net: Dictionary = _tiles["net"]
 	var ns := App.net_set_for(_area)
 	(net["value"] as Label).text = str(ns.display_name).to_upper() if ns != null else ""
-	(net["icon"] as TextureRect).texture = _thumb("net", ns.id if ns != null else "cotton")
+	(net["icon"] as TextureRect).texture = _net_tile_tex(_thumb("net", ns.id if ns != null else "cotton"))
+	(net["icon"] as TextureRect).position.y = -NET_TILE_LIFT
 	(net["caret"] as Control).visible = _net_ids().size() > 1
 	for k in _tiles:
 		var t: Dictionary = _tiles[k]
@@ -576,6 +584,18 @@ func _refresh_values() -> void:
 static func _thumb(kind: String, id: String) -> Texture2D:
 	var path := ("res://assets/textures/balls/thumbs/%s.png" % id) if kind == "ball" else NetSet.thumb_path(id)
 	return load(path) if ResourceLoader.exists(path) else null
+
+
+## The middle of a net's thumbnail, so filling the tile's box enlarges it by
+## NET_TILE_ZOOM and cuts what falls outside.
+static func _net_tile_tex(thumb: Texture2D) -> Texture2D:
+	if thumb == null:
+		return null
+	var tex := AtlasTexture.new()
+	tex.atlas = thumb
+	var side := thumb.get_size() / NET_TILE_ZOOM
+	tex.region = Rect2((thumb.get_size() - side) / 2.0, side)
+	return tex
 
 
 func shot_help_text() -> String:

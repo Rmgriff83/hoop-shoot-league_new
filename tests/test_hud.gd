@@ -269,8 +269,12 @@ func _widgets(t) -> void:
 	t.eq(pm.info_texts(), ["YOU 12", "OLLIE 9", "41.7 TIME LEFT"], "the info box: your line over theirs, then the time left")
 	t.ok(pm.find_child("Info", true, false) is ShadowPanel and pm.find_child("OptionsHead", true, false) == null, "an orange box; no OPTIONS head (2026-10-30)")
 	t.eq((pm.find_child("Ball", true, false) as Control).size.y, PauseMenu.TILE_H + ShadowStyle.OFFSET, "the tiles are 240 tall")
-	var tile_glow := pm.find_child("BallIcon", true, false).get_node("Glow") as TextureRect
-	t.ok(tile_glow.show_behind_parent and tile_glow.size.x == PauseMenu.TILE_ICON + 60.0, "the tile's glow sits behind its picture, 30 px past it")
+	var tile_glow := pm.find_child("BallIcon", true, false).get_parent().get_node("Glow") as TextureRect
+	t.ok(tile_glow.get_index() == 0 and tile_glow.size.x == PauseMenu.TILE_ICON + 60.0, "the tile's glow sits behind its picture, 30 px past it")
+	var net_icon := pm.find_child("NetIcon", true, false) as TextureRect
+	t.ok(net_icon.position.y == -14.0 and net_icon.texture is AtlasTexture, "the NET tile's picture is enlarged and sits 14 px higher")
+	t.close((net_icon.texture as AtlasTexture).region.size.x, 256.0 / 1.45, 0.01, "…145 % of the box")
+	t.eq((pm.find_child("BallIcon", true, false) as TextureRect).position.y, 0.0, "…the ball stays put")
 	t.eq(HudCopy.pause_resume_sub(-1.0), "BACK TO PRACTICE · NO CLOCK", "practice has no clock")
 	# HUD SIDE (43a, later 2026-10-27): its row opens LEFT / RIGHT above it; a pick sets it, says so and closes.
 	var was_hud: String = app.hud_side

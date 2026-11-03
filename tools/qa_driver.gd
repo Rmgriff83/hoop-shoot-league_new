@@ -990,9 +990,12 @@ func _run_hud() -> void:
 ## The practice pause page (43a): the design's numbers, then a long session's.
 func _run_pause_practice() -> void:
 	await _sleep(1.2)
-	await _close_archive()
-	await _click_button_named("PRACTICE")
-	await _sleep(1.2)
+	for attempt in 3:
+		await _close_archive()
+		await _click_button_named("PRACTICE")
+		await _sleep(1.2)
+		if get_tree().current_scene != null and "trial" in get_tree().current_scene:
+			break
 	var prac := get_tree().current_scene
 	var pp: Button = get_tree().root.find_child("PauseButton", true, false)
 	for nums in [[23, 34, 9, "hud_pause_practice"], [123, 456, 78, "hud_pause_practice_long"]]:
