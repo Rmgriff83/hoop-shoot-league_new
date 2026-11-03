@@ -110,6 +110,9 @@ func run(t) -> void:
 	var wall_mat := wall.get_active_material(0) as BaseMaterial3D if wall != null else null
 	t.ok(wall_mat != null and wall_mat.albedo_texture != null and wall_mat.albedo_texture.get_width() == 512,
 		"the embankment wears Pizza Doggy's 512 px tile")
+	var sand_mesh := beach.find_child("Sand", true, false) as MeshInstance3D
+	var sand_mat := sand_mesh.get_active_material(0) as BaseMaterial3D if sand_mesh != null else null
+	t.ok(sand_mat != null and sand_mat.albedo_texture != null and sand_mat.albedo_texture.get_width() == 512, "the sand carries the dirt's grain at 512 px")
 	var palm: Node = load("res://assets/arena/beach/palm.glb").instantiate()
 	var fronds := palm.find_child("PalmFronds", true, false) as MeshInstance3D
 	t.ok(palm.find_child("PalmTrunk", true, false) is MeshInstance3D and fronds != null, "palm.glb: PalmTrunk + PalmFronds")

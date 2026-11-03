@@ -28,6 +28,8 @@
   `Court` slab as is, tiled every metre, and `grass_pt_3.png` (same) its `Lawn`, every 4 m
   (`tools/blender/build_park.py`, embedded in `park.glb`). The city's ground wears
   `asphalt_old_tr_1.png` and its fence the cage's cut (`tools/blender/build_city.py`).
+  `dirt_pt_5.png` (same) gives the beach's sand its grain: `tools/render_beach_sand.gd` keeps
+  our sand's colour and takes only the dirt's light and dark (`beach_sand_dirt.png`).
 
 ## What's here
 
@@ -37,6 +39,7 @@
 | `asphalt_old_tr_1.png` | the 512×512 tile, RGBA (opaque), dark grey pitted surface, seamless |
 | `small_stones_tr_1.png` | the 512×512 tile, RGBA (opaque), small dark grey stones, seamless |
 | `grass_pt_3.png` | the 512×512 tile, RGBA (opaque), dark green winter grass, seamless |
+| `dirt_pt_5.png` | the 512×512 tile, dark brown-grey dirt, seamless |
 | `LICENSE.pdf` | the agreement as downloaded |
 
 ## House rules

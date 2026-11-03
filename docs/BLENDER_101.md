@@ -1467,7 +1467,9 @@ sky cylinder, the towels and cooler and the sky life stay as they were.
   v = 0 at the ground; vertical faces along × height, tops along × across). `beach_concrete.png`,
   the board-formed one that was there, now only skins the city. New `beach_curb.png` (pale speckled concrete, 64²)
   skins the `WallCap%d` boxes (0.5 m tiles) AND the `CourtApron` (0.5 m tiles; it was flat
-  blacktop). `beach_sand.png` gets diagonal wind ripples, grain and shell bits;
+  blacktop). `beach_sand.png` gets diagonal wind ripples, grain and shell bits, and since 2026-11-02
+  `tools/render_beach_sand.gd` multiplies Pizza Doggy's `dirt_pt_5.png` grain into it
+  (`beach_sand_dirt.png`, 3 m tiles, `SAND_TILE_M`), the colour staying the sand's;
   `beach_court.png` gets aggregate speckle, seven meandering cracks that keep out of the key,
   and paint wear along the lines. The old fence material (cage_mesh.png) is gone with it.
 - **The palms** are 3D now. `build_palm_model()` builds a unit-height tree in its own

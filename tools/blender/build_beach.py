@@ -55,6 +55,7 @@ SAND_X0, SAND_X1 = 4.5, 18.0
 # sim's walls (SimGeometry.beach) still stand there, unseen.
 WALL_T = 0.25
 WALL_H = 0.45
+SAND_TILE_M = 3.0                         # far enough off the camera that a finer grain averages away
 WALL_TILE_M = 1.0                         # the embankment's 512 px tile repeats every metre
 FENCE_TOP = 3.6
 # Per side, in `corners` order: k=0 is the z=-8.6 run, k=1 the BACK (x=+5.7,
@@ -356,7 +357,7 @@ def build():
     c_sky, c_props, c_pole = cage.sub(coll, "Sky"), cage.sub(coll, "Props"), cage.sub(coll, "Pole")
 
     court = cage.mat_tex("Beach_Court", TEX("beach_court.png"))
-    sand = cage.mat_tex("Beach_Sand", TEX("beach_sand.png"))
+    sand = cage.mat_tex("Beach_Sand", TEX("beach_sand_dirt.png"))   # tools/render_beach_sand.gd
     water = cage.mat_tex("Beach_Water", TEX("beach_water.png"), double_sided=True)
     foam = cage.mat_tex("Beach_Foam", TEX("beach_foam.png"), double_sided=True)
     sky = cage.mat_tex("Beach_Sky", TEX("beach_sky.png"), emissive=True)
@@ -408,7 +409,7 @@ def build():
 
     # Sand everywhere around the court (the slab sits 5 mm above it), out to the shoreline.
     cage.add_quad("Sand", [(-40, -0.005, -WIDE), (SAND_X1, -0.005, -WIDE), (SAND_X1, -0.005, WIDE), (-40, -0.005, WIDE)],
-                  (0, 1, 0), sand, c_sand, root, ((SAND_X1 + 40) * 0.67, 2 * WIDE * 0.67))
+                  (0, 1, 0), sand, c_sand, root, ((SAND_X1 + 40) / SAND_TILE_M, 2 * WIDE / SAND_TILE_M))
 
     # Ocean: a subdivided grid the shader displaces. UV u = 0 at the shore edge.
     bpy.ops.mesh.primitive_grid_add(x_subdivisions=96, y_subdivisions=48, size=1.0, location=(0, 0, 0))
