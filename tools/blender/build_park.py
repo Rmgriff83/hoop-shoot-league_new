@@ -48,6 +48,7 @@ TEX = lambda name: os.path.join(ROOT, "assets", "textures", name)  # noqa: E731
 # ---- the layout, mirrored from core/physics/sim_geometry.gd park() -------------
 PARK_DIST = 3.70
 COURT_X0, COURT_X1, COURT_HALF_W = -7.0, 6.80, 6.0      # the slab; its sides are the sim's soft walls
+COURT_TILE_M = 1.0                                       # the slab's 512 px stones repeat this often (stones about 5 cm)
 FENCE_X = 6.20                                           # SimGeometry.PARK_FENCE_X: the slab runs 0.6 m past it
 FENCE_POSTS = [-6.0, -3.6, -1.2, 1.2, 3.6, 6.0]
 FENCE_RAILS = [0.20, 0.60, 1.00]
@@ -515,6 +516,8 @@ def build():
     c_ground, c_props, c_sky, c_snow = cage.sub(coll, "Ground"), cage.sub(coll, "Props"), cage.sub(coll, "Sky"), cage.sub(coll, "Snow")
 
     asphalt = cage.mat_tex("Park_Asphalt", TEX("park_asphalt.png"))
+    # Pizza Doggy's tile (Ross, 2026-11-02), embedded in the glb as supplied.
+    stones = cage.mat_tex("Park_Stones", os.path.join(ROOT, "art", "third_party", "pizza_doggy", "small_stones_tr_1.png"))
     grass = cage.mat_tex("Park_Grass", TEX("park_grass.png"))
     snow = cage.mat_flat("Park_Snow", (238, 243, 246), roughness=0.9)
     far_snow = cage.mat_flat("Park_FarSnow", (228, 234, 238), roughness=1.0)
@@ -540,7 +543,7 @@ def build():
     # Ground: the lawn, the slab, the lot, the road, the path, the pads.
     quad_xz("Lawn", 20.0, 0.0, 240.0, 240.0, -0.03, 0.0, grass, c_ground, root, (60.0, 60.0))
     w = COURT_X1 - COURT_X0
-    quad_xz("Court", (COURT_X0 + COURT_X1) / 2, 0.0, w, COURT_HALF_W * 2, 0.0, 0.0, asphalt, c_ground, root, (9.75, 10.0))
+    quad_xz("Court", (COURT_X0 + COURT_X1) / 2, 0.0, w, COURT_HALF_W * 2, 0.0, 0.0, stones, c_ground, root, (w / COURT_TILE_M, COURT_HALF_W * 2 / COURT_TILE_M))
     cage.add_box("CourtEdge", (w + 0.1, 0.08, COURT_HALF_W * 2 + 0.1), ((COURT_X0 + COURT_X1) / 2, -0.06, 0), asphalt, c_ground, root)
     quad_xz("ParkingLot", 18.5, -11.5, 9.0, 38.0, -0.005, 0.0, asphalt, c_ground, root, (10.0, 12.0))
     quad_xz("Road", 45.0, -15.0, 44.0, 6.5, -0.01, 0.0, asphalt, c_ground, root, (12.0, 2.0))

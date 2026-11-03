@@ -24,6 +24,8 @@
   (`tools/blender/build_beach.py`, embedded in `beach.glb`). `tools/render_cage_fence.gd`
   cuts the chain-link out of it for the arcade cage's side and top fences and its gate
   (`assets/textures/cage_fence_asphalt.png`, embedded in `cage.glb`).
+  `small_stones_tr_1.png` (Ross supplied it 2026-11-02, pack not recorded) skins the park's
+  `Court` slab as is, tiled every metre (`tools/blender/build_park.py`, embedded in `park.glb`).
 
 ## What's here
 
@@ -31,6 +33,7 @@
 |---|---|
 | `brick_wall_pt_2.png` | the 256×256 tile, RGBA, bricks about 24×10 px in a running bond |
 | `asphalt_old_tr_1.png` | the 512×512 tile, RGBA (opaque), dark grey pitted surface, seamless |
+| `small_stones_tr_1.png` | the 512×512 tile, RGBA (opaque), small dark grey stones, seamless |
 | `LICENSE.pdf` | the agreement as downloaded |
 
 ## House rules

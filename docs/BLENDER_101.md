@@ -815,7 +815,8 @@ laid out from the reference photo. Three scripts and a layout file:
   the black pole, the white park board (edge band, shooting square, rust,
   the sticker), the sky's cloud mask and the treeline strip.
 - `tools/blender/build_park.py` (`-- --force`) → `assets/arena/park/park.glb`:
-  the slab (x −7.0…6.80, z ±6.0: the sides are `SimGeometry.park()`'s soft
+  the slab (Pizza Doggy's `small_stones_tr_1.png` since 2026-11-02, 1 m tiles; x −7.0…6.80,
+  z ±6.0: the sides are `SimGeometry.park()`'s soft
   snow-bank walls, the back is the **split-rail cedar fence** at x 6.20 —
   `SplitRailFence`, one merged mesh in `park_cedar.png`, posts at z −6…6 in
   2.4 m bays, three rails overlapping inside the posts, snow on the post
