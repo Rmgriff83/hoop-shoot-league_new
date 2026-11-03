@@ -1,5 +1,5 @@
 extends SceneTree
-## Pizza Doggy's dirt as grain in the beach's own colours (Ross, 2026-11-02): the
+## Pizza Doggy's tiles as grain in the beach's own colours (Ross, 2026-11-02): the
 ## base keeps its colour, the dirt only says lighter or darker. Each pixel is the
 ## base's × (1 + detail × how far the dirt's brightness sits from its own mean),
 ## then scaled so the mean colour stays the base's (clipping loses a little).
@@ -19,13 +19,12 @@ extends SceneTree
 
 const TEXTURES := "res://assets/textures/"
 const PIZZA := "res://art/third_party/pizza_doggy/"
-const WATER := "res://art/third_party/water_2/"
 ## base, dirt, out, base scale, dirt tile in output pixels, detail, grey only
 const JOBS := [
 	["beach_sand.png", PIZZA + "dirt_pt_5.png", "beach_sand_dirt.png", 2, 512, 0.8, false],
 	["beach_court.png", PIZZA + "dirt_pt_10.png", "beach_court_grain.png", 2, 203, 0.25, true],
 	["street_board.png", PIZZA + "dirt_pt_10.png", "street_board_grain.png", 1, 210, 0.25, true],
-	["beach_water.png", WATER + "water_2.png", "beach_water_grain.png", 2, 256, 1.0, false],
+	["beach_water.png", PIZZA + "water_2.png", "beach_water_grain.png", 2, 256, 1.0, false],
 ]
 ## Grey fades out across these (the board's graphite is a cool 0.16 saturated).
 const GREY_SAT := Vector2(0.20, 0.30)

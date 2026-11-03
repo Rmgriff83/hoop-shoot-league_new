@@ -31,6 +31,8 @@
   `dirt_pt_5.png` (same) gives the beach's sand its grain and `dirt_pt_10.png` (same) the grey
   of its court and backboard: `tools/render_beach_grain.gd` keeps our colours and takes only the
   dirt's light and dark (`beach_sand_dirt.png`, `beach_court_grain.png`, `street_board_grain.png`).
+  `water_2.png` (Ross confirmed it as Pizza Doggy's 2026-11-03, pack not recorded) does the same
+  for the water (`beach_water_grain.png`).
 
 ## What's here
 
@@ -42,6 +44,7 @@
 | `grass_pt_3.png` | the 512×512 tile, RGBA (opaque), dark green winter grass, seamless |
 | `dirt_pt_5.png` | the 512×512 tile, dark brown-grey dirt, seamless |
 | `dirt_pt_10.png` | the 512×512 tile, dark brown rocky dirt, seamless |
+| `water_2.png` | the 256×256 tile, soft teal water, seamless |
 | `LICENSE.pdf` | the agreement as downloaded |
 
 ## House rules
