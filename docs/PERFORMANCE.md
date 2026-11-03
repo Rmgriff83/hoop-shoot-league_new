@@ -540,5 +540,23 @@ Only about 44 of the old row's 84 draws were ever in the frustum, so the saving 
 per view, not 78. `cov` is the probe's upper bound: the glass mesh's box spans the row.
 The ledger passes, but on the Mac that says nothing about GPU time.
 
-**Phone not yet measured.** Next time the moto g is connected, run the old build and this
-one back to back, cool, and compare main-view GPU (see `NEW_AREA_PERFORMANCE.txt` §4).
+**Phone, same day** (moto g, builds 449 and 451 installed alternately, 13 runs, battery
+27–29 °C, 24 s a row; means, ms):
+
+    mode       build  runs   p50    p95    p99   spk60  mainG  script p95
+    heat_pip   old     4    20.2   28.8   31.5   4.7    14.4    9.4
+    heat_pip   new     4    19.7   28.3   31.7   2.3    14.5    9.7
+    heat_min   old     2    19.2   26.4   31.3   1.1    15.6    7.8
+    heat_min   new     3    19.3   26.1   30.8   0.8    15.7    7.7
+    trial      old     6    18.2   22.2   28.3   2.0    15.2    2.2
+    trial      new     7    18.3   20.4   25.6   0.0    14.9    2.4
+
+Inside every limit (`tools/perf_ledger.gd` OK on all the new dumps). Main-view GPU is about
+0.1 ms up where it can be paired fairly (trial median 15.32 → 15.38), inside the phone's noise.
+One new trial row read 11.8 ms GPU at the vsync floor and pulls that mean down, and one read
+script p95 4.5: outliers, not savings or costs. Script in `heat_pip` looked 1 ms up in the first two pairs and level in the
+next two: noise.
+
+QA quirk, both builds: after a launch on the phone, the sweep's first two scenarios log "did not
+start" and are skipped, so the mode order decides which rows you get. Put the mode you want
+third (`--qa-perf-mode=trial,heat_min,heat_pip`); the driver's repeat of the first mode still runs.
