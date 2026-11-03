@@ -64,6 +64,13 @@ func run(t) -> void:
 	var root := page.build("beach")
 	t.eq((root.find_child("Title", true, false) as Label).text, "ONLINE", "the title on the page")
 	t.eq(page.state(), "menu", "opens on the menu")
+	t.eq(MatchLobbyPage.online_card_entries({"inventory": {"ice": 2, "fire7": 1, "nope": 3}, "loadout": ["fire7", null, "magnet6"]}), [["fire7", 2], ["ice", 2], ["magnet6", 1]], "ONLINE CARDS: spares and armed cards, unknown ids dropped")
+	t.eq(MatchCopy.online_cards_count(7, 3), "7 CARDS · 3 TYPES", "…counted")
+	t.eq(MatchCopy.online_cards_count(1, 1), "1 CARD · 1 TYPE", "…singular")
+	page.fill_online_cards([["ice", 2], ["fire7", 1]])
+	t.eq(page.online_card_count(), 2, "…a card per type in the row")
+	t.eq(page.online_cards_text(), "3 CARDS · 2 TYPES", "…and the count over it")
+	t.ok((root.find_child("OcScroll", true, false) as ScrollContainer).horizontal_scroll_mode == ScrollContainer.SCROLL_MODE_SHOW_NEVER, "…swiped sideways, no bar")
 	var owned := App.unlocked_areas()
 	t.eq(page.area_choice, "beach" if owned.size() > 1 else "cage", "opens on the home's court, or the cage alone")
 	for a in MatchCopy.AREAS:

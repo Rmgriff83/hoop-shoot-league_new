@@ -44,7 +44,7 @@ const COURT_S := 0.3       # …sliding in
 const MUTED := Color("#D9D9D9")
 const RANKED_H := 88.0
 const TOP_N := 15          # the leaderboard's window onto the top fifteen (2026-10-31)
-const TOP_SHOWN := 3       # …three rows in view (186)
+const TOP_SHOWN := 2       # …two rows in view (124; three until the ONLINE CARDS row, 2026-11-03)
 const TOP_ROW_H := 62.0
 const TOP_PAD_X := 20.0    # the rows run edge to edge; their words sit inside the panel's padding
 const TOP_FADE := Color(60.0 / 255.0, 52.0 / 255.0, 46.0 / 255.0)
@@ -56,7 +56,19 @@ const WHO_W := FRAME_SIZE.x - 2.0 * PAD - 2.0 * YOU_PAD.y - ShadowStyle.OFFSET -
 ## The leaderboard at the menu's foot needs this much frame (a 9:16 screen
 ## has no room for it under the buttons; a phone-tall one does).
 const TOP_MIN_FRAME := 1400.0
+## The ONLINE CARDS row (2026-11-03): 60 × 80 cards, 24 apart, a fade at whichever end has more.
+const OC_CARD := Vector2(60, 80)
+const OC_GAP := 24
+const OC_ROW_H := 98.0
+const OC_FADE_W := 56.0
+const OC_FADE := Color(60.0 / 255.0, 52.0 / 255.0, 46.0 / 255.0, 0.9)
 
+var _oc_block: MarginContainer
+var _oc_count: Label
+var _oc_scroll: ScrollContainer
+var _oc_row: HBoxContainer
+var _oc_left: TextureRect
+var _oc_right: TextureRect
 var area_choice := "any"
 var _menu: VBoxContainer
 var _wait: VBoxContainer
@@ -438,6 +450,7 @@ func _build_you() -> void:
 	bar_row.add_child(_me_progress)
 	_ranked_btn = _ranked_button()
 	col.add_child(_ranked_btn)
+	_build_online_cards(col)
 	# The record tag on the card's top right corner (15 px over the top edge,
 	# 5 px past the right): a layer the panel stretches over its content, the
 	# tag placed in it by hand from the CARD's size — never the content's, so
@@ -455,6 +468,155 @@ func _build_you() -> void:
 	card.resized.connect(func() -> void: _place_tag(layer))
 	_set_you_name(name_l, str(rec.get("name", "YOU")), tag)
 	set_rank(Dictionary(rec.get("rank", {})))
+
+
+## ONLINE CARDS under RANKED MATCH: what you hold for online play, a row that
+## swipes sideways once it outgrows the panel. Look only: cards are armed on the
+## pre-match page.
+func _build_online_cards(col: VBoxContainer) -> void:
+	_oc_block = MarginContainer.new()
+	_oc_block.name = "OnlineCards"
+	_oc_block.add_theme_constant_override("margin_top", 10)
+	_oc_block.add_theme_constant_override("margin_right", 6)
+	_oc_block.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	col.add_child(_oc_block)
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation", 10)
+	stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_oc_block.add_child(stack)
+	var head_ := HBoxContainer.new()
+	head_.add_theme_constant_override("separation", 14)
+	head_.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stack.add_child(head_)
+	head_.add_child(words("ONLINE CARDS", 16, true))
+	var rule := ColorRect.new()
+	rule.color = Color(CREAM, 0.4)
+	rule.custom_minimum_size = Vector2(0, 2)
+	rule.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	rule.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	rule.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	head_.add_child(rule)
+	_oc_count = words("", 16)
+	_oc_count.name = "OcCount"
+	_oc_count.add_theme_color_override("font_color", MUTED)
+	head_.add_child(_oc_count)
+	var row := Control.new()
+	row.name = "OcRowBox"
+	row.custom_minimum_size = Vector2(0, OC_ROW_H)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stack.add_child(row)
+	_oc_scroll = ScrollContainer.new()
+	_oc_scroll.name = "OcScroll"
+	UiLayout.full_rect(_oc_scroll)
+	_oc_scroll.offset_left = -4.0
+	_oc_scroll.offset_right = 4.0
+	_oc_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	_oc_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	row.add_child(_oc_scroll)
+	var pad := MarginContainer.new()
+	pad.add_theme_constant_override("margin_left", 4)
+	pad.add_theme_constant_override("margin_right", 18)
+	pad.add_theme_constant_override("margin_top", 4)
+	pad.mouse_filter = Control.MOUSE_FILTER_PASS
+	_oc_scroll.add_child(pad)
+	_oc_row = HBoxContainer.new()
+	_oc_row.name = "OcRow"
+	_oc_row.add_theme_constant_override("separation", OC_GAP)
+	_oc_row.mouse_filter = Control.MOUSE_FILTER_PASS
+	pad.add_child(_oc_row)
+	_oc_left = _oc_fade(row, true)
+	_oc_right = _oc_fade(row, false)
+	_oc_scroll.get_h_scroll_bar().value_changed.connect(func(_v: float) -> void: _refresh_oc_fades())
+	_oc_scroll.get_h_scroll_bar().changed.connect(_refresh_oc_fades)
+	Net.cards_changed.connect(_refresh_online_cards)
+	_refresh_online_cards()
+
+
+func _oc_fade(row: Control, left: bool) -> TextureRect:
+	var g := Gradient.new()
+	g.offsets = PackedFloat32Array([0.0, 1.0])
+	g.colors = PackedColorArray([OC_FADE, Color(OC_FADE, 0.0)]) if left else PackedColorArray([Color(OC_FADE, 0.0), OC_FADE])
+	var t := GradientTexture2D.new()
+	t.gradient = g
+	t.width = 64
+	t.height = 4
+	var fade := TextureRect.new()
+	fade.name = "OcFadeLeft" if left else "OcFadeRight"
+	fade.texture = t
+	fade.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	fade.stretch_mode = TextureRect.STRETCH_SCALE
+	fade.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fade.visible = false
+	fade.anchor_top = 0.0
+	fade.anchor_bottom = 1.0
+	fade.anchor_left = 0.0 if left else 1.0
+	fade.anchor_right = 0.0 if left else 1.0
+	fade.offset_left = -4.0 if left else 4.0 - OC_FADE_W
+	fade.offset_right = OC_FADE_W - 4.0 if left else 4.0
+	row.add_child(fade)
+	return fade
+
+
+## Every online card you hold, armed ones too (equipping moves a card out of the
+## inventory): [[id, n], ...] sorted by id.
+static func online_card_entries(doc: Dictionary) -> Array:
+	var counts := {}
+	var inv: Dictionary = doc.get("inventory", {})
+	for id in inv:
+		counts[str(id)] = int(inv[id])
+	for id in doc.get("loadout", []):
+		if id != null:
+			counts[str(id)] = int(counts.get(str(id), 0)) + 1
+	var ids := counts.keys()
+	ids.sort()
+	var out := []
+	for id in ids:
+		if int(counts[id]) > 0 and not CardDefs.get_card(id).is_empty():
+			out.push_back([id, int(counts[id])])
+	return out
+
+
+func _refresh_online_cards() -> void:
+	fill_online_cards(online_card_entries(App.cards_bucket(Net.ONLINE_BUCKET)))
+
+
+func fill_online_cards(entries: Array) -> void:
+	if _oc_row == null:
+		return
+	for c in _oc_row.get_children():
+		_oc_row.remove_child(c)
+		c.queue_free()
+	var total := 0
+	for e in entries:
+		total += int(e[1])
+		var holder := ModeCards.art(CardDefs.get_card(str(e[0])), OC_CARD, 4.0, true)
+		holder.name = "OcCard_" + str(e[0])
+		var btn := holder.get_meta("button") as TextureButton
+		btn.mouse_filter = Control.MOUSE_FILTER_PASS   # a swipe across the row scrolls it
+		var n := words("×%d" % int(e[1]), 16, true)
+		n.name = "Left"
+		n.position = Vector2(OC_CARD.x - 4.0, OC_CARD.y - 4.0)
+		n.z_index = 1
+		holder.add_child(n)
+		_oc_row.add_child(holder)
+	_oc_count.text = MatchCopy.online_cards_count(total, entries.size())
+	_refresh_oc_fades.call_deferred()
+
+
+func _refresh_oc_fades() -> void:
+	if _oc_scroll == null or not is_instance_valid(_oc_scroll):
+		return
+	var bar := _oc_scroll.get_h_scroll_bar()
+	_oc_left.visible = bar.value > 4.0
+	_oc_right.visible = bar.value + bar.page < bar.max_value - 4.0
+
+
+func online_cards_text() -> String:
+	return _oc_count.text if _oc_count != null else ""
+
+
+func online_card_count() -> int:
+	return _oc_row.get_child_count() if _oc_row != null else 0
 
 
 func _place_tag(layer: Control) -> void:
@@ -944,6 +1106,7 @@ func set_loading(on: bool) -> void:
 		return
 	_you_body.visible = not on
 	_you_loading.visible = on
+	_oc_block.visible = not on
 	_me_tag.visible = not on and _me_line.text != ""
 	_courts_row.visible = not on
 	_courts_loading.visible = on
@@ -1155,6 +1318,7 @@ func _go() -> void:
 
 
 func show_menu() -> void:
+	_refresh_online_cards()
 	_rewards.visible = true   # the trophy is the menu's alone
 	_state = "menu"
 	_how = ""

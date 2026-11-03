@@ -1896,6 +1896,19 @@ func _run_multi() -> void:
 		print("QA multi: no lobby")
 		get_tree().quit()
 		return
+	# ONLINE CARDS (2026-11-03): the design's three, then a row long enough to swipe.
+	lobby.fill_online_cards([["fire7", 3], ["ice", 2], ["magnet6", 2]])
+	await _sleep(0.4)
+	await _snap("multi_online_cards")
+	var many := []
+	for i in 4:
+		many.append_array([["fire7", 3], ["ice", 2], ["magnet6", 2]])
+	lobby.fill_online_cards(many)
+	await _sleep(0.4)
+	await _snap("multi_online_cards_many")
+	(lobby.find_child("OcScroll", true, false) as ScrollContainer).scroll_horizontal = 200
+	await _sleep(0.2)
+	await _snap("multi_online_cards_mid")
 	# The loading states (design 37a, 2026-10-31): LOADING PLAYER / COURTS / RANKS.
 	lobby.set_loading(true)
 	lobby._top_set_waiting(true)
