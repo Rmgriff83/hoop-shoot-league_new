@@ -5,6 +5,10 @@ extends RefCounted
 
 
 func run(t) -> void:
+	# HUD SIDE moves the numbers too (Ross, 2026-11-03).
+	var screen_script: GDScript = load("res://game/screens/time_trial_screen.gd")
+	t.ok(float(screen_script.call("help_side_offset", "right")) > 0.0, "HUD SIDE right: the numbers sit right of the ball")
+	t.ok(float(screen_script.call("help_side_offset", "left")) < 0.0, "HUD SIDE left: left of it")
 	var geo := SimGeometry.arcade()
 	var tuning := FlickTuning.new()
 	var origin := Vector3(0.0, 1.6, 0.3)

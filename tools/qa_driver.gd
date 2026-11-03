@@ -829,6 +829,18 @@ func _run_hud_side() -> void:
 	await _flick(1.9, 0.30, 0.0)
 	await _sleep(1.6)
 	await _snap("hud_right_live")
+	# The shot-help numbers follow HUD SIDE: hold the next ball mid-pull.
+	var help_was: int = App.shot_help
+	App.shot_help = App.SHOT_HELP_FULL
+	var held := Vector2(WIN.x / 2.0, WIN.y * 0.62)
+	_mouse_button(held, true)
+	await _sleep(0.12)
+	_mouse_move(held + Vector2(0.0, WIN.y * 0.1), Vector2(0.0, WIN.y * 0.1))
+	await _sleep(0.4)
+	await _snap("hud_right_numbers")
+	_mouse_button(held + Vector2(0.0, WIN.y * 0.1), false)
+	App.shot_help = help_was
+	await _sleep(1.0)
 	var sc_t := get_tree().current_scene
 	if sc_t != null and "_hud" in sc_t:
 		(sc_t.get("_hud") as Hud).banner("NEXT: L ELBOW IN 3", Color.WHITE)

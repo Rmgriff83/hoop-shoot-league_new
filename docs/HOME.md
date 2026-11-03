@@ -912,6 +912,8 @@ skip it (`App.qa_skip_tutorial`) except `--qa-tutorial`.
 
 **2026-11-03 update (design 38a/38b):** type sizes as the design (title 26, count 18, body 24 with 1.45 leading, buttons 68 tall; PS2P sizes snap to UiFont's steps), shorter copy, the card 104 px from the screen's top edge or under a deeper notch. The finger is the 13 × 18 sprite `assets/ui/icon_finger.png` at × 6, tip at (27, 3). The lesson's aim line is 2D (`ShotTutorialCopy.arc_dots`, the design's dotsFrom plus a sideways bow): the real 3D dots are seen head-on and stack by the rim, so they are off during the lesson. Real matches still use the 3D dots.
 
+The shot-help numbers sit on the side HUD SIDE names (`help_side_offset` in time_trial_screen.gd), in matches and in the tutorial.
+
 ## QA and tests
 
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-heat` →

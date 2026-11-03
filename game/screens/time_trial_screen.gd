@@ -388,7 +388,7 @@ func demo_reset() -> void:
 ## readout's own verdict colours, with the dots at that arc.
 func demo_readout(arc_deg: float, pct: float) -> void:
 	var origin: Vector3 = _pool.to_global(_pool.rest_pos)
-	var lat := (origin - _spot).dot(_right) - HELP_SIDE
+	var lat := (origin - _spot).dot(_right) + help_side_offset(App.hud_side)
 	var anchor := _spot + _right * lat + Vector3(0.0, origin.y, 0.0)
 	if _readout != null:
 		_readout.demo(anchor, arc_deg, pct, origin, trial.geo)
@@ -1257,10 +1257,15 @@ func _on_feel_rate(speed_sh: float, _latched: bool) -> void:
 ## of it, tapering out before the rim — the launch and the arc, without quite
 ## handing over where the ball lands.
 const HELP_ARC_FRAC := 0.85
-## The numbers sit this far to the shooter's left of the ball — close enough to
+## The numbers sit this far to the side of the ball that HUD SIDE names — close enough to
 ## read in the same glance, far enough that they never cover it. The ball is
 ## 0.242 m across, so this clears its edge by about half a ball.
 const HELP_SIDE := 0.18
+
+
+## The shot-help numbers' sideways offset along the shooter's right.
+static func help_side_offset(side: String) -> float:
+	return HELP_SIDE if side == "right" else -HELP_SIDE
 
 
 func _refresh_preview() -> void:
@@ -1287,7 +1292,7 @@ func _refresh_readout() -> void:
 	# sideways: the ball sinks as you pull (so a readout that follows it
 	# vertically drifts away mid-read), yet it also slides left and right with
 	# your thumb, and numbers that ignored that would drift off the ball.
-	var lat := (_hand_pos - _spot).dot(_right) - HELP_SIDE
+	var lat := (_hand_pos - _spot).dot(_right) + help_side_offset(App.hud_side)
 	var anchor := _spot + _right * lat + Vector3(0.0, _grab_anchor.y, 0.0)
 	_readout.aim(anchor, angle, _hand_pos, _lead_geo(angle, NAN))
 
