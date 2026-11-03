@@ -138,6 +138,7 @@ func _ready() -> void:
 	Net.score_accepted.connect(_on_score_accepted)
 	rebuild_chrome()
 	_ui.add_child(_cover)
+	App.net_hung.connect(_on_net_hung)
 	_build_court(_index)
 	if deep != "" and App.enter_league(deep):
 		_open_league(true)
@@ -416,6 +417,13 @@ func _process(dt: float) -> void:
 
 
 # ---- the live court (the page background) ----------------------------------------
+
+
+## A net went up on the area on show (the locker, behind which this court sits).
+func _on_net_hung(area: String) -> void:
+	var card: Dictionary = CARDS[_index]
+	if _court != null and str(card["area"]) == area:
+		_court.set_net(App.net_for_mode(card["mode"]))
 
 
 func _build_court(i: int) -> void:

@@ -7,6 +7,8 @@ class StubScreen extends RefCounted:
 	var calls: Array = []
 	func ball_rest_point() -> Vector2:
 		return Vector2(360, 1050)
+	func tutorial_arc() -> Dictionary:
+		return {}
 	func demo_press() -> bool:
 		calls.push_back("press")
 		return true
@@ -64,6 +66,22 @@ func run(t) -> void:
 	t.ok(absf(float(ShotTutorialCopy.demo(1, 2.0)["pull"]) - ShotTutorialCopy.PULL_AIM) < 0.5, "…fully pulled by 2.0 s")
 	t.ok(not bool(ShotTutorialCopy.demo(1, 2.5)["holding"]), "…let go after 2.3 s")
 	t.ok(absf(float(ShotTutorialCopy.demo(4, 1.0)["alpha"]) - 0.6) < 0.01, "step 5's ghost is the aim demo at 60 %")
+	# The lesson's aim line (design dotsFrom): it arcs on screen, over the rim and onto it.
+	var ball := Vector2(360.0, 1020.0)
+	var rim := Vector2(360.0, 725.0)
+	var dots: Array = ShotTutorialCopy.arc_dots(ball, rim, 52.0)
+	t.eq(dots.size(), ShotTutorialCopy.ARC_DOTS, "twelve dots")
+	var top := 1e9
+	var widest := 0.0
+	for d in dots:
+		top = minf(top, (d["p"] as Vector2).y)
+		widest = maxf(widest, (d["p"] as Vector2).x - rim.x)
+	t.ok(top < rim.y - 50.0, "the line climbs over the rim (top %.0f)" % top)
+	t.ok(widest > 30.0, "…and bows to the side, so a head-on view still reads as an arc (%.0f px)" % widest)
+	t.ok((dots[-1]["p"] as Vector2).distance_to(rim) < 5.0, "…and ends on the rim")
+	t.ok(float(dots[0]["d"]) > float(dots[-1]["d"]), "…its dots shrinking with distance")
+	t.ok(ShotTutorialCopy.arc_dots(ball, rim, 60.0)[6]["p"].y < ShotTutorialCopy.arc_dots(ball, rim, 35.0)[6]["p"].y, "a higher arc draws a higher line")
+	t.eq(ShotTutorial.FINGER_TEX.get_size(), Vector2(13, 18), "the finger is the design's 13 x 18 sprite")
 	var f2 := ShotTutorialCopy.demo(2, 1.58)
 	t.ok(bool(f2["flick"]) and bool(f2["holding"]) and float((f2["finger"] as Vector2).y) < ShotTutorialCopy.PULL_FLICK, "step 3: the flick at 1.58 s, the finger on its way up")
 	var r2 := ShotTutorialCopy.demo(2, 1.7)

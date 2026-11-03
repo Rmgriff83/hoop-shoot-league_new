@@ -199,6 +199,7 @@ var _tutorial: ShotTutorial
 var _match_rules: TimeTrial
 var _tutorial_help := false
 var _tutorial_grabs := 0
+var _demo_read_arc := NAN   # step 4's arc while its readout shows
 var _hidden_layers := {}
 var _pool_rest_was := Vector3.ZERO
 ## Where the lesson's ball rests on screen (design px): high enough in the grab
@@ -296,6 +297,22 @@ func ball_rest_point() -> Vector2:
 	return UiLayout.from_screen(_cam.unproject_position(p))
 
 
+## The tutorial's aim line: where the ball is drawn, the rim and the arc, all on
+## screen; {} when there is no line to show. It replaces the 3D dots for the lesson
+## (ShotTutorialCopy.arc_dots says why).
+func tutorial_arc() -> Dictionary:
+	var angle := _demo_read_arc
+	var ball: Vector3 = _pool.to_global(_pool.rest_pos)
+	if trial.holding:
+		angle = FlickMap.windup_angle(_pull_px, UiLayout.DESIGN.y, tuning)
+		ball = _pool.to_global(ShotFeel.held_pos(_pool.to_local(_cam.global_position), _hand_pos, _feel_depth))
+	if is_nan(angle) or _cam.is_position_behind(ball):
+		return {}
+	var rim := Vector3(trial.geo.hoop_x, trial.geo.hoop_y, trial.geo.hoop_z)
+	return {"ball": UiLayout.from_screen(_cam.unproject_position(ball)),
+		"rim": UiLayout.from_screen(_cam.unproject_position(rim)), "angle": angle}
+
+
 func demo_press() -> bool:
 	if not trial.pickup():
 		return false
@@ -375,10 +392,11 @@ func demo_readout(arc_deg: float, pct: float) -> void:
 	var anchor := _spot + _right * lat + Vector3(0.0, origin.y, 0.0)
 	if _readout != null:
 		_readout.demo(anchor, arc_deg, pct, origin, trial.geo)
-	_preview.show_preview(origin, arc_deg, trial.geo, HELP_ARC_FRAC)
+	_demo_read_arc = arc_deg
 
 
 func demo_readout_clear() -> void:
+	_demo_read_arc = NAN
 	if _readout != null:
 		_readout.clear()
 	if not trial.holding:
@@ -1246,7 +1264,7 @@ const HELP_SIDE := 0.18
 
 
 func _refresh_preview() -> void:
-	if not trial.holding or not _help_full():
+	if not trial.holding or not _help_full() or _tutorial_help:
 		_preview.hide_preview()
 		return
 	var viewport_h := UiLayout.DESIGN.y

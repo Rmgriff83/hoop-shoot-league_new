@@ -620,6 +620,10 @@ func net_for_mode(id: String) -> NetSet:
 	return net_set_for(str(mode_config(id).get("location", "cage")))
 
 
+## A net went up on an area, from anywhere: the court on show re-hangs it.
+signal net_hung(area: String)
+
+
 ## Hang an owned net on one area (the locker's sheet, the pause menu's NET
 ## row). False for an unknown or unowned net or an unknown area.
 func select_net(area: String, id: String) -> bool:
@@ -632,6 +636,7 @@ func select_net(area: String, id: String) -> bool:
 		c["net"]["selected"] = {}
 	c["net"]["selected"][area] = id
 	SaveService.put_cosmetics(c)
+	net_hung.emit(area)
 	return true
 
 
@@ -647,6 +652,8 @@ func select_net_everywhere(id: String) -> bool:
 	for area in AREA_MODES["practice"]:
 		c["net"]["selected"][area] = id
 	SaveService.put_cosmetics(c)
+	for area: String in AREA_MODES["practice"]:
+		net_hung.emit(area)
 	return true
 
 

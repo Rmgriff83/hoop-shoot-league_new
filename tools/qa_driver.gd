@@ -60,7 +60,7 @@ func _ready() -> void:
 		App.loader.instant = _has_prefixed(args, "--qa") and not args.has("--qa-loading")
 		App.loader.force_show = args.has("--qa-loading")
 		PeggyMachine.threaded = not App.loader.instant
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-pause-practice") or args.has("--qa-prematch-series") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live") or args.has("--qa-ads") or args.has("--qa-platform") or args.has("--qa-machines") or args.has("--qa-park-snow")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-pause-practice") or args.has("--qa-prematch-series") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live") or args.has("--qa-ads") or args.has("--qa-platform") or args.has("--qa-machines") or args.has("--qa-park-snow") or args.has("--qa-net-hang")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# Achievements earned during a pass, in the log (docs/ACHIEVEMENTS.md).
@@ -83,6 +83,8 @@ func _ready() -> void:
 		_run_machines.call_deferred()
 	elif args.has("--qa-park-snow"):
 		_run_park_snow.call_deferred()
+	elif args.has("--qa-net-hang"):
+		_run_net_hang.call_deferred()
 	elif args.has("--qa-results"):
 		_run_results.call_deferred()
 	elif args.has("--qa-heat-result"):
@@ -2426,6 +2428,30 @@ func _run_splash() -> void:
 	await _sleep(1.0)
 	await _snap("new_player_home")
 	print("QA splash: done (player %s, town %s)" % [Net.handle(), App.hometown()])
+	get_tree().quit(0)
+
+
+## A net hung from the locker reaches the home court at once: prints the net on
+## the court before and after, then restores the save.
+func _run_net_hang() -> void:
+	await _sleep(1.2)
+	await _close_archive()
+	var court: CourtGeometry = get_tree().current_scene.find_child("Court", true, false)
+	var was := App.net_set_for("cage")
+	var owned: Array = []
+	for n in CosmeticLibrary.nets():
+		if App.owns("net", n.id) and n.id != was.id:
+			owned.push_back(n.id)
+	var cosmetics := SaveService.get_cosmetics().duplicate(true)
+	if owned.is_empty():
+		print("QA net hang: no second net owned")
+		owned = [was.id]
+	print("QA net hang: court %s, hanging %s" % [court.net_set.id, owned[0]])
+	print("QA net hang: select_net %s" % str(App.select_net("cage", owned[0])))
+	await _sleep(0.3)
+	print("QA net hang: court now %s, body %s" % [court.net_set.id, str(court.net_body() != null)])
+	await _snap("net_hang")
+	SaveService.put_cosmetics(cosmetics)
 	get_tree().quit(0)
 
 

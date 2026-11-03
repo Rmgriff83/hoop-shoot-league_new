@@ -17,60 +17,36 @@ signal closed(completed: bool)
 
 const CREAM := RetroTheme.SCENE_TEXT
 const CARD_X := 36.0
-const CARD_Y := 24.0
+const CARD_TOP := 104.0    # from the screen's top edge, under any notch
 const CARD_W := 720.0 - 36.0 - 42.0
-const CARD_PAD := Vector2(24.0, 22.0)   # x, y
-const CARD_GAP := 16.0
+const CARD_PAD := Vector2(20.0, 19.0)   # x, y (the design's 18 over, 20 under)
+const CARD_GAP := 12.0
 const CARD_IN_S := 0.3
 const CARD_IN_PX := 16.0
-const BUTTON_H := 60.0
-const BACK_W := 60.0
-const SKIP_W := 130.0
-const LEGEND_H := 40.0
-## The pixel hand: FINGER_PX cells, each FINGER_SCALE design px; the tip at TIP.
-const FINGER_SCALE := 3.0
+const BUTTON_H := 68.0
+const BACK_W := 68.0
+const SKIP_W := 150.0
+const LEGEND_H := 48.0
+## Type sizes, the design's. Body leading: its 1.45 over 24 px.
+const TITLE_SIZE := 26
+const COUNT_SIZE := 18
+const BODY_SIZE := 24
+const BODY_LEADING := 4
+const BACK_SIZE := 24
+const SKIP_SIZE := 18
+const CTA_SIZE := 23
+const ARROW_SIZE := 22
+const HINT_SIZE := 20
+const LEGEND_SIZE := 18
+## The pointing hand (design 38b): a 13 × 18 sprite at × FINGER_SCALE, the fingertip
+## at FINGER_TIP, the image's hard shadow at FINGER_SHADOW.
+const FINGER_TEX := preload("res://assets/ui/icon_finger.png")
+const FINGER_SCALE := 6.0
 const FINGER_TIP := Vector2(27.0, 3.0)
 const FINGER_SHADOW := Vector2(5.0, 6.0)
+const FINGER_SHADOW_COLOR := Color(0.0, 0.0, 0.0, 0.45)
 const FINGER_PRESS_SCALE := 0.9
-## The pointing hand, 26 × 36 cells: `c` cream, `o` ink outline, `.` clear.
-const FINGER_PX := [
-	".........ooo..............",
-	"........occco.............",
-	"........occco.............",
-	"........occco.............",
-	"........occco.............",
-	"........occco.............",
-	"........occco.............",
-	"........occco.............",
-	"........occcoooo..........",
-	"........occccccoooo.......",
-	"........occccccccccoooo...",
-	"....oooooccccccccccccccoo.",
-	"...occcccccccccccccccccco.",
-	"..occcccccccccccccccccccco",
-	"..occcccccccccccccccccccco",
-	"..occcccccccccccccccccccco",
-	"..occcccccccccccccccccccco",
-	"..occcccccccccccccccccccco",
-	"..occcccccccccccccccccccco",
-	"..occcccccccccccccccccccco",
-	"...occccccccccccccccccccco",
-	"...occcccccccccccccccccco.",
-	"....occccccccccccccccccco.",
-	"....occccccccccccccccccco.",
-	".....occccccccccccccccco..",
-	".....occccccccccccccccco..",
-	"......occccccccccccccco...",
-	"......occccccccccccccco...",
-	".......occccccccccccco....",
-	".......occccccccccccco....",
-	"........occccccccccco.....",
-	"........occccccccccco.....",
-	".........occccccccco......",
-	".........occccccccco......",
-	"..........ooooooooo.......",
-	"..........................",
-]
+const ARC_DOT_COLOR := Color8(255, 237, 158, 189)   # the design's rgba(255,237,158,.74)
 
 var steps: Array = ShotTutorialCopy.STEPS
 var _screen: Object
@@ -80,6 +56,7 @@ var _root: Control
 var _card: ShadowPanel
 var _card_tween: Tween
 var _finger: Finger
+var _arc: ArcDots
 var _hint: Label
 ## The demo's state on the real ball: pressed, and whether this loop's shot went.
 var _demo_holding := false
@@ -113,6 +90,9 @@ func start(screen: Object) -> void:
 	_root.name = "Root"
 	UiLayout.full_rect(_root)
 	add_child(_root)
+	_arc = ArcDots.new()
+	_arc.name = "ArcDots"
+	_root.add_child(_arc)
 	_finger = Finger.new()
 	_finger.name = "Finger"
 	_finger.visible = false
@@ -197,6 +177,7 @@ func _process(dt: float) -> void:
 	if _screen == null:
 		return
 	_t += dt
+	_arc.show_arc(_screen.call("tutorial_arc"))
 	if live():
 		_process_live()
 		return
@@ -283,7 +264,8 @@ func _build_card() -> void:
 	_card = ShadowPanel.new(CREAM, CARD_PAD.y, ShadowStyle.TINT, CARD_PAD.x)
 	_card.name = "Card"
 	_card.mouse_filter = Control.MOUSE_FILTER_STOP
-	_card.position = Vector2(CARD_X, CARD_Y)
+	var card_y := card_top()
+	_card.position = Vector2(CARD_X, card_y)
 	_card.size = Vector2(CARD_W + ShadowStyle.OFFSET, 0)
 	_root.add_child(_card)
 	var col := VBoxContainer.new()
@@ -296,18 +278,19 @@ func _build_card() -> void:
 	row.add_theme_constant_override("separation", 16)
 	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(row)
-	var tl := _words(title, 22, true)
+	var tl := _words(title, TITLE_SIZE, true)
 	tl.name = "Title"
 	tl.add_theme_color_override("font_color", title_color)
 	tl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	tl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.add_child(tl)
-	var count := _words("%d / %d" % [_index + 1, steps.size()], 16)
+	var count := _words("%d / %d" % [_index + 1, steps.size()], COUNT_SIZE)
 	count.name = "Count"
 	count.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	row.add_child(count)
-	var bl := _words(body, 19)
+	var bl := _words(body, BODY_SIZE)
 	bl.name = "Body"
+	bl.add_theme_constant_override("line_spacing", BODY_LEADING)
 	bl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	bl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	bl.custom_minimum_size = Vector2(CARD_W - 2.0 * CARD_PAD.x - ShadowStyle.OFFSET, 0)
@@ -321,19 +304,19 @@ func _build_card() -> void:
 	col.add_child(buttons)
 	var last := live()
 	if _index > 0:
-		var back_b := HomePage.button("<", CREAM, 22, BUTTON_H - ShadowStyle.OFFSET)
+		var back_b := HomePage.button("<", CREAM, BACK_SIZE, BUTTON_H - ShadowStyle.OFFSET)
 		back_b.name = "TourBack"
 		back_b.custom_minimum_size = Vector2(BACK_W + ShadowStyle.OFFSET, BUTTON_H + ShadowStyle.OFFSET)
 		back_b.pressed.connect(back)
 		buttons.add_child(back_b)
 	if not (last and _made):
-		var skip_b := HomePage.button("SKIP", CREAM, 16, BUTTON_H - ShadowStyle.OFFSET)
+		var skip_b := HomePage.button("SKIP", CREAM, SKIP_SIZE, BUTTON_H - ShadowStyle.OFFSET)
 		skip_b.name = "TourSkip"
 		skip_b.custom_minimum_size = Vector2(SKIP_W + ShadowStyle.OFFSET, BUTTON_H + ShadowStyle.OFFSET)
 		skip_b.pressed.connect(skip)
 		buttons.add_child(skip_b)
 	if not last or _made:
-		var next_b := HomePage.button("", RetroTheme.c("orange"), 18, BUTTON_H - ShadowStyle.OFFSET)
+		var next_b := HomePage.button("", RetroTheme.c("orange"), CTA_SIZE, BUTTON_H - ShadowStyle.OFFSET)
 		next_b.name = "TourNext"
 		next_b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		next_b.pressed.connect(next)
@@ -345,13 +328,13 @@ func _build_card() -> void:
 		nrow.offset_right = -(22.0 + ShadowStyle.OFFSET)
 		nrow.offset_bottom = -ShadowStyle.OFFSET
 		next_b.add_child(nrow)
-		var nl := _words(ShotTutorialCopy.CTA_PLAY if last else ShotTutorialCopy.CTA_NEXT, 18, true)
+		var nl := _words(ShotTutorialCopy.CTA_PLAY if last else ShotTutorialCopy.CTA_NEXT, CTA_SIZE, true)
 		nl.name = "Cta"
 		nl.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 		nl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		nl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		nrow.add_child(nl)
-		var arrow := _words(">", 22, true)
+		var arrow := _words(">", ARROW_SIZE, true)
 		arrow.name = "Arrow"
 		arrow.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		nrow.add_child(arrow)
@@ -361,7 +344,7 @@ func _build_card() -> void:
 		var wait := ModeCards.Dashed.new(Vector2(0, BUTTON_H), 2.0, 0.0)
 		wait.name = "Waiting"
 		wait.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		_hint = _words(ShotTutorialCopy.HINT_WAITING, 16)
+		_hint = _words(ShotTutorialCopy.HINT_WAITING, HINT_SIZE)
 		_hint.name = "Hint"
 		UiLayout.full_rect(_hint)
 		_hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -370,16 +353,25 @@ func _build_card() -> void:
 		buttons.add_child(wait)
 	# Slide in from 16 px above with a fade (design cardIn).
 	_card.modulate.a = 0.0
-	_card.position.y = CARD_Y - CARD_IN_PX
+	_card.position.y = card_y - CARD_IN_PX
 	if _card_tween != null and _card_tween.is_valid():
 		_card_tween.kill()
 	if is_inside_tree():
 		_card_tween = create_tween().set_parallel(true).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
-		_card_tween.tween_property(_card, "position:y", CARD_Y, CARD_IN_S)
+		_card_tween.tween_property(_card, "position:y", card_y, CARD_IN_S)
 		_card_tween.tween_property(_card, "modulate:a", 1.0, CARD_IN_S)
 	else:
-		_card.position.y = CARD_Y
+		_card.position.y = card_y
 		_card.modulate.a = 1.0
+	# The aim line and the hand stay over the card (design 38b).
+	_arc.move_to_front()
+	_finger.move_to_front()
+
+
+## The card's top in this layer's coordinates (a centred layer, so less its
+## offset): the design's y from the screen's top edge, pushed under a deeper notch.
+static func card_top() -> float:
+	return maxf(CARD_TOP, UiLayout.safe_top() + UiLayout.HUD_GAP) - UiLayout.offset().y
 
 
 ## IN / CLOSE / MISS: three boxes in the readout's verdict colours.
@@ -408,7 +400,7 @@ func _legend() -> HBoxContainer:
 		var sw := Swatch.new(item[1])
 		sw.size_flags_vertical = Control.SIZE_SHRINK_CENTER
 		inner.add_child(sw)
-		var l := _words(str(item[0]), 15)
+		var l := _words(str(item[0]), LEGEND_SIZE)
 		l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		inner.add_child(l)
 		row.add_child(box)
@@ -433,8 +425,31 @@ static func _words(text: String, size_: int, display := false) -> Label:
 	return l
 
 
-## The drawn pixel finger (design icon_finger at 78 × 108, the tip at (27, 3))
-## and, on the first step, the fading ripple ring around the ball.
+## The aim line: the design's dots, on screen over the court.
+class ArcDots extends Control:
+	var dots: Array = []
+
+	func _init() -> void:
+		UiLayout.full_rect(self)
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+	## {ball, rim, angle} or {} for no line.
+	func show_arc(arc: Dictionary) -> void:
+		if arc.is_empty():
+			if not dots.is_empty():
+				dots = []
+				queue_redraw()
+			return
+		dots = ShotTutorialCopy.arc_dots(arc["ball"], arc["rim"], float(arc["angle"]))
+		queue_redraw()
+
+	func _draw() -> void:
+		for d in dots:
+			draw_circle(d["p"], float(d["d"]) / 2.0, ARC_DOT_COLOR)
+
+
+## The pixel hand (design 38b: icon_finger at 78 × 108, the tip at (27, 3), shrinking
+## about the tip when pressed) and, on the first step, the ripple ring round the ball.
 class Finger extends Control:
 	var tip := Vector2.ZERO
 	var rest := Vector2.ZERO
@@ -444,26 +459,13 @@ class Finger extends Control:
 	func _init() -> void:
 		UiLayout.full_rect(self)
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 
 	func _draw() -> void:
 		if not ripple.is_empty():
 			var s := float(ripple.get("s", 60.0))
 			draw_arc(rest, s / 2.0, 0.0, TAU, 48, Color(ShotTutorialCopy.GOLD, float(ripple.get("op", 1.0))), 3.0)
-		var k := FINGER_SCALE * (FINGER_PRESS_SCALE if pressed else 1.0)
-		var origin := tip - FINGER_TIP * (k / FINGER_SCALE)
-		for y in FINGER_PX.size():
-			var row: String = FINGER_PX[y]
-			for x in row.length():
-				var ch := row[x]
-				if ch == ".":
-					continue
-				var r := Rect2(origin + Vector2(x, y) * k, Vector2.ONE * k)
-				draw_rect(Rect2(r.position + FINGER_SHADOW, r.size), Color(0, 0, 0, 0.45))
-		for y in FINGER_PX.size():
-			var row: String = FINGER_PX[y]
-			for x in row.length():
-				var ch := row[x]
-				if ch == ".":
-					continue
-				var r := Rect2(origin + Vector2(x, y) * k, Vector2.ONE * k)
-				draw_rect(r, RetroTheme.SCENE_OUTLINE if ch == "o" else CREAM)
+		var k := FINGER_PRESS_SCALE if pressed else 1.0
+		var r := Rect2(tip - FINGER_TIP * k, Vector2(FINGER_TEX.get_size()) * FINGER_SCALE * k)
+		draw_texture_rect(FINGER_TEX, Rect2(r.position + FINGER_SHADOW, r.size), false, FINGER_SHADOW_COLOR)
+		draw_texture_rect(FINGER_TEX, r, false)

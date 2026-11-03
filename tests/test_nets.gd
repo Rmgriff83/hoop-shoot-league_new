@@ -32,6 +32,13 @@ func run(t) -> void:
 	t.ok(app.select_net("city", "cotton"), "a cotton net hangs on the chain rim too (any net, any hoop)")
 	t.eq(app.net_set_for("city").id, "cotton", "…and the city shows it")
 	t.ok(app.select_net("city", "chain"), "…and the stock chain goes back up")
+	# The home court re-hangs on this, or the locker's pick waits for a trip to a match.
+	var hung: Array[String] = []
+	app.net_hung.connect(func(area: String) -> void: hung.push_back(area))
+	t.ok(app.select_net("city", "cotton") and hung == ["city"], "hanging a net tells whoever shows that court")
+	app.select_net("city", "chain")
+	hung.clear()
+	t.ok(not app.select_net("nowhere", "cotton") and hung.is_empty(), "a refused net says nothing")
 	t.ok(not app.select_net("nowhere", "cotton"), "an unknown area takes nothing")
 	t.ok(not app.select_net("city", "jack"), "an unowned net cannot be hung")
 	t.ok(not app.try_buy("net", "jack"), "nets are never bought (PEGGY prizes)")

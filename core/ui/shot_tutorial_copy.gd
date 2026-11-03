@@ -23,12 +23,28 @@ const PULL_FLICK := 340.0
 const FLICK_ARC := 45.0
 
 const STEPS := [
-	{"id": "how", "title": "HOW TO SHOOT", "body": "Every shot starts from the ball at the bottom of the screen. Here's how to take one."},
-	{"id": "pull", "title": "PULL DOWN TO AIM", "body": "Press the ball and drag down. Pull further for a higher arc. The dots show the path; the number is your arc."},
+	{"id": "how", "title": "HOW TO SHOOT", "body": "Every shot starts from the ball at the bottom. Here's how."},
+	{"id": "pull", "title": "PULL DOWN TO AIM", "body": "Press the ball and drag down. Pull further for more arc."},
 	{"id": "flick", "title": "FLICK UP TO SHOOT", "body": "Then flick up and let go. A faster flick means more power."},
 	{"id": "read", "title": "READ YOUR SHOT", "body": "Over 100% is long, under is short.", "legend": true},
 	{"id": "turn", "title": "YOUR TURN", "body": "Pull down on the ball, then flick up.", "live": true},
 ]
+
+## The aim line the lesson draws on screen (the design's dotsFrom): a curve from
+## the ball up over the rim and down onto it. The real dots are 3D and seen from
+## straight behind, so they stack into a short column by the rim and teach nothing
+## about arc. The design's ball sits 54 px right of its rim, which gives its curve
+## a lean; ours are in line, so ARC_BOW swings the middle to one side for the same
+## read (the numbers sit left of the ball, so right).
+const ARC_DOTS := 12
+const ARC_SPACING_POW := 0.6
+const ARC_DOT_D := 16.0
+const ARC_DOT_SHRINK := 0.55
+const ARC_RISE := 120.0        # how far the curve's control sits over the rim at the lowest arc
+const ARC_RISE_SPAN := 340.0   # …and how much more at the highest
+const ARC_LOW := 35.0
+const ARC_SPAN := 25.0
+const ARC_BOW := 150.0
 
 ## The live step's result lines: verdict → [title, body].
 const RESULT := {
@@ -158,6 +174,18 @@ static func demo(step_i: int, t: float) -> Dictionary:
 ## Step 4's readout at second `t`: [arc, pct].
 static func read_sample(t: float) -> Array:
 	return READ_CYCLE[int(floor(t / READ_CYCLE_S)) % READ_CYCLE.size()]
+
+
+## The aim line's dots, design px, for a ball, a rim and an arc: [{p, d}, ...].
+static func arc_dots(ball: Vector2, rim: Vector2, angle_deg: float) -> Array:
+	var rise := ARC_RISE + clampf((angle_deg - ARC_LOW) / ARC_SPAN, 0.0, 1.0) * ARC_RISE_SPAN
+	var ctrl := Vector2((ball.x + rim.x) / 2.0 + ARC_BOW, minf(ball.y, rim.y) - rise)
+	var out := []
+	for i in ARC_DOTS:
+		var f := pow(float(i + 1) / float(ARC_DOTS), ARC_SPACING_POW)
+		var u := 1.0 - f
+		out.push_back({"p": ball * (u * u) + ctrl * (2.0 * u * f) + rim * (f * f), "d": ARC_DOT_D * (1.0 - ARC_DOT_SHRINK * f)})
+	return out
 
 
 ## Every word the overlay can show, for the glyph check.
