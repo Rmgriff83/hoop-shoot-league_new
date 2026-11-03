@@ -264,7 +264,12 @@ func _city(t) -> void:
 	t.eq(_count(city, "ParkHead"), 1, "the three park lamps behind the player, one merged mesh")
 	t.eq(_count(city, "Wall"), 0, "no knee wall: the fence runs to the ground")
 	t.ok(_count(city, "FenceFoot") == 0 and city.find_child("FenceWork", true, false) != null, "the fence's posts, corners, feet and rails are one FenceWork mesh")
-	t.ok(city.find_child("Fence", true, false) is MeshInstance3D and city.find_child("FenceBack", true, false) == null, "one chain-link loop (black, all four sides)")
+	t.ok(city.find_child("Fence", true, false) is MeshInstance3D and city.find_child("FenceBack", true, false) == null, "one chain-link loop (all four sides)")
+	for n in ["Court", "CourtApron", "Ground", "Fence"]:
+		var ground_mat := (city.find_child(n, true, false) as MeshInstance3D).get_active_material(0) as BaseMaterial3D
+		t.ok(ground_mat.albedo_texture != null and ground_mat.albedo_texture.get_width() == 512, "the city's %s wears the 512 px asphalt" % n)
+	var paint_mat := (city.find_child("CourtPaint", true, false) as MeshInstance3D).get_active_material(0) as BaseMaterial3D
+	t.ok(paint_mat.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA_SCISSOR, "the court's lines and leaves are cut out over it")
 	# Pigeons: a loose bunch crosses over the street now and then (a
 	# different bird from the beach's gulls), glides included, freed past the edge.
 	t.ok(FileAccess.file_exists("res://assets/textures/city_pigeon.png"), "pigeon sheet generated")

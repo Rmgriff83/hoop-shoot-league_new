@@ -53,26 +53,6 @@ do
   save(spr, "park_asphalt.png")
 end
 
--- park_grass.png 64x64 — winter lawn: dull greens with pale frost flecks.
-do
-  local W, H = 64, 64
-  local spr, img = newImage(W, H)
-  for y = 0, H - 1 do
-    for x = 0, W - 1 do
-      local n = math.sin(x * 0.31 + math.sin(y * 0.17) * 2) + math.sin(y * 0.27 + x * 0.07) + (noise(x, y, 21) - 0.5) * 0.9
-      local c
-      if n > 1.55 then c = "#E6ECEF"
-      elseif n > 1.4 then c = ((x + y) % 2 == 1) and "#C9CFC8" or "#9A9A6A"
-      else
-        local m = noise(x, y, 22)
-        c = m < 0.5 and "#7E8452" or (m < 0.75 and "#8F8A5C" or "#6C7646")
-      end
-      img:drawPixel(x, y, hex(c))
-    end
-  end
-  save(spr, "park_grass.png")
-end
-
 -- park_snow.png 32x32 — lying snow, a faint speckle.
 do
   local W, H = 32, 32

@@ -67,6 +67,8 @@ func run(t) -> void:
 	t.ok(inst.find_child("Pole", true, false) == null, "no arena pole: the park hoop brings its own")
 	var court_mat := (inst.find_child("Court", true, false) as MeshInstance3D).get_active_material(0) as BaseMaterial3D
 	t.ok(court_mat.albedo_texture != null and court_mat.albedo_texture.get_width() == 512, "the court is Pizza Doggy's 512 px stones")
+	var lawn_mat := (inst.find_child("Lawn", true, false) as MeshInstance3D).get_active_material(0) as BaseMaterial3D
+	t.ok(lawn_mat.albedo_texture != null and lawn_mat.albedo_texture.get_width() == 512, "the lawn is Pizza Doggy's 512 px grass")
 	var fx := ParkFx.new()
 	t.ok(fx.setup(inst, arena), "ParkFx dresses the park")
 	t.eq(fx.instance_count(), rows.size(), "every layout row is instanced")

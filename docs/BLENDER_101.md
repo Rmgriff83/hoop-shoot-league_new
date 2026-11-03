@@ -811,7 +811,7 @@ picked at random per make, never the same twice running. The sim side is
 Ross's "Park Area Concept": a neighbourhood park court on a winter morning,
 laid out from the reference photo. Three scripts and a layout file:
 
-- `tools/aseprite/gen_park_textures.lua` — the asphalt, winter grass, snow,
+- `tools/aseprite/gen_park_textures.lua` — the asphalt, snow,
   the black pole, the white park board (edge band, shooting square, rust,
   the sticker), the sky's cloud mask and the treeline strip.
 - `tools/blender/build_park.py` (`-- --force`) → `assets/arena/park/park.glb`:
@@ -820,7 +820,8 @@ laid out from the reference photo. Three scripts and a layout file:
   snow-bank walls, the back is the **split-rail cedar fence** at x 6.20 —
   `SplitRailFence`, one merged mesh in `park_cedar.png`, posts at z −6…6 in
   2.4 m bays, three rails overlapping inside the posts, snow on the post
-  tops and the top rails, the slab running 0.6 m past it), the lawn, the lot
+  tops and the top rails, the slab running 0.6 m past it), the lawn (Pizza Doggy's
+  `grass_pt_3.png` since 2026-11-02, 4 m tiles), the lot
   with its three worn `BayStripes` (one car parked in the left bay), the
   road, the path, the pads, five horizon buildings with snow roofs, the
   ballfield fence, the light poles, the bollards and the notice board (the
@@ -1042,7 +1043,8 @@ The area archive's cards show the real courts: after rebuilding any area
 
 `beach_court.png` carries a few sand patches (blobs near the edges, corners
 and the baseline, the asphalt blended toward the sand with a lighter grain,
-sand re-covering the paint at a blob's heart); `city_court.png` scatters
+sand re-covering the paint at a blob's heart); `city_court_paint.png` (since 2026-11-02
+transparent over Pizza Doggy's asphalt, the `CourtPaint` quad, no teal or darker lane) scatters
 its leaves in five drifts (warm browns and oranges, a few green, densest at
 each heart, strays outside) instead of an even sprinkle. Both are
 `gen_*_textures.lua` passes; rebuild the area and re-run `--qa-area-snaps`

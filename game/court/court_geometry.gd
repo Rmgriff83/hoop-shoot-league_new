@@ -301,6 +301,7 @@ func _build_arena_model() -> bool:
 	_matte("BackPad")   # the cage's foam: no specular, whatever the importer kept
 	_matte("HallFloor")        # the cage's blacklight carpet: near-black needs no sheen over it…
 	_no_mipmaps("HallFloor")   # …and its neon stays sharp at any distance
+	_no_mipmaps("CourtPaint")  # the city's lines: mips would average them under the alpha cut
 	_build_interactables(arena_set)
 	if arena_set.ocean:
 		_beach_fx = BeachFx.new()

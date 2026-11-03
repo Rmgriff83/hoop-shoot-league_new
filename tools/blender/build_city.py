@@ -1,4 +1,4 @@
-"""Build the city arena: an inner-city cage court at dusk — a teal blacktop
+"""Build the city arena: an inner-city cage court at dusk — an asphalt
 slab inside a chain-link fence, a two-lane street behind the hoop's fence
 (cars drive it: game/view/city_fx.gd), real-scale city blocks beyond it from
 Sam Grady's Low Poly Buildings Pack (art/third_party/buildings, CC BY 4.0:
@@ -42,12 +42,16 @@ import build_cage as cage        # noqa: E402  (helpers: s2b, add_quad, add_box,
 ROOT = os.path.abspath(os.path.join(HERE, "..", ".."))
 BLEND_PATH = os.path.join(ROOT, "art", "blender", "city.blend")
 GLB_PATH = os.path.join(ROOT, "assets", "arena", "city", "city.glb")
+# Pizza Doggy's tile (Ross, 2026-11-02), embedded in the glb as supplied.
+GROUND_TEX = os.path.join(ROOT, "art", "third_party", "pizza_doggy", "asphalt_old_tr_1.png")
+GROUND_TILE_M = 1.0                       # its 512 px repeat this often on the court and apron
+FENCE_UV_PER_M = 80.0 / 512.0             # cage_fence_asphalt.png at the cage's 80 px/m: 20 cm cells
 TEX = lambda name: os.path.join(ROOT, "assets", "textures", name)
 
 CITY_DIST = 2.9 * 1.25                    # SimGeometry.CITY_DIST
 BOARD_X = CITY_DIST + 0.3796
 POLE_X = BOARD_X + 0.3                    # CourtGeometry.CROSSBAR_X_OFF
-# The lined slab: 14.6 x 15.2 m, authored in city_court.png with the rim at
+# The lined slab: 14.6 x 15.2 m, authored in city_court_paint.png with the rim at
 # x 3.625 and the baseline at 4.6 (so it stays behind the pole at 4.30).
 COURT_X0, COURT_X1, COURT_HALF_W = -9.9, 4.7, 7.6
 # Chain-link fence all the way to the ground (no knee wall: Ross, 2026-09-30),
@@ -164,8 +168,9 @@ def build():
     c_court, c_street, c_blocks = cage.sub(coll, "Court"), cage.sub(coll, "Street"), cage.sub(coll, "Blocks")
     c_sky, c_props = cage.sub(coll, "Sky"), cage.sub(coll, "Props")
 
-    court = cage.mat_tex("City_Court", TEX("city_court.png"))
-    asphalt = cage.mat_tex("City_Asphalt", TEX("city_asphalt.png"))
+    # The court's lines and leaves, over the ground's asphalt.
+    court_paint = cage.mat_tex("City_CourtPaint", TEX("city_court_paint.png"), alpha_clip=True)
+    asphalt = cage.mat_tex("City_Asphalt", GROUND_TEX)
     kerb = cage.mat_tex("City_Kerb", TEX("city_kerb.png"))
     walk = cage.mat_tex("City_Walk", TEX("beach_concrete.png"))
     brick = cage.mat_tex("City_Brick", TEX("city_brick.png"))
@@ -176,31 +181,32 @@ def build():
     flood = cage.mat_tex("City_Flood", TEX("city_flood.png"), alpha_clip=True, emissive=True)
     pole_tex = cage.mat_tex("City_Pole", TEX("beach_pole.png"))
     concrete = cage.mat_tex("City_Concrete", TEX("beach_concrete.png"))
-    # The whole enclosure fence is black (Ross, 2026-10-01): the lattice over
-    # city_fence_black.png, the rails and posts in near-black.
-    fence = cage.mat_tex("City_Fence", TEX("city_fence_black.png"), alpha_clip=True, double_sided=True)
+    # The cage's asphalt chain link all round (Ross, 2026-11-02), the rails and
+    # posts in near-black.
+    fence = cage.mat_tex("City_Fence", TEX("cage_fence_asphalt.png"), alpha_clip=True, double_sided=True)
     curb = cage.mat_flat("City_Curb", (150, 146, 140))
-    apron = cage.mat_flat("City_Apron", (40, 52, 52), roughness=1.0)
     dark = cage.mat_flat("City_Dark", (30, 30, 34))
     fence_dark = cage.mat_flat("City_FenceDark", (14, 14, 16))
     steel = cage.mat_flat("City_Steel", (70, 72, 78), roughness=0.6)
     yellow = cage.mat_flat("City_Yellow", (232, 196, 74), roughness=0.9)
     # Smooth look on the big surfaces (the pixel-crisp fence and windows stay nearest).
-    for m in (court, asphalt, sky, tree, mural, walk, concrete, facade):
+    for m in (asphalt, sky, tree, mural, walk, concrete, facade):
         for n in m.node_tree.nodes:
             if n.type == "TEX_IMAGE":
                 n.interpolation = "Linear"
 
     root = cage.add_empty("City", c_court, None, (0, 0, 0))
     w = COURT_HALF_W
-    # Plain blacktop out to the wall, under the lined slab.
+    # The same asphalt out to the wall, under the lined slab.
     ap_x0, ap_x1 = ENC_X0 + WALL_T, ENC_X1 - WALL_T
     ap_w = ENC_HALF_W - WALL_T
     cage.add_quad("CourtApron", [(ap_x0, -0.002, -ap_w), (ap_x1, -0.002, -ap_w),
                                  (ap_x1, -0.002, ap_w), (ap_x0, -0.002, ap_w)],
-                  (0, 1, 0), apron, c_court, root, ((ap_x1 - ap_x0) * 0.5, 2 * ap_w * 0.5))
+                  (0, 1, 0), asphalt, c_court, root, ((ap_x1 - ap_x0) / GROUND_TILE_M, 2 * ap_w / GROUND_TILE_M))
     cage.add_quad("Court", [(COURT_X0, 0, -w), (COURT_X1, 0, -w), (COURT_X1, 0, w), (COURT_X0, 0, w)],
-                  (0, 1, 0), court, c_court, root, (1.0, 1.0))
+                  (0, 1, 0), asphalt, c_court, root, ((COURT_X1 - COURT_X0) / GROUND_TILE_M, 2 * w / GROUND_TILE_M))
+    cage.add_quad("CourtPaint", [(COURT_X0, 0.004, -w), (COURT_X1, 0.004, -w), (COURT_X1, 0.004, w), (COURT_X0, 0.004, w)],
+                  (0, 1, 0), court_paint, c_court, root, (1.0, 1.0))
     # The ground everywhere else: dark wet asphalt out past the sky cylinder.
     cage.add_quad("Ground", [(-GROUND, -0.01, -GROUND), (GROUND, -0.01, -GROUND), (GROUND, -0.01, GROUND), (-GROUND, -0.01, GROUND)],
                   (0, 1, 0), asphalt, c_street, root, (GROUND, GROUND))
@@ -223,7 +229,7 @@ def build():
             cage.add_box("FencePost%d_%d" % (k, i), (0.08, FENCE_TOP - WALL_H + 0.1, 0.08), (px, (WALL_H + FENCE_TOP) / 2.0, pz), fence_dark, c_court, root)
     for k, (px, pz) in enumerate(corners):
         cage.add_box("FenceCorner%d" % k, (0.10, FENCE_TOP - WALL_H + 0.1, 0.10), (px, (WALL_H + FENCE_TOP) / 2.0, pz), fence_dark, c_court, root)
-    # The chain link: one loop, all four sides, black.
+    # The chain link: one loop, all four sides.
     meshes = {"Fence": (bmesh.new(), fence)}
     u = 0.0
     for k in range(4):
@@ -236,8 +242,8 @@ def build():
         v2 = bm.verts.new(cage.s2b((bx, FENCE_TOP, bz)))
         v3 = bm.verts.new(cage.s2b((ax, FENCE_TOP, az)))
         f = bm.faces.new((v0, v1, v2, v3))
-        u0, u1 = u * 1.25, (u + length) * 1.25
-        vv = (FENCE_TOP - WALL_H) * 1.25
+        u0, u1 = u * FENCE_UV_PER_M, (u + length) * FENCE_UV_PER_M
+        vv = (FENCE_TOP - WALL_H) * FENCE_UV_PER_M
         for loop, uvc in zip(f.loops, ((u0, 0.0), (u1, 0.0), (u1, vv), (u0, vv))):
             loop[uvl].uv = uvc
         u += length

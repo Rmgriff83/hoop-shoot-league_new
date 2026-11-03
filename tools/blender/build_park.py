@@ -518,7 +518,7 @@ def build():
     asphalt = cage.mat_tex("Park_Asphalt", TEX("park_asphalt.png"))
     # Pizza Doggy's tile (Ross, 2026-11-02), embedded in the glb as supplied.
     stones = cage.mat_tex("Park_Stones", os.path.join(ROOT, "art", "third_party", "pizza_doggy", "small_stones_tr_1.png"))
-    grass = cage.mat_tex("Park_Grass", TEX("park_grass.png"))
+    grass = cage.mat_tex("Park_Grass", os.path.join(ROOT, "art", "third_party", "pizza_doggy", "grass_pt_3.png"))
     snow = cage.mat_flat("Park_Snow", (238, 243, 246), roughness=0.9)
     far_snow = cage.mat_flat("Park_FarSnow", (228, 234, 238), roughness=1.0)
     concrete = cage.mat_flat("Park_Concrete", (185, 182, 174), roughness=0.95)

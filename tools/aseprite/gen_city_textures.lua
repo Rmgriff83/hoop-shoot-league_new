@@ -4,8 +4,8 @@
 -- towers, a dusk sky, billboard trees, a painted wall and the floodlight heads.
 -- Run: /Applications/Aseprite.app/Contents/MacOS/aseprite -b --script tools/aseprite/gen_city_textures.lua
 -- Deterministic hash noise (no math.random) so rebuilds are byte-identical.
--- The fence reuses cage_mesh.png, the sidewalk beach_concrete.png and the
--- hoop pole beach_pole.png.
+-- The fence is the cage's cage_fence_asphalt.png, the ground Pizza Doggy's
+-- asphalt tile, the sidewalk beach_concrete.png and the hoop pole beach_pole.png.
 
 local OUT = app.fs.joinPath(app.fs.filePath(app.fs.filePath(app.fs.filePath(debug.getinfo(1).source:sub(2)))), "assets/textures")
 local pc = app.pixelColor
@@ -57,11 +57,12 @@ local function arc(img, cx, cy, r, a0, a1, c, thick)
   end
 end
 
--- city_court.png 480x512 — a full half court, 14.6 x 15.2 m (32.9 px/m).
+-- city_court_paint.png 480x512 RGBA — a full half court's paint over the
+-- ground's asphalt (Ross, 2026-11-02), 14.6 x 15.2 m (32.9 px/m).
 -- u = 0 at sim x = -9.9, u = 1 at x = 4.7 (the baseline side); v runs across
 -- the court, z -7.6..7.6. Rim centre at x 3.625 (SimGeometry.CITY_DIST), z 0;
--- the baseline sits 1 m behind it at x 4.6. Teal blacktop, a darker lane,
--- yellow lines, rain streaks and a few leaves.
+-- the baseline sits 1 m behind it at x 4.6. Yellow lines and a few leaves,
+-- transparent everywhere else.
 do
   local W, H = 480, 512
   local spr, img = newImage(W, H)
@@ -69,24 +70,9 @@ do
   local function col(x) return math.floor((x + 9.9) * px + 0.5) end
   local function row(z) return math.floor((z + 7.6) * px + 0.5) end
   local line = rgb(232, 196, 74)
-  for y = 0, H - 1 do
-    for x = 0, W - 1 do
-      local n = vnoise(x, y, 28, 171) * 0.55 + noise(x, y, 172) * 0.25 + vnoise(x, y, 90, 173) * 0.2
-      -- wet sheen: long streaks along u
-      local wet = math.max(0, vnoise(x, y * 4, 40, 174) - 0.62) * 1.6
-      local v = 62 + n * 20 + wet * 30
-      img:drawPixel(x, y, rgb(v * 0.55, v * 1.05, v * 0.98))
-    end
-  end
   local hoop_c, base_c, ft_c, half_c = col(3.625), col(4.6), col(3.625 - 4.2), col(-9.75)
   local mid = row(0)
   local lane_half = math.floor(2.45 * px + 0.5)
-  for y = mid - lane_half, mid + lane_half do
-    for x = ft_c, base_c do
-      local c = img:getPixel(x, y)
-      img:drawPixel(x, y, rgb(pc.rgbaR(c) * 0.8, pc.rgbaG(c) * 0.86, pc.rgbaB(c) * 0.9))
-    end
-  end
   -- Leaves in a few DRIFTS (Ross, 2026-10-02), not an even sprinkle: each a
   -- blob in a corner or along the fence side, packed with small leaves
   -- (warm browns and oranges, a few still green) densest at its heart,
@@ -136,23 +122,7 @@ do
   fill(img, x_join, mid - math.floor(zc), base_c, mid - math.floor(zc) + 1, line)
   fill(img, x_join, mid + math.floor(zc) - 1, base_c, mid + math.floor(zc), line)
   arc(img, half_c, mid, 1.8 * px, -math.pi / 2, math.pi / 2, line, 2)
-  save(spr, "city_court.png")
-end
-
--- city_asphalt.png 128x128 — wet dark asphalt: fine speckle, a few patches.
-do
-  local W, H = 128, 128
-  local spr, img = newImage(W, H)
-  for y = 0, H - 1 do
-    do
-      for x = 0, W - 1 do
-        local n = noise(x, y, 181) * 0.35 + vnoise(x, y, 16, 182) * 0.4 + vnoise(x, y, 48, 183) * 0.25
-        local v = 34 + n * 22
-        img:drawPixel(x, y, rgb(v, v + 1, v + 5))
-      end
-    end
-  end
-  save(spr, "city_asphalt.png")
+  save(spr, "city_court_paint.png")
 end
 
 -- city_kerb.png 64x16 — concrete kerb: a pale top, a darker face.
@@ -421,32 +391,6 @@ do
   -- "BUS" as three bold blocks
   for i = 0, 2 do fill(img, 46 + i * 5, 10, 49 + i * 5, 21, rgb(236, 238, 242)) end
   save(spr, "city_sign.png")
-end
-
--- city_fence_black.png 64x64 RGBA — the back fence's chain link (Ross,
--- 2026-10-01: black): cage_mesh.png's lattice with every cord pixel
--- re-coloured near-black, a touch lighter on the cord's upper edge.
-do
-  local src = Sprite{ fromFile = app.fs.joinPath(OUT, "cage_mesh.png") }
-  local simg = Image(src.cels[1].image)
-  local W, H = simg.width, simg.height
-  local spr = Sprite(W, H, ColorMode.RGBA)
-  local img = spr.cels[1].image
-  for y = 0, H - 1 do
-    for x = 0, W - 1 do
-      local c = simg:getPixel(x, y)
-      local a = pc.rgbaA(c)
-      if a == 0 then
-        img:drawPixel(x, y, pc.rgba(0, 0, 0, 0))
-      else
-        local lum = 0.299 * pc.rgbaR(c) + 0.587 * pc.rgbaG(c) + 0.114 * pc.rgbaB(c)
-        local v = 14 + (lum / 255) * 30
-        img:drawPixel(x, y, pc.rgba(math.floor(v), math.floor(v), math.floor(v + 3), a))
-      end
-    end
-  end
-  src:close()
-  save(spr, "city_fence_black.png")
 end
 
 -- city_pigeon.png 96x16 — a 4-frame pigeon flap (24x16 each): a plump
