@@ -2,19 +2,19 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://dcbjn2q76wvyh"
-path="res://.godot/imported/beach_beach_concrete.png-fece78d2a5ba25ba46ba6cde58b3de13.ctex"
+uid="uid://qanm4xsgs38h"
+path="res://.godot/imported/beach_asphalt_old_tr_1.png-c2863620f5e7dd2714e443374ff63797.ctex"
 metadata={
 "vram_texture": false
 }
 generator_parameters={
-"md5": "cbe88a7280095e9e857c176ee7a764bb"
+"md5": "4ffd727c415ed7e6ce5c99e80e644411"
 }
 
 [deps]
 
-source_file="res://assets/arena/beach/beach_beach_concrete.png"
-dest_files=["res://.godot/imported/beach_beach_concrete.png-fece78d2a5ba25ba46ba6cde58b3de13.ctex"]
+source_file="res://assets/arena/beach/beach_asphalt_old_tr_1.png"
+dest_files=["res://.godot/imported/beach_asphalt_old_tr_1.png-c2863620f5e7dd2714e443374ff63797.ctex"]
 
 [params]
 

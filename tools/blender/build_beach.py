@@ -3,7 +3,7 @@ subdivided ocean plane (Godot's ocean.gdshader moves its vertices), a foam
 strip the tide slides, a sunset sky panel, ten `PalmRig` handles for the 3D
 coconut palms (the unit model exports to palm.glb; BeachFx instances it) and
 the hoop's in-ground pole. Production pass 2026-10-16 (design "Beach Concept"
-34a): board-formed concrete walls, pale concrete caps + apron, rippled sand,
+34a): concrete walls (Pizza Doggy's tile since 2026-11-02), pale concrete caps + apron, rippled sand,
 weathered asphalt, the 3D palms and one-mesh vertex-coloured umbrellas.
 
 Run headless:
@@ -41,6 +41,8 @@ BLEND_PATH = os.path.join(ROOT, "art", "blender", "beach.blend")
 GLB_PATH = os.path.join(ROOT, "assets", "arena", "beach", "beach.glb")
 PALM_GLB_PATH = os.path.join(ROOT, "assets", "arena", "beach", "palm.glb")
 TEX = lambda name: os.path.join(ROOT, "assets", "textures", name)
+# Pizza Doggy's tile (Ross, 2026-11-02), embedded in the glb as supplied.
+EMBANKMENT_TEX = os.path.join(ROOT, "art", "third_party", "pizza_doggy", "asphalt_old_tr_1.png")
 
 BEACH_DIST = 2.9 * 1.175                  # SimGeometry.BEACH_DIST
 BOARD_X = BEACH_DIST + 0.3796
@@ -53,6 +55,7 @@ SAND_X0, SAND_X1 = 4.5, 18.0
 # sim's walls (SimGeometry.beach) still stand there, unseen.
 WALL_T = 0.25
 WALL_H = 0.45
+WALL_TILE_M = 1.0                         # the embankment's 512 px tile repeats every metre
 FENCE_TOP = 3.6
 # Per side, in `corners` order: k=0 is the z=-8.6 run, k=1 the BACK (x=+5.7,
 # behind the hoop), k=2 the z=+8.6 run, k=3 behind the shooter. The back is
@@ -358,7 +361,7 @@ def build():
     foam = cage.mat_tex("Beach_Foam", TEX("beach_foam.png"), double_sided=True)
     sky = cage.mat_tex("Beach_Sky", TEX("beach_sky.png"), emissive=True)
     pole_tex = cage.mat_tex("Beach_Pole", TEX("beach_pole.png"))
-    concrete = cage.mat_tex("Beach_Concrete", TEX("beach_concrete.png"))
+    concrete = cage.mat_tex("Beach_Concrete", EMBANKMENT_TEX)
     # Pale cast concrete on the wall caps AND the apron between the lined slab
     # and the wall (design 34a; the apron was plain blacktop before).
     curb = cage.mat_tex("Beach_Curb", TEX("beach_curb.png"))
@@ -396,9 +399,8 @@ def build():
         cx, cz = (ax + bx) / 2.0, (az + bz) / 2.0
         along_x = abs(bx - ax) > abs(bz - az)
         size = (length + WALL_T, WALL_H, WALL_T) if along_x else (WALL_T, WALL_H, length + WALL_T)
-        # Board-formed concrete: one texture height = the wall's height, the
-        # courses running along it; the caps in 0.5 m tiles of pale concrete.
-        add_box_uv("Wall%d" % k, size, (cx, WALL_H / 2.0, cz), concrete, c_court, root, WALL_H)
+        # The embankment in WALL_TILE_M tiles; the caps in 0.5 m tiles of pale concrete.
+        add_box_uv("Wall%d" % k, size, (cx, WALL_H / 2.0, cz), concrete, c_court, root, WALL_TILE_M)
         add_box_uv("WallCap%d" % k, (size[0] + 0.06, 0.06, size[2] + 0.06), (cx, WALL_H + 0.03, cz), curb, c_court, root, 0.5)
     # No chain-link on the beach (Ross, 2026-10-02): just the concrete
     # embankment. The league chalkboard that stood on the wall cap came down

@@ -1456,11 +1456,11 @@ Ross's "Beach Concept" 34a loads the production beach.glb and layers four change
 hoop, the slab's painted lines, the LED reader (the boombox under it came off later that day), the ocean / tide / foam, the
 sky cylinder, the towels and cooler and the sky life stay as they were.
 
-- **Skins** (`gen_beach_textures.lua`): `beach_concrete.png` is board-formed — six ~21 px
-  courses with the boards' grain, a light and a dark seam row, tie holes, a darker speckled
-  damp base — and `build_beach.add_box_uv()` maps the `Wall%d` boxes from their SIM position
-  in 0.45 m tiles (one texture height = the wall's height, v = 0 at the ground; vertical faces
-  along × height, tops along × across). New `beach_curb.png` (pale speckled concrete, 64²)
+- **Skins** (`gen_beach_textures.lua`): the `Wall%d` boxes wear Pizza Doggy's
+  `asphalt_old_tr_1.png` since 2026-11-02 (from `art/third_party/pizza_doggy`, as supplied) and
+  `build_beach.add_box_uv()` maps them from their SIM position in 1 m tiles (`WALL_TILE_M`,
+  v = 0 at the ground; vertical faces along × height, tops along × across). `beach_concrete.png`,
+  the board-formed one that was there, now only skins the city. New `beach_curb.png` (pale speckled concrete, 64²)
   skins the `WallCap%d` boxes (0.5 m tiles) AND the `CourtApron` (0.5 m tiles; it was flat
   blacktop). `beach_sand.png` gets diagonal wind ripples, grain and shell bits;
   `beach_court.png` gets aggregate speckle, seven meandering cracks that keep out of the key,

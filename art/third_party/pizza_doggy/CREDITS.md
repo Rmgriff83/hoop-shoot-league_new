@@ -19,12 +19,16 @@
   boot splash from it). The same tool writes the tile on its own darkening
   (`CAGE_DARK` 0.6) to `assets/textures/cage_brick.png` for the back wall behind the
   arcade cage's cabinet row (`tools/blender/build_cage.py`, embedded in `cage.glb`).
+  `asphalt_old_tr_1.png` (Ross supplied it 2026-11-02 as Pizza Doggy's; the pack it came
+  from was not recorded) skins the beach's embankment walls as is, tiled every metre
+  (`tools/blender/build_beach.py`, embedded in `beach.glb`).
 
 ## What's here
 
 | File | Contents |
 |---|---|
 | `brick_wall_pt_2.png` | the 256×256 tile, RGBA, bricks about 24×10 px in a running bond |
+| `asphalt_old_tr_1.png` | the 512×512 tile, RGBA (opaque), dark grey pitted surface, seamless |
 | `LICENSE.pdf` | the agreement as downloaded |
 
 ## House rules

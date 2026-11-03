@@ -106,6 +106,10 @@ func run(t) -> void:
 	for f in ["beach_bark", "beach_frond", "beach_curb", "beach_dither", "beach_concrete"]:
 		t.ok(FileAccess.file_exists("res://assets/textures/%s.png" % f), "%s skin generated" % f)
 	t.ok(not FileAccess.file_exists("res://assets/textures/beach_palm.png"), "the palm billboard sheet is gone")
+	var wall := beach.find_child("Wall0", true, false) as MeshInstance3D
+	var wall_mat := wall.get_active_material(0) as BaseMaterial3D if wall != null else null
+	t.ok(wall_mat != null and wall_mat.albedo_texture != null and wall_mat.albedo_texture.get_width() == 512,
+		"the embankment wears Pizza Doggy's 512 px tile")
 	var palm: Node = load("res://assets/arena/beach/palm.glb").instantiate()
 	var fronds := palm.find_child("PalmFronds", true, false) as MeshInstance3D
 	t.ok(palm.find_child("PalmTrunk", true, false) is MeshInstance3D and fronds != null, "palm.glb: PalmTrunk + PalmFronds")
