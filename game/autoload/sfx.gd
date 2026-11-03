@@ -871,7 +871,8 @@ func countdown_go() -> void:
 
 
 ## The last ten seconds of a match or a time trial (Ross, 2026-10-30):
-## iainmccurdy's "Timer Ticking" (credited), 11 s sped up 10% to fill 10 s
+## iainmccurdy's "Timer Ticking" (credited; one semitone up in the wav itself
+## since 2026-11-03, so it still fills the window), 11 s sped up 10% to fill 10 s
 ## (Ross: a bit faster, 2026-10-30) and lifted 3 dB to
 ## sit with the other clips, played TICK_DB under that (Ross: quieter,
 ## 2026-10-30). One at a time; it pauses with the tree.

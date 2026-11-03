@@ -850,7 +850,8 @@ seconds ticking down in place; it lives 1.7 s and fades by itself, reading
 `Hud.set_ball_wait`, `HudCopy.WAIT_TOAST_S`). **Sounds** (2026-10-30, every
 timed mode): a beep on each countdown digit (`Sfx.countdown_beep`, Ross's
 own clip), stomachache's "Countdown Start" on GO (`Sfx.countdown_go`, CC0),
-and iainmccurdy's "Timer Ticking" (CC BY 4.0, cut to 10 s and raised 3 dB to
+and iainmccurdy's "Timer Ticking" (CC BY 4.0, a semitone up since 2026-11-03,
+cut to 10 s and raised 3 dB to
 sit with the other clips) under the last ten seconds of a match, a trial or
 an overtime period (`TimeTrialScreen.TICK_FROM_S`, its own player that
 pauses with the tree; stopped at the buzzer and on leaving). Time up is EagleStealthTeam's "Analog Timer" ring

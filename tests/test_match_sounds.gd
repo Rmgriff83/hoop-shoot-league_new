@@ -1,7 +1,8 @@
 extends RefCounted
 ## The match's countdown and clock sounds (Ross, 2026-10-30): a beep on each
 ## of 3, 2, 1, stomachache's "Countdown Start" on GO, and iainmccurdy's
-## "Timer Ticking" (11 s sped up 10% to 10 s, raised 3 dB) under the last ten seconds.
+## "Timer Ticking" (11 s sped up 10% to 10 s, raised 3 dB, a semitone up since
+## 2026-11-03, its length kept) under the last ten seconds.
 
 
 func run(t) -> void:
