@@ -42,6 +42,9 @@ import bmesh
 import bpy
 from mathutils import Vector
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import cage_machines
+
 ROOT = os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 BLEND_PATH = os.path.join(ROOT, "art", "blender", "cage.blend")
 GLB_PATH = os.path.join(ROOT, "assets", "arena", "cage", "cage.glb")
@@ -617,32 +620,15 @@ def build():
     add_quad("HallCeiling", [(HALL_X0, HALL_H, -hw), (HALL_X1, HALL_H, -hw), (HALL_X1, HALL_H, hw), (HALL_X0, HALL_H, hw)],
              (0, -1, 0), dark, c_hall, cage)
 
-    # ---- Arcade cabinets along the BACK wall, either side of the cage. From
-    # the shooter's spot the portrait view sees the far wall at z ≈ ±3.4–5.1
-    # past the cage's back panel (the side walls are outside the FOV), so the
-    # row sits there, fronts toward the cage. Bodies are plain boxes; the
-    # `CabScreen%d` / `CabMarquee%d` quads get live shaders in Godot
-    # (game/view/arcade_fx.gd): attract-mode screens and chasing bulbs.
-    c_cabs = sub(coll, "Cabinets")
-    cab_body = mat_flat("Hall_Cab", (30, 26, 32))
-    cab_panel = mat_flat("Hall_CabPanel", (70, 62, 72))
-    cab_trim = mat_flat("Hall_CabTrim", (160, 60, 40))
-    cab_screen = mat_flat("Hall_CabScreen", (200, 160, 60))
-    cab_marquee = mat_flat("Hall_CabMarquee", (240, 200, 90))
-    CAB_W, CAB_H, CAB_D = 0.7, 1.85, 0.75
-    xc = HALL_X1 - 0.05 - CAB_D / 2.0
-    xf = xc - CAB_D / 2.0                                # front face plane (toward the cage)
+    # ---- The machine row along the BACK wall, either side of the cage (design
+    # "Arcade Cage Concept", tools/blender/cage_machines.py): fronts toward the
+    # cage, six meshes in all, the same 14 slots the plain cabinets stood in.
+    # ArcadeFx gives the live ones their shaders (game/view/arcade_fx.gd).
+    c_cabs = sub(coll, "Machines")
     zs = [1.9 + 0.8 * k for k in range(7)]
-    for i, z in enumerate([-z for z in reversed(zs)] + zs):
-        add_box("Cabinet%d" % i, (CAB_D, CAB_H, CAB_W), (xc, CAB_H / 2.0, z), cab_body, c_cabs, cage)
-        add_box("CabPanel%d" % i, (0.28, 0.05, CAB_W), (xf - 0.12, 0.96, z), cab_panel, c_cabs, cage)
-        add_box("CabCoin%d" % i, (0.02, 0.14, 0.18), (xf - 0.01, 0.45, z), cab_panel, c_cabs, cage)
-        add_box("CabTrim%d" % i, (0.03, 0.03, CAB_W + 0.02), (xf - 0.015, 1.5, z), cab_trim, c_cabs, cage)
-        xq = xf - 0.006
-        add_quad("CabScreen%d" % i, [(xq, 1.05, z + 0.25), (xq, 1.05, z - 0.25), (xq, 1.45, z - 0.25), (xq, 1.45, z + 0.25)],
-                 (-1, 0, 0), cab_screen, c_cabs, cage)
-        add_quad("CabMarquee%d" % i, [(xq, 1.62, z + 0.33), (xq, 1.62, z - 0.33), (xq, 1.8, z - 0.33), (xq, 1.8, z + 0.33)],
-                 (-1, 0, 0), cab_marquee, c_cabs, cage)
+    xc = HALL_X1 - 0.05 - 0.75 / 2.0
+    slots = [(xc, z) for z in [-z for z in reversed(zs)] + zs]
+    cage_machines.build(c_cabs, cage, slots, s2b, link_obj, mat_tex, TEX)
 
     # ---- Crossbar (moves in x) + Trolley (moves in x and z) -----------------
     crossbar = add_empty("Crossbar", c_carriage, None, (CROSSBAR_X, RAIL_Y, 0.0))
@@ -697,6 +683,7 @@ def export_glb(coll=None, path=GLB_PATH):
         filepath=path, export_format="GLB", use_selection=True, export_apply=True,
         export_yup=True, export_materials="EXPORT", export_image_format="AUTO",
         export_animations=True, export_animation_mode="NLA_TRACKS", export_force_sampling=True,
+        export_vertex_color="ACTIVE",   # the machine screens' tints
     )
     bpy.ops.object.select_all(action="DESELECT")
     print("EXPORTED", path, os.path.getsize(path), "bytes")

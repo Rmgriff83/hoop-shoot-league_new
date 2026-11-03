@@ -934,13 +934,18 @@ centroid so the game can tumble it.
 
 ## 17. Ambient life (2026-09-16)
 
-- **Arcade cabinets**: `build_cage.py` adds a `Cabinets` collection — fourteen boxes along the hall's
-  back wall either side of the cage (the portrait view sees the far wall at z ≈ ±3.4–5.1 past
-  the cage's back panel; the side walls are outside the FOV), each with a `CabScreen%d`
-  and `CabMarquee%d` quad. In Godot `game/view/arcade_fx.gd` (gated by the arena set's
-  `arcade_life`) replaces those quads' materials with `arcade_screen.gdshader` (four tiny
-  procedural attract-mode games, scanlines, flicker) and `marquee_chase.gdshader` (chasing
-  bulbs), plus a faint warm light per wall. Add a cabinet: one more z in the `zs` list.
+- **Arcade machines** (design "Arcade Cage Concept", 2026-11-03): `tools/blender/cage_machines.py`,
+  called from `build_cage.py`, fills fourteen slots along the hall's back wall either side of the
+  cage (the portrait view sees the far wall at z ≈ ±3.4–5.1 past the cage's back panel; the side
+  walls are outside the FOV): 9 uprights, 3 pinball tables, a claw machine and a ticket wheel. It
+  paints the design's canvases into one atlas (`assets/textures/cage_machines.png`) and merges the
+  row into six meshes, one draw each: `HallMachines`, `HallMachinesGlow`, `HallMachineScreens`,
+  `HallMachineGlass`, `HallClaw`, `HallWheel`. In Godot `game/view/arcade_fx.gd` (gated by the arena
+  set's `arcade_life`) gives them `game/court/machine_*.gdshader`, all off `TIME`, so no script runs
+  per frame for them; a faint warm light per wall stays. `machine_body.gdshader` lays a grain
+  (`tools/render_machine_grain.gd`, Pizza Doggy's `dirt_pt_10`) over the paint: `detail` is its
+  strength, `grain_per_m` its scale. Look at it with `--resolution 1560x720 -- --qa-machines`.
+  Keep any new machine part in the merged meshes; a new mesh is a new draw on the phone.
 - **Tourists**: `build_beach.py` adds a `Tourists` collection — three `TouristRig%d` groups
   (towel quad, blocky lounger, `Arm%d` rig for the raised arm, optional `Umbrella%d` rig with
   one vertex-coloured `UmbMesh%d` since 2026-10-16 — §31 — a cooler). `BeachFx` waves a random

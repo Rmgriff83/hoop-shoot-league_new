@@ -1,14 +1,24 @@
 class_name ArcadeFx
 extends Node
-## Presentation-only arcade-hall life: the side-wall cabinets' screens run
-## attract-mode games (arcade_screen.gdshader) and their marquees chase
-## bulbs (marquee_chase.gdshader), all off one running clock, plus a faint
-## warm light on each side. Mirrors BeachFx; never touches the sim.
+## Presentation-only arcade-hall life: the machine row's screens, flashing
+## backglasses, claw and ticket wheel (shaders off TIME, so nothing here runs
+## per frame for them), plus a faint warm light on each side. Mirrors BeachFx;
+## never touches the sim.
 
-const SCREEN_SHADER := preload("res://game/court/arcade_screen.gdshader")
-const MARQUEE_SHADER := preload("res://game/court/marquee_chase.gdshader")
-const PALETTES := [Color(1.0, 0.75, 0.3), Color(0.4, 1.0, 0.55), Color(0.55, 0.8, 1.0), Color(1.0, 0.45, 0.4)]
-const MARQUEE_TINTS := [Color(1.0, 0.8, 0.35), Color(0.9, 0.35, 0.3), Color(0.5, 0.75, 1.0), Color(0.95, 0.55, 0.9)]
+## The row's live meshes (tools/blender/cage_machines.py) and their shaders.
+const MACHINE_SHADERS := {
+	"HallMachinesGlow": preload("res://game/court/machine_glow.gdshader"),
+	"HallMachineScreens": preload("res://game/court/machine_screen.gdshader"),
+	"HallClaw": preload("res://game/court/machine_claw.gdshader"),
+	"HallWheel": preload("res://game/court/machine_wheel.gdshader"),
+}
+## The design's glass is 13 %, but three.js blends in sRGB and we blend in linear
+## light, where 13 % reads as fog. 4 % lands on the same colours over these bases.
+const BODY_SHADER := preload("res://game/court/machine_body.gdshader")
+const BODY_GRAIN := preload("res://assets/textures/cage_machine_grain.png")
+const GLASS_COLOR := Color(0.867, 0.933, 1.0, 0.04)
+## The claw's vertex shader moves it, so its box covers the whole case.
+const CLAW_AABB := AABB(Vector3(-0.45, 0.75, -0.45), Vector3(0.9, 1.1, 0.9))
 ## Runner lights around the top of the arcade HALL (Bulb*), in place of the old
 ## sign over the cage. ONE shared material so they all batch; each bulb's
 ## position in the chase is an instance uniform, and the order comes from the
@@ -27,8 +37,7 @@ const CHASE_STAGGER := 0.11
 const CHASE_HOLD := 0.3
 const CHASE_GAP := 0.3
 var _t := 0.0
-var _screens: Array[ShaderMaterial] = []
-var _marquees: Array[ShaderMaterial] = []
+var _machines: Array[ShaderMaterial] = []
 var _lights: Array[OmniLight3D] = []
 var _bulb_mat: ShaderMaterial
 var _flare := 0.0
@@ -42,29 +51,9 @@ var _chase_t := -1.0   # < 0: no chase running
 var _rng := RandomNumberGenerator.new()
 
 
-## Bind every CabScreen* / CabMarquee* under the arena. False → nothing to run.
+## Bind the machine row, the bulbs and the arrows. False → nothing to run.
 func setup(arena: Node) -> bool:
-	var i := 0
-	for n in BeachFx._descendants(arena):
-		if not (n is MeshInstance3D):
-			continue
-		var mi := n as MeshInstance3D
-		if mi.name.begins_with("CabScreen"):
-			var m := ShaderMaterial.new()
-			m.shader = SCREEN_SHADER
-			m.set_shader_parameter("game", float(i % 4))
-			m.set_shader_parameter("phase", 3.7 * i)
-			m.set_shader_parameter("palette", PALETTES[i % PALETTES.size()])
-			mi.material_override = m
-			_screens.push_back(m)
-			i += 1
-		elif mi.name.begins_with("CabMarquee"):
-			var m := ShaderMaterial.new()
-			m.shader = MARQUEE_SHADER
-			m.set_shader_parameter("phase", 1.9 * _marquees.size())
-			m.set_shader_parameter("tint", MARQUEE_TINTS[_marquees.size() % MARQUEE_TINTS.size()])
-			mi.material_override = m
-			_marquees.push_back(m)
+	_bind_machines(arena)
 	# Runner lights: one material for all of them. The chase order is the ordinal
 	# in the name (Bulb000, Bulb001, ...), which build_cage.py lays out as one
 	# continuous path around the hall — reading it from the name rather than from
@@ -115,7 +104,7 @@ func setup(arena: Node) -> bool:
 		mi3.material_override = m
 		mi3.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 		_arrows.push_back(m)
-	if _screens.is_empty() and _marquees.is_empty() and bulbs == 0 and _arrows.is_empty():
+	if _machines.is_empty() and bulbs == 0 and _arrows.is_empty():
 		return false
 	_rng.seed = 0x5EED_CA6E
 	# A faint glow from each run of machines on the back wall.
@@ -131,12 +120,49 @@ func setup(arena: Node) -> bool:
 	return true
 
 
-func screen_count() -> int:
-	return _screens.size()
+## The six meshes of the machine row: the static one gets the grain, the glass
+## blends, the rest get a shader that samples the same atlas. Materials per fx,
+## so freeze() stills only the PiP's copy.
+func _bind_machines(arena: Node) -> void:
+	var body := arena.find_child("HallMachines", true, false) as MeshInstance3D
+	if body == null or body.mesh == null:
+		return
+	var skin := body.mesh.surface_get_material(0) as BaseMaterial3D
+	var atlas: Texture2D = skin.albedo_texture if skin != null else null
+	var body_mat := ShaderMaterial.new()
+	body_mat.shader = BODY_SHADER
+	body_mat.set_shader_parameter("atlas", atlas)
+	body_mat.set_shader_parameter("grain", BODY_GRAIN)
+	body.material_override = body_mat
+	body.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+	for mesh_name: String in MACHINE_SHADERS:
+		var mi := arena.find_child(mesh_name, true, false) as MeshInstance3D
+		if mi == null:
+			continue
+		var m := ShaderMaterial.new()
+		m.shader = MACHINE_SHADERS[mesh_name]
+		if mesh_name != "HallMachineScreens":
+			m.set_shader_parameter("atlas", atlas)
+		if mesh_name == "HallClaw":
+			m.set_shader_parameter("k", mi.position.z)
+			mi.custom_aabb = CLAW_AABB
+		mi.material_override = m
+		mi.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
+		_machines.push_back(m)
+	var glass := arena.find_child("HallMachineGlass", true, false) as MeshInstance3D
+	if glass != null:
+		var gm := StandardMaterial3D.new()
+		gm.shading_mode = BaseMaterial3D.SHADING_MODE_UNSHADED
+		gm.transparency = BaseMaterial3D.TRANSPARENCY_ALPHA
+		gm.cull_mode = BaseMaterial3D.CULL_DISABLED
+		gm.albedo_color = GLASS_COLOR
+		glass.material_override = gm
+		glass.cast_shadow = GeometryInstance3D.SHADOW_CASTING_SETTING_OFF
 
 
-func marquee_count() -> int:
-	return _marquees.size()
+## The row's shader materials (one each: they read TIME and nobody writes them).
+func machine_materials() -> Array[ShaderMaterial]:
+	return _machines
 
 
 func clock() -> float:
@@ -211,18 +237,15 @@ func flare() -> void:
 	_flare = FLARE_S
 
 
-## The PiP's static cage (CourtGeometry.Profile.PIP): the cabinet screens,
-## the marquees and the bulbs at one instant, the lights steady, no chase —
-## and nothing runs per frame.
+## The PiP's static cage (CourtGeometry.Profile.PIP): the machine row and the
+## bulbs at one instant, the lights steady, no chase — and nothing runs per frame.
 var frozen := false   # CourtGeometry.Profile.PIP: built, then still
 
 
 func freeze() -> void:
 	frozen = true
-	for m in _screens:
-		m.set_shader_parameter("t", 0.0)
-	for m in _marquees:
-		m.set_shader_parameter("t", 0.0)
+	for m in _machines:
+		m.set_shader_parameter("rate", 0.0)
 	if _bulb_mat != null:
 		_bulb_mat.set_shader_parameter("t", 0.0)
 		_bulb_mat.set_shader_parameter("flare", 0.0)
@@ -231,10 +254,6 @@ func freeze() -> void:
 
 func _process(dt: float) -> void:
 	_t += dt
-	for m in _screens:
-		m.set_shader_parameter("t", _t)
-	for m in _marquees:
-		m.set_shader_parameter("t", _t)
 	if _bulb_mat != null:
 		_bulb_mat.set_shader_parameter("t", _t)
 		if _flare > 0.0:

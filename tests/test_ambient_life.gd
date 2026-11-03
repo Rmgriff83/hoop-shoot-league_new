@@ -3,6 +3,9 @@ extends RefCounted
 ## and arm waves via BeachFx.
 
 
+const MACHINE_MESHES := ["HallMachines", "HallMachinesGlow", "HallMachineScreens", "HallMachineGlass", "HallClaw", "HallWheel"]
+
+
 func _count(root: Node, prefix: String, mesh_only := true) -> int:
 	var n := 0
 	for c in BeachFx._descendants(root):
@@ -13,11 +16,23 @@ func _count(root: Node, prefix: String, mesh_only := true) -> int:
 
 func run(t) -> void:
 	_city(t)
-	# Cage: ten cabinets with screens and marquees; ArcadeFx binds them.
+	# Cage: the machine row (design "Arcade Cage Concept", 2026-11-03) is six
+	# meshes of one surface each, however many machines stand in it: the phone
+	# pays per draw, so this count must not creep back up.
 	var cage: Node = load("res://assets/arena/cage/cage.glb").instantiate()
-	t.eq(_count(cage, "Cabinet"), 14, "14 cabinet bodies")
-	t.eq(_count(cage, "CabScreen"), 14, "14 cabinet screens")
-	t.eq(_count(cage, "CabMarquee"), 14, "14 cabinet marquees")
+	for gone in ["Cabinet", "CabPanel", "CabCoin", "CabTrim", "CabScreen", "CabMarquee"]:
+		t.eq(_count(cage, gone), 0, "the plain row's %s meshes are gone" % gone)
+	for n in MACHINE_MESHES:
+		var mm := cage.find_child(n, true, false) as MeshInstance3D
+		t.ok(mm != null and mm.mesh.get_surface_count() == 1, "%s is one mesh, one draw" % n)
+	var row_tris := 0
+	for n in MACHINE_MESHES:
+		row_tris += (cage.find_child(n, true, false) as MeshInstance3D).mesh.surface_get_array_len(0) / 3
+	t.ok(row_tris < 8000, "the row stays a light mesh (%d tris)" % row_tris)
+	var atlas := ((cage.find_child("HallMachines", true, false) as MeshInstance3D).mesh.surface_get_material(0) as BaseMaterial3D).albedo_texture
+	t.ok(atlas != null and atlas.get_width() <= 1024 and atlas.get_height() <= 1024, "one atlas inside the texture budget")
+	# Only the row changed: the hall's runner lights above it stay.
+	t.ok(_count(cage, "Bulb") > 20 and _count(cage, "BulbWire") == 3, "the runner lights and their wires stay")
 	# The padded back (2026-10-03): egg-crate foam over the panel, the ribbon
 	# board housed on top of it, and the return arrows down the lane.
 	t.eq(_count(cage, "BackPad"), 1, "the egg-crate foam over the back panel")
@@ -51,14 +66,25 @@ func run(t) -> void:
 	t.ok(afx.setup(cage), "ArcadeFx binds the cabinets")
 	t.eq(afx.arrow_count(), 2 * ArcadeFx.ARROW_STEPS, "…and the return arrows")
 	t.eq(afx.arrow_steps(), ArcadeFx.ARROW_STEPS, "…in %d steps" % ArcadeFx.ARROW_STEPS)
-	t.eq(afx.screen_count(), 14, "14 screen materials")
-	t.eq(afx.marquee_count(), 14, "14 marquee materials")
+	t.eq(afx.machine_materials().size(), 4, "glow, screens, claw and wheel get their shaders")
+	for n in ["HallMachinesGlow", "HallMachineScreens", "HallClaw", "HallWheel"]:
+		t.ok((cage.find_child(n, true, false) as MeshInstance3D).material_override is ShaderMaterial, "%s is live" % n)
+	t.ok((cage.find_child("HallMachineGlass", true, false) as MeshInstance3D).material_override.transparency == BaseMaterial3D.TRANSPARENCY_ALPHA, "the glass blends")
+	var body := cage.find_child("HallMachines", true, false) as MeshInstance3D
+	var body_mat := body.material_override as ShaderMaterial
+	t.ok(body_mat != null and body_mat.shader == ArcadeFx.BODY_SHADER and body_mat.get_shader_parameter("grain") != null, "the machine bodies carry the grain (Ross, 2026-11-03)")
+	t.ok(not (body.mesh.surface_get_arrays(0)[Mesh.ARRAY_TEX_UV2] as PackedVector2Array).is_empty(), "…laid out by UV2, in metres")
+	t.ok(FileAccess.file_exists("res://assets/textures/cage_machine_grain.png"), "the grain tile ships")
+	var claw := cage.find_child("HallClaw", true, false) as MeshInstance3D
+	t.ok(claw.custom_aabb.size.y > 1.0, "the claw's box covers its travel, so it never culls wrongly")
+	for shader in ["glow", "screen", "claw", "wheel"]:
+		var src := FileAccess.get_file_as_string("res://game/court/machine_%s.gdshader" % shader)
+		t.ok(src.contains("TIME * rate"), "machine_%s runs off TIME: no script writes it each frame" % shader)
 	afx._process(0.5)
 	t.close(afx.clock(), 0.5, 1e-9, "ArcadeFx clock runs")
-	var games := {}
-	for m in afx._screens:
-		games[int(m.get_shader_parameter("game"))] = true
-	t.eq(games.size(), 4, "all four attract games in use")
+	var machine_src := FileAccess.get_file_as_string("res://game/view/arcade_fx.gd")
+	var process_src := machine_src.substr(machine_src.find("func _process"))
+	t.ok(not process_src.contains("_machines"), "_process never touches the machine row")
 	t.ok(CosmeticLibrary.get_arena("cage").arcade_life, "cage arena enables arcade life")
 	# String lights replaced the HOOP SHOOT sign.
 	t.eq(_count(cage, "Marquee", false), 0, "the HOOP SHOOT sign is gone")
@@ -89,6 +115,10 @@ func run(t) -> void:
 	t.ok(afx.chasing() and afx.arrow_lit(0) > 0.9, "twenty sweeps on, the top arrow lights again")
 	afx.stop_chase()
 	t.ok(not afx.chasing() and afx.arrow_lit(0) == 0.0 and afx.arrow_lit(4) == 0.0, "the buzzer stops the chase: the arrows go dim")
+	# The PiP's frozen cage: the whole row holds still.
+	afx.freeze()
+	for m in afx.machine_materials():
+		t.close(m.get_shader_parameter("rate"), 0.0, 1e-9, "freeze() stills the machine shaders")
 	afx.free()
 	cage.free()
 	# Beach: three tourist groups with arms and umbrellas; birds spawn and cross.

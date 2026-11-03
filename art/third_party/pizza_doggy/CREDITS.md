@@ -28,6 +28,8 @@
   `Court` slab as is, tiled every metre, and `grass_pt_3.png` (same) its `Lawn`, every 4 m
   (`tools/blender/build_park.py`, embedded in `park.glb`). The city's ground wears
   `asphalt_old_tr_1.png` and its fence the cage's cut (`tools/blender/build_city.py`).
+  `dirt_pt_10.png` also gives the arcade cage's machine row its grain, reduced to a grey
+  128 px tile by `tools/render_machine_grain.gd` (`assets/textures/cage_machine_grain.png`).
   `dirt_pt_5.png` (same) gives the beach's sand its grain and `dirt_pt_10.png` (same) the grey
   of its court and backboard: `tools/render_beach_grain.gd` keeps our colours and takes only the
   dirt's light and dark (`beach_sand_dirt.png`, `beach_court_grain.png`, `street_board_grain.png`).

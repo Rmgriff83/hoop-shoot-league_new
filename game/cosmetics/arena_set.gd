@@ -76,8 +76,8 @@ extends CosmeticSet
 ## The city court: cars pass on the street beyond the fence and the buildings'
 ## windows switch on and off (CityFx).
 @export var traffic := false
-## Arcade hall life: cabinets with live screens and chasing marquees
-## (CabScreen*/CabMarquee* meshes; game/view/arcade_fx.gd).
+## Arcade hall life: the machine row's live screens, backglasses, claw and
+## wheel (HallMachine*/HallClaw/HallWheel meshes; game/view/arcade_fx.gd).
 @export var arcade_life := false
 ## The park (game/view/park_fx.gd): falling snow (one points mesh, `snow_amount`
 ## flakes — the park asks for 300 — capped at 800), a shader sky on the `Sky` mesh (`sky` names the

@@ -60,7 +60,7 @@ func _ready() -> void:
 		App.loader.instant = _has_prefixed(args, "--qa") and not args.has("--qa-loading")
 		App.loader.force_show = args.has("--qa-loading")
 		PeggyMachine.threaded = not App.loader.instant
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-pause-practice") or args.has("--qa-prematch-series") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live") or args.has("--qa-ads") or args.has("--qa-platform")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-pause-practice") or args.has("--qa-prematch-series") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live") or args.has("--qa-ads") or args.has("--qa-platform") or args.has("--qa-machines")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# Achievements earned during a pass, in the log (docs/ACHIEVEMENTS.md).
@@ -79,6 +79,8 @@ func _ready() -> void:
 		_run_spots.call_deferred()
 	elif args.has("--qa-title"):
 		_run_title.call_deferred()
+	elif args.has("--qa-machines"):
+		_run_machines.call_deferred()
 	elif args.has("--qa-results"):
 		_run_results.call_deferred()
 	elif args.has("--qa-heat-result"):
@@ -2422,6 +2424,28 @@ func _run_splash() -> void:
 	await _sleep(1.0)
 	await _snap("new_player_home")
 	print("QA splash: done (player %s, town %s)" % [Net.handle(), App.hometown()])
+	get_tree().quit(0)
+
+
+## The cage's machine row up close, the camera parked in the hall and the HUD
+## hidden: both runs, then one of each kind twice over so the screens, backglass,
+## claw and wheel can be seen to move. --resolution 1560x720 frames it best.
+func _run_machines() -> void:
+	await _sleep(1.2)
+	await _close_archive()
+	App.start_mode("trial")
+	await _sleep(4.4)
+	for layer in get_tree().root.find_children("*", "CanvasLayer", true, false):
+		(layer as CanvasLayer).visible = false
+	var cam: Camera3D = get_viewport().get_camera_3d()
+	print("QA machines: " + _render_stats())
+	for shot in [["left", -4.7, 6.6], ["right", 4.7, 6.6], ["upright", 3.5, 9.4], ["pinball", -5.9, 9.0], ["claw", -4.3, 9.6], ["wheel", 2.7, 9.6]]:
+		var z: float = shot[1]
+		cam.global_position = Vector3(shot[2], 1.45, z - 0.25)
+		cam.look_at(Vector3(11.5, 1.2, z))
+		for i in 2:
+			await _sleep(0.75)
+			await _snap("machines_%s_%d" % [shot[0], i])
 	get_tree().quit(0)
 
 

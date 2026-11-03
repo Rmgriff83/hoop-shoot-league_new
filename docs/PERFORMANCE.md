@@ -521,3 +521,24 @@ the phone, the asset rules and the check before it ships — is
    shadows, no area fx motion, a static backdrop, drawn at 30 Hz; it keeps the
    fog, the ambient and the sun colour, and the opponent's net, ball and their
    effects (they react to every shot).
+
+## Cage machine row (2026-11-03)
+
+Design "Arcade Cage Concept": 14 plain cabinets became 9 uprights, 3 pinball tables, a
+claw machine and a ticket wheel. Six merged meshes off one atlas, shaders off `TIME`, 28
+per-frame `set_shader_parameter` calls gone. The bodies' grain is one extra texture fetch.
+
+Mac, same session, both builds at 720x1560 (cage, 12 s; GPU reads n/a on Metal):
+
+    build   mode       drwV  pipDrw  tris(trial)  script p95  mainC  cov
+    old     trial       148      -       13284        0.95    0.60  0.00
+    new     trial       110      -       17874        0.91    0.55  0.05
+    old     heat_pip    148    143       13284        1.38    0.52  0.00
+    new     heat_pip    110    105       17874        1.32    0.48  0.05
+
+Only about 44 of the old row's 84 draws were ever in the frustum, so the saving is 38 draws
+per view, not 78. `cov` is the probe's upper bound: the glass mesh's box spans the row.
+The ledger passes, but on the Mac that says nothing about GPU time.
+
+**Phone not yet measured.** Next time the moto g is connected, run the old build and this
+one back to back, cool, and compare main-view GPU (see `NEW_AREA_PERFORMANCE.txt` §4).
