@@ -142,9 +142,8 @@ func run(t) -> void:
 		if bfx.bird_count() == 0:
 			break
 	t.eq(bfx.bird_count(), 0, "flock freed once it has crossed")
-	# --- Beach life: walkers on the sand, a ship on the horizon, a plane. ---
-	for f in ["beach_ship", "beach_plane"]:
-		t.ok(FileAccess.file_exists("res://assets/textures/%s.png" % f), "%s sheet generated" % f)
+	# --- Beach life: walkers on the sand, a ship on the horizon. ---
+	t.ok(FileAccess.file_exists("res://assets/textures/beach_ship.png"), "beach_ship sheet generated")
 
 	# The ship must stay side-on rather than billboard, and sit on the horizon
 	# inside the sky cylinder (r 60) or it would clip through the painted sky.
@@ -159,20 +158,6 @@ func run(t) -> void:
 	for i in 300:
 		bfx._process(1.0 / 60.0)
 	t.ok(absf(bfx._ship.position.z - sz0) > 1.0, "and it crosses, slowly (%.1f m in 5 s)" % absf(bfx._ship.position.z - sz0))
-
-	t.ok(not bfx.has_plane() and not bfx.has_jet(), "no plane at first")
-	bfx.spawn_jet()
-	t.ok(bfx.has_jet(), "a high jet passes now and then")
-	var jp: Vector3 = bfx._jet.position
-	t.ok(jp.y >= 40.0 and Vector2(jp.x, jp.z).length() < 58.0, "the jet is high and inside the sky (y %.0f)" % jp.y)
-	for i in 60:
-		bfx._process(1.0 / 60.0)
-	t.ok(absf(bfx._jet.position.z) < absf(jp.z), "and crosses")
-	bfx.spawn_plane()
-	t.ok(bfx.has_plane(), "an airliner passes")
-	var pp: Vector3 = bfx._plane.position
-	t.ok(pp.y > 20.0, "high in the sky (y %.1f)" % pp.y)
-	t.ok(sqrt(pp.x * pp.x + pp.z * pp.z) < 58.0, "and inside the sky cylinder")
 
 	# Seeded, not randomize(): two runs must agree. This is what retires the
 	# long-standing ~7 %% flake in this file.

@@ -533,23 +533,6 @@ do
 end
 
 
--- Local helpers for the horizon sprites below (px/limb are not used elsewhere).
-local function px(img, x, y, c)
-  if x >= 0 and y >= 0 and x < img.width and y < img.height then img:drawPixel(x, y, c) end
-end
-local function limb(img, x0, y0, x1, y1, c, w)
-  local dx, dy = x1 - x0, y1 - y0
-  local n = math.max(math.abs(dx), math.abs(dy))
-  if n < 1 then n = 1 end
-  for i = 0, n do
-    local t = i / n
-    local x, y = x0 + dx * t, y0 + dy * t
-    for oy = 0, w - 1 do
-      for ox = 0, w - 1 do px(img, math.floor(x) + ox, math.floor(y) + oy, c) end
-    end
-  end
-end
-
 -- ---- beach_ship.png --------------------------------------------------------
 -- A modern CRUISE ship for the far horizon: long and low, many thin decks, a
 -- small funnel set well aft. The first attempt read as a steamboat because the
@@ -596,25 +579,4 @@ do
     for x = x0 + d[1] + 3, x1 - d[2] - 3, 5 do fill(img, x, wl - d[3] + 1, x, wl - d[3] + 1, port) end
   end
   save(spr, "beach_ship.png")
-end
-
--- ---- beach_plane.png -------------------------------------------------------
--- A high airliner: a small dark shape with a faint contrail. One frame.
-do
-  local W, H = 64, 16
-  local spr, img = newImage(W, H)
-  fill(img, 0, 0, W - 1, H - 1, pc.rgba(0, 0, 0, 0))
-  local ink = rgb(58, 54, 66)
-  local cy = 9
-  fill(img, 40, cy, 57, cy + 1, ink)              -- fuselage
-  fill(img, 56, cy - 2, 58, cy, ink)              -- tail fin
-  limb(img, 47, cy, 43, cy - 4, ink, 1)           -- swept wings
-  limb(img, 47, cy + 1, 43, cy + 5, ink, 1)
-  -- Contrail, fading behind.
-  for x = 4, 39 do
-    local a = math.floor(150 * (x - 4) / 35)
-    px(img, x, cy, pc.rgba(246, 236, 228, a))
-    if x > 20 then px(img, x, cy + 1, pc.rgba(246, 236, 228, math.floor(a * 0.5))) end
-  end
-  save(spr, "beach_plane.png")
 end
