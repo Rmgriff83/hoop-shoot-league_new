@@ -67,6 +67,7 @@ var _oc_block: MarginContainer
 var _oc_count: Label
 var _oc_scroll: ScrollContainer
 var _oc_row: HBoxContainer
+var _oc_empty: Label
 var _oc_left: TextureRect
 var _oc_right: TextureRect
 var area_choice := "any"
@@ -524,6 +525,14 @@ func _build_online_cards(col: VBoxContainer) -> void:
 	_oc_row.add_theme_constant_override("separation", OC_GAP)
 	_oc_row.mouse_filter = Control.MOUSE_FILTER_PASS
 	pad.add_child(_oc_row)
+	_oc_empty = words(MatchCopy.online_cards_empty(), 16)
+	_oc_empty.name = "OcEmpty"
+	_oc_empty.add_theme_color_override("font_color", MUTED)
+	_oc_empty.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_oc_empty.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	_oc_empty.visible = false
+	UiLayout.full_rect(_oc_empty)
+	row.add_child(_oc_empty)
 	_oc_left = _oc_fade(row, true)
 	_oc_right = _oc_fade(row, false)
 	_oc_scroll.get_h_scroll_bar().value_changed.connect(func(_v: float) -> void: _refresh_oc_fades())
@@ -600,6 +609,7 @@ func fill_online_cards(entries: Array) -> void:
 		holder.add_child(n)
 		_oc_row.add_child(holder)
 	_oc_count.text = MatchCopy.online_cards_count(total, entries.size())
+	_oc_empty.visible = entries.is_empty()   # the row keeps its height
 	_refresh_oc_fades.call_deferred()
 
 

@@ -70,6 +70,12 @@ func run(t) -> void:
 	page.fill_online_cards([["ice", 2], ["fire7", 1]])
 	t.eq(page.online_card_count(), 2, "…a card per type in the row")
 	t.eq(page.online_cards_text(), "3 CARDS · 2 TYPES", "…and the count over it")
+	var oc_empty := root.find_child("OcEmpty", true, false) as Label
+	t.ok(not oc_empty.visible, "…no message with cards")
+	page.fill_online_cards([])
+	t.ok(oc_empty.visible and oc_empty.text == "NO CARDS YET", "no cards: a small message")
+	t.eq((root.find_child("OcRowBox", true, false) as Control).custom_minimum_size.y, MatchLobbyPage.OC_ROW_H, "…in a row of the same height")
+	t.eq(page.online_card_count(), 0, "…and no cards in it")
 	t.ok((root.find_child("OcScroll", true, false) as ScrollContainer).horizontal_scroll_mode == ScrollContainer.SCROLL_MODE_SHOW_NEVER, "…swiped sideways, no bar")
 	var owned := App.unlocked_areas()
 	t.eq(page.area_choice, "beach" if owned.size() > 1 else "cage", "opens on the home's court, or the cage alone")

@@ -430,6 +430,11 @@ static func online_cards_count(total: int, kinds: int) -> String:
 	return "%d CARD%s · %d TYPE%s" % [total, "" if total == 1 else "S", kinds, "" if kinds == 1 else "S"]
 
 
+## …and in its place with none (Ross, 2026-11-03).
+static func online_cards_empty() -> String:
+	return "NO CARDS YET"
+
+
 ## A playoff game on the pre-match page (design 37a, 2026-11-03): where the series
 ## stands for the player, {} outside one. `need` = the wins that take it, one pip each.
 static func prematch_series(series: Dictionary, player_id: String) -> Dictionary:
@@ -617,7 +622,7 @@ static func strings() -> Array:
 		header({"location": "beach"}), header({"location": "city", "reason": "forfeit"}), header({"location": "cage", "reason": "void"}),
 		prematch_tab_opp(), prematch_tab_you(), their_loadout().replace("\n", " "), your_loadout().replace("\n", " "), load_count(2), your_cards_hint(), opp_status(true), opp_status(false), "×2",
 		starts_in(), go_word(), arm_word(), thousands(1480), "RANK", "RATING", "RECORD", "SEED", "AVG PTS", "NEW", "#142",
-		ready_button("count", 7)["top"], ready_button("go", 0)["top"], "ONLINE CARDS", online_cards_count(7, 3), online_cards_count(1, 1),
+		ready_button("count", 7)["top"], ready_button("go", 0)["top"], "ONLINE CARDS", online_cards_count(7, 3), online_cards_count(1, 1), online_cards_empty(),
 		prematch_series({"round": "semifinal", "bestOf": 3, "highSeedId": "a", "highWins": 1}, "a")["label"],
 		prematch_series({"round": "final", "bestOf": 5, "highSeedId": "a", "lowWins": 1}, "a")["score"],
 		spoils_panel({"ranked": true, "granted": [{"why": "meter", "card": "ice"}]})["caption"],

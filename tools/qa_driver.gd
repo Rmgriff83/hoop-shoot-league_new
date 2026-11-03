@@ -1897,6 +1897,9 @@ func _run_multi() -> void:
 		get_tree().quit()
 		return
 	# ONLINE CARDS (2026-11-03): the design's three, then a row long enough to swipe.
+	lobby.fill_online_cards([])
+	await _sleep(0.4)
+	await _snap("multi_online_cards_none")
 	lobby.fill_online_cards([["fire7", 3], ["ice", 2], ["magnet6", 2]])
 	await _sleep(0.4)
 	await _snap("multi_online_cards")
