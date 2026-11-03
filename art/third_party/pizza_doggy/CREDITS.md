@@ -30,6 +30,12 @@
   `asphalt_old_tr_1.png` and its fence the cage's cut (`tools/blender/build_city.py`).
   `dirt_pt_10.png` also gives the arcade cage's machine row its grain, reduced to a grey
   128 px tile by `tools/render_machine_grain.gd` (`assets/textures/cage_machine_grain.png`).
+  `dry_leaves_tr_1.png` (Ross supplied it 2026-11-03, pack not recorded) is cut into the
+  leaves on the city court (`tools/aseprite/gen_city_textures.lua`, `city_court_paint.png`).
+  `snow_tr_1.png` (same) is the park's lying snow, lifted by `tools/render_park_snow.gd`
+  (`assets/textures/park_snow_drift.png`). `building_ceiling_pt_1.png` (same) is grain over
+  the arcade hall's ceiling colour (`tools/render_cage_ceiling.gd`,
+  `assets/textures/cage_ceiling_grain.png`).
   `dirt_pt_5.png` (same) gives the beach's sand its grain and `dirt_pt_10.png` (same) the grey
   of its court and backboard: `tools/render_beach_grain.gd` keeps our colours and takes only the
   dirt's light and dark (`beach_sand_dirt.png`, `beach_court_grain.png`, `street_board_grain.png`).
@@ -47,6 +53,9 @@
 | `dirt_pt_5.png` | the 512×512 tile, dark brown-grey dirt, seamless |
 | `dirt_pt_10.png` | the 512×512 tile, dark brown rocky dirt, seamless |
 | `water_2.png` | the 256×256 tile, soft teal water, seamless |
+| `dry_leaves_tr_1.png` | the 512×512 tile, RGBA (opaque), a bed of dry brown leaves, seamless |
+| `snow_tr_1.png` | the 512×512 tile, RGBA (opaque), wind-lined grey snow, seamless |
+| `building_ceiling_pt_1.png` | the 512×512 tile, a rough grey panel in a pale green-grey frame |
 | `LICENSE.pdf` | the agreement as downloaded |
 
 ## House rules

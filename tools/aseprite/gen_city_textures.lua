@@ -57,14 +57,17 @@ local function arc(img, cx, cy, r, a0, a1, c, thick)
   end
 end
 
--- city_court_paint.png 480x512 RGBA — a full half court's paint over the
--- ground's asphalt (Ross, 2026-11-02), 14.6 x 15.2 m (32.9 px/m).
+-- city_court_paint.png 960x1024 RGBA — a full half court's paint over the
+-- ground's asphalt (Ross, 2026-11-02), 14.6 x 15.2 m. The lines are drawn at
+-- 32.9 px/m and doubled; the leaves at 65.8 px/m, cut from Pizza Doggy's
+-- dry_leaves_tr_1 (Ross, 2026-11-03).
 -- u = 0 at sim x = -9.9, u = 1 at x = 4.7 (the baseline side); v runs across
 -- the court, z -7.6..7.6. Rim centre at x 3.625 (SimGeometry.CITY_DIST), z 0;
 -- the baseline sits 1 m behind it at x 4.6. Yellow lines and a few leaves,
 -- transparent everywhere else.
 do
   local W, H = 480, 512
+  local LEAF_DENSITY = 2
   local spr, img = newImage(W, H)
   local px = W / 14.6
   local function col(x) return math.floor((x + 9.9) * px + 0.5) end
@@ -73,37 +76,6 @@ do
   local hoop_c, base_c, ft_c, half_c = col(3.625), col(4.6), col(3.625 - 4.2), col(-9.75)
   local mid = row(0)
   local lane_half = math.floor(2.45 * px + 0.5)
-  -- Leaves in a few DRIFTS (Ross, 2026-10-02), not an even sprinkle: each a
-  -- blob in a corner or along the fence side, packed with small leaves
-  -- (warm browns and oranges, a few still green) densest at its heart,
-  -- with a handful of strays just outside.
-  local DRIFTS = {
-    {col(4.1), row(-6.8), 42, 60}, {col(3.4), row(6.6), 34, 44}, {col(-8.4), row(6.9), 40, 52},
-    {col(-6.2), row(-7.0), 28, 34}, {col(-0.5), row(7.1), 24, 30},
-    -- …and around the key and the elbows, in the shooter's view (Ross, 2026-10-02)
-    {col(-0.8), row(1.0), 30, 36}, {col(0.8), row(-2.2), 30, 34}, {col(1.7), row(2.5), 28, 32},
-    {col(2.2), row(-0.4), 24, 26}, {col(-0.2), row(3.3), 26, 30},
-  }
-  for d, drift in ipairs(DRIFTS) do
-    local cx, cy, r, n = drift[1], drift[2], drift[3], drift[4]
-    for i = 0, n + 7 do
-      local stray = i >= n
-      local ang = noise(i, d, 175) * 6.2832
-      local rad = (stray and (1.05 + noise(i, d, 176) * 0.5) or math.sqrt(noise(i, d, 176)) * 0.95) * r
-      local lx = math.floor(cx + math.cos(ang) * rad)
-      local ly = math.floor(cy + math.sin(ang) * rad * 0.8)
-      local warm = noise(i, d, 177)
-      local leaf
-      if noise(i, d, 178) < 0.22 then
-        leaf = rgb(70 + warm * 40, 120 + warm * 50, 40)         -- still green
-      else
-        leaf = rgb(120 + warm * 90, 60 + warm * 50, 24 + warm * 10)
-      end
-      local w = 1 + math.floor(noise(i, d, 179) * 2.5)
-      fill(img, lx, ly, lx + w, ly + 1, leaf)
-      if w > 1 then img:drawPixel(lx + 1, ly - 1, leaf) end
-    end
-  end
   fill(img, base_c, row(-7.5), base_c + 1, row(7.5), line)
   fill(img, half_c, row(-7.5), half_c + 1, row(7.5), line)
   fill(img, half_c, row(-7.5), base_c, row(-7.5) + 1, line)
@@ -122,7 +94,50 @@ do
   fill(img, x_join, mid - math.floor(zc), base_c, mid - math.floor(zc) + 1, line)
   fill(img, x_join, mid + math.floor(zc) - 1, base_c, mid + math.floor(zc), line)
   arc(img, half_c, mid, 1.8 * px, -math.pi / 2, math.pi / 2, line, 2)
-  save(spr, "city_court_paint.png")
+  local spr2, out = newImage(W * 2, H * 2)
+  -- Leaves in a few DRIFTS (Ross, 2026-10-02), not an even sprinkle: each a
+  -- blob in a corner or along the fence side, packed with small leaves densest
+  -- at its heart, with a handful of strays just outside. Each leaf is a little
+  -- ellipse of the tile, read every other pixel so it repeats about every 3.9 m.
+  local LEAF_TILE = app.fs.joinPath(app.fs.filePath(OUT), "..", "art", "third_party", "pizza_doggy", "dry_leaves_tr_1.png")
+  local tile = Image{fromFile = LEAF_TILE}
+  local DRIFTS = {
+    {col(4.1), row(-6.8), 42, 60}, {col(3.4), row(6.6), 34, 44}, {col(-8.4), row(6.9), 40, 52},
+    {col(-6.2), row(-7.0), 28, 34}, {col(-0.5), row(7.1), 24, 30},
+    -- …and around the key and the elbows, in the shooter's view (Ross, 2026-10-02)
+    {col(-0.8), row(1.0), 30, 36}, {col(0.8), row(-2.2), 30, 34}, {col(1.7), row(2.5), 28, 32},
+    {col(2.2), row(-0.4), 24, 26}, {col(-0.2), row(3.3), 26, 30},
+  }
+  for d, drift in ipairs(DRIFTS) do
+    local cx, cy, r, n = drift[1] * 2, drift[2] * 2, drift[3] * 2, drift[4] * LEAF_DENSITY
+    for i = 0, n + 7 do
+      local stray = i >= n
+      local ang = noise(i, d, 175) * 6.2832
+      local rad = (stray and (1.05 + noise(i, d, 176) * 0.5) or math.sqrt(noise(i, d, 176)) * 0.95) * r
+      local lx = math.floor(cx + math.cos(ang) * rad)
+      local ly = math.floor(cy + math.sin(ang) * rad * 0.8)
+      local turn = noise(i, d, 177) * 3.1416
+      local long = 3.0 + noise(i, d, 179) * 3.5   -- half length: 5 to 10 cm leaves
+      local c, s = math.cos(turn), math.sin(turn)
+      local reach = math.ceil(long)
+      for y = ly - reach, ly + reach do
+        for x = lx - reach, lx + reach do
+          local u, v = (x - lx) * c + (y - ly) * s, (y - ly) * c - (x - lx) * s
+          if x >= 0 and y >= 0 and x < out.width and y < out.height
+              and u * u / (long * long) + v * v / (long * long * 0.36) <= 1.0 then
+            out:drawPixel(x, y, tile:getPixel((x * 2) % tile.width, (y * 2) % tile.height))
+          end
+        end
+      end
+    end
+  end
+  for y = 0, H - 1 do
+    for x = 0, W - 1 do
+      local p = img:getPixel(x, y)
+      if pc.rgbaA(p) > 0 then fill(out, x * 2, y * 2, x * 2 + 1, y * 2 + 1, p) end
+    end
+  end
+  save(spr2, "city_court_paint.png")
 end
 
 -- city_kerb.png 64x16 — concrete kerb: a pale top, a darker face.

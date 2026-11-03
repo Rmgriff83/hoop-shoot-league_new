@@ -48,6 +48,8 @@ TEX = lambda name: os.path.join(ROOT, "assets", "textures", name)  # noqa: E731
 # ---- the layout, mirrored from core/physics/sim_geometry.gd park() -------------
 PARK_DIST = 3.70
 COURT_X0, COURT_X1, COURT_HALF_W = -7.0, 6.80, 6.0      # the slab; its sides are the sim's soft walls
+SNOW_TILE_M = 4.0                                        # Pizza Doggy's snow tile, laid flat from above, repeats this often
+FAR_SNOW_TILE_M = 8.0                                    # …and further apart on the far disc, where a repeat would show
 COURT_TILE_M = 1.0                                       # the slab's 512 px stones repeat this often (stones about 5 cm)
 FENCE_X = 6.20                                           # SimGeometry.PARK_FENCE_X: the slab runs 0.6 m past it
 FENCE_POSTS = [-6.0, -3.6, -1.2, 1.2, 3.6, 6.0]
@@ -310,6 +312,14 @@ class MeshMerge:
         return o
 
 
+def planar_uv(me, tile_m):
+    """UVs straight down from above: snow lies flat, and a low drift's sides stretch little."""
+    uvl = me.uv_layers.new(name="UVMap")
+    for loop in me.loops:
+        co = me.vertices[loop.vertex_index].co
+        uvl.data[loop.index].uv = (co.x / tile_m, co.y / tile_m)
+
+
 class SnowMerge:
     """Every lying-snow piece into one bmesh → one mesh."""
 
@@ -370,6 +380,7 @@ class SnowMerge:
         me = bpy.data.meshes.new(name)
         self.bm.to_mesh(me)
         self.bm.free()
+        planar_uv(me, SNOW_TILE_M)
         me.materials.append(mat)
         o = bpy.data.objects.new(name, me)
         cage.link_obj(o, coll, parent, (0, 0, 0))
@@ -519,8 +530,7 @@ def build():
     # Pizza Doggy's tile (Ross, 2026-11-02), embedded in the glb as supplied.
     stones = cage.mat_tex("Park_Stones", os.path.join(ROOT, "art", "third_party", "pizza_doggy", "small_stones_tr_1.png"))
     grass = cage.mat_tex("Park_Grass", os.path.join(ROOT, "art", "third_party", "pizza_doggy", "grass_pt_3.png"))
-    snow = cage.mat_flat("Park_Snow", (238, 243, 246), roughness=0.9)
-    far_snow = cage.mat_flat("Park_FarSnow", (228, 234, 238), roughness=1.0)
+    snow = cage.mat_tex("Park_Snow", TEX("park_snow_drift.png"))   # tools/render_park_snow.gd
     concrete = cage.mat_flat("Park_Concrete", (185, 182, 174), roughness=0.95)
     brick = cage.mat_flat("Park_Brick", (138, 90, 72), roughness=0.95)
     beige = cage.mat_flat("Park_Beige", (189, 179, 158), roughness=0.95)
@@ -634,7 +644,8 @@ def build():
     bpy.ops.mesh.primitive_circle_add(vertices=48, radius=96.0, fill_type="NGON", location=(0, 0, 0))
     far = bpy.context.active_object
     far.name = far.data.name = "FarSnow"
-    far.data.materials.append(far_snow)
+    planar_uv(far.data, FAR_SNOW_TILE_M)
+    far.data.materials.append(snow)
     cage.link_obj(far, c_ground, root, cage.s2b((8.0, -0.06, -4.0)))
     add_sky(c_sky, root, sky)
     add_ring(c_sky, root, ring)

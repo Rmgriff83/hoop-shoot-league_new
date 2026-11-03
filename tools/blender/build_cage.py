@@ -118,6 +118,7 @@ HALL_H = 7.0
 FPS = 30
 HALL_WALL_SPLIT = 2.2               # side walls: textured cabinets below (2.2 m tall), dark above
 CARPET_TILE_M = 1.6                 # the blacklight carpet's repeat: 128 px, 80 px/m
+CEILING_TILE_M = 2.0                # the hall ceiling's framed panel repeats this often
 BRICK_TILE_M = 3.2                  # the back wall's brick repeat: bricks about 30 x 12.5 cm
 NEON_Y0, NEON_Y1 = 1.99, 2.06       # the neon line along the back wall, where cage_hall.png painted it
 MESH_REPEATS_PER_M = 2.5            # 32-px tiles with 16-px diamonds (2 cells) -> 20 cm cells (finer shimmers on a phone; Ross kept these over the design's 40 cm, 2026-10-16)
@@ -385,7 +386,7 @@ def add_gate(coll, parent, frame_mat, mesh_mat):
         zc = s * (W / 4.0 + 0.008)
         z0, z1 = zc - leaf / 2.0, zc + leaf / 2.0
         add_quad("GateMesh%d" % j, [(X, 0.02, z0), (X, 0.02, z1), (X, 0.02 + H - 0.04, z1), (X, 0.02 + H - 0.04, z0)],
-                 (-1, 0, 0), mesh_mat, coll, gate, (leaf / 0.12 / FENCE_TILE_CELLS, (H - 0.04) / 0.12 / FENCE_TILE_CELLS), origin=(X, 0.0, 0.0))
+                 (-1, 0, 0), mesh_mat, coll, gate, (leaf * MESH_REPEATS_PER_M / FENCE_TILE_CELLS, (H - 0.04) * MESH_REPEATS_PER_M / FENCE_TILE_CELLS), origin=(X, 0.0, 0.0))
     return gate
 
 
@@ -491,6 +492,7 @@ def build():
     neon = mat_tex("Hall_Neon", TEX("cage_neon.png"), emissive=True)
     bulb = mat_flat("Cage_Bulb", (255, 206, 140), roughness=0.4)   # ArcadeFx twinkles these
     dark = mat_flat("Hall_Dark", (12, 10, 10))
+    ceiling = mat_tex("Hall_Ceiling", TEX("cage_ceiling_grain.png"))   # tools/render_cage_ceiling.gd: Hall_Dark's colour
     metal_dark = mat_flat("Cage_MetalDark", (30, 28, 28), roughness=0.8)
     accent = mat_flat("Cage_Accent", (206, 62, 34), roughness=0.7)   # red-orange trim (rim family)
     panel = mat_flat("Cage_BackPanel", (34, 30, 30), roughness=1.0)  # solid back, flat colour
@@ -618,7 +620,7 @@ def build():
         add_quad("HallSideUpper%d" % j, [(HALL_X0, ys, z), (HALL_X1, ys, z), (HALL_X1, HALL_H, z), (HALL_X0, HALL_H, z)],
                  toward, dark, c_hall, cage)
     add_quad("HallCeiling", [(HALL_X0, HALL_H, -hw), (HALL_X1, HALL_H, -hw), (HALL_X1, HALL_H, hw), (HALL_X0, HALL_H, hw)],
-             (0, -1, 0), dark, c_hall, cage)
+             (0, -1, 0), ceiling, c_hall, cage, ((HALL_X1 - HALL_X0) / CEILING_TILE_M, 2.0 * hw / CEILING_TILE_M))
 
     # ---- The machine row along the BACK wall, either side of the cage (design
     # "Arcade Cage Concept", tools/blender/cage_machines.py): fronts toward the

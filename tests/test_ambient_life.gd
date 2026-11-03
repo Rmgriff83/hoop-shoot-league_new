@@ -31,6 +31,18 @@ func run(t) -> void:
 	t.ok(row_tris < 8000, "the row stays a light mesh (%d tris)" % row_tris)
 	var atlas := ((cage.find_child("HallMachines", true, false) as MeshInstance3D).mesh.surface_get_material(0) as BaseMaterial3D).albedo_texture
 	t.ok(atlas != null and atlas.get_width() <= 1024 and atlas.get_height() <= 1024, "one atlas inside the texture budget")
+	# The hall ceiling (Ross, 2026-11-03): Pizza Doggy's panel, its mean still Hall_Dark's colour.
+	var ceil_mat := (cage.find_child("HallCeiling", true, false) as MeshInstance3D).mesh.surface_get_material(0) as BaseMaterial3D
+	t.ok(ceil_mat != null and ceil_mat.albedo_texture != null, "the hall ceiling wears the panel")
+	var ceil_img := Image.load_from_file("res://assets/textures/cage_ceiling_grain.png")
+	ceil_img.convert(Image.FORMAT_RGB8)
+	var ceil_sum := Vector3.ZERO
+	for y in ceil_img.get_height():
+		for x in ceil_img.get_width():
+			var c := ceil_img.get_pixel(x, y)
+			ceil_sum += Vector3(c.r, c.g, c.b)
+	ceil_sum *= 255.0 / float(ceil_img.get_width() * ceil_img.get_height())
+	t.ok(absf(ceil_sum.x - 12.0) < 1.0 and absf(ceil_sum.y - 10.0) < 1.0 and absf(ceil_sum.z - 10.0) < 1.0, "…and keeps the base colour (%.1f, %.1f, %.1f)" % [ceil_sum.x, ceil_sum.y, ceil_sum.z])
 	# Only the row changed: the hall's runner lights above it stay.
 	t.ok(_count(cage, "Bulb") > 20 and _count(cage, "BulbWire") == 3, "the runner lights and their wires stay")
 	# The padded back (2026-10-03): egg-crate foam over the panel, the ribbon
