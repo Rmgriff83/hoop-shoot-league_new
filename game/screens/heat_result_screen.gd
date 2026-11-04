@@ -43,8 +43,21 @@ const CONT_H := BUTTON_H     # REMATCH? / SHOOT AROUND? share the foot
 const HI := Color("#FFE45C")
 const CREAM := RetroTheme.SCENE_TEXT
 const GOLD := Color("#F0B84A")
+## The game pulse (design 6b, 2026-11-04): the box's PULSE tab.
+const GREEN := Color("#6FC28A")     # the opponent's line
+const TICK := Color("#D9D9D9")      # the clock ticks under the chart
+const TAB_H := 48.0
+const TAB_W := 112.0                # PS2P 16 × 5 letters + 16 each side
+const PULSE_CAP_H := 32.0           # the caption row (26) over its 6 px top pad
+const PULSE_TICKS_H := 20.0
+const PULSE_START := 0.1            # the lines draw on from here once the tab opens
 
 var _t := 0.0
+var _pulse: Dictionary = {}
+var _tab_row: HBoxContainer
+var _stats_body: VBoxContainer
+var _pulse_body: VBoxContainer
+var _pulse_chart: PulseChart
 var _spec: Dictionary = {}
 var _box: TicketBox
 var _meter: XpMeter
@@ -220,7 +233,16 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	var bcol := _vbox(0)
 	box.add_child(bcol)
 	var bh := _hbox(0)
+	bh.name = "BoxHead"
 	bh.custom_minimum_size = Vector2(0, BOX_HEAD_H)
+	# STATS / PULSE (design 6b, 2026-11-04) when the heat recorded its pulse.
+	_pulse = GamePulse.analyse(heat.get("pulse", {}) if heat.get("pulse", null) is Dictionary else {})
+	if not _pulse.is_empty():
+		_tab_row = _hbox(14)
+		_tab_row.name = "Tabs"
+		_tab_row.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		bh.add_child(_tab_row)
+		_build_tabs("stats")
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	spacer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -240,8 +262,11 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 		cell.add_child(chip)
 		bh.add_child(cell)
 	bcol.add_child(bh)
+	_stats_body = _vbox(0)
+	_stats_body.name = "StatsBody"
+	bcol.add_child(_stats_body)
 	for r in HeatCopy.box(heat):
-		bcol.add_child(_box_row(r, row_h))
+		_stats_body.add_child(_box_row(r, row_h))
 	# The bright spots of a loss (docs/CARDS.md § Drops), in gold under the rows.
 	for line in bright:
 		var bl := _text(str(line), 19, GOLD)
@@ -251,7 +276,12 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 		bl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		bl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		bl.custom_minimum_size = Vector2(0, BRIGHT_H)
-		bcol.add_child(bl)
+		_stats_body.add_child(bl)
+	# The pulse view takes the rows' exact height, so the box never moves.
+	if not _pulse.is_empty():
+		_pulse_body = _pulse_view(HeatCopy.ROWS.size() * row_h + bright.size() * BRIGHT_H)
+		_pulse_body.visible = false
+		bcol.add_child(_pulse_body)
 	var below := BOX_Y + box_h + DROP_GAP
 
 	# The card drops (design 6b, 2026-10-30): a row of teal cards under the
@@ -656,6 +686,265 @@ class RowRule extends Control:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 	func _draw() -> void:
 		draw_dashed_line(Vector2(0, 1), Vector2(size.x, 1), Color(RetroTheme.SCENE_TEXT, 0.35), 2.0, 8.0)
+
+
+# ---- the game pulse (design 6b, 2026-11-04) --------------------------------------
+
+
+## The box header's STATS / PULSE tabs, rebuilt on a switch: the active one
+## orange, the other cream (both see-through, dithered shadows, pressable).
+func _build_tabs(active: String) -> void:
+	for c in _tab_row.get_children():
+		_tab_row.remove_child(c)
+		c.queue_free()
+	for spec in [["stats", HeatCopy.PULSE_TABS[0], "TabStats"], ["pulse", HeatCopy.PULSE_TABS[1], "TabPulse"]]:
+		var which := str(spec[0])
+		var on := which == active
+		var b := ShadowCard.new(RetroTheme.c("orange") if on else CREAM)
+		b.tint = 0.40 if on else 0.32
+		b.name = str(spec[2])
+		RetroTheme.on_scene(b)
+		b.add_theme_font_override("font", UiFont.display())
+		b.add_theme_font_size_override("font_size", UiFont.snap(18))
+		b.text = str(spec[1])
+		b.custom_minimum_size = Vector2(TAB_W + ShadowStyle.OFFSET, TAB_H + ShadowStyle.OFFSET)
+		b.pressed.connect(func() -> void:
+			if which == "pulse":
+				show_pulse()
+			else:
+				show_stats())
+		_tab_row.add_child(b)
+
+
+## The PULSE tab: the caption, the chart drawing on, the ticks.
+func show_pulse() -> void:
+	if _pulse_body == null:
+		return
+	_build_tabs("pulse")
+	_stats_body.visible = false
+	_pulse_body.visible = true
+	_pulse_chart.play(PULSE_START)
+
+
+## Back to the rows.
+func show_stats() -> void:
+	if _pulse_body == null:
+		return
+	_build_tabs("stats")
+	_pulse_body.visible = false
+	_stats_body.visible = true
+
+
+## Which view the box shows (tests / QA).
+func box_view() -> String:
+	return "pulse" if _pulse_body != null and _pulse_body.visible else "stats"
+
+
+## The pulse view at the rows' height `body_h`: the caption row (over its
+## 6 px pad), the chart, the four clock ticks spread over the plot's width.
+func _pulse_view(body_h: float) -> VBoxContainer:
+	var body := _vbox(10)
+	body.name = "PulseBody"
+	body.custom_minimum_size = Vector2(0, body_h)
+	var cap := HeatCopy.pulse_caption(_pulse)
+	var cl := _text(str(cap["text"]), 20, cap["color"])
+	cl.name = "Caption"
+	cl.custom_minimum_size = Vector2(0, PULSE_CAP_H)
+	cl.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	body.add_child(cl)
+	var chart_h := body_h - PULSE_CAP_H - PULSE_TICKS_H - 20.0
+	_pulse_chart = PulseChart.new(_pulse, chart_h)
+	_pulse_chart.name = "Pulse"
+	_pulse_chart.custom_minimum_size = Vector2(0, chart_h)
+	var you_l := _text(str(_pulse["you"][-1]), 18, RetroTheme.c("orange"), true)
+	you_l.name = "EndYou"
+	var opp_l := _text(str(_pulse["opp"][-1]), 18, GREEN, true)
+	opp_l.name = "EndOpp"
+	var mark_l := _text(str(_pulse["mark_text"]), 14, HI, true)
+	mark_l.name = "Mark"
+	var ot_l := _text("OT", 12, GOLD, true)
+	ot_l.name = "OtLabel"
+	for l in [you_l, opp_l, mark_l, ot_l]:
+		(l as Label).add_theme_constant_override("outline_size", 8)   # the design's 2 px ink shadow
+		_pulse_chart.add_child(l)
+	_pulse_chart.set_labels(you_l, opp_l, mark_l, ot_l)
+	body.add_child(_pulse_chart)
+	var ticks := _hbox(0)
+	ticks.name = "Ticks"
+	ticks.custom_minimum_size = Vector2(0, PULSE_TICKS_H)
+	var i := 0
+	for k in _pulse["ticks"]:
+		if i > 0:
+			var gap := Control.new()
+			gap.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+			gap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			ticks.add_child(gap)
+		var tl := _text(str(k), 16, TICK)
+		tl.name = "Tick%d" % i
+		tl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		ticks.add_child(tl)
+		i += 1
+	var pad := Control.new()
+	pad.custom_minimum_size = Vector2(PulseChart.LABEL_X - PulseChart.PLOT_W, 0)
+	pad.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ticks.add_child(pad)
+	body.add_child(ticks)
+	return body
+
+
+## The chart: dashed grid, the OT band, the marker at the margin's extreme,
+## the opponent's green step line under your orange one (each over an ink
+## stroke, square caps), both drawing on over DRAW_S from `play`'s start;
+## the end scores, the marker's number and OT fade in after. Its own clock
+## (`step`), `manual` for deterministic snaps, like XpMeter.
+class PulseChart extends Control:
+	const PLOT_W := 540.0
+	const LABEL_X := 552.0
+	const TOP := 4.0
+	const DRAW_S := 1.1
+	const MARK_AT := 1.2
+	const LABELS_AT := 1.3
+	const SEP := 20.0            # the end scores never sit closer than this
+	const INK := RetroTheme.SCENE_OUTLINE
+	const BUTTER := Color("#FFE45C")
+	const GREEN := Color("#6FC28A")
+	const GOLD := Color("#F0B84A")
+	var a: Dictionary
+	var h: float
+	var manual := false
+	var _t := 0.0
+	var _start := 0.0
+	var _you_pts: PackedVector2Array
+	var _opp_pts: PackedVector2Array
+	var _you_l: Label
+	var _opp_l: Label
+	var _mark_l: Label
+	var _ot_l: Label
+
+	func _init(analysis: Dictionary, height: float) -> void:
+		a = analysis
+		h = height
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_you_pts = _path(a["you"])
+		_opp_pts = _path(a["opp"])
+
+	func plot_h() -> float:
+		return h - 8.0
+
+	func x_of(t: float) -> float:
+		return t / float(a["duration"]) * PLOT_W
+
+	func y_of(v: float) -> float:
+		return TOP + plot_h() - v / float(a["max"]) * plot_h()
+
+	## The step path: M0 y0, then across to each sample's clock and up to its score.
+	func _path(vals: Array) -> PackedVector2Array:
+		var pts := PackedVector2Array()
+		var step := float(a["step"])
+		pts.push_back(Vector2(0.0, y_of(float(vals[0]))))
+		for i in range(1, vals.size()):
+			var x := x_of(i * step)
+			pts.push_back(Vector2(x, y_of(float(vals[i - 1]))))
+			pts.push_back(Vector2(x, y_of(float(vals[i]))))
+		return pts
+
+	func set_labels(you_l: Label, opp_l: Label, mark_l: Label, ot_l: Label) -> void:
+		_you_l = you_l
+		_opp_l = opp_l
+		_mark_l = mark_l
+		_ot_l = ot_l
+		_layout_labels()
+		_apply()
+
+	func _layout_labels() -> void:
+		var y_l := y_of(float(a["you"][-1]))
+		var o_l := y_of(float(a["opp"][-1]))
+		if absf(y_l - o_l) < SEP:
+			o_l = y_l + SEP if o_l >= y_l else y_l - SEP
+		_you_l.position = Vector2(LABEL_X, y_l - _you_l.get_minimum_size().y * 0.5)
+		_opp_l.position = Vector2(LABEL_X, o_l - _opp_l.get_minimum_size().y * 0.5)
+		_mark_l.visible = int(a["mark_i"]) >= 0
+		if _mark_l.visible:
+			var i := int(a["mark_i"])
+			var x := x_of(float(a["mark_t"]))
+			var top := minf(y_of(float(a["you"][i])), y_of(float(a["opp"][i])))
+			var ms := _mark_l.get_minimum_size()
+			_mark_l.position = Vector2(x - ms.x * 0.5, top - 6.0 - ms.y)
+		_ot_l.visible = bool(a["ot"])
+		if _ot_l.visible:
+			var x := (x_of(GamePulse.REGULATION_S) + x_of(float(a["duration"]))) * 0.5
+			_ot_l.position = Vector2(x - _ot_l.get_minimum_size().x * 0.5, 12.0)
+
+	## Start the draw-on at second `start` of the chart's own clock.
+	func play(start: float) -> void:
+		_start = start
+		_t = 0.0
+		_apply()
+
+	func _process(dt: float) -> void:
+		if not manual:
+			step(dt)
+
+	func step(dt: float) -> void:
+		if _t - _start > LABELS_AT + 0.5:
+			return   # settled: nothing left to move
+		_t += dt
+		_apply()
+
+	func progress() -> float:
+		return clampf((_t - _start) / DRAW_S, 0.0, 1.0)
+
+	func _fade(at: float, dur: float) -> float:
+		return clampf((_t - _start - at) / dur, 0.0, 1.0)
+
+	func _apply() -> void:
+		if _you_l != null:
+			_you_l.modulate.a = _fade(LABELS_AT, 0.25)
+			_opp_l.modulate.a = _fade(LABELS_AT, 0.25)
+			_mark_l.modulate.a = _fade(MARK_AT, 0.3)
+			_ot_l.modulate.a = 1.0
+		queue_redraw()
+
+	func _draw() -> void:
+		var ph := plot_h()
+		var base := TOP + ph
+		if bool(a["ot"]):
+			var x0 := x_of(GamePulse.REGULATION_S)
+			draw_rect(Rect2(x0, TOP, x_of(float(a["duration"])) - x0, ph), Color(GOLD, 0.16))
+		draw_dashed_line(Vector2(0, TOP), Vector2(PLOT_W, TOP), Color(RetroTheme.SCENE_TEXT, 0.22), 2.0, 10.0)
+		draw_dashed_line(Vector2(0, TOP + ph * 0.5), Vector2(PLOT_W, TOP + ph * 0.5), Color(RetroTheme.SCENE_TEXT, 0.22), 2.0, 10.0)
+		draw_line(Vector2(0, base), Vector2(PLOT_W, base), Color(RetroTheme.SCENE_TEXT, 0.55), 2.0)
+		if int(a["mark_i"]) >= 0:
+			var i := int(a["mark_i"])
+			var x := x_of(float(a["mark_t"]))
+			var y1 := y_of(float(a["you"][i]))
+			var y2 := y_of(float(a["opp"][i]))
+			draw_dashed_line(Vector2(x, minf(y1, y2)), Vector2(x, maxf(y1, y2)), Color(BUTTER, _fade(MARK_AT, 0.3)), 2.0, 6.0)
+		var p := progress()
+		_stroke(_opp_pts, INK, 8.0, p)
+		_stroke(_opp_pts, GREEN, 4.0, p)
+		_stroke(_you_pts, INK, 9.0, p)
+		_stroke(_you_pts, RetroTheme.c("orange"), 5.0, p)
+
+	## A square-capped stroke along the first `p` of the path's length: one
+	## rect per segment, grown by half the width.
+	func _stroke(pts: PackedVector2Array, colour: Color, width: float, p: float) -> void:
+		if p <= 0.0:
+			return
+		var total := 0.0
+		for k in range(1, pts.size()):
+			total += (pts[k] - pts[k - 1]).length()
+		var left := total * p
+		for k in range(1, pts.size()):
+			if left <= 0.0:
+				break
+			var from := pts[k - 1]
+			var to := pts[k]
+			var seg := (to - from).length()
+			var end := from + (to - from) * minf(1.0, left / seg) if seg > 0.0 else to
+			left -= seg
+			var r := Rect2(Vector2(minf(from.x, end.x), minf(from.y, end.y)), (end - from).abs()).grow(width * 0.5)
+			draw_rect(r, colour)
 
 
 # ---- helpers ---------------------------------------------------------------------

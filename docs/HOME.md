@@ -1109,10 +1109,10 @@ band by) and the spread of each — the inconsistency before and after.
 league's name as the title (`HeatCopy.title`) under `★ SEASON 2 · DAY 4`
 (`HeatCopy.kicker`; a playoff game reads `SEMI 2 · GAME 3`); the result (36
 gold / 28 cream), the score at 60 with the OT chip and `VS NAME · "NICK"`
-on the left, the gold `TicketBox` on the right that the `TicketStream`
-fills from the score on arrival (one flyer per two tickets, fifteen at
-most, the count ticking up); an `XpMeter` (`game/ui/xp_meter.gd`) under them
-that fills with the XP just earned once the tickets land (0.8 s, ease-out;
+on the left, the gold `TicketBox` on the right showing the balance with the
+haul on its badge (the ticket stream left on 2026-10-30); an `XpMeter`
+(`game/ui/xp_meter.gd`) under them
+that fills with the XP just earned from 0.5 s (0.8 s, ease-out;
 `HeatCopy.level_meter` / `meter_text`: gold and pulsing on a level up, full
 at the cap); the box score at y 442 with the larger YOU / opponent chips
 and the better number in gold, a loss's bright spots in gold under the
@@ -1120,7 +1120,36 @@ rows (rows 56, 50 with bright spots); a card drop in its own teal row with
 the live card and `+1 CARD`; CONTINUE SEASON and HOME on one 120 px row.
 An online match keeps its rank line (in the score block), its rewards /
 spoils / meter row under the box and REMATCH? / SHOOT AROUND? beside HOME.
-QA: `--qa-heat-result` (`heat_win_stream` mid-flight, `heat_win` settled).
+QA: `--qa-heat-result` (`heat_win_meter` mid-fill, `heat_win` settled).
+
+**Game pulse** (design 6b, 2026-11-04; Ross: track it in every match, solo
+and online): the box header carries STATS / PULSE tabs on its left
+(`ShadowCard`s, the active one orange at .40, the other cream at .32, PS2P
+16, 48 tall) whenever the heat carries a `pulse` (every heat since that day;
+an older result shows the plain header). PULSE swaps the rows for a view of
+the rows' exact height, so the box, the drops and the buttons never move:
+the caption (Silkscreen bold 20, `HeatCopy.pulse_caption`) over the chart
+(`HeatResultScreen.PulseChart`) and four clock ticks under it (bold 16,
+`#D9D9D9`, spread over the plot's 540 px). The chart: a dashed grid (top,
+middle; a solid base), a gold band over the overtime with `OT`, the
+opponent's green `#6FC28A` step line (4 px over 8 px of ink) under your
+orange one (5 over 9), both drawing on over 1.1 s from 0.1 s after the tab
+opens, the two finals at the lines' ends (PS2P 16, never closer than 20 px)
+fading in at 1.3 s; a butter dashed marker with the margin's number at the
+caption's moment. The axis top is the higher final + 3 up to a ten; the
+clock runs 0 to the buzzer (90 s, 110 with one overtime; a forfeit's series
+stops at the clock). `GamePulse.analyse` (core, pure) decides the caption:
+a win that trailed by 6+ → `COMEBACK · DOWN n AT m:ss` (butter, marker at
+the deficit); a loss that led by 6+ → `LED BY n · SLIPPED AWAY` (`#FF8A6A`,
+marker at the lead); two or more lead changes → `n LEAD CHANGES`
+(`· WON IN OT` / `· LOST IN OT` past regulation); else `LED WIRE TO WIRE` /
+`CHASED ALL GAME`. Ticks `0:00 · 0:30 · 1:00 · 1:30`, or with overtime
+`0:00 · 0:45 · 1:30 · 1:50`. The series is sampled in `Heat` (docs/LEAGUE.md
+→ Core), rides in `App.last_heat` and is never saved. `show_pulse()` /
+`show_stats()` / `box_view()` for QA and tests. QA: `heat_pulse_win_draw`
+(mid-draw), `heat_pulse_win` (OT, lead changes), `heat_pulse_loss` (slipped
+away, under bright spots), `heat_pulse_comeback`, `online_pulse`;
+`--qa-multi`'s `online_pulse_live` is the staged heat's real series.
 CONTINUE SEASON after the season's last game lands on the league home with
 the season wrap-up over it (below).
 

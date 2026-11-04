@@ -50,6 +50,7 @@ func _relay(seed: int, max_s := 60.0) -> Array:
 
 
 func run(t) -> void:
+	_pulse(t)
 	# No bot on the remote side; the board reads the other phone's count.
 	var r := Heat.new(_cfg({"remote": true}))
 	t.ok(r.remote, "remote flag")
@@ -191,3 +192,26 @@ func run(t) -> void:
 	t.ok(stuck.ai.phase == TimeTrial.PHASE_DONE, "the timeout abandons the replay")
 	t.ok(stuck.done and str(stuck.result().get("reason", "")) == "" and not bool(stuck.result()["won"]), "…and decides on the reports: 0–2, a plain loss, not a void")
 	t.eq(int(stuck.result()["ai_score"]), 2, "…their reported score")
+
+
+## The game pulse online: the other side's series is their relayed score as
+## it arrived; a forfeit's pulse stops at the clock and ends on their score.
+func _pulse(t) -> void:
+	var r := Heat.new(_cfg({"remote": true}))
+	for i in int((TimeTrial.COUNTDOWN_SECONDS + 5.0) * 60.0):
+		r.tick(1.0 / 60.0)
+	t.eq(r.pulse_opp.size(), 3, "three samples by 5 s (0, 2, 4)")
+	r.remote_outcome(4)
+	for i in 60 * 2:
+		r.tick(1.0 / 60.0)
+	t.eq(int(r.pulse_opp[-1]), 4, "their relayed score shows at the next sample")
+	t.eq(int(r.pulse_opp[2]), 0, "…and not before it arrived")
+	r.remote_forfeit(1.0)
+	var p: Dictionary = r.result()["pulse"]
+	t.eq(p["you"].size(), 4, "cut at the clock (7 s → 0, 2, 4, 6)")
+	t.eq(int(p["opp"][-1]), 4, "a forfeit's pulse ends on their score")
+	var pair := _relay(11)
+	var src: Heat = pair[0]
+	var dst: Heat = pair[1]
+	t.eq(int(dst.result()["pulse"]["opp"][-1]), src.ai.score, "the remote pulse ends on their reported score")
+	t.eq(dst.result()["pulse"]["opp"].size(), src.result()["pulse"]["opp"].size(), "…over the same clock as theirs")

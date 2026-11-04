@@ -266,7 +266,11 @@ build at any server.
   identically; the room records the match when both reports for a period
   differ. A disagreement between the replay and their report flags `desync`
   on the result (recorded on the match). `tests/test_heat_remote.gd` proves a
-  seeded bot's run replays to the identical score.
+  seeded bot's run replays to the identical score. The game pulse
+  (docs/HOME.md → League post-match, 2026-11-04) is local: each phone
+  samples its own score and the other side's relayed `outcome` scores as
+  they arrive (so their line carries the line's latency), and the period
+  report fixes their final; nothing new goes over the wire or into D1.
 - **Leaving**: a socket gone past the 20 s grace tells the other phone
   `peer_left`; a match 30 s in is a forfeit win for them, earlier a void
   (`Heat.remote_forfeit`). Our OWN line lost for good, or the room timing

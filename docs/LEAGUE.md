@@ -30,7 +30,14 @@ a picture-in-picture opponent, and one-time-use power-up cards (M3).
   driven by cadence timers and `AimError` shots, ties → `ot_seconds` overtime periods until
   decided. Same renderer contract (`tick → drain_events → balls(side)`), events tagged with
   `side`, plus `ot_start` and `heat_done {result}`. `result()` = won, scores, OT count, per-side
-  totals (score, makes, swishes, attempts, bestStreak, bonus, iced).
+  totals (score, makes, swishes, attempts, bestStreak, bonus, iced), `half` (both scores at the
+  midpoint) and, since 2026-11-04, `pulse` — the game pulse: `{step: 2, you: [...], opp: [...]}`,
+  both scores every `Heat.PULSE_STEP` s of the match clock (`Heat.clock()`: seconds played, through
+  overtime; the countdown reads 0) from 0 to the buzzer, the last pair fixed to the final
+  (a ball landing after the horn counts at the buzzer's sample); a forfeit or a void stops it at
+  the clock. Online the opponent's series is their relayed score as it arrived here. `GamePulse`
+  (`core/match/game_pulse.gd`, pure) reads it for the post-match chart (docs/HOME.md → League
+  post-match); `from_keyframes` builds fixtures the way the design does. Result only: never saved.
 
 Defaults: 90 s heats, 20 s overtime, 1.5 s ball-return wait (quick heats); league rows set `ball_return_s` to 1.0. The last 30 s trigger the location's mechanic for both sides: the cage's sliding board (`board_motion` on both TimeTrials; the AI leads a moving hoop by `Heat.AI_LEAD_S`), the beach's random spot shuffle (the screen's existing shuffle for you; the AI gets its own seeded walk between the arena's spots in `Heat` — `set_spots`, `ai_spot` event — and shoots from that spot's origin, with the PiP camera following).
 

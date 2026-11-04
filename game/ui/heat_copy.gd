@@ -11,6 +11,37 @@ extends RefCounted
 const PLAYER := Campaign.PLAYER
 const ROWS := [["MAKES", "makes"], ["SHOOTING", "pct"], ["SWISHES", "swishes"], ["BEST STREAK", "bestStreak"],
 	["STREAK BONUS", "bonus"], ["ICED OVER", "iced"]]
+## The box's two views (design 6b, 2026-11-04): the rows, or the game pulse.
+const PULSE_TABS := ["STATS", "PULSE"]
+const BUTTER := Color("#FFE45C")
+const BAD := Color("#FF8A6A")
+
+
+## The pulse caption over the chart (design 6b) from `GamePulse.analyse`: what
+## the game was, and its colour — a comeback in butter, a lead that slipped
+## away in red, the rest plain.
+static func pulse_caption(a: Dictionary) -> Dictionary:
+	if a.is_empty():
+		return {"text": "", "color": RetroTheme.SCENE_TEXT}
+	match str(a.get("kind", "")):
+		"comeback":
+			return {"text": "COMEBACK · DOWN %d AT %s" % [-int(a["lo"]), GamePulse.fmt(float(a["mark_t"]))], "color": BUTTER}
+		"slipped":
+			return {"text": "LED BY %d · SLIPPED AWAY" % int(a["hi"]), "color": BAD}
+		"changes":
+			var s := "%d LEAD CHANGES" % int(a["changes"])
+			if bool(a.get("ot", false)):
+				s += " · WON IN OT" if bool(a.get("won", false)) else " · LOST IN OT"
+			return {"text": s, "color": RetroTheme.SCENE_TEXT}
+		"wire":
+			return {"text": "LED WIRE TO WIRE", "color": RetroTheme.SCENE_TEXT}
+	return {"text": "CHASED ALL GAME", "color": RetroTheme.SCENE_TEXT}
+
+
+## Every shape the pulse can say (the glyph check).
+static func pulse_strings() -> Array:
+	return PULSE_TABS + ["COMEBACK · DOWN 6 AT 1:04", "LED BY 8 · SLIPPED AWAY", "3 LEAD CHANGES · WON IN OT", "2 LEAD CHANGES · LOST IN OT",
+		"LED WIRE TO WIRE", "CHASED ALL GAME", "0:00 · 0:30 · 1:00 · 1:30 · 0:45 · 1:50", "OT", "-6", "+8"]
 
 
 static func league_of(heat: Dictionary) -> Dictionary:

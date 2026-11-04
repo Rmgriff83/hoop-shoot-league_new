@@ -17,6 +17,7 @@ func _drain_kinds(h: Heat) -> Array:
 
 
 func run(t) -> void:
+	_pulse(t)
 	var geo := SimGeometry.arcade()
 	var h := Heat.new({"geo": geo, "seconds": 20.0, "ot_seconds": 5.0, "ball_return_s": 1.5,
 		"ai": AiRatings.make(0.6, 0.6, 3.0), "seed": 11, "calib_key": "arcade"})
@@ -203,3 +204,48 @@ func run(t) -> void:
 	var idle := Heat.new({"geo": geo, "seconds": 8.0, "ai": AiRatings.make(0.6, 0.6, 3.0), "seed": 21, "calib_key": "arcade"})
 	_tick(idle, 12.0)
 	t.eq(idle.player.attempts, 0, "no bot → the player side does not shoot on its own")
+
+
+## The game pulse (GamePulse, docs/HOME.md → League post-match): both scores
+## every 2 s of the match clock, the last pair the final.
+func _pulse(t) -> void:
+	var h := Heat.new({"geo": SimGeometry.arcade(), "seconds": 20.0, "ot_seconds": 5.0, "ball_return_s": 1.5,
+		"ai": AiRatings.make(0.9, 0.6, 3.0), "seed": 11, "calib_key": "arcade"})
+	t.close(h.clock(), 0.0, 1e-9, "the clock reads 0 before the tip-off")
+	t.eq(h.pulse_you.size(), 0, "nothing sampled before a tick")
+	_tick(h, TimeTrial.COUNTDOWN_SECONDS + 0.05)
+	t.ok(h.clock() > 0.0 and h.clock() < 0.1, "…and starts with the period (%.3f)" % h.clock())
+	t.eq(h.pulse_you.size(), 1, "the 0 s sample")
+	_tick(h, 10.0)
+	t.close(h.clock(), 10.05, 0.02, "10 s in")
+	t.eq(h.pulse_you.size(), 6, "six samples by 10 s (0, 2, …, 10)")
+	t.eq(h.pulse_opp.size(), 6, "…both sides")
+	_tick(h, 30.0)
+	t.ok(h.done, "decided (a 0.9 AI against an idle player)")
+	t.close(h.clock(), 20.0, 1e-6, "the clock stops at the buzzer")
+	var p: Dictionary = h.result()["pulse"]
+	t.close(float(p["step"]), 2.0, 1e-9, "step 2")
+	t.eq(p["you"].size(), 11, "11 samples over 20 s")
+	t.eq(p["opp"].size(), 11, "…both")
+	t.eq(int(p["opp"][-1]), int(h.result()["ai_score"]), "the last pair is the final")
+	t.eq(int(p["you"][-1]), int(h.result()["player_score"]), "…both sides")
+	t.eq(int(p["you"][-1]), 0, "the idle player never scored")
+	var rising := true
+	for i in range(1, p["opp"].size()):
+		if int(p["opp"][i]) < int(p["opp"][i - 1]):
+			rising = false
+	t.ok(rising, "a score never falls")
+	t.ok(int(p["opp"][-1]) > 0, "the AI scored (%d)" % int(p["opp"][-1]))
+	# The clock through overtime: the period before plus what this one has run.
+	var o := Heat.new({"geo": SimGeometry.arcade(), "seconds": 20.0, "ot_seconds": 5.0, "ball_return_s": 1.5,
+		"ai": AiRatings.make(0.6, 0.6, 3.0), "seed": 11, "calib_key": "arcade"})
+	o.ot = 1
+	o._ot_break = 1.0
+	o.player.time_left = 0.0
+	t.close(o.clock(), 20.0, 1e-9, "an OT break reads as the buzzer")
+	o._ot_break = -1.0
+	o.player.time_left = 3.0
+	t.close(o.clock(), 22.0, 1e-9, "2 s into the first OT")
+	o.ot = 2
+	o.player.time_left = 5.0
+	t.close(o.clock(), 25.0, 1e-9, "the second OT opens at 25")

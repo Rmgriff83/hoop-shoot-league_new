@@ -43,6 +43,14 @@ var ot := 0
 ## The scores at the regulation midpoint ({player, ai}; {} until then): the
 ## league drop's comeback rule reads it (docs/CARDS.md § Drops, 2026-10-19).
 var half: Dictionary = {}
+## The game pulse (GamePulse; docs/HOME.md → League post-match, 2026-11-04):
+## both scores every PULSE_STEP s of the match clock from 0 to the buzzer,
+## overtime carrying on, the last pair fixed to the final at the result —
+## online the other side is their relayed score as it arrived here.
+const PULSE_STEP := 2.0
+var pulse_you: Array[int] = []
+var pulse_opp: Array[int] = []
+var _pulse_next := 0.0
 var done := false
 var rng: DetRng
 
@@ -240,6 +248,7 @@ func tick(dt: float) -> void:
 	ai.tick(dt)
 	if half.is_empty() and ot == 0 and player.time_left <= seconds * 0.5:
 		half = {PLAYER: player.score, AI: score(AI)}
+	_pulse_sample()
 	for ev in player.drain_events():
 		ev["side"] = PLAYER
 		# The period this event belongs to, stamped now: when the other side's
@@ -545,6 +554,38 @@ func result() -> Dictionary:
 	return _result
 
 
+## The match clock: seconds played, through overtime (the countdown reads 0;
+## an OT break reads as the end of the period before it).
+func clock() -> float:
+	if ot == 0:
+		return seconds - player.time_left
+	if _ot_break >= 0.0:
+		return seconds + (ot - 1) * ot_seconds
+	return seconds + (ot - 1) * ot_seconds + (ot_seconds - player.time_left)
+
+
+## Every PULSE_STEP of the clock: both scores as they stand.
+func _pulse_sample() -> void:
+	var t := clock()
+	while _pulse_next <= t + 1e-6:
+		pulse_you.push_back(player.score)
+		pulse_opp.push_back(score(AI))
+		_pulse_next += PULSE_STEP
+
+
+## The series as the result carries it: sampled to the clock, the last pair
+## the final (a ball landing after the horn counts at the buzzer's sample).
+func _pulse_finish(you: int, opp: int) -> Dictionary:
+	_pulse_sample()
+	if pulse_you.is_empty():
+		pulse_you.push_back(you)
+		pulse_opp.push_back(opp)
+	else:
+		pulse_you[-1] = you
+		pulse_opp[-1] = opp
+	return {"step": PULSE_STEP, "you": pulse_you.duplicate(), "opp": pulse_opp.duplicate()}
+
+
 static func totals_of(tt: TimeTrial) -> Dictionary:
 	return {
 		"score": tt.score, "makes": tt.makes, "swishes": tt.swishes, "attempts": tt.attempts,
@@ -572,6 +613,7 @@ func _build_result() -> Dictionary:
 		"seed": seed_value,
 		"sides": {PLAYER: p, AI: a},
 		"half": half.duplicate(),
+		"pulse": _pulse_finish(player.score, score(AI)),
 	}
 	if remote:
 		out["online"] = true

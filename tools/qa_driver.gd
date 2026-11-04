@@ -1132,13 +1132,20 @@ func _run_heat_result() -> void:
 		"league": {"id": "cage", "game": "d1", "playoff": false}, "tickets": 36, "card_drop": "fire7",
 		"xp": {"gained": 30, "level_before": 1, "level_after": 2},
 		"sides": {"player": {"makes": 19, "attempts": 30, "swishes": 7, "bestStreak": 6, "bonus": 7, "iced": 0},
-			"ai": {"makes": 18, "attempts": 31, "swishes": 6, "bestStreak": 6, "bonus": 7, "iced": 0}}}
+			"ai": {"makes": 18, "attempts": 31, "swishes": 6, "bestStreak": 6, "bonus": 7, "iced": 0}},
+		# The game pulse (design 6b, 2026-11-04): the lead traded into overtime.
+		"pulse": GamePulse.from_keyframes([0, 15, 30, 45, 60, 75, 90, 110], [0, 5, 10, 14, 18, 21, 38, 44], [0, 6, 9, 15, 17, 22, 38, 42])}
 	App.last_heat = base
 	get_tree().change_scene_to_file(App.HEAT_RESULT_SCENE)
 	await _sleep(0.9)
 	await _snap("heat_win_meter")   # the XP meter mid-fill (design 6b, 2026-10-30)
 	await _sleep(3.4)   # past the XP fill: LEVEL UP in gold
 	await _snap("heat_win")
+	await _show_pulse()
+	await _sleep(0.6)
+	await _snap("heat_pulse_win_draw")   # the lines half drawn
+	await _sleep(1.2)
+	await _snap("heat_pulse_win")        # settled: the OT band, the end scores
 	var loss := base.duplicate(true)
 	loss["won"] = false
 	loss["player_score"] = 33
@@ -1150,13 +1157,18 @@ func _run_heat_result() -> void:
 	loss["sides"]["player"] = {"makes": 14, "attempts": 25, "swishes": 5, "bestStreak": 4, "bonus": 3, "iced": 1}
 	loss["sides"]["ai"] = {"makes": 16, "attempts": 26, "swishes": 5, "bestStreak": 8, "bonus": 9, "iced": 0}
 	loss["bright"] = ["NEW BEST STREAK · 4", "SHOOTING 56% · UP FROM 48% · LAST 5"]
+	loss["pulse"] = GamePulse.from_keyframes([0, 15, 30, 45, 60, 75, 90], [0, 9, 16, 22, 26, 30, 33], [0, 3, 8, 14, 22, 30, 36])   # led by 8, slipped away
 	App.last_heat = loss
 	get_tree().change_scene_to_file(App.HEAT_RESULT_SCENE)
 	await _sleep(1.2)
 	await _snap("heat_loss")
+	await _show_pulse()
+	await _sleep(1.8)
+	await _snap("heat_pulse_loss")       # the marker at the lead's top, bright-spot height
 	# A close loss (by 2) rolls a card: CLOSE ONE over the drop.
 	var close := loss.duplicate(true)
 	close["player_score"] = 34
+	close["pulse"]["you"][-1] = 34
 	close["card_drop"] = "ice"
 	close["drop_reason"] = "close_loss"
 	close["bright"] = ["5 SWISHES · YOUR MOST"]
@@ -1167,6 +1179,7 @@ func _run_heat_result() -> void:
 	# The 4th straight loss: the guaranteed Ice and its caption.
 	var streak := loss.duplicate(true)
 	streak["player_score"] = 24
+	streak["pulse"]["you"][-1] = 24
 	streak["card_drop"] = "ice"
 	streak["drop_reason"] = "loss_streak"
 	streak["bright"] = []
@@ -1177,10 +1190,15 @@ func _run_heat_result() -> void:
 	var quick := base.duplicate(true)
 	quick["league"] = null
 	quick["card_drop"] = ""
+	quick["ot"] = 0
+	quick["pulse"] = GamePulse.from_keyframes([0, 15, 30, 45, 60, 75, 90], [0, 4, 8, 11, 16, 30, 44], [0, 9, 16, 21, 24, 32, 42])   # a comeback from 10 down
 	App.last_heat = quick
 	get_tree().change_scene_to_file(App.HEAT_RESULT_SCENE)
 	await _sleep(1.2)
 	await _snap("heat_quick")
+	await _show_pulse()
+	await _sleep(1.8)
+	await _snap("heat_pulse_comeback")   # butter caption, the marker at the deficit
 	# The online page (docs/BACKEND.md → Ranked → Stage B): a rated win with
 	# SPOILS, tickets and a full meter; a rated loss with the lost card, the
 	# insured one, the streak Ice, bright spots and SHOOT AROUND? beside
@@ -1214,6 +1232,10 @@ func _run_heat_result() -> void:
 		App.settled_online(peer.settle_message(won))
 		await _sleep(0.8)
 		await _snap("online_result_win" if won else "online_result_loss")
+		if won:
+			await _show_pulse()
+			await _sleep(1.8)
+			await _snap("online_pulse")
 		print("QA heat result: online %s rank='%s' spoils='%s' meter='%s' shoot=%s" % ["win" if won else "loss", MatchCopy.rank_delta_line(App.last_heat),
 			str(MatchCopy.spoils_panel(App.last_heat).get("caption", "")), MatchCopy.meter_line(App.last_heat), App.shoot_around_offered()])
 	App.online_settle = {}
@@ -1221,6 +1243,14 @@ func _run_heat_result() -> void:
 	peer.queue_free()
 	print("QA heat result: done")
 	get_tree().quit(0)
+
+
+## The post-match box's PULSE tab (design 6b, 2026-11-04).
+func _show_pulse() -> void:
+	var page := get_tree().current_scene
+	if page != null and page.has_method("show_pulse"):
+		page.show_pulse()
+	await _sleep(0.05)
 
 
 ## Card icons QA (design "Card Icons" 9a / 10a): the animated faces at every
@@ -2149,6 +2179,15 @@ func _run_multi() -> void:
 	await _sleep(9.0)
 	await _snap("online_result")
 	print("QA multi: settle rank line '%s' tickets=%s" % [MatchCopy.rank_delta_line(App.online_settle), str(App.last_heat.get("tickets", "-"))])
+	# The game pulse the staged heat recorded (design 6b, 2026-11-04): the real series, both sides.
+	var pulse: Dictionary = App.last_heat.get("pulse", {})
+	print("QA multi: pulse %d samples you=%s opp=%s" % [pulse.get("you", []).size(), str(pulse.get("you", [])), str(pulse.get("opp", []))])
+	await _show_pulse()
+	await _sleep(1.8)
+	await _snap("online_pulse_live")
+	var page := get_tree().current_scene
+	if page != null and page.has_method("show_stats"):
+		page.show_stats()
 	# The rematch card: they ask (gold), we accept (teal).
 	if is_instance_valid(fake):
 		fake.ask_rematch()

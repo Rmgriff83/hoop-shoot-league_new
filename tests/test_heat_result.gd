@@ -83,7 +83,7 @@ func _copy(t) -> void:
 	t.eq(HeatCopy.drop(_heat(true, 0, "")), {}, "no drop, no card")
 	var display := UiFont.display()
 	var bold := UiFont.body_bold()
-	for s in [HeatCopy.header(win, doc), vs, "COINS · WIN", "NOW 3-1 · 2ND PLACE · DAY 5 NEXT", "THEY TOOK IT"]:
+	for s in [HeatCopy.header(win, doc), vs, "COINS · WIN", "NOW 3-1 · 2ND PLACE · DAY 5 NEXT", "THEY TOOK IT"] + HeatCopy.pulse_strings():
 		for ch in s:
 			t.ok(display.has_char(ch.unicode_at(0)) and bold.has_char(ch.unicode_at(0)), "glyph '%s' in both faces" % ch)
 
@@ -183,5 +183,37 @@ func _chrome(t) -> void:
 	t.eq(c.find_child("Row_ICED_OVER", true, false).custom_minimum_size.y, 50.0, "box rows slim under bright spots")
 	t.ok(c.find_child("Bright", true, false) != null, "the bright spots in a loss")
 	t.ok(c.find_child("Rematch", true, false) == null, "no REMATCH without a room")
+	t.ok(c.find_child("TabPulse", true, false) == null and c.find_child("PulseBody", true, false) == null, "no tabs without a pulse (an older result)")
 	c.free()
+	# The game pulse (design 6b, 2026-11-04): STATS / PULSE tabs in the box
+	# header when the heat carries its series; PULSE swaps the rows for the
+	# chart at the same height; the box never moves.
+	var ph := _heat(true, 0, "")
+	ph["pulse"] = GamePulse.from_keyframes([0, 15, 30, 45, 60, 75, 90], [0, 4, 8, 11, 16, 24, 41], [0, 7, 13, 18, 21, 23, 37])
+	var pc: Control = screen.build_chrome(ph, doc, cage)
+	t.ok(pc.find_child("TabStats", true, false) is ShadowCard and pc.find_child("TabPulse", true, false) is ShadowCard, "the two tabs")
+	t.eq((pc.find_child("Box", true, false) as Control).position.y, 442.0, "the box keeps its place")
+	t.eq((pc.find_child("PulseBody", true, false) as Control).custom_minimum_size.y, 6 * 56.0, "the pulse view is the rows' height")
+	t.ok(not (pc.find_child("PulseBody", true, false) as Control).visible, "the rows first")
+	t.eq(screen.box_view(), "stats", "…STATS")
+	screen.show_pulse()
+	t.eq(screen.box_view(), "pulse", "PULSE opens the chart")
+	t.ok(not (pc.find_child("StatsBody", true, false) as Control).visible, "…over the rows")
+	var expect_cap: Dictionary = HeatCopy.pulse_caption(GamePulse.analyse(ph["pulse"]))
+	t.eq((pc.find_child("Caption", true, false) as Label).text, str(expect_cap["text"]), "the caption (%s)" % expect_cap["text"])
+	t.eq((pc.find_child("EndYou", true, false) as Label).text, "41", "your final at the line's end")
+	t.eq((pc.find_child("EndOpp", true, false) as Label).text, "37", "…and theirs")
+	t.eq((pc.find_child("Tick0", true, false) as Label).text, "0:00", "the first tick")
+	t.eq((pc.find_child("Tick3", true, false) as Label).text, "1:30", "the last tick")
+	t.ok((pc.find_child("Pulse", true, false) as Control).custom_minimum_size.y > 200.0, "the chart takes the body (%.0f)" % (pc.find_child("Pulse", true, false) as Control).custom_minimum_size.y)
+	screen.show_stats()
+	t.eq(screen.box_view(), "stats", "STATS brings the rows back")
+	t.ok((pc.find_child("Row_ICED_OVER", true, false) as Control).visible, "…visible again")
+	pc.free()
+	# Online too: the same box, the same tabs.
+	on["pulse"] = ph["pulse"]
+	var oc: Control = screen.build_chrome(on, {}, {})
+	t.ok(oc.find_child("TabPulse", true, false) is ShadowCard, "an online match has the PULSE tab")
+	t.eq((oc.find_child("PulseBody", true, false) as Control).custom_minimum_size.y, 6 * 50.0 + 2 * 32.0, "…at the slim rows' height under bright spots")
+	oc.free()
 	screen.free()
