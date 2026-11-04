@@ -454,7 +454,7 @@ def add_flip_board(coll, root, face_mat, cards_mat, card_back, board_back, vcol)
                   (-1, 0, 0), face_mat, coll, board, origin=BOARD)
     cage.add_box("ScoreboardBack", (0.025, hh * 2, hw * 2), (0.0135, 0.0, 0.0), board_back, coll, board)
     hard = VcolMerge()
-    world = (("ry", -math.pi / 2), ("t", BOARD))     # design local -> sim
+    world = (("ry", -math.pi / 2),)     # design local -> board-local (the mesh is parented to the board)
     for sx in SLOTS:
         hard.add(P_box(.172, .244, .014), hexrgb(0xCFCCC4), (("t", (sx, CARD_Y - .122, .007)),) + world)
         for rx in (-.045, .045):

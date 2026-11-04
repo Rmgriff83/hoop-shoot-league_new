@@ -7,6 +7,7 @@ extends RefCounted
 
 
 func run(t) -> void:
+	_built_board(t)
 	_board(t)
 	_court(t)
 
@@ -123,3 +124,15 @@ func _court(t) -> void:
 	beach.show_score(3)
 	t.eq(beach.led.idle_text(), "SCORE 3", "…show_score() still reaches its LED")
 	root.free()
+
+
+## The park's real board: the stacks, rings and hooks stay on it (they once sat
+## at twice the board's position, floating by the far wall; Ross, 2026-11-04).
+func _built_board(t) -> void:
+	var arena: Node = (load("res://assets/arena/park/park.glb") as PackedScene).instantiate()
+	var hardware := arena.find_child("ScoreboardHardware", true, false) as MeshInstance3D
+	t.ok(hardware != null, "the park's board carries its hardware")
+	if hardware != null:
+		var box := hardware.get_aabb()
+		t.ok(hardware.position.is_zero_approx() and box.get_center().length() < 0.2 and box.get_longest_axis_size() < 1.0, "…around the board's own origin (%s)" % str(box))
+	arena.free()

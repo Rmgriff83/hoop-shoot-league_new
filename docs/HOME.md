@@ -947,6 +947,9 @@ The shot-help numbers sit on the side HUD SIDE names (`help_side_offset` in time
   `user://qa/cards_f0.png`, `cards_f5.png`, `cards_live.png`: the animated
   card faces (ice, fire, the magnet) at tray / loadout / shop / deal
   size, the chips, the WAIT and `5S` tray tags, the deal caption.
+- `godot --path hoop_shoot --resolution 720x1560 -- --qa-heat --qa-heat-court=park` →
+  `user://qa/heat_park_live.png`, `heat_park_clean.png`: another court's league
+  match, the shooter's view with and without the HUD.
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-heat-result` →
   `user://qa/heat_win.png` (OT, a card drop), `heat_loss.png`, `heat_quick.png`.
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-results` →

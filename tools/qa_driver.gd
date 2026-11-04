@@ -251,6 +251,10 @@ func _run_results() -> void:
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-heat
 func _run_heat() -> void:
 	await _sleep(0.8)
+	# --qa-heat-court=park: the same pass on another court's league.
+	if _heat_court() != "cage":
+		await _run_heat_court(_heat_court())
+		return
 	App.enter_league("cage")
 	# Cards in the tray (design "Card Icons"): a Deep Freeze and a Heat Check
 	# in the first two slots when they are empty (this touches the dev save).
@@ -2814,6 +2818,40 @@ func _qa_shop_buy() -> void:
 		await _sleep(0.3)
 		await _snap("title_league_shop_locked")
 		(pane as ScrollContainer).scroll_vertical = 0
+
+
+func _heat_court() -> String:
+	for a in OS.get_cmdline_user_args():
+		if a.begins_with("--qa-heat-court="):
+			return a.get_slice("=", 1)
+	return "cage"
+
+
+## A league match on another court: the shooter's view and the same view with
+## the HUD off, so whatever stands behind the hoop can be read.
+func _run_heat_court(court: String) -> void:
+	App.enter_league(court)
+	App.start_league_heat()
+	for i in 40:
+		var sc := get_tree().current_scene
+		if sc != null and "heat" in sc and sc.has_method("prematch_open") and sc.call("prematch_open"):
+			break
+		await _sleep(0.5)
+	var heat_sc: Node = get_tree().current_scene
+	var page: PreMatchPage = heat_sc.call("prematch_page")
+	if page != null:
+		page.press_ready()
+	for i in 30:
+		if not bool(heat_sc.call("prematch_open")):
+			break
+		await _sleep(0.5)
+	await _sleep(4.0)
+	await _snap("heat_%s_live" % court)
+	for layer in get_tree().root.find_children("*", "CanvasLayer", true, false):
+		(layer as CanvasLayer).visible = false
+	await _sleep(0.3)
+	await _snap("heat_%s_clean" % court)
+	get_tree().quit(0)
 
 
 ## Aim QA: one REAL wind-up — press, pull DOWN in steps snapshotting at
