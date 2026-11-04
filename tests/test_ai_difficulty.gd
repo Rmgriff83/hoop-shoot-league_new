@@ -21,8 +21,8 @@ func run(t) -> void:
 	t.eq(AiDifficulty.label("normal"), "NORMAL", "NORMAL label")
 	t.eq(AiDifficulty.label("hard"), "HARD", "HARD label")
 	t.ok(AiDifficulty.shift("easy") < AiDifficulty.shift("normal") and AiDifficulty.shift("normal") < AiDifficulty.shift("hard"), "easy < normal < hard")
-	t.eq(AiDifficulty.SHIFT, {"easy": 0.0, "normal": 0.07, "hard": 0.14}, "the table: +0.05 a level on 2026-11-01 (Ross: tune up all the levels a little)")
-	t.eq(AiDifficulty.shift("easy"), 0.0, "EASY is the roster as authored")
+	t.eq(AiDifficulty.SHIFT, {"easy": 0.05, "normal": 0.12, "hard": 0.19}, "the table: +0.05 a level on 2026-11-03 (Ross: increase the difficulty a bit for all levels)")
+	t.close(AiDifficulty.shift("easy"), 0.05, 1e-9, "EASY sits a step above the roster as authored")
 	var r := {"accuracy": 0.5, "swishRate": 0.6, "pace": 3.4}
 	var n := AiDifficulty.apply(r, "normal")
 	t.close(float(n["accuracy"]), 0.5 + AiDifficulty.shift("normal"), 1e-9, "NORMAL shifts accuracy by the normal step")
@@ -35,7 +35,7 @@ func run(t) -> void:
 	var h := AiDifficulty.apply(r, "hard")
 	t.close(float(h["accuracy"]), 0.5 + AiDifficulty.shift("hard"), 1e-9, "HARD shifts accuracy by the hard step")
 	t.close(float(AiDifficulty.apply({"accuracy": 0.95}, "hard")["accuracy"]), 0.97, 1e-9, "clamped at AiMood's ceiling")
-	t.close(float(AiDifficulty.apply({"accuracy": 0.08}, "easy")["accuracy"]), 0.08, 1e-9, "EASY leaves the rating as authored (no shift, so no clamp either)")
+	t.close(float(AiDifficulty.apply({"accuracy": 0.08}, "easy")["accuracy"]), 0.13, 1e-9, "EASY shifts a low rating by its step (no clamp at the floor)")
 	# The ratings type reads the shifted dict like any other.
 	var ar := AiRatings.from_dict(AiDifficulty.apply(LeagueData.shooter("brickport")["ratings"], "hard"))
 	t.close(ar.accuracy, 0.38 + AiDifficulty.shift("hard"), 1e-9, "a shifted roster dict parses into AiRatings")
