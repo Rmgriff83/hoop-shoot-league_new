@@ -22,6 +22,7 @@ func run(t) -> void:
 	_season_over(t, app, cfg)
 	app.save_league_doc(kept, "cage")
 	_shop(t, app)
+	_shop_locked(t, app)
 	_float_cards(t, app)
 	SaveService.put_cards(cards_before)
 	SaveService.put_cosmetics(cos_before)
@@ -118,7 +119,7 @@ func _shop(t, app) -> void:
 	lc.tap_buy(id)
 	lc.tap_buy(id)
 	t.eq(lc.buy_state(id), "done", "CONFIRM buys it: +1 ADDED")
-	t.ok(lc.find_child("Added_" + id, true, false) is LeagueContext.AddedBox, "…in its dashed box")
+	t.ok(lc.find_child("Added_" + id, true, false) is LeagueContext.DashedBox, "…in its dashed box")
 	t.eq(app.tickets(), before - price, "the price is paid")
 	t.eq(CardDefs.owned(app.cards_bucket("cage"), id), owned_before + 1, "…and the card is yours")
 	t.eq(bought, [id], "the home hears of it (the flight)")
@@ -138,6 +139,53 @@ func _shop(t, app) -> void:
 	lc.tap_buy(id)
 	t.eq(store[0], 1, "an affordable one asks as before")
 	lc.free()
+
+
+## A card above your level (Home League Context v2): grey art under a padlock,
+## a locked tag, and a box saying how far off it is instead of a price.
+func _shop_locked(t, app) -> void:
+	var prog_before: Dictionary = SaveService.get_progress().duplicate(true)
+	var pr: Dictionary = prog_before.duplicate(true)
+	pr["xp"] = 0
+	SaveService.put_progress(pr)
+	t.eq(app.level(), 1, "a new player is level 1")
+	var lc := LeagueContext.new()
+	lc.setup("cage", "CARDS")
+	# The cage's three rows at level 1: ice plays, fire7 and magnet6 do not.
+	t.ok(lc.find_child("Buy_ice", true, false) is ShadowCard, "a card at your level keeps its price")
+	t.ok(lc.find_child("Locked_ice", true, false) == null, "…and no locked box")
+	var ice_art: Control = lc.find_child("Shop_ice", true, false).get_meta("art")
+	t.ok(ice_art.material == null and ice_art.find_child("Padlock", true, false) == null, "…and full-colour art")
+	for id in ["fire7", "magnet6"]:
+		t.ok(lc.find_child("Buy_" + id, true, false) == null, "%s has no price to tap" % id)
+		t.ok(lc.find_child("Locked_" + id, true, false) is LeagueContext.DashedBox, "…the dashed box instead")
+		var art: Control = lc.find_child("Shop_" + id, true, false).get_meta("art")
+		t.ok(art.material is ShaderMaterial, "…the art goes grey")
+		t.ok(art.find_child("Padlock", true, false) is PixelIcon and art.find_child("Veil", true, false) != null, "…under the veil and padlock")
+		t.ok((art.find_child("Face", true, false) as CanvasItem).use_parent_material, "…the grey reaches the face")
+		t.ok(not (art.find_child("Veil", true, false) as CanvasItem).use_parent_material, "…not the veil")
+	var words := []
+	for l in lc.find_child("Locked_fire7", true, false).find_children("*", "Label", true, false):
+		words.push_back((l as Label).text)
+	t.eq(words, ["LVL %d" % Progression.card_level(CardDefs.get_card("fire7")), "%d LEVELS TO GO" % (Progression.card_level(CardDefs.get_card("fire7")) - 1)], "the box names the level and the gap")
+	var one_off := []
+	pr["xp"] = (Progression.card_level(CardDefs.get_card("fire7")) - 2) * Progression.xp_per_level()
+	SaveService.put_progress(pr)
+	var lc2 := LeagueContext.new()
+	lc2.setup("cage", "CARDS")
+	for l in lc2.find_child("Locked_fire7", true, false).find_children("*", "Label", true, false):
+		one_off.push_back((l as Label).text)
+	t.eq(one_off[1], "1 LEVEL TO GO", "one level off is singular")
+	lc2.free()
+	pr["xp"] = 0
+	SaveService.put_progress(pr)
+	# Nothing buys a locked card, even told to.
+	var before: int = app.tickets()
+	lc.tap_buy("fire7")
+	t.eq(lc.buy_state("fire7"), "idle", "a tap on a locked card does nothing")
+	t.eq(app.tickets(), before, "…and costs nothing")
+	lc.free()
+	SaveService.put_progress(prog_before)
 
 
 func _float_cards(t, app) -> void:

@@ -24,6 +24,7 @@ signal new_season_requested   # START SEASON on the MATCH pane: the title rolls 
 signal card_bought(id: String, from: Rect2)
 signal store_requested   # a card bought short of tickets: the title opens the Ticket Store (design 50a)
 
+const LOCKED_ART := preload("res://game/ui/locked_art.gdshader")
 const TABS := ["HEAT", "TABLE", "SCHED", "CARDS", "STATS"]
 const TAB_LABELS := {"HEAT": "MATCH"}
 const PINE := Color("#3E7C4F")
@@ -33,6 +34,8 @@ const CREAM := RetroTheme.SCENE_TEXT
 const MUTED := RetroTheme.SCENE_MUTED
 const DIM := RetroTheme.SCENE_DIM
 const INK := RetroTheme.SCENE_OUTLINE
+const LOCKED := Color("#D9D9D9")   # a shop card above your level: its tag, name and box
+const LOCKED_GROUND := Color("#14100E")
 const TAB_H := 72.0
 const TAB_TOP := 14.0
 const TAB_ROW := 92.0        # the tab row's box (14 above the tabs, room for their shadow)
@@ -1003,15 +1006,20 @@ func _fill_cards() -> void:
 
 
 ## A shop row (design 3a, 2026-10-30): the art, the name, its LVL tag on the
-## corner (gold edge once you can play it) and the buy button.
+## corner (gold edge once you can play it) and the buy button. Above your level
+## (Home League Context v2, 2026-11-04) the art goes grey under a padlock, the
+## tag wears a lock and the button is a dashed box saying how far off it is.
 func _shop_row(card: Dictionary) -> Control:
 	var cid := str(card["id"])
+	var usable := Progression.can_use(App.level(), card)
 	var panel := ShadowPanel.new(CREAM, 20.0, 0.22)
 	panel.name = "Shop_" + cid
 	var row := _hrow(20)
 	panel.add_child(row)
 	var art := ModeCards.art(card, Vector2(120, 160), 6.0)
 	art.name = "Art"
+	if not usable:
+		_lock_art(art, Vector2(120, 160))
 	row.add_child(art)
 	var col := _vcol(16)
 	col.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -1021,7 +1029,7 @@ func _shop_row(card: Dictionary) -> Control:
 	above.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	above.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	col.add_child(above)
-	var nm := _display(str(card.get("name", "")).to_upper(), 24)
+	var nm := _display(str(card.get("name", "")).to_upper(), 24, CREAM if usable else LOCKED)
 	nm.name = "Name"
 	nm.autowrap_mode = TextServer.AUTOWRAP_WORD
 	nm.add_theme_constant_override("line_spacing", 8)
@@ -1037,12 +1045,11 @@ func _shop_row(card: Dictionary) -> Control:
 	col.add_child(foot)
 	# The level it plays from (docs/PROGRESSION.md) on the panel's corner:
 	# right −5, top −10 off the face — hung off the column's top-right.
-	var usable := Progression.can_use(App.level(), card)
 	var lvl := PanelContainer.new()
 	lvl.name = "Level_" + cid
 	var lsb := StyleBoxFlat.new()
-	lsb.bg_color = Color(INK, 0.6)
-	lsb.border_color = RetroTheme.c("gold") if usable else CREAM
+	lsb.bg_color = Color(INK, 0.6) if usable else Color(LOCKED_GROUND, 0.85)
+	lsb.border_color = RetroTheme.c("gold") if usable else LOCKED
 	lsb.set_border_width_all(2)
 	lsb.content_margin_left = 10
 	lsb.content_margin_right = 10
@@ -1051,8 +1058,15 @@ func _shop_row(card: Dictionary) -> Control:
 	lvl.add_theme_stylebox_override("panel", lsb)
 	lvl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var lt := "LVL %d" % Progression.card_level(card)
-	lvl.add_child(UiFont.label(lt, 20, RetroTheme.c("gold") if usable else CREAM, UiFont.body_bold()))
 	var lw := UiFont.body_bold().get_string_size(lt, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(20)).x + 24.0
+	var tag := _hrow(8)
+	lvl.add_child(tag)
+	if not usable:
+		var tag_lock := PixelIcon.new("icon_lock", Vector2(20, 24))
+		tag_lock.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		tag.add_child(tag_lock)
+		lw += 28.0
+	tag.add_child(UiFont.label(lt, 20, RetroTheme.c("gold") if usable else LOCKED, UiFont.body_bold()))
 	lvl.set_anchors_preset(Control.PRESET_TOP_RIGHT)
 	lvl.offset_right = 20.0 + 5.0
 	lvl.offset_left = lvl.offset_right - lw
@@ -1061,6 +1075,26 @@ func _shop_row(card: Dictionary) -> Control:
 	_fill_buy(cid, foot)
 	panel.set_meta("art", art)
 	return panel
+
+
+## A locked card's art: grey (the shader takes the face and its shadow), then
+## ink over the face and the padlock on top, both outside the filter.
+func _lock_art(art: Control, face: Vector2) -> void:
+	var grey := ShaderMaterial.new()
+	grey.shader = LOCKED_ART
+	art.material = grey
+	for c in art.get_children():
+		(c as CanvasItem).use_parent_material = true
+	var veil := ColorRect.new()
+	veil.name = "Veil"
+	veil.color = Color(LOCKED_GROUND, 0.55)
+	veil.size = face
+	veil.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	art.add_child(veil)
+	var padlock := PixelIcon.new("lock_closed", Vector2(42, 51), 3.0)
+	padlock.name = "Padlock"
+	padlock.position = ((face - padlock.size) * 0.5).floor()
+	art.add_child(padlock)
 
 
 ## The buy button's state for a card: idle (the gold price), ask (X and the
@@ -1072,6 +1106,8 @@ func buy_state(id: String) -> String:
 ## A tap on a card's buy button: idle → ask, ask → buy. Short of tickets,
 ## idle asks for the Ticket Store instead (design 50a, Ross 2026-10-31).
 func tap_buy(id: String) -> void:
+	if not Progression.can_use(App.level(), CardDefs.get_card(id)):
+		return
 	match buy_state(id):
 		"idle":
 			if App.tickets() < int(CardDefs.get_card(id).get("price", 0)):
@@ -1126,6 +1162,9 @@ func _fill_buy(id: String, foot: HBoxContainer = null) -> void:
 		c.queue_free()
 	var card := CardDefs.get_card(id)
 	var price := int(card.get("price", 0))
+	if not Progression.can_use(App.level(), card):
+		foot.add_child(_locked_box(id, card))
+		return
 	match buy_state(id):
 		"ask":
 			var x := HomePage.button("X", CREAM, 24, 72.0)
@@ -1156,7 +1195,7 @@ func _fill_buy(id: String, foot: HBoxContainer = null) -> void:
 			ok.pressed.connect(func() -> void: tap_buy(id))
 			foot.add_child(ok)
 		"done":
-			var done := AddedBox.new()
+			var done := DashedBox.new(HI)
 			done.name = "Added_" + id
 			var dl := _display("+1 ADDED", 22, HI)
 			UiLayout.full_rect(dl)
@@ -1168,8 +1207,7 @@ func _fill_buy(id: String, foot: HBoxContainer = null) -> void:
 			var buy := ShadowCard.new(RetroTheme.c("gold"))
 			buy.name = "Buy_" + id
 			buy.custom_minimum_size = Vector2(196, 72) + Vector2.ONE * ShadowStyle.OFFSET
-			# Bought at level; short of tickets it opens the Ticket Store (tap_buy).
-			buy.disabled = not Progression.can_use(App.level(), card)
+			# Short of tickets it opens the Ticket Store (tap_buy).
 			var br := _hrow(10)
 			br.alignment = BoxContainer.ALIGNMENT_CENTER
 			UiLayout.full_rect(br)
@@ -1186,16 +1224,51 @@ func _fill_buy(id: String, foot: HBoxContainer = null) -> void:
 			foot.add_child(buy)
 
 
-## +1 ADDED's box: a dashed gold border, 196 × 72, no face.
-class AddedBox extends Control:
-	func _init() -> void:
+## Where the price would be on a card above your level: the lock and its
+## level, then how many levels off it is. Nothing to tap.
+func _locked_box(id: String, card: Dictionary) -> Control:
+	var box := DashedBox.new(LOCKED, Color(LOCKED_GROUND, 0.45))
+	box.name = "Locked_" + id
+	var col := _vcol(8)
+	col.alignment = BoxContainer.ALIGNMENT_CENTER
+	UiLayout.full_rect(col)
+	col.offset_right = -ShadowStyle.OFFSET
+	col.offset_bottom = -ShadowStyle.OFFSET
+	box.add_child(col)
+	var top := _hrow(8)
+	top.alignment = BoxContainer.ALIGNMENT_CENTER
+	col.add_child(top)
+	var padlock := PixelIcon.new("icon_lock", Vector2(20, 24))
+	padlock.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	top.add_child(padlock)
+	var need := Progression.card_level(card)
+	var lv := _display("LVL %d" % need, 16, LOCKED)
+	lv.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	top.add_child(lv)
+	var gap := need - App.level()
+	var go := _text("1 LEVEL TO GO" if gap == 1 else "%d LEVELS TO GO" % gap, 16, LOCKED)
+	go.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	col.add_child(go)
+	return box
+
+
+## A dashed box the buy button's size, no face: +1 ADDED (gold) and a locked
+## card (grey, over a ground).
+class DashedBox extends Control:
+	var line := Color.WHITE
+	var ground := Color.TRANSPARENT
+	func _init(p_line: Color, p_ground := Color.TRANSPARENT) -> void:
+		line = p_line
+		ground = p_ground
 		custom_minimum_size = Vector2(196, 72) + Vector2.ONE * ShadowStyle.OFFSET
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 	func _draw() -> void:
+		if ground.a > 0.0:
+			draw_rect(Rect2(Vector2.ZERO, Vector2(196, 72)), ground)
 		var b := Rect2(Vector2.ONE, Vector2(196, 72) - Vector2.ONE * 2.0)
 		var pts := [b.position, Vector2(b.end.x, b.position.y), b.end, Vector2(b.position.x, b.end.y), b.position]
 		for i in 4:
-			draw_dashed_line(pts[i], pts[i + 1], LeagueContext.HI, 2.0, 8.0)
+			draw_dashed_line(pts[i], pts[i + 1], line, 2.0, 8.0)
 
 
 # ---- STATS -----------------------------------------------------------------------

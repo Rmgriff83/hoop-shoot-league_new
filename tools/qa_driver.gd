@@ -2807,6 +2807,13 @@ func _qa_shop_buy() -> void:
 	await _sleep(0.6)
 	await _snap("title_league_shop_done")
 	await _sleep(1.4)
+	# The rows above your level: the shelf's end.
+	var pane: Node = lc._list("CARDS").get_parent()
+	if pane is ScrollContainer:
+		(pane as ScrollContainer).scroll_vertical = 100000
+		await _sleep(0.3)
+		await _snap("title_league_shop_locked")
+		(pane as ScrollContainer).scroll_vertical = 0
 
 
 ## Aim QA: one REAL wind-up — press, pull DOWN in steps snapshotting at

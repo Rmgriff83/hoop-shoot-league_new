@@ -478,7 +478,7 @@ func rebuild_chrome() -> void:
 	_chrome.add_child(scrim)
 
 	# Top bar: 72 px faces at the design's x's (LVL 36, the ball 230, the
-	# tickets 420, the menu 606).
+	# menu 606), the tickets 430 so both pairs sit 12 px apart.
 	_badge = LevelBadge.new()
 	_badge.position = Vector2(MARGIN, float(_lay["top_y"]))
 	_badge.set_level(App.level(), Progression.frac_for(App.xp()))
@@ -507,13 +507,14 @@ func rebuild_chrome() -> void:
 	var amount: Label = _wallet.find_child("Amount", true, false)
 	if amount != null:
 		amount.add_theme_font_size_override("font_size", LevelBadge.TEXT)
-	# The face ends at the design's 584 (22 px short of the menu); a long
-	# balance grows the pill to the left.
-	_wallet.position = Vector2(420, float(_lay["top_y"]))
+	# The face ends at 594, 12 px short of the menu like LVL and the ball
+	# (Ross, 2026-11-04; the design's 584 left 22); a long balance grows the
+	# pill to the left.
+	_wallet.position = Vector2(430, float(_lay["top_y"]))
 	_wallet.tappable = true
 	_wallet.pressed.connect(_open_store)   # the Ticket Store (design 50a)
 	var pill := _wallet
-	pill.resized.connect(func() -> void: pill.position.x = 584.0 + ShadowStyle.OFFSET - pill.size.x)
+	pill.resized.connect(func() -> void: pill.position.x = 594.0 + ShadowStyle.OFFSET - pill.size.x)
 	_chrome.add_child(_wallet)
 
 	# The area zone: the stars on top, the name big under them with the

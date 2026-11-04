@@ -6,8 +6,9 @@ current area**. `game/screens/title_screen.gd` (a `Node3D`), widgets in `game/ui
 
 ```
 Court       full-screen CourtGeometry + Camera3D (TitlePan), under a mild scrim (0.25)
-TopBar      72 px faces at x 36 / 230 / 420 / 606: [LVL · 01 + meter] [neon ball =
-            locker] [tilted ticket 1,240] [menu: three 30×5 bars, ink drops]; text 24
+TopBar      72 px faces at x 36 / 230 / 430 / 606, 12 px between each pair: [LVL · 01 +
+            meter] [neon ball = locker] [tilted ticket 1,240] [menu: three 30×5 bars,
+            ink drops]; text 24; a long balance grows the ticket pill to the left
 AreaZone    ★ 34 px (one star per difficulty step, ArenaSet.title_stars)
             ARCADE CAGE (52 px, wraps at 430, dithered drop shadow) [⚔ ONLINE] (72 tall)
             ALL AREAS · 2/3 OPEN > (bold 22, the > dithered) — the archive
@@ -138,7 +139,11 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
   game (today's gold, unplayed dim). **CARDS** — the shop alone (`SHOP` over
   `CARDS BOUGHT IN THE ARCADE CAGE SHOP CAN ONLY BE PLAYED IN ARCADE CAGE
   MATCHES`): each row the art, the name and a `LVL n` tag on the corner
-  (gold edge once you can play it), and the buy flow — the gold price →
+  (gold edge once you can play it). A card above your level stays on the
+  shelf locked (`Home League Context v2`, 2026-11-04): grey art under a
+  padlock (`locked_art.gdshader`, grayscale + 60 % brightness), a grey name, a
+  lock on the tag and a dashed box with the level and `n LEVELS TO GO` where
+  the price would be, nothing to tap. Otherwise the buy flow — the gold price →
   a tap asks (X + orange CONFIRM with the price; back after 4 s) → CONFIRM
   buys (`App.try_buy_card`, no pane rebuild) and shows `+1 ADDED` for 1.6 s
   while the card **flies** into YOUR CARDS above (`card_bought` → the
