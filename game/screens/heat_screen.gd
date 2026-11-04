@@ -36,6 +36,8 @@ var _pip_chip_label: Label
 var _pip_frame: PipFrame
 var _pip_chrome: Control
 var _opp_chips: HBoxContainer
+## Over the opponent's chips while YOUR shield is up (design 4a, state 6).
+var _opp_blocked: OppBlockedPanel
 var _opp_hand_n := -1
 var _opp_color := LeagueContext.PINE
 var _opp_short := "OPP"
@@ -675,6 +677,68 @@ class BlockedPanel extends Control:
 		draw_rect(r.grow(-3.0), Color(BUTTER, a), false, 3.0)
 
 
+## Over the opponent's chip row while YOUR shield is up (design "League Match
+## HUD" 4a, state 6): the row grown 5 px each way, a light-orange line over
+## the dark dotted face, the shield loop at half size on its ink shadow and
+## the seconds left to a tenth. Pops in like the big one.
+class OppBlockedPanel extends Control:
+	const MARGIN := 5.0
+	var seconds: Label
+
+	func _init(card: Dictionary) -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+		var row := HBoxContainer.new()
+		row.name = "Row"
+		row.alignment = BoxContainer.ALIGNMENT_CENTER
+		row.add_theme_constant_override("separation", 10)
+		row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		UiLayout.full_rect(row)
+		add_child(row)
+		var art := Control.new()
+		art.name = "Art"
+		art.custom_minimum_size = Vector2(32 + 2, 28 + 2)
+		art.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		row.add_child(art)
+		var shadow := CardFace.new(card, Vector2(32, 28), true)
+		shadow.name = "Shadow"
+		shadow.position = Vector2(2, 2)
+		shadow.modulate = RetroTheme.SCENE_OUTLINE
+		art.add_child(shadow)
+		var loop := CardFace.new(card, Vector2(32, 28), true)
+		loop.name = "Loop"
+		art.add_child(loop)
+		seconds = RetroTheme.on_scene(UiFont.label("5.0S", 16, RetroTheme.SCENE_TEXT)) as Label
+		seconds.name = "Seconds"
+		seconds.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		seconds.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		row.add_child(seconds)
+
+	## Around the chip row as laid out now.
+	func fit(chips: Control) -> void:
+		position = chips.position - Vector2.ONE * MARGIN
+		size = chips.size + Vector2.ONE * MARGIN * 2.0
+		pivot_offset = size * 0.5
+
+	func pop_in() -> void:
+		visible = true
+		modulate = Color(1, 1, 1, 0)
+		scale = Vector2.ONE * 1.12
+		var tw := create_tween().set_parallel(true)
+		tw.tween_property(self, "modulate", Color.WHITE, 0.3).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw.tween_property(self, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+	func set_left(left: float) -> void:
+		seconds.text = "%.1fS" % maxf(left, 0.0)
+
+	func _draw() -> void:
+		var r := Rect2(Vector2.ZERO, size)
+		draw_rect(r, Color(20.0 / 255.0, 16.0 / 255.0, 14.0 / 255.0, 0.68))
+		draw_texture_rect(ShadowStyle.dot_tex(), r, true, Color(RetroTheme.SCENE_TEXT, ShadowStyle.DOT_ALPHA))
+		draw_rect(r, SHIELD_C, false, 2.0)
+
+
 ## Slots that still hold a card, lowest slot first.
 func _tray_shown() -> Array[int]:
 	var out: Array[int] = []
@@ -719,6 +783,22 @@ func _layout_tray(animate: bool) -> void:
 			_empties[k].position = spots[slot]
 	if _blocked != null:
 		_blocked.place(spots[CardDefs.SLOTS - 1].y)
+
+
+## The small panel over the opponent's chips follows YOUR shield (design 4a,
+## state 6: YOU SHIELDED · OPP CARDS BLOCKED).
+func _refresh_opp_blocked() -> void:
+	if _opp_blocked == null or _opp_chips == null:
+		return
+	var up := heat.blocked(Heat.AI)
+	if up and not _opp_blocked.visible:
+		_opp_blocked.fit(_opp_chips)
+		_opp_blocked.pop_in()
+	elif not up and _opp_blocked.visible:
+		_opp_blocked.visible = false
+	if up:
+		_opp_blocked.fit(_opp_chips)
+		_opp_blocked.set_left(heat.player.shield_left())
 
 
 ## The BLOCKED panel follows the opponent's shield: pops in when it goes up,
@@ -1144,6 +1224,10 @@ func _build_pip() -> void:
 	_opp_chips.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_pip_chrome.add_child(_opp_chips)
 	_refresh_opp_chips()
+	_opp_blocked = OppBlockedPanel.new(CardDefs.get_card("shield5"))
+	_opp_blocked.name = "OppBlocked"
+	_opp_blocked.visible = false
+	_pip_chrome.add_child(_opp_blocked)
 	# The minimized chip.
 	_pip_chip = ShadowCard.new(_opp_color)
 	_pip_chip.name = "PipChip"
@@ -1461,6 +1545,7 @@ func _process(dt: float) -> void:
 	_refresh_opp_chips()
 	_refresh_tray()
 	_refresh_blocked()
+	_refresh_opp_blocked()
 	_hud.set_ball_wait(heat.ball_wait() if heat.player.phase == TimeTrial.PHASE_RUNNING and not heat.player.holding else 0.0)
 	_hud.set_side_tags(heat.player.streak, heat.player.iced, heat.ai.streak, heat.ai.iced)
 	_watch_report(dt)

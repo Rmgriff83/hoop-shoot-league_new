@@ -311,8 +311,11 @@ up, the tray goes `blocked`: every card dims to .45 under the BLOCKED panel
 (`HeatScreen.BlockedPanel`): the column grown 12 px, a light-orange frame
 over the dark dotted face, an inset butter line breathing, BLOCKED, the
 shield loop on its ink shadow and the seconds to a tenth; it pops in
-(1.12 → 1, 0.3 s) and leaves with the shield. No PiP rig (the design draws
-none). Match-end drop tile colour `#F2A65E`.
+(1.12 → 1, 0.3 s) and leaves with the shield. While YOUR shield is up
+(design 4a state 6) a small panel of the same make covers the opponent's
+chip row under their window (`OppBlockedPanel`: the row grown 5 px, the
+loop at 32×28, the seconds left). No PiP rig (the design draws none).
+Match-end drop tile colour `#F2A65E`.
 
 Power is a **placeholder** (Ross, 2026-11-04): 0.6 in every league (common,
 80 tickets with the ice), noted in `card_power.json → placeholder`. The lab
