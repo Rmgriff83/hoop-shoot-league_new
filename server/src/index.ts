@@ -12,7 +12,8 @@ import { authenticate, matchSecret, replaceSecretsStatements, secretsOf, sha256H
 import { deleteAccountStatements, link, providersOf } from "./platform_routes";
 import { store } from "./store_routes";
 import { pendingTicketsOf, entitlementsOf } from "./store";
-import { minuteLimit, longLimit, type Verdict } from "./limits";
+import { minuteLimit, longLimit, peekLimit, type Verdict } from "./limits";
+import { meter } from "./meter";
 import {
   AREAS, SCORE_FIELDS, SECRET_RE, TAG_RE, UUID_RE, normalizeName, onlyFields, plausible, validName, weekOf,
   type ScorePayload,
@@ -341,7 +342,14 @@ app.route("/v1/store", store);
 // ---- 1v1 rooms (match_room.ts, lobby.ts) ---------------------------------------------------
 
 const MATCH_PER_MINUTE = 30; // a 4 s ranked poll for the 30 s cap, with room to spare
+/**
+ * Match STARTS a day (quick, code, join, a fresh ranked search): the D1 day
+ * counter is a row written per call, so it counts nothing else — not the 4 s
+ * ranked polls, not `leave`, not the room upgrades (2026-11-04). The minute
+ * bucket on the binding (no D1) still fronts every match route.
+ */
 const MATCH_PER_DAY = 200;
+const dayKey = (id: string) => `match:day:${id}`;
 const ROOM_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 
 app.use("/v1/match/*", authenticate, async (c, next) => {
@@ -349,8 +357,6 @@ app.use("/v1/match/*", authenticate, async (c, next) => {
   const p = c.get("player");
   const minute = await minuteLimit(c.env.RL_MATCH, `match:${p.id}`, MATCH_PER_MINUTE);
   if (!minute.allowed) return throttled(c, minute);
-  const day = await longLimit(c.env.DB, `match:day:${p.id}`, MATCH_PER_DAY, 86_400);
-  if (!day.allowed) return throttled(c, day);
   await next();
 });
 
@@ -375,6 +381,11 @@ app.post("/v1/match/:action{quick|code|join|leave}", async (c) => {
   }
   if (area === "any" && areas.length === 0) areas = ["cage"];
   if (action === "join" && typeof b.code !== "string") return c.json({ error: "code" }, 400);
+  if (action !== "leave") {
+    // Each of these starts a match: the one D1 write the lobby path makes.
+    const day = await longLimit(c.env.DB, dayKey(p.id), MATCH_PER_DAY, 86_400);
+    if (!day.allowed) return throttled(c, day);
+  }
   const stub = c.env.LOBBY.get(c.env.LOBBY.idFromName("lobby"));
   const res = await stub.fetch(`https://lobby/${action}`, {
     method: "POST",
@@ -402,9 +413,14 @@ app.post("/v1/match/ranked", async (c) => {
   const pref = b.area === undefined ? "any" : b.area;
   if (pref !== "any" && !(MATCH_AREAS as readonly string[]).includes(pref as string)) return c.json({ error: "area" }, 400);
   const now = Date.now();
+  // The day budget is read first (one row read, no write): the Lobby refuses a NEW search for a
+  // capped player before anything is queued, while a search already running polls on; the budget
+  // is counted below only on a call the Lobby reports as a fresh search, never a repeat poll.
+  const peek = await peekLimit(c.env.DB, dayKey(p.id), MATCH_PER_DAY, 86_400, now);
   let r = await db.ratingOf(c.env.DB, p.id);
   if (!r) {
     r = defaultRow(p.id, now);
+    meter.d1 += 1;
     await db.upsertRatingStatement(c.env.DB, r).run();
   }
   const level = p.level ?? 1;
@@ -413,9 +429,14 @@ app.post("/v1/match/ranked", async (c) => {
   const stub = c.env.LOBBY.get(c.env.LOBBY.idFromName("lobby"));
   const res = await stub.fetch("https://lobby/ranked", {
     method: "POST",
-    body: JSON.stringify({ playerId: p.id, level, mu: r.mu, rd: r.rd, cons: r.cons, tier: r.tier, division: r.division, areas: areasForLevel(level), pref, lean }),
+    body: JSON.stringify({ playerId: p.id, level, mu: r.mu, rd: r.rd, cons: r.cons, tier: r.tier, division: r.division, areas: areasForLevel(level), pref, lean, starts: peek.allowed }),
   });
-  return new Response(res.body, { status: res.status, headers: { "content-type": "application/json" } });
+  if (res.status === 429) return throttled(c, peek);
+  const out = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+  const fresh = out.fresh === true;
+  delete out.fresh; // the Worker's business, not the phone's: the wire is unchanged
+  if (res.ok && fresh) await longLimit(c.env.DB, dayKey(p.id), MATCH_PER_DAY, 86_400, now); // the peek above already allowed this one
+  return new Response(JSON.stringify(out), { status: res.status, headers: { "content-type": "application/json" } });
 });
 
 /**

@@ -23,9 +23,54 @@ layer, and on Cloudflare's free plan it is free.
 | D1 | 5M row reads, 100k writes, 5 GB | 25B reads, 50M writes |
 | Durable Objects | 100k requests, 13k GB-s | 1M requests, 400k GB-s |
 
-A leaderboard run costs two requests (submit, view). A 1v1 match will cost
-two WebSocket upgrades plus ~70 incoming messages billed 20:1 — about six
-Durable Object requests and at worst ~11 GB-s. No egress billing.
+A leaderboard run costs two requests (submit, view). No egress billing.
+
+### What a match costs (measured 2026-11-04)
+
+`server/test/cost.test.ts` runs a whole ranked match — a 30 s search, both
+upgrades, the pick, ~60 `shot` / `outcome` messages a side, a card each, the
+buzzer, the decision, a rematch offer, the close alarm — with `src/meter.ts`
+counting every billed write, and pins the numbers. The same flow on the code
+before that day, for the "before" column:
+
+| Per ranked match | Before | After | Free limit (daily) | Matches/day now |
+|---|---|---|---|---|
+| DO storage rows: `put` + `deleteAll` | 130 | 10 | 100k rows written | ~6.6k (with the alarms below) |
+| DO storage rows: `setAlarm` | 5 | 5 | (same budget) | |
+| D1 write statements | 29 (~35 with a 30 s search) | 24 | 100k rows written | ~4k (an upsert's index rows count too, so a floor) |
+| DO requests | ~20 | ~20 | 100k | ~5k |
+| Worker requests | ~12 | ~12 | 100k | ~8k |
+
+Before, the free plan's DO rows carried ~740 matches a day; the two causes
+and their fixes:
+
+- `match_room.ts` wrote its whole `meta` row after **every** socket message
+  — each shot and outcome, ~120 a match — only to stamp the activity time.
+  Now the row is written on real state changes only: a seat, each pick, a
+  card (with its ledger row), each period report, the decision, a drop, a
+  rematch, the teardown. The activity stamp lives in each socket's
+  attachment (`seen`, ~100 B, free, survives hibernation); the idle alarm
+  reads the stored stamp or a live socket's later one. What an evicted room
+  keeps: seats, status, hands, played, ends, drops, rematch — everything a
+  decision or a reconnect replay reads. What it loses: nothing it needs —
+  shots were never kept (each phone owns its own and reports `period_end`),
+  and a closing socket's activity goes into `meta.last` with the drop. The
+  forfeit / void rules are untouched (`cost.test.ts` covers hibernation
+  between messages, the idle timeout, a mid-match drop, a card's ledger row).
+- The `/v1/match/*` middleware upserted the D1 day counter (`rl`) on **every**
+  match call — each 4 s ranked poll, `leave`, both room upgrades. Now the
+  minute bucket (the binding, no D1) fronts every match route and the day
+  counter moves only on a START: `quick`, `code`, `join`, and a ranked poll
+  the Lobby reports as a fresh search (`fresh` in its reply, stripped before
+  the phone sees it; `peekLimit` reads the day row first, and the Lobby
+  refuses a NEW search for a capped player before anything is queued while a
+  running search polls on). The 200/day cap stays: it used to count polls
+  (≈ 20 ranked matches a day); now it is 200 match starts, which also bounds
+  a player's `rl` writes.
+
+Past any free daily limit Cloudflare answers errors for everyone until
+00:00 UTC (4 pm Pacific) — the plan is Workers Paid ($5/mo) before launch,
+which moves every limit above to the monthly column.
 
 ## Identity: anonymous device accounts
 
@@ -97,6 +142,9 @@ Every request has a budget and a hit degrades to the device board.
    and the account-wide ones are Enterprise); if the API ever moves to a
    domain Ross owns, the zone's one free rate-limiting rule is a bonus layer.
 3. **Worker** — per-player buckets: `scores` 6/min (binding) + 120/day (D1),
+   `match` 30/min (binding, every match route) + 200 starts/day (D1, on
+   `quick` / `code` / `join` / a fresh ranked search only — never a repeat
+   poll, `leave` or a room upgrade; see What a match costs),
    `leaderboard` 20/min, `me` 5/min, `register` 5/hour per IP,
    `transfer/code` 3/hour, `transfer/claim` 5/hour per IP, `link` 5/hour,
    `link/restore` 5/hour per IP, `link/<provider>` (unlink) 5/hour,
@@ -117,7 +165,8 @@ Every request has a budget and a hit degrades to the device board.
 5. **Durable Objects (phase 3)** — ≤ 5 incoming messages/s and 2 KB each per
    connection, 30 s heartbeats, one active room per player, rooms close 60 s
    after the result or after 2 min of silence (10 min hard cap), a capped
-   matchmaker queue.
+   matchmaker queue; a room writes its one storage row only when its state
+   changes, never per shot (What a match costs).
 
 Every server limit has a Vitest case (`server/test/api.test.ts`); the client
 side is `tests/test_backoff.gd` and `tests/test_account.gd`.
@@ -231,9 +280,10 @@ build at any server.
   screen closes the room. Rooms that nobody joins expire after 60 s;
   idle rooms after 2 min; every room after 10 min; a finished room closes
   60 s after the decision.
-- **Throttles**: `/v1/match/*` 20/min per player + 200/day, `FEATURE_MATCH`
-  kill switch; per socket ≤ 5 messages/s and ≤ 2 KB (over → close 1008, which
-  counts as leaving).
+- **Throttles**: `/v1/match/*` 30/min per player (the binding) + 200 match
+  starts a day (D1; since 2026-11-04 polls, `leave` and upgrades count
+  nothing), `FEATURE_MATCH` kill switch; per socket ≤ 5 messages/s and ≤ 2 KB
+  (over → close 1008, which counts as leaving).
 - **Game**: the home's multiplayer icon opens `MatchLobbyPage` (QUICK MATCH /
   CREATE CODE / ENTER CODE + GO, then the waiting, found and failed states);
   `App.start_online` talks to the Lobby, opens the room and tips off into

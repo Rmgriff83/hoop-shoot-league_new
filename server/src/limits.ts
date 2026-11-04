@@ -1,9 +1,13 @@
 import type { RateLimiter } from "./env";
+import { meter } from "./meter";
 
 /**
  * Throttling, layer 3 (docs/BACKEND.md): minute buckets on the Workers Rate
  * Limiting binding when it exists (production), an in-isolate fixed window
- * when it does not (dev, tests); hour/day windows as D1 counters.
+ * when it does not (dev, tests); hour/day windows as D1 counters. A D1
+ * counter is a row written every call, so it sits only on calls that start
+ * something (`peekLimit` reads one without counting, for a route that has to
+ * refuse before it knows whether this call starts anything).
  */
 export interface Verdict {
   allowed: boolean;
@@ -27,6 +31,7 @@ export async function minuteLimit(binding: RateLimiter | undefined, key: string,
 
 export async function longLimit(db: D1Database, key: string, limit: number, periodSec: number, now = Date.now()): Promise<Verdict> {
   const win = Math.floor(now / 1000 / periodSec);
+  meter.d1 += 1;
   const row = await db
     .prepare(
       `INSERT INTO rl (key, win, n) VALUES (?1, ?2, 1)
@@ -38,6 +43,15 @@ export async function longLimit(db: D1Database, key: string, limit: number, peri
   const n = row?.n ?? 1;
   const until = (win + 1) * periodSec;
   return { allowed: n <= limit, retryAfter: n <= limit ? 0 : Math.max(1, until - Math.floor(now / 1000)) };
+}
+
+/** The verdict a `longLimit` call would get, without counting it (one row read, no write). */
+export async function peekLimit(db: D1Database, key: string, limit: number, periodSec: number, now = Date.now()): Promise<Verdict> {
+  const win = Math.floor(now / 1000 / periodSec);
+  const row = await db.prepare("SELECT win, n FROM rl WHERE key = ?1").bind(key).first<{ win: number; n: number }>();
+  const n = row && row.win === win ? row.n : 0;
+  const until = (win + 1) * periodSec;
+  return { allowed: n < limit, retryAfter: n < limit ? 0 : Math.max(1, until - Math.floor(now / 1000)) };
 }
 
 /** Test hook: forget the in-memory minute windows. */

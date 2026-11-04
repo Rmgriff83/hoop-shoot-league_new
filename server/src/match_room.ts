@@ -16,12 +16,25 @@
  * LIFETIME_MS hard cap, CLOSE_AFTER_MS once decided. A socket that drops
  * mid-match has DROP_GRACE_MS to come back (the phone reconnects and gets
  * `start` again, resumed) before the match is a forfeit.
+ *
+ * Storage discipline (docs/BACKEND.md → What a match costs, 2026-11-04):
+ * every `storage.put` is a billed row, so `meta` is written only when the
+ * room's state really changes — a seat, the pick, a card (with its ledger
+ * row), a period report, the decision, a drop, a rematch, the teardown. A
+ * shot or an outcome is relayed and forgotten (each phone owns its own
+ * shots and reports its period); the activity stamp those used to write
+ * lives in each socket's attachment (`seen`), which survives hibernation for
+ * free. What an evicted room keeps: seats, status, hands, played, ends,
+ * drops, rematch — everything a decision or a reconnect replay reads. What
+ * it loses: nothing it needs (a closed socket's activity was stamped into
+ * `meta.last` as it went).
  */
 import { DurableObject } from "cloudflare:workers";
 import type { Env } from "./env";
 import { SLOTS, inventoryOf, validHand, type Inventory } from "./cards";
 import { rankedPosition, ratingOf, upsertRatingStatement } from "./db";
 import { dayOf, dayStart } from "./days";
+import { meter } from "./meter";
 import { DROPS, METER_SIZE, meterGain, milestonesReached, nextLossStreak, rarityOdds, settleSpoils } from "./online_drops";
 import { applyResult, currentRd, defaultRow, type RatingRow } from "./rank";
 import { DIVISIONS, PREMATCH, TICKETS, TIERS } from "./ranked_data";
@@ -81,8 +94,13 @@ interface Meta {
   reason: string;
   recorded: boolean;
 }
-/** `tok` / `at`: the rate bucket — tokens left and when they were last topped up. */
-interface Attachment { side: Side; pid: string; tok: number; at: number }
+/**
+ * `tok` / `at`: the rate bucket — tokens left and when they were last topped
+ * up. `seen`: this socket's last real message (not a ping) — the activity the
+ * idle rule reads, kept here rather than in storage (a ~100 B attachment is
+ * free and survives hibernation; the limit is 2 KB).
+ */
+interface Attachment { side: Side; pid: string; tok: number; at: number; seen: number }
 /** A kit as the phones send it: a version and up to three ids. */
 interface Kit { v: number; ball?: string; net?: string; hoop?: string }
 
@@ -110,12 +128,35 @@ export class MatchRoom extends DurableObject<Env> {
     return this.ctx.storage.get<Meta>("meta");
   }
 
+  /** The one storage row. Only on a real state change — see the header. */
   private async put(m: Meta): Promise<void> {
+    meter.doPut += 1;
     await this.ctx.storage.put("meta", m);
+  }
+
+  private async alarmAt(ms: number): Promise<void> {
+    meter.doAlarm += 1;
+    await this.ctx.storage.setAlarm(ms);
+  }
+
+  private async wipe(): Promise<void> {
+    meter.doDelete += 1;
+    await this.ctx.storage.deleteAll();
   }
 
   private sockets(side?: Side): WebSocket[] {
     return side ? this.ctx.getWebSockets(side) : this.ctx.getWebSockets();
+  }
+
+  private attachment(ws: WebSocket): Attachment | null {
+    try { return ws.deserializeAttachment() as Attachment | null; } catch { return null; }
+  }
+
+  /** The room's last activity: the stored stamp, or a live socket's later `seen`. */
+  private lastSeen(m: Meta): number {
+    let last = m.last;
+    for (const ws of this.sockets()) last = Math.max(last, this.attachment(ws)?.seen ?? 0);
+    return last;
   }
 
   private send(ws: WebSocket, msg: unknown): void {
@@ -188,32 +229,34 @@ export class MatchRoom extends DurableObject<Env> {
     if (!player.id) return new Response("who", { status: 400 });
     const now = Date.now();
     let m = await this.meta();
+    let write = false; // a seat, the court, a drop reset, the pre-match step: the only reasons to write here
     if (!m) {
       m = {
         area, created: now, status: "waiting", seed: 0, started: 0, last: now, a: null, b: null, ends: { a: {}, b: {} },
         hands: { a: blank(), b: blank() }, played: { a: [], b: [] }, ranked, cap: 0, inv: { a: null, b: null }, ready: { a: false, b: false },
         leftWaiting: null, rematch: { a: false, b: false }, reason: "", recorded: false,
       };
-      await this.ctx.storage.setAlarm(now + WAIT_MS);
+      write = true;
+      await this.alarmAt(now + WAIT_MS);
     } else if (m.area === "any" && area !== "any") {
       // An any-court host: the room takes the court the Lobby paired on, which the joiner brings.
       m.area = area;
+      write = true;
     }
     if (m.status === "done") return new Response("over", { status: 410 });
     let side: Side;
     if (m.a?.id === player.id) side = "a";
     else if (m.b?.id === player.id) side = "b";
-    else if (!m.a) { side = "a"; m.a = player; }
-    else if (!m.b) { side = "b"; m.b = player; }
+    else if (!m.a) { side = "a"; m.a = player; write = true; }
+    else if (!m.b) { side = "b"; m.b = player; write = true; }
     else return new Response("full", { status: 409 });
     // A reconnect replaces the old socket.
     for (const old of this.sockets(side)) { try { old.close(1000, "replaced"); } catch { /* gone */ } }
     const pair = new WebSocketPair();
     const [client, server] = [pair[0], pair[1]];
     this.ctx.acceptWebSocket(server, [side]);
-    server.serializeAttachment({ side, pid: player.id, tok: BURST, at: now } satisfies Attachment);
-    m.last = now;
-    if (m.dropped?.[side]) m.dropped[side] = null; // back inside the grace: nothing happened
+    server.serializeAttachment({ side, pid: player.id, tok: BURST, at: now, seen: now } satisfies Attachment);
+    if (m.dropped?.[side]) { m.dropped[side] = null; write = true; } // back inside the grace: nothing happened
     const peer = m[other(side)];
     this.send(server, { t: "joined", side, room, area: m.area, peer, status: m.status, ranked: m.ranked });
     // The court rides along: an any-court host learns here where it plays.
@@ -226,7 +269,8 @@ export class MatchRoom extends DurableObject<Env> {
       m.inv = { a: ia, b: ib };
       m.hands = { a: blank(), b: blank() };
       m.ready = { a: false, b: false };
-      await this.ctx.storage.setAlarm(now + (PREMATCH.seconds + PREMATCH.grace_s) * 1000);
+      write = true;
+      await this.alarmAt(now + (PREMATCH.seconds + PREMATCH.grace_s) * 1000);
       for (const s of ["a", "b"] as Side[]) this.sendSide(s, this.matched(m, s));
     } else if (m.status === "prematch") {
       // Back during the pick: the card again, with the clock as it stands.
@@ -242,7 +286,10 @@ export class MatchRoom extends DurableObject<Env> {
         this.send(server, { t: "period_end", period, score: e.score, totals: e.totals, from: other(side) });
       }
     }
-    await this.put(m);
+    if (write) {
+      m.last = now;
+      await this.put(m);
+    }
     return new Response(null, { status: 101, webSocket: client });
   }
 
@@ -252,7 +299,7 @@ export class MatchRoom extends DurableObject<Env> {
     m.seed = Math.floor(Math.random() * 2_147_483_647) + 1;
     m.started = now;
     m.last = now;
-    await this.ctx.storage.setAlarm(now + LIFETIME_MS);
+    await this.alarmAt(now + LIFETIME_MS);
     const start = this.start(m);
     for (const ws of this.sockets()) this.send(ws, start);
   }
@@ -271,11 +318,12 @@ export class MatchRoom extends DurableObject<Env> {
       return this.gone(ws, "too fast");
     }
     att.tok -= 1;
-    ws.serializeAttachment(att);
     let msg: any;
-    try { msg = JSON.parse(text); } catch { return this.send(ws, { t: "error", code: "json" }); }
-    if (!msg || typeof msg.t !== "string") return this.send(ws, { t: "error", code: "shape" });
-    if (msg.t === "ping") return this.send(ws, { t: "pong", now });
+    try { msg = JSON.parse(text); } catch { ws.serializeAttachment(att); return this.send(ws, { t: "error", code: "json" }); }
+    if (!msg || typeof msg.t !== "string") { ws.serializeAttachment(att); return this.send(ws, { t: "error", code: "shape" }); }
+    if (msg.t === "ping") { ws.serializeAttachment(att); return this.send(ws, { t: "pong", now }); }
+    att.seen = now; // a real message: the activity the idle rule reads (a ping is not one)
+    ws.serializeAttachment(att);
     const m = await this.meta();
     if (!m) return this.send(ws, { t: "error", code: "not_playing" });
     if (msg.t === "rematch") {
@@ -290,15 +338,16 @@ export class MatchRoom extends DurableObject<Env> {
         if (m.ranked && m.a && m.b) {
           // A rematch of a ranked match stays ranked (Ross, 2026-10-23): the Worker reads this row at the upgrade.
           try {
+            meter.d1 += 1;
             await this.env.DB.prepare("INSERT OR IGNORE INTO ranked_rooms (room, area, a_id, b_id, created_at) VALUES (?1, ?2, ?3, ?4, ?5)").bind(room, m.area, m.a.id, m.b.id, now).run();
           } catch (e) {
             console.error("rematch ranked_rooms", e);
           }
         }
         for (const s of this.sockets()) this.send(s, { t: "rematch_go", room, area: m.area });
-        await this.ctx.storage.setAlarm(now + 5_000);
+        await this.alarmAt(now + 5_000);
       } else {
-        await this.ctx.storage.setAlarm(now + CLOSE_AFTER_MS); // the offer buys another minute
+        await this.alarmAt(now + CLOSE_AFTER_MS); // the offer buys another minute
       }
       await this.put(m);
       return;
@@ -328,7 +377,7 @@ export class MatchRoom extends DurableObject<Env> {
       return;
     }
     if (m.status !== "playing") return this.send(ws, { t: "error", code: "not_playing" });
-    m.last = now;
+    let write = false; // shots and outcomes are relayed, never kept: no row for them
     switch (msg.t) {
       case "shot":
       case "outcome":
@@ -343,6 +392,7 @@ export class MatchRoom extends DurableObject<Env> {
         hand.splice(at, 1);
         const pid = att.side === "a" ? m.a?.id : m.b?.id;
         try {
+          meter.d1 += 2;
           await this.env.DB.batch([
             this.env.DB.prepare("UPDATE online_cards SET n = n - 1 WHERE player_id = ?1 AND card_id = ?2 AND n > 0").bind(pid, id),
             this.env.DB.prepare("INSERT INTO online_ledger (player_id, kind, card_id, coins, room, at) VALUES (?1, 'play', ?2, 0, ?3, ?4)").bind(pid, id, this.ctx.id.toString(), now),
@@ -356,6 +406,8 @@ export class MatchRoom extends DurableObject<Env> {
         }
         if (!m.played) m.played = { a: [], b: [] };
         m.played[att.side].push(id);
+        m.last = now;
+        write = true; // the hand moved, with its ledger row
         this.send(ws, { t: "card_ok", id });
         this.sendSide(other(att.side), { t: "card", id, from: att.side });
         break;
@@ -364,6 +416,8 @@ export class MatchRoom extends DurableObject<Env> {
         const period = Number.isInteger(msg.period) ? msg.period : 0;
         const score = Number.isInteger(msg.score) ? msg.score : 0;
         m.ends[att.side][String(period)] = { score, totals: msg.totals ?? {} };
+        m.last = now;
+        write = true; // a reconnecting peer gets this report again
         this.sendSide(other(att.side), { ...msg, from: att.side });
         const a = m.ends.a[String(period)];
         const b = m.ends.b[String(period)];
@@ -371,20 +425,20 @@ export class MatchRoom extends DurableObject<Env> {
           m.status = "done";
           m.reason = "played";
           await this.record(m, a.score, b.score, period, msg.desync ? 1 : 0, a.score > b.score ? "a" : "b");
-          await this.ctx.storage.setAlarm(now + CLOSE_AFTER_MS);
+          await this.alarmAt(now + CLOSE_AFTER_MS);
         } else if (a && b && m.leftWaiting) {
           // A tie, and one of them already left: no overtime to play — the one who stayed takes it.
           m.status = "done";
           m.reason = "forfeit";
           await this.record(m, a.score, b.score, period, 0, other(m.leftWaiting));
-          await this.ctx.storage.setAlarm(now + CLOSE_AFTER_MS);
+          await this.alarmAt(now + CLOSE_AFTER_MS);
         }
         break;
       }
       default:
         this.send(ws, { t: "error", code: "unknown" });
     }
-    await this.put(m);
+    if (write) await this.put(m);
   }
 
   async webSocketClose(ws: WebSocket, code: number, reason: string): Promise<void> {
@@ -402,7 +456,7 @@ export class MatchRoom extends DurableObject<Env> {
    */
   private async gone(ws: WebSocket, reason: string): Promise<void> {
     if (reason === "replaced") return;
-    const att = ws.deserializeAttachment() as Attachment | null;
+    const att = this.attachment(ws);
     const m = await this.meta();
     if (!att || !m) return;
     if (this.sockets(att.side).some((s) => s !== ws && s.readyState === WebSocket.READY_STATE_OPEN)) return; // they reconnected already
@@ -412,6 +466,8 @@ export class MatchRoom extends DurableObject<Env> {
       return;
     }
     if (m.status === "playing") {
+      // The closing socket's activity goes into the stored stamp with the drop (its attachment goes with it).
+      m.last = Math.max(m.last, att.seen ?? 0);
       // Reported this period and then went? They are finished, not forfeiting:
       // the other phone's report still decides it.
       const mine = Object.keys(m.ends[att.side]).length;
@@ -425,7 +481,7 @@ export class MatchRoom extends DurableObject<Env> {
       const now = Date.now();
       if (!m.dropped) m.dropped = { a: null, b: null };
       if (!m.dropped[att.side]) m.dropped[att.side] = now;
-      await this.ctx.storage.setAlarm(now + DROP_GRACE_MS);
+      await this.alarmAt(now + DROP_GRACE_MS);
       await this.put(m);
       return;
     }
@@ -447,7 +503,7 @@ export class MatchRoom extends DurableObject<Env> {
     m.reason = played >= 30_000 ? "forfeit" : "void";
     const latest = (s: Side) => { const ks = Object.keys(m.ends[s]).map(Number); return ks.length ? m.ends[s][String(Math.max(...ks))].score : 0; };
     await this.record(m, latest("a"), latest("b"), 0, 0, m.reason === "forfeit" ? other(side) : null);
-    await this.ctx.storage.setAlarm(Date.now() + CLOSE_AFTER_MS);
+    await this.alarmAt(Date.now() + CLOSE_AFTER_MS);
     await this.put(m);
   }
 
@@ -561,6 +617,7 @@ export class MatchRoom extends DurableObject<Env> {
            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22)`,
         )
         .bind(room, m.area, m.a.id, m.b.id, a, b, period, m.reason, desync, now, m.ranked ? 1 : 0, winner, m.a.level, m.b.level, m.cap, mus.a.before, mus.a.after, mus.b.before, mus.b.after, pay, JSON.stringify(played.a), JSON.stringify(played.b));
+      meter.d1 += 1 + stmts.length;
       const results = await db.batch([matchStmt, ...stmts]);
       for (const s of ["a", "b"] as Side[]) {
         if (!grantAt[s].length) continue;
@@ -582,11 +639,11 @@ export class MatchRoom extends DurableObject<Env> {
   /** Nobody came / the pick ran out / the match ran too long / time to tear down. */
   async alarm(): Promise<void> {
     const m = await this.meta();
-    if (!m) return this.ctx.storage.deleteAll();
+    if (!m) return this.wipe();
     const now = Date.now();
     if (m.status === "waiting") {
       for (const ws of this.sockets()) { this.send(ws, { t: "expired" }); try { ws.close(1000, "expired"); } catch { /* gone */ } }
-      await this.ctx.storage.deleteAll();
+      await this.wipe();
       return;
     }
     if (m.status === "prematch") {
@@ -596,27 +653,29 @@ export class MatchRoom extends DurableObject<Env> {
       return;
     }
     if (m.status === "playing") {
-      if (now - m.last > IDLE_MS || now - m.started > LIFETIME_MS) {
+      // Activity: the stored stamp, or a live socket's later message (its attachment, back from hibernation).
+      if (now - this.lastSeen(m) > IDLE_MS || now - m.started > LIFETIME_MS) {
         m.status = "done";
         m.reason = "void";
         for (const ws of this.sockets()) { this.send(ws, { t: "expired" }); try { ws.close(1000, "expired"); } catch { /* gone */ } }
-        await this.ctx.storage.deleteAll();
+        await this.wipe();
         return;
       }
       // A side gone past its grace, with no socket back, forfeits now; one still inside it keeps the alarm.
       let next = now + IDLE_MS;
+      let write = false;
       for (const side of ["a", "b"] as Side[]) {
         const at = m.dropped?.[side];
         if (!at) continue;
-        if (this.sockets(side).some((s) => s.readyState === WebSocket.READY_STATE_OPEN)) { m.dropped![side] = null; continue; }
+        if (this.sockets(side).some((s) => s.readyState === WebSocket.READY_STATE_OPEN)) { m.dropped![side] = null; write = true; continue; }
         if (now - at >= DROP_GRACE_MS) return this.dropForfeit(m, side);
         next = Math.min(next, at + DROP_GRACE_MS);
       }
-      await this.put(m);
-      await this.ctx.storage.setAlarm(next);
+      if (write) await this.put(m);
+      await this.alarmAt(next);
       return;
     }
     for (const ws of this.sockets()) { try { ws.close(1000, "over"); } catch { /* gone */ } }
-    await this.ctx.storage.deleteAll();
+    await this.wipe();
   }
 }

@@ -13,6 +13,7 @@
  */
 import { DurableObject } from "cloudflare:workers";
 import type { Env } from "./env";
+import { meter } from "./meter";
 import { DIVISIONS, QUEUE, TIERS } from "./ranked_data";
 
 export const QUEUE_TTL_MS = 60_000;
@@ -109,6 +110,11 @@ export class Lobby extends DurableObject<Env> {
         }
         const myKey = `rq:${playerId}`;
         const old = await this.ctx.storage.get<RankedWaiting>(myKey);
+        // `fresh`: this call starts a search (no live entry of mine yet) — the Worker counts
+        // its day budget on those alone, never on the 4 s repeat polls.
+        const fresh = !(old && live(old));
+        // Over the day budget (the Worker read it): a search already running polls on; a new one is refused before anything is queued.
+        if (fresh && body.starts === false) return Response.json({ error: "throttled" }, { status: 429 });
         const me: RankedWaiting = {
           room: old && live(old) ? old.room : crypto.randomUUID(),
           playerId,
@@ -145,15 +151,16 @@ export class Lobby extends DurableObject<Env> {
           await this.ctx.storage.delete([`rq:${best.w.playerId}`, myKey]);
           await this.ctx.storage.put(`paired:${best.w.playerId}`, { room: best.w.room, area: picked, opponent: opponentOf(me), at: now } satisfies Paired);
           try {
+            meter.d1 += 1;
             await this.env.DB.prepare("INSERT OR IGNORE INTO ranked_rooms (room, area, a_id, b_id, created_at) VALUES (?1, ?2, ?3, ?4, ?5)")
               .bind(best.w.room, picked, best.w.playerId, playerId, now).run();
           } catch (e) {
             console.error("ranked_rooms", e);
           }
-          return Response.json({ room: best.w.room, host: false, paired: true, area: picked, opponent: opponentOf(best.w) });
+          return Response.json({ room: best.w.room, host: false, paired: true, area: picked, opponent: opponentOf(best.w), fresh });
         }
         await this.ctx.storage.put(myKey, me);
-        return Response.json({ room: me.room, host: true, paired: false, waited: Math.floor((now - me.at) / 1000) });
+        return Response.json({ room: me.room, host: true, paired: false, waited: Math.floor((now - me.at) / 1000), fresh });
       }
       case "/leave": {
         if (body.ranked === true) {
