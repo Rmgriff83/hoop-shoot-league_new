@@ -87,10 +87,11 @@ func run(t) -> void:
 	sheet.build("cage", "CAGE CARDS", "SHOP")
 	t.eq(sheet.sub(), "SHOP", "the shop")
 	t.eq((sheet.find_child("Tickets", true, false) as Label).text, "150 TICKETS", "the wallet in the head")
-	for id in ["ice", "fire7", "magnet6"]:
+	for id in ["ice", "fire7", "magnet6", "shield5"]:
 		t.ok(sheet.find_child("Shop_" + id, true, false) != null, "%s is on the shelf" % id)
 	t.eq((sheet.find_child("Owned_ice", true, false) as Label).text, "OWNED 1", "owned count")
 	t.ok(not (sheet.find_child("Buy_ice", true, false) as Button).disabled, "ice (80) is affordable at 150")
+	t.ok(not (sheet.find_child("Buy_shield5", true, false) as Button).disabled, "the Shield (80, level 1) is affordable at 150")
 	t.ok(not (sheet.find_child("Buy_fire7", true, false) as Button).disabled or not App.can_equip("fire7"), "Heat Check (140) is affordable at 150 once its level is reached")
 	t.ok((sheet.find_child("Buy_magnet6", true, false) as Button).disabled, "Magnet is above the level anyway")
 	t.ok(App.try_buy_card("ice", "cage"), "the cage shop sells an ice for tickets")

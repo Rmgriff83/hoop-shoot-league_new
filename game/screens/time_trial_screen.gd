@@ -1523,6 +1523,12 @@ func _handle_event(ev: Dictionary) -> void:
 			_court.set_magnet(false, str(ev.get("reason", "")) == "ice")
 			_court.show_score(trial.score)
 			_court.info.marquee("MAGNET SPENT" if str(ev.get("reason", "")) == "time" else "MAGNET ICED", 24.0, _court.info.accent_color)
+		"shield_on":
+			# A shield card: the other side's cards are blocked for the window.
+			_court.info.marquee("SHIELD UP", 24.0, _court.info.accent_color)
+			Sfx.score_pop(true)
+		"shield_off":
+			_court.info.marquee("SHIELD DOWN", 24.0, _court.info.accent_color)
 		"heat_up":
 			# The hoop starts moving (the trial's last 30 s, or 30S MODE in the
 			# cage): the LED and the lights say so; no message at the rim

@@ -29,6 +29,7 @@
       "ai_cards_per_season": 5,
       "ai_hand_max": 2,
       "ai_pool": [
+        "shield5",
         "ice",
         "fire7"
       ],
@@ -84,6 +85,7 @@
       "ai_cards_per_season": 10,
       "ai_hand_max": 2,
       "ai_pool": [
+        "shield5",
         "ice",
         "fire7"
       ],
@@ -150,6 +152,7 @@
       "ai_cards_per_season": 11,
       "ai_hand_max": 2,
       "ai_pool": [
+        "shield5",
         "ice",
         "fire7"
       ],
@@ -212,6 +215,7 @@
       "ai_cards_per_season": 12,
       "ai_hand_max": 2,
       "ai_pool": [
+        "shield5",
         "ice",
         "fire7",
         "magnet6"

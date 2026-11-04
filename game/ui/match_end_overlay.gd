@@ -34,7 +34,7 @@ const ORANGE := MatchEndCopy.ORANGE
 const CREAM := MatchEndCopy.CREAM
 const INK := Color("#221C18")
 const DARK := Color(20.0 / 255.0, 16.0 / 255.0, 14.0 / 255.0)
-const CARD_COLORS := {"fire": MatchEndCopy.ORANGE, "ice": MatchEndCopy.BLUE, "magnet": Color("#D0443A")}
+const CARD_COLORS := {"fire": MatchEndCopy.ORANGE, "ice": MatchEndCopy.BLUE, "magnet": Color("#D0443A"), "shield": Color("#F2A65E")}
 
 var _t := 0.0
 var _v: Dictionary = {}

@@ -19,6 +19,11 @@ const AI_SFX_GAIN_DB := -9.0
 ## input's grab line at 45 % of the height) so a tap never becomes a shot.
 const TRAY_POS := Vector2(36, 440)
 const TRAY_CARD := Vector2(84, 112)
+## The Shield's light orange (design "Card Icons" 11a) and the tray's dim
+## under the BLOCKED panel (design 4a, state 5).
+const SHIELD_C := Color("#F2A65E")
+const BUTTER := Color("#FFE45C")
+const BLOCKED_DIM := 0.45
 
 var heat: Heat
 var _heat_cfg: Dictionary = {}
@@ -434,6 +439,10 @@ const TRAY_CENTRE_Y := TRAY_POS.y + TRAY_CARD.y * 0.5 - TRAY_PITCH
 ## The slot whose fire card is burning (its tag counts the window down).
 var _fire_slot := -1
 var _magnet_slot := -1
+var _shield_slot := -1
+## The BLOCKED panel over the tray while the opponent's shield is up (design
+## "League Match HUD" 4a, state 5).
+var _blocked: BlockedPanel
 ## The slot a card was just dealt from, and where it sat (the deal starts there).
 var _dealt_slot := -1
 var _dealt_from := Rect2(TRAY_POS, TRAY_CARD)
@@ -505,22 +514,31 @@ class TrayCard extends Control:
 		tag.position = Vector2(-6 + (4 if down else 0), 42 + (4 if down else 0))
 		queue_redraw()
 
-	## "wait" (WAIT, dimmed), "fire" / "magnet" (the seconds left, with the
-	## card's glyph) or "" (ready).
+	## "wait" (WAIT, dimmed), "fire" / "magnet" / "shield" (the seconds left,
+	## with the card's glyph), "blocked" (no tag, the card dimmed under the
+	## BLOCKED panel while the opponent's shield is up) or "" (ready).
 	func set_state(kind: String, text: String) -> void:
-		tag.visible = kind != ""
+		tag.visible = kind != "" and kind != "blocked"
 		tag_label.text = text
-		tag_glyph.visible = kind == "fire" or kind == "magnet"
+		tag_glyph.visible = kind == "fire" or kind == "magnet" or kind == "shield"
 		if kind == "magnet":
 			tag_glyph.icon_name = "cards/glyph_magnet"
 			tag_glyph.queue_redraw()
 			_sb.bg_color = Color(Color("#4A1410"), 0.9)
 			_sb.border_color = Color("#D0443A")
 			face.modulate = Color.WHITE
+		elif kind == "shield":
+			tag_glyph.icon_name = "cards/glyph_shield"
+			tag_glyph.queue_redraw()
+			_sb.bg_color = Color(SHIELD_C, 0.95)
+			_sb.border_color = SHIELD_C
+			face.modulate = Color.WHITE
 		elif kind == "fire":
 			tag_glyph.icon_name = "cards/glyph_fire"
 			tag_glyph.queue_redraw()
-		if kind == "wait":
+		if kind == "blocked":
+			face.modulate = Color(1, 1, 1, BLOCKED_DIM)
+		elif kind == "wait":
 			_sb.bg_color = Color(RetroTheme.SCENE_OUTLINE, 0.9)
 			_sb.border_color = RetroTheme.SCENE_TEXT
 			face.modulate = Color(1, 1, 1, 0.7)
@@ -574,7 +592,87 @@ func _build_tray() -> void:
 		e.visible = false
 		layer.add_child(e)
 		_empties.push_back(e)
+	_blocked = BlockedPanel.new(CardDefs.get_card("shield5"))
+	_blocked.name = "Blocked"
+	_blocked.visible = false
+	layer.add_child(_blocked)
 	_layout_tray(false)
+
+
+## The BLOCKED panel over the tray column while the opponent's shield is up
+## (design "League Match HUD" 4a, state 5): the column grown 12 px each way,
+## a light-orange frame over the dark dotted face, an inset butter line
+## pulsing, BLOCKED, the shield loop on its ink shadow and the seconds left
+## to a tenth. Pops in (scale 1.12 → 1, fading) and leaves with the shield.
+class BlockedPanel extends Control:
+	const MARGIN := 12.0
+	const PULSE_S := 1.6
+	var seconds: Label
+	var _t := 0.0
+
+	func _init(card: Dictionary) -> void:
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		texture_repeat = CanvasItem.TEXTURE_REPEAT_ENABLED
+		var column_h := CardDefs.SLOTS * TRAY_CARD.y + (CardDefs.SLOTS - 1) * (TRAY_PITCH - TRAY_CARD.y)
+		size = Vector2(TRAY_CARD.x + 2.0 * MARGIN + 2.0, column_h + 2.0 * MARGIN)
+		pivot_offset = size * 0.5
+		var col := VBoxContainer.new()
+		col.name = "Column"
+		col.alignment = BoxContainer.ALIGNMENT_CENTER
+		col.add_theme_constant_override("separation", 16)
+		col.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		UiLayout.full_rect(col)
+		add_child(col)
+		var title := RetroTheme.on_scene(UiFont.label("BLOCKED", 14, SHIELD_C)) as Label
+		title.name = "Title"
+		title.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		col.add_child(title)
+		var art := Control.new()
+		art.name = "Art"
+		art.custom_minimum_size = Vector2(64 + 3, 56 + 3)
+		art.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		col.add_child(art)
+		var shadow := CardFace.new(card, Vector2(64, 56), true)
+		shadow.name = "Shadow"
+		shadow.position = Vector2(3, 3)
+		shadow.modulate = RetroTheme.SCENE_OUTLINE
+		art.add_child(shadow)
+		var loop := CardFace.new(card, Vector2(64, 56), true)
+		loop.name = "Loop"
+		art.add_child(loop)
+		seconds = RetroTheme.on_scene(UiFont.label("5.0S", 20, RetroTheme.SCENE_TEXT)) as Label
+		seconds.name = "Seconds"
+		seconds.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		col.add_child(seconds)
+
+	## Over the tray column as laid out on this screen.
+	func place(column_top: float) -> void:
+		position = Vector2(TRAY_POS.x - MARGIN, column_top - MARGIN)
+
+	func pop_in() -> void:
+		visible = true
+		modulate = Color(1, 1, 1, 0)
+		scale = Vector2.ONE * 1.12
+		var tw := create_tween().set_parallel(true)
+		tw.tween_property(self, "modulate", Color.WHITE, 0.3).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+		tw.tween_property(self, "scale", Vector2.ONE, 0.3).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+
+	func set_left(left: float) -> void:
+		seconds.text = "%.1fS" % maxf(left, 0.0)
+
+	func _process(dt: float) -> void:
+		_t += dt
+		queue_redraw()
+
+	func _draw() -> void:
+		var r := Rect2(Vector2.ZERO, size)
+		draw_rect(r, Color(20.0 / 255.0, 16.0 / 255.0, 14.0 / 255.0, 0.62))
+		draw_texture_rect(ShadowStyle.dot_tex(), r, true, Color(RetroTheme.SCENE_TEXT, ShadowStyle.DOT_ALPHA))
+		draw_rect(r, SHIELD_C, false, 3.0)
+		# The inset butter line, breathing .3 ↔ .75 (design pipGlow).
+		var a := 0.3 + 0.45 * (0.5 - 0.5 * cos(TAU * _t / PULSE_S))
+		draw_rect(r.grow(-3.0), Color(BUTTER, a), false, 3.0)
 
 
 ## Slots that still hold a card, lowest slot first.
@@ -619,6 +717,22 @@ func _layout_tray(animate: bool) -> void:
 		_empties[k].visible = slot < CardDefs.SLOTS
 		if slot < CardDefs.SLOTS:
 			_empties[k].position = spots[slot]
+	if _blocked != null:
+		_blocked.place(spots[CardDefs.SLOTS - 1].y)
+
+
+## The BLOCKED panel follows the opponent's shield: pops in when it goes up,
+## counts it down, leaves when it drops.
+func _refresh_blocked() -> void:
+	if _blocked == null:
+		return
+	var up := heat.blocked(Heat.PLAYER)
+	if up and not _blocked.visible:
+		_blocked.pop_in()
+	elif not up and _blocked.visible:
+		_blocked.visible = false
+	if up:
+		_blocked.set_left(heat.ai.shield_left())
 
 
 ## Positions of the cards still in the tray, lowest slot first (for probes).
@@ -648,8 +762,12 @@ func tray_states() -> Array:
 				out.push_back("fire")
 			elif i == _magnet_slot and heat.player.magnet_card:
 				out.push_back("magnet")
+			elif i == _shield_slot and heat.player.shield_card:
+				out.push_back("shield")
 			else:
 				out.push_back("used")
+		elif heat.blocked(Heat.PLAYER):
+			out.push_back("blocked")   # the opponent's shield is up (design 4a, state 5)
 		elif not Progression.can_use(App.level(), CardDefs.get_card(_tray_ids[i])):
 			out.push_back("locked")
 		elif heat.can_play(Heat.PLAYER, _tray_ids[i]):
@@ -700,6 +818,8 @@ func _deploy(i: int, id: String, receipted := false) -> void:
 			_fire_slot = i   # stays in the tray while it burns
 		elif kind == "magnet":
 			_magnet_slot = i   # stays in the tray while it hangs over the rim
+		elif kind == "shield":
+			_shield_slot = i   # stays in the tray while the shield is up
 		else:
 			_remove_from_tray(i)
 	elif receipted:
@@ -761,8 +881,12 @@ func _refresh_tray() -> void:
 				_tray[i].set_state("fire", "%dS" % ceili(heat.player.fire_left()))
 			"magnet":
 				_tray[i].set_state("magnet", "%dS" % ceili(heat.player.magnet_left()))
+			"shield":
+				_tray[i].set_state("shield", "%dS" % ceili(heat.player.shield_left()))
 			"used":
 				_remove_from_tray(i)   # a fire card whose window just closed
+			"blocked":
+				_tray[i].set_state("blocked", "")
 			"wait":
 				_tray[i].set_state("wait", "WAIT")
 			"locked":
@@ -1262,6 +1386,10 @@ func _handle_ai_event(ev: Dictionary) -> void:
 			_ai_court.set_magnet(false, str(ev.get("reason", "")) == "ice")
 			_ai_court.show_score(heat.score(Heat.AI))
 			_ai_court.info.marquee("MAGNET SPENT" if str(ev.get("reason", "")) == "time" else "MAGNET ICED", 24.0, _ai_court.info.accent_color)
+		"shield_on":
+			_ai_court.info.marquee("SHIELD UP", 24.0, _ai_court.info.accent_color)
+		"shield_off":
+			_ai_court.info.marquee("SHIELD DOWN", 24.0, _ai_court.info.accent_color)
 		"card_played":
 			if ev.get("ok", false):
 				Sfx.gain_db = prev_gain
@@ -1332,6 +1460,7 @@ func _process(dt: float) -> void:
 	_pip_chip_label.text = "OPP %d" % heat.score(Heat.AI)
 	_refresh_opp_chips()
 	_refresh_tray()
+	_refresh_blocked()
 	_hud.set_ball_wait(heat.ball_wait() if heat.player.phase == TimeTrial.PHASE_RUNNING and not heat.player.holding else 0.0)
 	_hud.set_side_tags(heat.player.streak, heat.player.iced, heat.ai.streak, heat.ai.iced)
 	_watch_report(dt)

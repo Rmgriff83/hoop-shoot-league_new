@@ -56,8 +56,9 @@ describe("the login pass", () => {
     expect(pr.login_days).toBe(1);
     expect(pr.last_login_day).toBe(day0);
     expect((await playerRow(p)).login_day).toBe(day0);
-    // The first login: the Ice (a milestone) and the day-1 schedule card.
-    expect((await grants(p)).map((g: any) => [g.key, g.kind, g.card_id])).toEqual([["first_login", "milestone", DROPS.logins.first], ["login_day_1", "login", "ice"]]);
+    // The first login: the Ice (a milestone) and the day-1 schedule card (a rookie
+    // common: the Ice or, since 2026-11-04, the Shield).
+    expect((await grants(p)).map((g: any) => [g.key, g.kind, g.card_id])).toEqual([["first_login", "milestone", DROPS.logins.first], ["login_day_1", "login", expect.stringMatching(/^(ice|shield5)$/)]]);
     // The same day again: nothing moves.
     await pass(p, t(0) + 3600_000);
     expect((await progress(p)).login_days).toBe(1);

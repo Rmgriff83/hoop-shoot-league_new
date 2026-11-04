@@ -117,6 +117,7 @@ func _gates(t) -> void:
 	var fire := CardDefs.get_card("fire7")
 	t.ok(Progression.can_use(1, ice), "Deep Freeze from level 1")
 	t.ok(not Progression.can_use(2, fire) and Progression.can_use(3, fire), "Heat Check from level 3")
+	t.ok(Progression.can_use(1, CardDefs.get_card("shield5")), "the Shield from level 1")
 	t.eq(Progression.next_card(1)["id"], "fire7", "the next card up from level 1")
 	t.eq(Progression.next_card(3)["id"], "magnet6", "the next card up from level 3 is the Magnet")
 	t.ok(not Progression.can_use(4, CardDefs.get_card("magnet6")) and Progression.can_use(5, CardDefs.get_card("magnet6")), "Magnet from level 5")

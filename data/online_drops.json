@@ -52,7 +52,8 @@
   "card_min_tier": {
     "ice": "rookie",
     "fire7": "rookie",
-    "magnet6": "starter"
+    "magnet6": "starter",
+    "shield5": "rookie"
   },
   "streak_card": {
     "losses": 4,

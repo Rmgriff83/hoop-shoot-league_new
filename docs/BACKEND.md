@@ -305,6 +305,11 @@ other phone must trust what hits its rim.
   copies owned − the ones in the loadout; a slot the ledger no longer covers
   empties), so every card API and view renders it unchanged. The loadout is
   the phone's; `App.try_buy_card` refuses the online bucket.
+- **The list**: `server/src/cards.ts` reads `data/cards.json` and
+  `data/online_drops.json` at build, so a new card (the Shield, 2026-11-04)
+  needs a Worker deploy before `validHand` accepts it; the room never learns
+  an effect — the Shield's lockout runs in each phone's sim, and a card the
+  room receipted in the race window is CARD SPENT on both sides.
 - **Into the room**: the WebSocket upgrade carries `?slots=ice,,fire7`; the
   Worker keeps only what the ledger holds under the level (`validHand`) and
   the room deals both validated hands in `start.hands` (+ `levels`), so each

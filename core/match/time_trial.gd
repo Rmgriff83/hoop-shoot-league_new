@@ -94,6 +94,11 @@ var _fire_loan := 0
 var magnet_card := false
 var magnet_until := -1.0
 var magnet_pull_m := 0.5
+## Card shield (docs/CARDS.md): while it is up the OTHER side cannot play a
+## card (Heat.blocked gates can_play / play_card); it governs cards, not
+## shots, so ice leaves it alone and the clock alone ends it.
+var shield_card := false
+var shield_until := -1.0
 
 # Each flight: { "state": BallState, "seen_events": int, "scored": bool }
 var _flights: Array[Dictionary] = []
@@ -197,6 +202,32 @@ func _end_magnet(reason: String) -> void:
 	magnet_until = -1.0
 	_set_geo(geo)
 	_events.push_back({"kind": "magnet_off", "reason": reason})
+
+
+## Raise the shield from a power-up card for `seconds` of the trial clock:
+## the other side cannot play a card until it drops (Heat.blocked). Refused
+## during the countdown or while already up; ice does not refuse it (it is
+## not a rim effect). Emits shield_on {reason, seconds}.
+func raise_shield(seconds: float, reason := "card") -> bool:
+	if shield_card or phase != PHASE_RUNNING or seconds <= 0.0:
+		return false
+	shield_card = true
+	shield_until = t + seconds
+	_events.push_back({"kind": "shield_on", "reason": reason, "seconds": seconds})
+	return true
+
+
+## Seconds of the shield left (0 when none).
+func shield_left() -> float:
+	return maxf(shield_until - t, 0.0) if shield_card else 0.0
+
+
+func _end_shield(reason: String) -> void:
+	if not shield_card:
+		return
+	shield_card = false
+	shield_until = -1.0
+	_events.push_back({"kind": "shield_off", "reason": reason})
 
 
 ## Any shot still unresolved (in the air or rattling)?
@@ -384,6 +415,9 @@ func _step_fixed() -> void:
 		_end_card_fire("time")
 	if magnet_card and t >= magnet_until and not _shot_pending():
 		_end_magnet("time")
+	# The shield governs cards, not shots: the clock alone drops it.
+	if shield_card and t >= shield_until:
+		_end_shield("time")
 	if was_waiting and ball_ready() and phase == PHASE_RUNNING:
 		_events.push_back({"kind": "ball_ready"})
 	if phase == PHASE_COUNTDOWN:

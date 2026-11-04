@@ -61,7 +61,8 @@ const nextSecond = () => new Promise((r) => setTimeout(r, 1005 - (Date.now() % 1
 
 describe("the card list", () => {
   it("reads the cards and keeps a hand honest", () => {
-    expect(Object.keys(CARDS).sort()).toEqual(["fire7", "ice", "magnet6"]);
+    expect(Object.keys(CARDS).sort()).toEqual(["fire7", "ice", "magnet6", "shield5"]);
+    expect(CARDS.shield5.level).toBe(1);
     expect(CARDS.magnet6.level).toBe(5);
     const inv = { inventory: { ice: 1, fire7: 2 }, level: 3 };
     expect(validHand(["ice", "ice", "fire7"], inv)).toEqual(["ice", "", "fire7"]); // one ice owned

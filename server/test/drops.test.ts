@@ -153,7 +153,7 @@ describe("the rules (pure)", () => {
   it("rolls only cards the level and tier allow, deterministically", () => {
     const seen = new Set<string>();
     for (let i = 0; i < 200; i++) seen.add(rollCard("rookie", 5, rng(i)));
-    expect([...seen].sort()).toEqual(["fire7", "ice"]); // the magnet waits a tier
+    expect([...seen].sort()).toEqual(["fire7", "ice", "shield5"]); // the magnet waits a tier
     expect(rollCard("pro", 5, rng(7))).toBe(rollCard("pro", 5, rng(7)));
     expect(rollCard("rookie", 1, rng(3))).toBe("ice");
   });
@@ -299,7 +299,7 @@ describe("the decision pays (room)", () => {
     const { a: sa } = await decide(A, B, 30, 20);
     expect(sa.granted.length).toBe(1);
     expect(sa.granted[0].why).toBe("meter");
-    expect(["ice", "fire7"]).toContain(sa.granted[0].card); // rookie: the magnet waits a tier
+    expect(["ice", "fire7", "shield5"]).toContain(sa.granted[0].card); // rookie: the magnet waits a tier
     expect(sa.meter.after).toBe(METER_SIZE - 1 + DROPS.meter.win + DROPS.meter.first_win_day - METER_SIZE);
     expect(await count(a, sa.granted[0].card)).toBe(1);
     expect(await ledger(a, "meter")).toBe(1);

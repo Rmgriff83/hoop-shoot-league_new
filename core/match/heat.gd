@@ -413,7 +413,7 @@ func forfeit_reason() -> String:
 ## target, ok}. Returns true when it applied.
 func play_card(side_name: String, card_id: String) -> bool:
 	var hand: Array = hands[side_name]
-	if not hand.has(card_id) or done:
+	if not hand.has(card_id) or done or blocked(side_name):
 		return false
 	var card := CardDefs.get_card(card_id)
 	if card.is_empty():
@@ -437,15 +437,21 @@ func _target_for(side_name: String, card_id: String) -> String:
 
 func can_play(side_name: String, card_id: String) -> bool:
 	var card := CardDefs.get_card(card_id)
-	if card.is_empty() or done or not hands[side_name].has(card_id):
+	if card.is_empty() or done or not hands[side_name].has(card_id) or blocked(side_name):
 		return false
 	var target := _target_for(side_name, card_id)
 	return CardEffects.can_apply(str(card.get("effect", {}).get("kind", "")), self, target)
 
 
+## A side whose opponent's shield is up cannot play any card (the Shield,
+## docs/CARDS.md): can_play, play_card and the bot driver all read this.
+func blocked(side_name: String) -> bool:
+	return side(other_side(side_name)).shield_card
+
+
 func _drive_bot_cards(side_name: String) -> void:
 	var tt: TimeTrial = _sides[side_name]
-	if done or not _bots.has(side_name) or hands[side_name].is_empty() or tt.phase != TimeTrial.PHASE_RUNNING:
+	if done or not _bots.has(side_name) or hands[side_name].is_empty() or tt.phase != TimeTrial.PHASE_RUNNING or blocked(side_name):
 		return
 	var pick := CardPolicy.choose_for(side_name, hands[side_name], self, _bots[side_name]["card_rng"])
 	if pick != "":

@@ -867,7 +867,10 @@ colour with a dithered shadow (`PipFrame`), OPP top-left, a minimize button
 top-right and their loadout hanging off the bottom as chips; minimized it is
 a chip in their colour with their score and a restore glyph. The card tray
 (`TrayCard`) puts each card on a dithered ink shadow with a press state and a
-chip across its middle for WAIT (dimmed) or the fire window's seconds. A
+chip across its middle for WAIT (dimmed) or the fire window's seconds (the
+magnet's and the shield's too); while the opponent's shield is up the tray
+dims to .45 under the BLOCKED panel (`BlockedPanel`: light-orange frame,
+breathing butter inset, BLOCKED, the shield loop, the seconds to a tenth). A
 played card grows in the middle over its shadow then flies on — every card
 YOU play ends in the opponent's window (their PiP, or its chip when
 minimized), self cards too (Ross, 2026-10-30); theirs fly to whom they
@@ -945,8 +948,12 @@ The shot-help numbers sit on the side HUD SIDE names (`help_side_offset` in time
   trial over ~45 s (cars cross the street, windows switch, the spot shuffle).
 - `godot --path hoop_shoot --resolution 360x640 -- --qa-cards` →
   `user://qa/cards_f0.png`, `cards_f5.png`, `cards_live.png`: the animated
-  card faces (ice, fire, the magnet) at tray / loadout / shop / deal
+  card faces (ice, fire, the magnet, the shield) at tray / loadout / shop / deal
   size, the chips, the WAIT and `5S` tray tags, the deal caption.
+- `godot --path hoop_shoot --resolution 360x640 -- --qa-shield` →
+  `user://qa/heat_shield_up.png` (the player's shield tag counting down),
+  `heat_shield_blocked.png` / `heat_shield_blocked_late.png` (the opponent's
+  shield: the BLOCKED panel over the dimmed tray), `heat_shield_down.png`.
 - `godot --path hoop_shoot --resolution 720x1560 -- --qa-heat --qa-heat-court=park` →
   `user://qa/heat_park_live.png`, `heat_park_clean.png`: another court's league
   match, the shooter's view with and without the HUD.

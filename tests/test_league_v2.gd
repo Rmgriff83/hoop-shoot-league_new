@@ -151,9 +151,10 @@ func _shop_locked(t, app) -> void:
 	t.eq(app.level(), 1, "a new player is level 1")
 	var lc := LeagueContext.new()
 	lc.setup("cage", "CARDS")
-	# The cage's three rows at level 1: ice plays, fire7 and magnet6 do not.
+	# The cage's four rows at level 1: ice and shield5 play, fire7 and magnet6 do not.
 	t.ok(lc.find_child("Buy_ice", true, false) is ShadowCard, "a card at your level keeps its price")
 	t.ok(lc.find_child("Locked_ice", true, false) == null, "…and no locked box")
+	t.ok(lc.find_child("Buy_shield5", true, false) is ShadowCard and lc.find_child("Locked_shield5", true, false) == null, "the Shield (level 1) keeps its price too")
 	var ice_art: Control = lc.find_child("Shop_ice", true, false).get_meta("art")
 	t.ok(ice_art.material == null and ice_art.find_child("Padlock", true, false) == null, "…and full-colour art")
 	for id in ["fire7", "magnet6"]:

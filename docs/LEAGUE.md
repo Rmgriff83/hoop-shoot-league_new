@@ -210,7 +210,9 @@ the heat screen a play is "dealt": the card slides out of its slot, grows to the
 caption, then flies to your hoop (self) or the PiP / its chip (opponent); the AI's plays run
 the reverse path, and the other side's LED announces every play ("ICED BY CARD" when hit,
 "OPP HEAT CHECK" when the opponent boosted themselves). A played card leaves the tray and the remaining cards slide to re-centre on
-the column; a burning fire card stays lit with its tag counting the window down, then leaves.
+the column; a burning fire card stays lit with its tag counting the window down, then leaves
+(the magnet and the shield likewise). While the opponent's shield is up the tray dims under
+the BLOCKED panel (design 4a state 5) and no card plays.
 
 Loadout semantics (doc `v` 2, 2026-09-17): the three slots hold *real copies*. Equipping moves
 a copy out of the inventory (spares), unequipping returns it, and playing a card in a heat
@@ -229,7 +231,9 @@ opponent's clock not running or rim already iced); played cards leave the tray.
   `tests/test_card_budget.gd`). Quick-sims stay card-free by design.
 - **Data**: `data/cards.json` — one row per card (`id, name, rarity, price, target, effect
   {kind}, art, blurb`) plus rarity weights, drop odds, the rarity bands and the price curve.
-  Cards so far: `ice` / Deep Freeze (opponent), `fire7` / Heat Check (self).
+  Cards so far: `ice` / Deep Freeze (opponent), `fire7` / Heat Check (self), `magnet6` /
+  Magnet (self), `shield5` / Shield (self: the other side cannot play a card for 5 s —
+  `Heat.blocked`, docs/CARDS.md → The Shield).
   Card fronts are pixel art from `tools/aseprite/gen_card_textures.lua` (96 × 128,
   `assets/textures/cards/`).
 - **Core** (`core/cards/`): `CardDefs` (definitions, inventory/loadout doc helpers: add,

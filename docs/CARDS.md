@@ -289,6 +289,40 @@ Its power in `card_power.json` is **the Vortex's measurement carried over**
 (the `placeholder` note in the file) until `tools/card_lab.gd -- magnet6`
 is run for it (~27 min, other cards kept) — Ross's call.
 
+## The Shield (`shield5`, level 1) — 2026-11-04
+
+Design "Card Icons" 11a and "League Match HUD" 4a (state 5, SHIELDED). A
+self card: `effect {kind: "shield", seconds: 5}`. `TimeTrial.raise_shield`
+opens a window of the shielder's clock (`shield_card` / `shield_until`,
+events `shield_on {reason, seconds}` / `shield_off {reason}`) during which
+the OTHER side cannot play any card: `Heat.blocked(side)` reads the
+opponent's `shield_card` and gates `can_play`, `play_card` (so the remote
+side's plays too) and the bot driver. It governs cards, not shots, so the
+clock alone drops it (no waiting for a ball to land), ice leaves it alone,
+and it can be raised while iced; a second shield is refused while one is up.
+`CardPolicy`: a bot picks nothing while blocked, and reaches for its shield
+while the other side still holds a card once it has something to guard
+(≥ 3 straight, its fire or magnet up) or under 20 s of clock (0.35 a tick).
+
+On the heat screen the played shield stays in the tray with a light-orange
+tag (`#F2A65E`, the shield glyph, the seconds left) like fire and magnet;
+the court LED says SHIELD UP / SHIELD DOWN. When the opponent's shield is
+up, the tray goes `blocked`: every card dims to .45 under the BLOCKED panel
+(`HeatScreen.BlockedPanel`): the column grown 12 px, a light-orange frame
+over the dark dotted face, an inset butter line breathing, BLOCKED, the
+shield loop on its ink shadow and the seconds to a tenth; it pops in
+(1.12 → 1, 0.3 s) and leaves with the shield. No PiP rig (the design draws
+none). Match-end drop tile colour `#F2A65E`.
+
+Power is a **placeholder** (Ross, 2026-11-04): 0.6 in every league (common,
+80 tickets with the ice), noted in `card_power.json → placeholder`. The lab
+cannot measure it as it stands: its opponent bot holds no cards, so a block
+is worth 0 — give the opponent a reference hand in `CardLab.run_heat` before
+re-measuring. Dealt everywhere: every league's `ai_pool`, online from the
+rookie tier (`card_min_tier`), the level-1 drop pool with the ice. The
+Worker reads `data/cards.json` at build, so it needs a deploy before
+`validHand` accepts the id online.
+
 ## Online matches (2026-10-07)
 
 Cards play in online 1v1 too, from a separate **online** bucket that lives on
@@ -361,6 +395,12 @@ Never from tickets or money (docs/ECONOMY.md → The rule).
    export's `assets/cards/fx_magnet.png` — the sheet the design page itself
    renders (held still, the bolt flaring bottom-right, sparks); the
    `assets/textures/cards/` copy in the export was an earlier iteration.
+   Shield (`shield5`, 2026-11-04, design "Card Icons" 11a): `card_shield5.png`
+   + `fx_shield.png` (16 frames at 12 fps, rect `[16, 28, 64, 56]` — the
+   64×56 loop native, centred in the design's stretched box — chip 36×32 on
+   `#F2A65E`) came back whole from `DesignSync get_file` (CRC-checked, no
+   export zip needed); `glyph_shield.png` is drawn by
+   `gen_card_textures.lua` (a heater shield in the loop's greys).
 
 ## Adding a league
 

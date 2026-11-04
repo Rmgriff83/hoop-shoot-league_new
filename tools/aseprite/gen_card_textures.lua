@@ -120,3 +120,56 @@ do
   end
   save(spr, "card_back.png")
 end
+
+-- glyph_shield.png 14x14 RGBA (assets/ui/cards) — the Shield card's small
+-- glyph for the tray tag and the deal caption (design "Card Icons" 11a): a
+-- silver heater shield in the loop's own greys, ink outline, a pale cross.
+-- Sits beside glyph_fire / glyph_ice / glyph_magnet from the design export.
+do
+  local W, H = 14, 14
+  local spr = Sprite(W, H, ColorMode.RGB)
+  local img = spr.cels[1].image
+  local none = pc.rgba(0, 0, 0, 0)
+  local ink = pc.rgba(34, 28, 24, 255)
+  local body = pc.rgba(169, 177, 185, 255)
+  local light = pc.rgba(214, 220, 226, 255)
+  local dark = pc.rgba(108, 117, 127, 255)
+  local cross = pc.rgba(242, 245, 248, 255)
+  for y = 0, H - 1 do
+    for x = 0, W - 1 do
+      img:drawPixel(x, y, none)
+    end
+  end
+  -- half-widths per row: straight sides, then the taper to a point
+  local widths = { 12, 12, 12, 12, 12, 12, 12, 10, 10, 8, 6, 4, 2, 2 }
+  for y = 0, H - 1 do
+    local w = widths[y + 1]
+    local x0 = 7 - w / 2
+    local x1 = x0 + w - 1
+    for x = x0, x1 do
+      local edge = (y == 0) or (x == x0) or (x == x1) or (y == H - 1) or (y + 1 <= H - 1 and (x < 7 - widths[y + 2] / 2 or x > 7 - widths[y + 2] / 2 + widths[y + 2] - 1))
+      local c = body
+      if edge then
+        c = ink
+      elseif x == x0 + 1 then
+        c = light
+      elseif x == x1 - 1 then
+        c = dark
+      end
+      img:drawPixel(x, y, c)
+    end
+  end
+  -- the raised cross: a vertical bar down the middle, a bar across the top third
+  for y = 2, 10 do
+    for x = 6, 7 do
+      img:drawPixel(x, y, cross)
+    end
+  end
+  for x = 3, 10 do
+    img:drawPixel(x, 4, cross)
+  end
+  local out_ui = app.fs.joinPath(app.fs.filePath(app.fs.filePath(app.fs.filePath(debug.getinfo(1).source:sub(2)))), "assets/ui/cards")
+  app.fs.makeDirectory(out_ui)
+  spr:saveCopyAs(app.fs.joinPath(out_ui, "glyph_shield.png"))
+  print("wrote glyph_shield.png")
+end

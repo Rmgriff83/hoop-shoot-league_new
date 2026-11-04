@@ -20,9 +20,10 @@ func run(t) -> void:
 		var o := OnlineDrops.odds_for(str(c["tier"]), int(c["level"]))
 		for r in ["common", "rare", "epic"]:
 			t.close(float(o[r]), float(c[r]), 1e-3, "%s L%d %s odds agree" % [c["tier"], c["level"], r])
-	t.eq(OnlineDrops.eligible_cards("rookie", 5), ["fire7", "ice"], "a rookie at level 5: the magnet waits a tier")
-	t.eq(OnlineDrops.eligible_cards("starter", 5), ["fire7", "ice", "magnet6"], "a starter at level 5 may be dealt the magnet")
-	t.eq(OnlineDrops.eligible_cards("legend", 1), ["ice"], "level 1: the ice alone")
+	t.eq(OnlineDrops.eligible_cards("rookie", 5), ["fire7", "ice", "shield5"], "a rookie at level 5: the magnet waits a tier")
+	t.eq(OnlineDrops.eligible_cards("starter", 5), ["fire7", "ice", "magnet6", "shield5"], "a starter at level 5 may be dealt the magnet")
+	t.eq(OnlineDrops.eligible_cards("legend", 1), ["ice", "shield5"], "level 1: the ice and the shield")
+	t.eq(OnlineDrops.card_min_tier("shield5"), "rookie", "the shield from the first tier (Ross 2026-11-04: sprinkled in with the others)")
 	t.eq(OnlineDrops.odds_text({"common": 0.7, "rare": 0.25, "epic": 0.05}), "70% COMMON · 25% RARE · 5% EPIC", "the odds line")
 	t.eq(OnlineDrops.odds_text({"common": 1.0, "rare": 0.0, "epic": 0.0}), "100% COMMON", "a rarity at zero is left out")
 	t.eq(OnlineDrops.next_login_card(0), 1, "the first schedule day")

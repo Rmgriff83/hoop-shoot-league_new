@@ -23,6 +23,7 @@ func run(t) -> void:
 	t.eq(CardDefs.target_of("magnet6"), "self", "the magnet is a self card")
 	t.close(float(CardDefs.get_card("magnet6")["effect"]["pull_m"]), 0.5, 1e-9, "the pull threshold is data")
 	_run_magnet(t)
+	_run_shield(t)
 	_run_art(t)
 	# The save doc: one bucket per league (docs/ECONOMY.md).
 	var full := CardDefs.empty_doc()
@@ -202,7 +203,7 @@ func run(t) -> void:
 			if str(r["id"]) != "" and Progression.card_level(CardDefs.get_card(str(r["id"]))) > lvl + 1:
 				over += 1
 	t.eq(over, 0, "no drop ever sits above the player's level + 1")
-	t.eq(CardRewards.eligible_ids(1), ["ice"], "at level 1 only the ice is eligible (fire7 is level 3)")
+	t.eq(CardRewards.eligible_ids(1), ["ice", "shield5"], "at level 1 the ice and the shield are eligible (fire7 is level 3)")
 	t.ok(CardRewards.eligible_ids(2).has("fire7") and not CardRewards.eligible_ids(2).has("magnet6"), "at level 2 the Heat Check (level 3) joins, the Magnet (5) waits")
 	var ids := {}
 	for i in 2000:
@@ -222,10 +223,12 @@ func run(t) -> void:
 	for k in odds["difficulty_mult"]:
 		t.ok(float(odds["difficulty_mult"][k]) >= 0.0, "%s multiplier is a factor" % k)
 	t.eq(CardRewards.roll({"won": false, "level": 1, "loss_streak": 4, "difficulty": "easy"}, 3)["id"], "ice", "the streak ice ignores the multiplier")
-	# Whichever of the two is the common card (ice since the 2026-10-03 re-measure) drops more.
-	var common := "ice" if str(CardDefs.get_card("ice")["rarity"]) == "common" else "fire7"
-	var rare := "fire7" if common == "ice" else "ice"
-	t.ok(int(ids.get(common, 0)) > int(ids.get(rare, 0)), "the common %s drops more often than the rare %s" % [common, rare])
+	# The commons (ice, and the shield since 2026-11-04) together drop more than the rare fire7.
+	var commons := 0
+	for c in CardDefs.all():
+		if str(c["rarity"]) == "common":
+			commons += int(ids.get(str(c["id"]), 0))
+	t.ok(commons > int(ids.get("fire7", 0)), "the commons drop more often than the rare fire7 (%s)" % str(ids))
 	for id in ids:
 		t.ok(not CardDefs.get_card(str(id)).is_empty(), "drops are real card ids")
 	# Bright spots (BrightSpots.note): the running bests on the league doc.
@@ -315,6 +318,90 @@ func _run_art(t) -> void:
 	var deal := ModeCards.art(CardDefs.get_card("fire7"), Vector2(96, 128), 6.0, true)
 	t.ok(deal.get_node("Face") is CardFace and deal.get_meta("button") is TextureButton, "art holder: a face and its tap target")
 	deal.free()
+
+
+## The Shield card in a heat (design "Card Icons" 11a): a self window during
+## which the OTHER side cannot play any card. The clock alone drops it; ice
+## leaves it alone; the shielder's own cards still play.
+func _run_shield(t) -> void:
+	var shield := CardDefs.get_card("shield5")
+	t.eq(Progression.card_level(shield), 1, "the Shield is a level-1 card")
+	t.eq(CardDefs.target_of("shield5"), "self", "the shield is a self card")
+	t.eq(str(shield["rarity"]), "common", "common (placeholder power 0.6, Ross 2026-11-04)")
+	t.eq(int(shield["price"]), 80, "80 tickets, with the ice")
+	t.eq(CardDefs.rarity_for(CardDefs.power_mean("shield5")), "common", "its placeholder power sits in the common band")
+	t.ok(CardDefs.price_ok(80, CardDefs.power_mean("shield5")), "…and 80 is on the curve")
+	var h := Heat.new({"geo": SimGeometry.arcade(), "seconds": 40.0, "ai": AiRatings.make(0.9, 0.9, 2.0), "seed": 11,
+		"calib_key": "arcade", "player_cards": ["shield5", "fire7"], "ai_cards": ["ice", "fire7"]})
+	t.ok(not h.can_play(Heat.PLAYER, "shield5"), "no shield during the countdown")
+	_tick(h, TimeTrial.COUNTDOWN_SECONDS + 0.1)
+	h.drain_events()
+	t.ok(h.can_play(Heat.PLAYER, "shield5"), "shield playable once running")
+	t.ok(h.can_play(Heat.AI, "ice"), "before it: the AI could ice the player")
+	t.ok(h.play_card(Heat.PLAYER, "shield5"), "shield raised by the player")
+	t.ok(h.player.shield_card and not h.ai.shield_card, "the player's shield is up, the AI's is not")
+	t.close(h.player.shield_left(), 5.0, 0.05, "five seconds on it")
+	h.tick(SimConstants.SIM_DT)   # the side's events reach the heat on the next tick
+	var on := false
+	for ev in h.drain_events():
+		if ev["kind"] == "shield_on":
+			on = true
+			t.close(float(ev["seconds"]), 5.0, 1e-9, "shield_on carries the window")
+	t.ok(on, "shield_on emitted")
+	t.ok(h.blocked(Heat.AI) and not h.blocked(Heat.PLAYER), "the AI is blocked, the player is not")
+	t.ok(not h.can_play(Heat.AI, "ice") and not h.can_play(Heat.AI, "fire7"), "the AI can play nothing while it is up")
+	t.ok(not h.play_card(Heat.AI, "ice"), "…a play is refused")
+	t.eq(h.hands[Heat.AI], ["ice", "fire7"], "…and its hand is intact")
+	t.ok(h.play_card(Heat.PLAYER, "fire7"), "the shielder's own cards still play")
+	t.ok(not h.can_play(Heat.PLAYER, "shield5"), "cannot raise it twice (and it is spent)")
+	t.ok(h.player.freeze_rim("test"), "ice lands on the shielder")
+	t.ok(h.player.shield_card, "…and leaves the shield up: it is not a rim effect")
+	var spam := 0
+	for i in 40:
+		h.tick(SimConstants.SIM_DT)
+	for ev in h.drain_events():
+		if ev["kind"] == "card_played" and str(ev.get("side", "")) == Heat.AI:
+			spam += 1
+	t.eq(spam, 0, "the bot driver stays quiet while blocked (no refused plays)")
+	_tick(h, 5.0)
+	t.ok(not h.player.shield_card, "the clock drops it")
+	var off := false
+	for ev in h.drain_events():
+		if ev["kind"] == "shield_off":
+			off = true
+			t.eq(str(ev["reason"]), "time", "shield_off {time}")
+	t.ok(off, "shield_off emitted")
+	t.ok(not h.blocked(Heat.AI), "the AI is free again")
+	t.ok(h.can_play(Heat.AI, "ice") or h.player.iced, "…and may ice the player (unless the rim is iced already)")
+	# The policy: never while blocked; the shield on its own trigger.
+	# (The AI is dealt nothing here, so its own driver cannot spend the hand first.)
+	var h2 := Heat.new({"geo": SimGeometry.arcade(), "seconds": 40.0, "ai": AiRatings.make(0.9, 0.9, 2.0), "seed": 12,
+		"calib_key": "arcade", "player_cards": ["shield5"], "ai_cards": []})
+	_tick(h2, TimeTrial.COUNTDOWN_SECONDS + 11.0)
+	var rng := DetRng.new(5)
+	h2.ai.streak = 3
+	var picked := ""
+	for i in 50:
+		picked = CardPolicy.choose_for(Heat.AI, ["ice", "shield5"], h2, rng)
+		if picked != "":
+			break
+	t.eq(picked, "shield5", "on 3 straight with the player holding a card, the AI reaches for its shield")
+	h2.ai.streak = 0
+	h2.hands[Heat.PLAYER].clear()
+	var none := ""
+	for i in 50:
+		none = CardPolicy.choose_for(Heat.AI, ["shield5"], h2, rng)
+		if none != "":
+			break
+	t.eq(none, "", "nothing to guard against (the player holds no card): no shield")
+	h2.hands[Heat.PLAYER].push_back("shield5")
+	t.ok(h2.play_card(Heat.PLAYER, "shield5"), "the player shields")
+	h2.ai.streak = 3
+	for i in 50:
+		none = CardPolicy.choose_for(Heat.AI, ["ice", "shield5"], h2, rng)
+		if none != "":
+			break
+	t.eq(none, "", "the policy picks nothing while the other side's shield is up")
 
 
 ## The Magnet card in a heat: the player hangs it over their own rim; the AI

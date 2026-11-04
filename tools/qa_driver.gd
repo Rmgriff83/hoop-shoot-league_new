@@ -60,7 +60,7 @@ func _ready() -> void:
 		App.loader.instant = _has_prefixed(args, "--qa") and not args.has("--qa-loading")
 		App.loader.force_show = args.has("--qa-loading")
 		PeggyMachine.threaded = not App.loader.instant
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-pause-practice") or args.has("--qa-prematch-series") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live") or args.has("--qa-ads") or args.has("--qa-platform") or args.has("--qa-machines") or args.has("--qa-park-snow") or args.has("--qa-net-hang")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-pause-practice") or args.has("--qa-prematch-series") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live") or args.has("--qa-ads") or args.has("--qa-platform") or args.has("--qa-machines") or args.has("--qa-park-snow") or args.has("--qa-net-hang") or args.has("--qa-shield")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# Achievements earned during a pass, in the log (docs/ACHIEVEMENTS.md).
@@ -105,6 +105,8 @@ func _ready() -> void:
 		_run_heat.call_deferred()
 	elif args.has("--qa-cards"):
 		_run_cards.call_deferred()
+	elif args.has("--qa-shield"):
+		_run_shield.call_deferred()
 	elif args.has("--qa-beach"):
 		_run_beach.call_deferred()
 	elif args.has("--qa-city"):
@@ -242,6 +244,58 @@ func _run_results() -> void:
 	await _sleep(1.0)
 	await _snap("results_home")
 	print("QA results: done")
+	get_tree().quit(0)
+
+
+## Shield QA (design "Card Icons" 11a, "League Match HUD" 4a state 5) on a
+## cage league heat: the player's shield up (its tag counting down), then the
+## opponent's shield up over the player (the BLOCKED panel, the tray dimmed).
+##   Godot --path hoop_shoot --resolution 360x640 -- --qa-shield
+func _run_shield() -> void:
+	await _sleep(0.8)
+	App.enter_league("cage")
+	var loadout: Array = App.cards_bucket("cage").get("loadout", [null, null, null])
+	for pair in [[0, "ice"], [1, "shield5"], [2, "fire7"]]:
+		if loadout[pair[0]] == null:
+			App.add_card(str(pair[1]), 1, "cage")
+			App.equip_card(int(pair[0]), str(pair[1]), "cage")
+	App.start_league_heat()
+	for i in 40:
+		var sc := get_tree().current_scene
+		if sc != null and "heat" in sc and sc.has_method("prematch_open") and sc.call("prematch_open"):
+			break
+		await _sleep(0.5)
+	var heat_sc: Node = get_tree().current_scene
+	var page: PreMatchPage = heat_sc.call("prematch_page")
+	if page != null:
+		page.press_ready()
+	for i in 30:
+		if not bool(heat_sc.call("prematch_open")):
+			break
+		await _sleep(0.5)
+	await _sleep(4.0)   # through the countdown
+	var heat: Heat = heat_sc.heat
+	var slot: int = heat_sc.get("_tray_ids").find("shield5")
+	if slot < 0:
+		heat.hands[Heat.PLAYER].push_back("shield5")
+		slot = 1
+	heat_sc.call("_deploy", slot, "shield5")
+	await _sleep(0.9)
+	await _snap("heat_shield_up")
+	print("QA shield: tray %s, AI blocked %s" % [str(heat_sc.call("tray_states")), str(heat.blocked(Heat.AI))])
+	await _sleep(5.0)
+	# Now the opponent's: pushed into its hand and played on itself.
+	heat.hands[Heat.AI].push_back("shield5")
+	if not heat.play_card(Heat.AI, "shield5"):
+		print("QA shield: the AI's shield was refused")
+	await _sleep(0.5)
+	await _snap("heat_shield_blocked")
+	await _sleep(1.6)
+	await _snap("heat_shield_blocked_late")
+	print("QA shield: tray %s, player blocked %s" % [str(heat_sc.call("tray_states")), str(heat.blocked(Heat.PLAYER))])
+	await _sleep(3.5)
+	await _snap("heat_shield_down")
+	print("QA shield: done")
 	get_tree().quit(0)
 
 
@@ -1192,7 +1246,7 @@ func _run_cards() -> void:
 	col.add_theme_constant_override("separation", 26)
 	layer.add_child(col)
 	var faces: Array[CardFace] = []
-	for card in [CardDefs.get_card("ice"), CardDefs.get_card("fire7"), CardDefs.get_card("magnet6")]:
+	for card in [CardDefs.get_card("ice"), CardDefs.get_card("fire7"), CardDefs.get_card("magnet6"), CardDefs.get_card("shield5")]:
 		var row := HBoxContainer.new()
 		row.alignment = BoxContainer.ALIGNMENT_END
 		row.add_theme_constant_override("separation", 24)
@@ -1209,7 +1263,7 @@ func _run_cards() -> void:
 	var chips := HBoxContainer.new()
 	chips.add_theme_constant_override("separation", 10)
 	chips.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	for card in [CardDefs.get_card("ice"), CardDefs.get_card("fire7"), CardDefs.get_card("magnet6"), {}]:
+	for card in [CardDefs.get_card("ice"), CardDefs.get_card("fire7"), CardDefs.get_card("magnet6"), CardDefs.get_card("shield5"), {}]:
 		var chip := ModeCards.chip(card)
 		chips.add_child(chip)
 		if chip is ModeCards.Chip:
@@ -1224,6 +1278,10 @@ func _run_cards() -> void:
 	fire_card.set_state("fire", "5S")
 	last.add_child(fire_card)
 	faces.push_back(fire_card.face)
+	var shield_card: Control = heat_script.TrayCard.new(CardDefs.get_card("shield5"), Vector2(84, 112))
+	shield_card.set_state("shield", "5S")
+	last.add_child(shield_card)
+	faces.push_back(shield_card.face)
 	col.add_child(last)
 	var cap := ShadowPanel.new(LeagueContext.BLUE, 0.0, 0.40, 18.0)
 	cap.custom_minimum_size = Vector2(0, 50 + ShadowStyle.OFFSET)

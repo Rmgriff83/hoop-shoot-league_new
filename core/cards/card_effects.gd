@@ -3,7 +3,7 @@ extends RefCounted
 ## The effect registry: `apply(kind, params, heat, target)` acts on one side of
 ## a Heat. Returns true when the effect took (a card is only consumed then).
 
-const KINDS := ["ice", "fire", "magnet"]
+const KINDS := ["ice", "fire", "magnet", "shield"]
 
 
 static func apply(kind: String, params: Dictionary, heat: Heat, target: String) -> bool:
@@ -22,6 +22,10 @@ static func apply(kind: String, params: Dictionary, heat: Heat, target: String) 
 			# arc lands within `pull_m` of the rim centre is zapped in. Only the clock (or ice)
 			# ends it; makes under it never build the streak.
 			return side.magnetize_rim(float(params.get("seconds", 0.0)), float(params.get("pull_m", 0.5)), "card")
+		"shield":
+			# The target's own shield for `seconds`: the other side cannot play
+			# a card until it drops (Heat.blocked). The clock alone ends it.
+			return side.raise_shield(float(params.get("seconds", 0.0)), "card")
 		_:
 			return false
 
@@ -37,5 +41,8 @@ static func can_apply(kind: String, heat: Heat, target: String) -> bool:
 		"magnet":
 			var side := heat.side(target)
 			return side.phase == TimeTrial.PHASE_RUNNING and not side.iced and not side.magnet_card
+		"shield":
+			var side := heat.side(target)
+			return side.phase == TimeTrial.PHASE_RUNNING and not side.shield_card
 		_:
 			return false

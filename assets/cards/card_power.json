@@ -17,6 +17,12 @@
       "cage": 0.98,
       "city": 1.51,
       "park": 1.47
+    },
+    "shield5": {
+      "beach": 0.6,
+      "cage": 0.6,
+      "city": 0.6,
+      "park": 0.6
     }
   },
   "detail": {
@@ -97,12 +103,39 @@
         "with": 0.96,
         "without": -0.51
       }
+    },
+    "shield5": {
+      "beach": {
+        "played": 0.0,
+        "se": 0.0,
+        "with": 0.0,
+        "without": 0.0
+      },
+      "cage": {
+        "played": 0.0,
+        "se": 0.0,
+        "with": 0.0,
+        "without": 0.0
+      },
+      "city": {
+        "played": 0.0,
+        "se": 0.0,
+        "with": 0.0,
+        "without": 0.0
+      },
+      "park": {
+        "played": 0.0,
+        "se": 0.0,
+        "with": 0.0,
+        "without": 0.0
+      }
     }
   },
   "generated": "2026-10-20",
   "n": 500.0,
   "placeholder": {
-    "magnet6": "carried over from vortex6 (2026-10-23); re-run tools/card_lab.gd -- magnet6"
+    "magnet6": "carried over from vortex6 (2026-10-23); re-run tools/card_lab.gd -- magnet6",
+    "shield5": "placeholder 0.6 (common, 80 tickets; Ross 2026-11-04): the lab's opponent holds no cards, so a block measures 0 - extend tools/card_lab.gd before measuring"
   },
   "seed": 4242.0
 }

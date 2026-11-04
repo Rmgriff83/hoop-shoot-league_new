@@ -48,6 +48,7 @@ breaks the chain, and every card's level must be a band edge.
 | Card | Level |
 |---|---|
 | Deep Freeze (ice) | 1 |
+| Shield (shield5) | 1 |
 | Heat Check (fire7) | 3 |
 | Magnet (magnet6) | 5 |
 
