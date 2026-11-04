@@ -402,7 +402,8 @@ Never from tickets or money (docs/ECONOMY.md → The rule).
    + `fx_shield.png` (16 frames at 12 fps, rect `[16, 28, 64, 56]` — the
    64×56 loop native, centred in the design's stretched box — chip 36×32 on
    `#F2A65E`) came back whole from `DesignSync get_file` (CRC-checked, no
-   export zip needed); `glyph_shield.png` is drawn by
+   export zip needed; the face's small `5s` mark was erased the same day at
+   Ross's ask — the name plate reads SHIELD alone); `glyph_shield.png` is drawn by
    `gen_card_textures.lua` (a heater shield in the loop's greys).
 
 ## Adding a league
