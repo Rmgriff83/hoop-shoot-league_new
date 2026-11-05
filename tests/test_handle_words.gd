@@ -24,8 +24,14 @@ func run(t) -> void:
 	t.ok(not HandleWords.valid("BRICK-BARON"), "no punctuation")
 	t.ok(not HandleWords.valid("brick baron"), "already upper-cased by then")
 	t.ok(not HandleWords.valid("FUCK BARON"), "a blocked word")
-	t.ok(HandleWords.valid("FU CK BARON"), "short blocked words match whole tokens only")
-	t.ok(not HandleWords.valid("NIG GER"), "long ones match squashed too")
+	t.ok(not HandleWords.valid("FU CK BARON"), "…split across a space")
+	t.ok(not HandleWords.valid("FUCKER"), "…inside a word")
+	t.ok(not HandleWords.valid("SH1T KID"), "…in leet")
+	t.ok(HandleWords.valid("CLASS ACT"), "a whole-word rule for the short ones (test_word_filter has the table)")
+	for f in w["first"]:
+		for s in w["second"]:
+			if not HandleWords.valid("%s %s" % [f, s]):
+				t.ok(false, "every rolled handle passes the filter (%s %s)" % [f, s])
 	var display := UiFont.display()
 	var bold := UiFont.body_bold()
 	for list in [w["first"], w["second"]]:

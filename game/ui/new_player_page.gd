@@ -8,8 +8,10 @@ extends HomePage
 ## (35a on the 1560 phone) the fields sit on dashed lines inside one gold
 ## card — the jersey and HOMETOWN, then PLAYER NAME in big gold type with its
 ## #tag — over the splash's bare brick wall, under a line saying how. The name follows the settings rules
-## (A–Z, 0–9, 3–24, no blocked word), the hometown cannot be empty; LET'S PLAY
-## dims with a reason until both are good, then App.create_player lands on
+## (A–Z, 0–9, 3–24), the hometown cannot be empty, and neither may carry a
+## word from data/blocked_words.json (WordFilter: inside words, across
+## spaces, in leet or stretched — the other phone reads both off the
+## face-off card); LET'S PLAY dims with a reason until both are good, then App.create_player lands on
 ## the Arcade Cage campaign home. Name and hometown stay editable in
 ## Settings → PLAYER.
 
@@ -27,6 +29,8 @@ const RULE := Color(1, 1, 1, 0.55)
 const BUTTER := Color("#FFE45C")
 const BAD := Color("#FF8A6A")
 const HINT := "YOU CAN CHANGE THESE LATER IN SETTINGS"
+## Every reason LET'S PLAY can give (the glyph test reads them).
+const PROBLEMS := ["NAME NEEDS 3 OR MORE LETTERS", "NAME NOT ALLOWED", "PICK A HOMETOWN", "TOWN NOT ALLOWED"]
 const INTRO := "NAME YOUR PLAYER AND PICK A HOMETOWN. TAP EITHER LINE TO TYPE YOUR OWN, OR ROLL THE DICE FOR A RANDOM ONE."
 
 var rng: DetRng = DetRng.new(int(Time.get_ticks_usec() % 2147483647))
@@ -304,13 +308,7 @@ func _spin() -> void:
 ## Typing is tidied in place (upper-case, the allowed characters, single
 ## spaces) with the caret kept; a trailing space stays so words can follow.
 static func clean_typing(raw: String, max_len: int) -> String:
-	var re := RegEx.create_from_string("[^A-Z0-9 ]")
-	var s := re.sub(raw.to_upper(), "", true)
-	while s.contains("  "):
-		s = s.replace("  ", " ")
-	if s.begins_with(" "):
-		s = s.substr(1)
-	return s.left(max_len)
+	return WordFilter.clean_typing(raw, max_len)
 
 
 func _on_name_typed() -> void:
@@ -357,8 +355,11 @@ func problem() -> String:
 	var p := name_problem()
 	if p != "":
 		return p
-	if not Towns.valid(town_value()):
+	var town := town_value()
+	if town == "":
 		return "PICK A HOMETOWN"
+	if not Towns.valid(town):
+		return "TOWN NOT ALLOWED"
 	return ""
 
 

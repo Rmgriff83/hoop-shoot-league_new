@@ -433,3 +433,16 @@ describe("ranked rooms", () => {
     expect(res.status).toBe(403);
   });
 });
+
+describe("ranked board names", () => {
+  it("masks a stored name the list has since caught", async () => {
+    const p = await register(5);
+    await setRating(p, 1500, 60, { games: 10, wins: 6, losses: 4 });
+    await env.DB.prepare("UPDATE players SET name = ?1 WHERE id = ?2").bind("SH1T HEAD", p.playerId).run();
+    resetBoardCache();
+    const b = await board(p);
+    expect(b.status).toBe(200);
+    const row = b.json.rows.find((r: any) => r.playerId === p.playerId);
+    expect(row).toMatchObject({ name: "PLAYER", tag: p.tag });
+  });
+});

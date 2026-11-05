@@ -209,11 +209,19 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
   ≤ 16, white) and PLAYER NAME with its `#tag` on the right (`HandleWords.generate`,
   a two-digit tag; the name in big gold display type, a `TextEdit` that wraps a long
   name onto a second line) — each with a die (`DieGlyph` at 32 px, spins a turn) to
-  re-roll; typing is tidied in place (upper-case, A–Z 0–9 and single spaces, no line
-  breaks). The name follows the settings rules (3–24, no blocked
-  word), the hometown cannot be empty; the status line says why ("NAME NEEDS 3 OR
-  MORE LETTERS" / "NAME NOT ALLOWED" / "PICK A HOMETOWN", in `#FF8A6A`) and LET'S PLAY
-  dims until both pass. LET'S PLAY → `App.create_player(name, tag, town)`: the name and
+  re-roll; typing is tidied in place (`WordFilter.clean_typing`: upper-case, A–Z 0–9
+  and single spaces — quotes, punctuation, line breaks, emoji, accents, hidden and
+  look-alike characters all go, so only plain words ever reach a save or the server).
+  The name follows the settings rules (3–24), the hometown cannot be empty, and
+  neither may carry a word from `data/blocked_words.json` (2026-11-04,
+  `core/net/word_filter.gd` `WordFilter.blocked_word`, the same file and rule the
+  Worker runs: a `blocked` word matches inside a word and across a space — FUCKVILLE,
+  FU CK — with digits read as letters (SH1T, 80085) and stretched letters squeezed
+  (FUUUCK); `whole` words match a whole word only (ASS, never CLASS); `allow` lists
+  innocent words that contain one (SCUNTHORPE, HANCOCK). Known cost: two innocent
+  words can spell one across their seam — GLASS HITMAN — and are refused.) The status
+  line says why ("NAME NEEDS 3 OR MORE LETTERS" / "NAME NOT ALLOWED" / "PICK A
+  HOMETOWN" / "TOWN NOT ALLOWED", in `#FF8A6A`) and LET'S PLAY dims until both pass. LET'S PLAY → `App.create_player(name, tag, town)`: the name and
   tag onto the account part (registration waits for this step — `Net._register`
   refuses until `App.player_created()` — so the chosen name goes up in the register
   call), the hometown and `playerCreated` into the settings part (synced; the
@@ -285,9 +293,13 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
     turns MUSIC back on.
   - **PLAYER** (the cloud line on the right): a gold card with how you
     appear in leagues and online. Its pencil opens NAME (with your tag) and
-    HOMETOWN, tidied as you type, the card following; SAVE checks both
-    (`NAME NOT ALLOWED · A-Z, 0-9, 3-24`, `PICK A HOMETOWN`), renames on the
-    server when the name changed and closes; CLOSE drops the changes. The
+    HOMETOWN, tidied as you type (the same `WordFilter.clean_typing`), the card
+    following; SAVE checks both (`NAME NOT ALLOWED · A-Z, 0-9, 3-24`, `PICK A
+    HOMETOWN`, `TOWN NOT ALLOWED` — the blocked list applies to both fields),
+    renames on the server when the name changed (`Net.rename` answers "" / "name"
+    / "offline": a server refusal — a newer list than this build's — says NAME NOT
+    ALLOWED, anything else NO SIGNAL · TRY AGAIN LATER) and closes; CLOSE drops
+    the changes. The
     platform link row (LINK GAME CENTER / LINKED · GAME CENTER, 2026-11-01;
     docs/BACKEND.md → Platform identity) shows on an iPhone with the plugin
     and stays hidden elsewhere.

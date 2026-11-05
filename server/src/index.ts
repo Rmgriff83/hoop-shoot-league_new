@@ -15,14 +15,14 @@ import { pendingTicketsOf, entitlementsOf } from "./store";
 import { minuteLimit, longLimit, peekLimit, type Verdict } from "./limits";
 import { meter } from "./meter";
 import {
-  AREAS, SCORE_FIELDS, SECRET_RE, TAG_RE, UUID_RE, normalizeName, onlyFields, plausible, validName, weekOf,
+  AREAS, SCORE_FIELDS, SECRET_RE, TAG_RE, UUID_RE, normalizeName, onlyFields, plausible, safeName, validName, weekOf,
   type ScorePayload,
 } from "./rules";
-import { BLOCKED, randomHandle } from "./handles";
+import { randomHandle } from "./handles";
 import * as db from "./db";
 import { save } from "./save";
 import { AREAS as MATCH_AREAS } from "./rules";
-import { cleanTown } from "./towns";
+import { shownTown } from "./towns";
 export { MatchRoom } from "./match_room";
 export { Lobby } from "./lobby";
 import { inventoryOf } from "./cards";
@@ -95,7 +95,7 @@ app.post("/v1/register", async (c) => {
   let handle = randomHandle();
   if (typeof b.name === "string") {
     const name = normalizeName(b.name);
-    if (validName(name, BLOCKED)) handle.name = name;
+    if (validName(name)) handle.name = name;
   }
   if (typeof b.tag === "string" && TAG_RE.test(b.tag)) handle.tag = b.tag;
   const now = Date.now();
@@ -167,7 +167,7 @@ app.patch("/v1/me", authenticate, async (c) => {
   if (b.name !== undefined) {
     if (typeof b.name !== "string") return c.json({ error: "name" }, 400);
     name = normalizeName(b.name);
-    if (!validName(name, BLOCKED)) return c.json({ error: "name" }, 400);
+    if (!validName(name)) return c.json({ error: "name" }, 400);
   }
   let level = p.level ?? 1;
   if (b.level !== undefined) {
@@ -285,7 +285,7 @@ app.get("/v1/leaderboard", authenticate, async (c) => {
     area,
     period,
     week,
-    rows: rows.map((r, i) => ({ rank: i + 1, name: r.name, tag: r.tag, score: r.score, playedAt: r.played_at, me: r.player_id === p.id })),
+    rows: rows.map((r, i) => ({ rank: i + 1, name: safeName(r.name ?? ""), tag: r.tag, score: r.score, playedAt: r.played_at, me: r.player_id === p.id })),
     me: mine ? { rank: myRank, score: mine.score, name: p.name, tag: p.tag } : null,
   });
 });
@@ -467,10 +467,10 @@ app.get("/v1/match/room/:id", async (c) => {
   const band = rating ?? defaultRow(p.id, Date.now());
   const headers = new Headers(c.req.raw.headers);
   headers.set("x-player-id", p.id);
-  headers.set("x-player-name", p.name);
+  headers.set("x-player-name", safeName(p.name));
   headers.set("x-player-tag", p.tag);
   headers.set("x-player-level", String(inv.level));
-  headers.set("x-player-town", cleanTown(c.req.query("town")));
+  headers.set("x-player-town", shownTown(c.req.query("town")));
   headers.set("x-player-tier", band.tier);
   headers.set("x-player-division", String(band.division));
   // The pre-match card's stats (design "Pre Match" 37a): the rating shown, the record, the world position.
@@ -515,7 +515,7 @@ app.get("/v1/ranked/board", authenticate, async (c) => {
       }
     : null;
   return c.json({
-    rows: boardCache.rows.map((r, i) => ({ position: i + 1, playerId: r.player_id, name: r.name, tag: r.tag, tier: r.tier, division: r.division, games: r.games, wins: r.wins, losses: r.losses })),
+    rows: boardCache.rows.map((r, i) => ({ position: i + 1, playerId: r.player_id, name: safeName(r.name), tag: r.tag, tier: r.tier, division: r.division, games: r.games, wins: r.wins, losses: r.losses })),
     me,
   });
 });

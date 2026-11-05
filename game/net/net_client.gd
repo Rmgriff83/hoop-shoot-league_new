@@ -204,20 +204,26 @@ func _mint_fresh() -> void:
 	_board_cache.clear()
 
 
-## Rename on the server; the local copy follows on success.
-func rename(raw: String) -> bool:
+## Rename on the server; the local copy follows on success. "" when it
+## took, "name" when the server's list refused it (a newer list than this
+## build's), "offline" for anything else.
+func rename(raw: String) -> String:
 	var name := HandleWords.normalize(raw)
-	if not HandleWords.valid(name) or not registered():
-		return false
+	if not HandleWords.valid(name):
+		return "name"
+	if not registered():
+		return "offline"
 	var r := await _request("me", HTTPClient.METHOD_PATCH, "/v1/me", {"name": name})
 	if r["ok"]:
 		var a := account()
 		a["name"] = str(r["json"].get("name", name))
 		SaveService.put_account(a)
 		account_ready.emit(a["name"], a["tag"])
-		return true
+		return ""
+	if int(r["code"]) == 400 and str(r["json"].get("error", "")) == "name":
+		return "name"
 	_back_off(r)
-	return false
+	return "offline"
 
 
 ## A one-time code for the new phone, {code, expiresAt} or {} (rate-limited here too).

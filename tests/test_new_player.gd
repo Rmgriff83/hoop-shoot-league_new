@@ -59,6 +59,12 @@ func run(t) -> void:
 	ne.text_changed.emit()
 	t.eq(ne.text, "OK FUCK", "punctuation, line breaks and double spaces go")
 	t.eq(page.problem(), "NAME NOT ALLOWED", "a blocked word")
+	ne.text = "SH1T HEAD"
+	ne.text_changed.emit()
+	t.eq(page.problem(), "NAME NOT ALLOWED", "…in leet too")
+	ne.text = "GLASS HITMAN"
+	ne.text_changed.emit()
+	t.eq(page.problem(), "NAME NOT ALLOWED", "…and spelled across a space (the known cost of the rule)")
 	ne.text = "BRICK BARON "
 	ne.text_changed.emit()
 	t.eq(ne.text, "BRICK BARON ", "a trailing space survives while typing")
@@ -66,10 +72,22 @@ func run(t) -> void:
 	te.text = ""
 	te.text_changed.emit("")
 	t.eq(page.problem(), "PICK A HOMETOWN", "an empty hometown")
+	te.text = "fuckville"
+	te.text_changed.emit("fuckville")
+	t.eq(page.problem(), "TOWN NOT ALLOWED", "a blocked hometown")
+	t.ok(play.disabled, "…dims LET'S PLAY")
 	te.text = "salt harbor"
 	te.text_changed.emit("salt harbor")
 	t.ok(page.is_valid() and page.values()["town"] == "SALT HARBOR", "a typed town")
 	t.eq(NewPlayerPage.clean_typing("a very long hometown name", Towns.TOWN_MAX), "A VERY LONG HOME", "typing caps at the max")
+	te.text = "'; drop table players; --"
+	te.text_changed.emit(te.text)
+	t.eq(te.text, "DROP TABLE PL", "punctuation never reaches the field (the LineEdit caps at 16 first, then the cleaner)")
+	var display := UiFont.display()
+	var bold := UiFont.body_bold()
+	for s in NewPlayerPage.PROBLEMS + [NewPlayerPage.HINT]:
+		for ch in s:
+			t.ok(display.has_char(ch.unicode_at(0)) and bold.has_char(ch.unicode_at(0)), "glyph '%s' in both faces" % ch)
 	# LET'S PLAY: the account, the settings, the landing.
 	save.put_account({})
 	app.pending_welcome = {}

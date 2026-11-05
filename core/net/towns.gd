@@ -39,7 +39,8 @@ static func normalize(raw: String) -> String:
 	return " ".join(parts).left(TOWN_MAX)
 
 
-## Non-empty after tidying, within TOWN_MAX.
+## Non-empty after tidying, within TOWN_MAX, nothing from the blocked list
+## (the other phone reads it off the face-off card).
 static func valid(town: String) -> bool:
 	var n := normalize(town)
-	return n != "" and n == town and n.length() <= TOWN_MAX
+	return n != "" and n == town and n.length() <= TOWN_MAX and WordFilter.blocked_word(n) == ""

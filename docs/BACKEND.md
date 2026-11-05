@@ -92,8 +92,20 @@ platform restores the account (`Net._recover_identity` →
 repo or the APK is a shared secret.
 
 - **Handle**: `BRICK BARON 42` — two words and a two-digit tag; editable in
-  Settings → PLAYER (`PATCH /v1/me`; 3–24 of A–Z, 0–9, single spaces, no
-  blocked word; the server tidies and checks, `HandleWords.valid` mirrors it).
+  Settings → PLAYER (`PATCH /v1/me`; 3–24 of A–Z, 0–9, single spaces, nothing
+  from `data/blocked_words.json`; the server tidies and checks, `HandleWords.valid`
+  mirrors it). The word filter (2026-11-04, `src/word_filter.ts`, twin of
+  `core/net/word_filter.gd`; both read the same JSON and agree on
+  `data/word_filter_cases.json`): a `blocked` word anywhere, across a space, in
+  leet (digits as letters) or stretched; `whole` words as whole words; `allow`
+  words innocent (SCUNTHORPE). Register swaps a bad name for a random handle
+  (the client checked first; only a tampered client gets here), `PATCH /v1/me`
+  answers `400 {error:"name"}`. Names stored before a list grew are masked on
+  read — `safeName`: the boards (`/v1/leaderboard`, `/v1/ranked/board`) and the
+  room's `x-player-name` show `PLAYER` for a name that no longer passes; the row
+  is untouched. Every statement binds its parameters and the fields are
+  letters, digits and spaces, so there is nothing to inject; `api.test.ts`
+  pins a name carrying SQL as a plain 400.
 - **Move to a new phone**: Settings → MOVE TO NEW PHONE asks for a one-time
   8-letter code (15 min); ENTER CODE on the new phone claims it with a fresh
   secret and the old secret dies. Phase 2's save mirror makes that restore
@@ -323,9 +335,10 @@ build at any server.
   (unknown court → 400); a code is never "any".
 - **The face-off (2026-10-18, design 37a):** the phone sends its hometown on
   the room URL (`&town=`); the room route cleans it (`src/towns.ts`
-  `cleanTown`: A–Z, 0–9, single spaces, ≤ 16) and always sets
-  `x-player-town`, so the player record — `joined.peer` / `peer.peer` —
-  carries `town` ("" when none). The `peer` message also carries the room's
+  `cleanTown`: A–Z, 0–9, single spaces, ≤ 16) and, since 2026-11-04, blanks
+  it when it carries a blocked word (`shownTown` — the card then prints the
+  level alone, the match goes ahead) before setting `x-player-town`, so the
+  player record — `joined.peer` / `peer.peer` — carries `town` ("" when none). The `peer` message also carries the room's
   `area`, so an any-court host learns its court. Needs a Worker deploy; the
   old Worker just sends no town (the card shows the level alone).
 

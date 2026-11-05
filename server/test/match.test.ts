@@ -2,7 +2,7 @@ import { SELF, env, runDurableObjectAlarm } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { resetMemoryLimits } from "../src/limits";
 import { BURST, DROP_GRACE_MS, MAX_PER_S } from "../src/match_room";
-import { cleanTown, TOWN_MAX } from "../src/towns";
+import { cleanTown, shownTown, TOWN_MAX } from "../src/towns";
 
 const uuid = () => crypto.randomUUID();
 const secret = () => [...crypto.getRandomValues(new Uint8Array(40))].map((b) => "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"[b % 62]).join("");
@@ -170,6 +170,23 @@ describe("hometown", () => {
     expect(cleanTown("<script>")).toBe("SCRIPT");
     expect(cleanTown(undefined)).toBe("");
     expect(cleanTown("")).toBe("");
+  });
+  it("is blanked when it carries a blocked word (the card prints the level alone)", async () => {
+    expect(shownTown("fuckville")).toBe("");
+    expect(shownTown("sh1t creek")).toBe("");
+    expect(shownTown("salt harbor")).toBe("SALT HARBOR");
+    const a = await register();
+    const b = await register();
+    const room = uuid();
+    const A = await join(a, room, "cage", "FUCKVILLE");
+    await A.until((m) => m.t === "joined");
+    const B = await join(b, room, "cage", "HANCOCK PARK");
+    const jb = await B.until((m) => m.t === "joined");
+    expect(jb.peer).toMatchObject({ id: a.playerId, town: "" });
+    const peer = await A.until((m) => m.t === "peer");
+    expect(peer.peer.town).toBe("HANCOCK PARK");
+    A.ws.close();
+    B.ws.close();
   });
 });
 

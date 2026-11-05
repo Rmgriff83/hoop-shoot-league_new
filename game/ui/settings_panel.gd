@@ -481,8 +481,7 @@ func _edit(name_: String, text: String, max_len: int, display := false) -> LineE
 
 ## Capitals, letters, digits and single spaces as you type (the caret kept).
 static func _tidy(e: LineEdit, raw: String) -> void:
-	var re := RegEx.create_from_string("[^A-Z0-9 ]")
-	var cleaned := re.sub(raw.to_upper(), "", true).replace("  ", " ").lstrip(" ").left(e.max_length)
+	var cleaned := WordFilter.clean_typing(raw, e.max_length)
 	if cleaned != e.text:
 		var caret := e.caret_column
 		e.text = cleaned
@@ -537,18 +536,24 @@ func _save_player() -> void:
 		_say("NAME NOT ALLOWED · A-Z, 0-9, 3-24", false)
 		return
 	var town := Towns.normalize(_town_edit.text)
-	if not Towns.valid(town):
+	if town == "":
 		_say("PICK A HOMETOWN", false)
+		return
+	if not Towns.valid(town):
+		_say("TOWN NOT ALLOWED", false)
 		return
 	if name_ != str(Net.account().get("name", "")):
 		var save_b := _edit_box.find_child("Save", true, false) as ShadowCard
 		_say("")
 		_button_spin(save_b, true)
-		var ok: bool = await Net.rename(name_)
+		var why: String = await Net.rename(name_)
 		if not is_instance_valid(_msg):
 			return
 		_button_spin(save_b, false)
-		if not ok:
+		if why == "name":
+			_say("NAME NOT ALLOWED", false)
+			return
+		if why != "":
 			_say("NO SIGNAL · TRY AGAIN LATER", false)
 			return
 	App.set_hometown(town)

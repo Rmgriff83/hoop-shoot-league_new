@@ -3,6 +3,8 @@
  * `plausible` and tests/test_score_payload.gd asserts the same verdicts, so a
  * change here is a change there.
  */
+import { blockedWord } from "./word_filter";
+
 export const AREAS = ["cage", "beach", "park", "city"] as const;
 export type Area = (typeof AREAS)[number];
 
@@ -75,15 +77,14 @@ export function normalizeName(raw: string): string {
   return raw.trim().toUpperCase().replace(/\s+/g, " ");
 }
 
-export function validName(name: string, blocked: readonly string[]): boolean {
-  if (name.length < NAME_MIN || name.length > NAME_MAX || !NAME_RE.test(name)) return false;
-  const tokens = name.split(" ");
-  const squashed = name.replace(/ /g, "");
-  for (const b of blocked) {
-    if (tokens.includes(b)) return false;
-    if (b.length >= 5 && squashed.includes(b)) return false;
-  }
-  return true;
+/** 3–24 of A–Z, 0–9 and single spaces, nothing from data/blocked_words.json (word_filter.ts). */
+export function validName(name: string): boolean {
+  return name.length >= NAME_MIN && name.length <= NAME_MAX && NAME_RE.test(name) && blockedWord(name) === "";
+}
+
+/** A stored name as other players may see it: itself while it still passes, else a plain PLAYER (a list grown since it was chosen). */
+export function safeName(name: string): string {
+  return validName(name) ? name : "PLAYER";
 }
 
 /** Only the listed keys, nothing else — a stray field is a 400, not a shrug. */

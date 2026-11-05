@@ -686,7 +686,7 @@ func _widgets(t) -> void:
 	var ne: LineEdit = panel.find_child("NameEdit", true, false)
 	var te: LineEdit = panel.find_child("TownEdit", true, false)
 	ne.text = ""
-	ne.text_changed.emit("glass  wizard!")
+	ne.text_changed.emit("glass   wizard!")
 	t.eq(ne.text, "GLASS WIZARD", "the name field tidies as you type")
 	t.ok(panel.card_text().begins_with("GLASS WIZARD"), "…and the card follows")
 	te.text = ""
@@ -697,6 +697,11 @@ func _widgets(t) -> void:
 	ne.text = "AB"
 	(panel.find_child("Save", true, false) as ShadowCard).pressed.emit()
 	t.eq(panel.message(), "NAME NOT ALLOWED · A-Z, 0-9, 3-24", "…and the name")
+	ne.text = "GLASS WIZARD"
+	te.text = "FUCKVILLE"
+	(panel.find_child("Save", true, false) as ShadowCard).pressed.emit()
+	t.eq(panel.message(), "TOWN NOT ALLOWED", "…and the hometown against the blocked list")
+	t.ok(panel.edit_open(), "…still open")
 	(panel.find_child("CloseEdit", true, false) as ShadowCard).pressed.emit()
 	t.ok(not panel.edit_open() and panel.message() == "", "CLOSE drops the changes")
 	t.eq(ne.text, str(Net.account().get("name", "")), "…the name back to the saved one")

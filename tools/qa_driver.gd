@@ -2527,6 +2527,23 @@ func _run_splash() -> void:
 		ne.text_changed.emit()
 	await _sleep(0.2)
 	await _snap("new_player_long")
+	# The word filter: a leet name, then a blocked hometown.
+	if ne != null:
+		ne.text = "SH1T HEAD"
+		ne.text_changed.emit()
+	await _sleep(0.2)
+	await _snap("new_player_blocked_name")
+	var te: LineEdit = page.find_child("TownEdit", true, false) if page != null else null
+	if ne != null and te != null:
+		ne.text = "GLASS WIZARD"
+		ne.text_changed.emit()
+		te.text = "FUCKVILLE"
+		te.text_changed.emit(te.text)
+	await _sleep(0.2)
+	await _snap("new_player_blocked_town")
+	if te != null:
+		te.text = "SALT HARBOR"
+		te.text_changed.emit(te.text)
 	await _click_named("RollName")
 	await _sleep(0.35)
 	await _click_button_named("LET'S PLAY")

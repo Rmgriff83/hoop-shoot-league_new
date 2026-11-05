@@ -1,0 +1,28 @@
+{
+  "_": "Words a player name or hometown may not carry (core/net/word_filter.gd, server/src/word_filter.ts — one list, two readers). `blocked` matches anywhere inside a word or across a space (FUCKVILLE, FU CK), also with digits read as letters (SH1T, 80085) and stretched letters squeezed (FUUUCK). `whole` matches a whole word only (ASS, not CLASS). `allow` lists innocent words that contain a blocked one (SCUNTHORPE, HANCOCK).",
+  "blocked": [
+    "FUCK", "FVCK", "PHUCK", "FCUK", "MOTHERFUCK", "SHIT", "BULLSHIT", "CUNT", "BITCH", "BIATCH",
+    "BASTARD", "DOUCHE", "PISS", "BOLLOCKS", "WANKER", "TWAT", "SLUT", "WHORE", "SKANK", "THOT",
+    "ASSHOLE", "ARSEHOLE", "ASSHAT", "ASSWIPE", "DUMBASS", "JACKASS", "FATASS", "BUTTHOLE",
+    "COCK", "DICK", "PRICK", "PENIS", "VAGINA", "PUSSY", "BOOB", "TITTY", "TITTIES", "NIPPLE",
+    "CLIT", "DILDO", "JIZZ", "SPERM", "ORGASM", "BLOWJOB", "HANDJOB", "RIMJOB", "JERKOFF",
+    "CUMSHOT", "QUEEF", "SMEGMA", "SCROTUM", "NUTSACK", "BALLSACK", "HORNY", "PORN", "PORNO",
+    "MASTURBAT", "RAPIST", "INCEST", "MOLEST", "PEDOPHILE", "PAEDOPHILE", "PAEDO",
+    "NIGGER", "NIGGA", "KIKE", "CHINK", "GOOKS", "WETBACK", "BEANER", "FAGGOT", "TRANNY",
+    "SHEMALE", "LESBO", "RETARD", "SPAZ", "MIDGET", "MONGOLOID", "HITLER", "NAZI", "KKK",
+    "1488", "8814", "SWASTIKA", "ZIPPERHEAD", "CAMELJOCKEY", "CHINAMAN", "INJUN", "SQUAW",
+    "DAGO", "POLACK", "DARKIE", "DARKY", "JIGABOO", "PICKANINNY", "PORCHMONKEY", "SPEARCHUCKER",
+    "TARBABY", "MUZZIE", "RAGHEAD", "TOWELHEAD", "KAFFIR", "GOLLIWOG", "KILLYOURSELF"
+  ],
+  "whole": [
+    "ASS", "ASSES", "ANAL", "ANUS", "CUM", "CUMS", "SEMEN", "SEX", "SEXY", "ORGY", "TITS", "TIT",
+    "WANK", "FUK", "FUX", "RAPE", "RAPED", "PEDO", "PEDOS", "FAG", "FAGS", "DYKE", "DYKES",
+    "HOMO", "HOMOS", "SPIC", "SPICS", "GOOK", "COON", "COONS", "NEGRO", "JAP", "JAPS", "PAKI",
+    "PAKIS", "WOG", "WOGS", "WOP", "WOPS", "YID", "YIDS", "TARD", "TARDS", "HEIL", "KYS"
+  ],
+  "allow": [
+    "SCUNTHORPE", "SHITAKE", "HANCOCK", "COCKPIT", "PEACOCK", "COCKATOO", "COCKTAIL", "COCKER",
+    "WOODCOCK", "HITCHCOCK", "BABCOCK", "DICKENS", "DICKSON", "DICKINSON", "DICKERSON",
+    "PRICKLY", "PRICKLE", "PENISTONE", "ASHKENAZI", "CLITHEROE", "HORNYHEAD"
+  ]
+}

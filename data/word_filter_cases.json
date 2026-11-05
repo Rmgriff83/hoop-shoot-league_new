@@ -1,0 +1,13 @@
+{
+  "_": "The verdict table both word filters must agree on (tests/test_word_filter.gd, server/test/word_filter.test.ts).",
+  "blocked": [
+    "FUCK", "FUCKER", "FUCK BARON", "SHITHEAD", "SH1T", "FUUUCK", "80085", "FU CK", "N1GGA", "NIG GER",
+    "FUCKVILLE", "A55HOLE", "1488", "14 88", "ASS", "A SS", "DUMB ASS", "FAAAG", "B1TCH LAKE", "SEX CITY",
+    "KILL YOUR SELF", "KYS"
+  ],
+  "allowed": [
+    "CLASS ACT", "SCUNTHORPE", "BASS LAKE", "ASSISTANT", "PASS MASTER", "HANCOCK PARK", "BRICK BARON",
+    "SALT HARBOR", "DICKENS", "BOB", "GLASS WIZARD", "COPPER HILL", "SEXTON", "PRICKLY PEAR", "ANNALS",
+    "BIG 5", "ROUTE 66", "ASHKENAZI", "MONTENEGRO", "PAKISTAN", "RACCOON", "SHEILA", "GRAPEVINE"
+  ]
+}

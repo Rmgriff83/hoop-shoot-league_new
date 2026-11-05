@@ -72,13 +72,13 @@ describe("rules", () => {
   });
   it("names are tidied and checked", () => {
     expect(normalizeName("  brick   baron ")).toBe("BRICK BARON");
-    expect(validName("BRICK BARON", ["FUCK"])).toBe(true);
-    expect(validName("AB", [])).toBe(false);
-    expect(validName("A".repeat(25), [])).toBe(false);
-    expect(validName("BRICK-BARON", [])).toBe(false);
-    expect(validName("FUCK BARON", ["FUCK"])).toBe(false);
-    expect(validName("FU CK BARON", ["FUCK"])).toBe(true); // short words only match whole tokens
-    expect(validName("NIG GER", ["NIGGER"])).toBe(false); // long ones match squashed too
+    expect(validName("BRICK BARON")).toBe(true);
+    expect(validName("AB")).toBe(false);
+    expect(validName("A".repeat(25))).toBe(false);
+    expect(validName("BRICK-BARON")).toBe(false);
+    expect(validName("FUCK BARON")).toBe(false);
+    expect(validName("FU CK BARON")).toBe(false); // across a space too (word_filter.test.ts has the table)
+    expect(validName("NIG GER")).toBe(false);
   });
 });
 
@@ -105,6 +105,9 @@ describe("register", () => {
     expect(ok.tag).toBe("07");
     const bad = await register("10.1.0.2", { name: "x" });
     expect(bad.name).toMatch(/^[A-Z]+ [A-Z]+$/);
+    const leet = await register("10.1.0.2", { name: "N1GGA KID" });
+    expect(leet.name).toMatch(/^[A-Z]+ [A-Z]+$/);
+    expect(leet.name).not.toBe("N1GGA KID");
     const stray = await SELF.fetch("https://api/v1/register", {
       method: "POST", headers: { "content-type": "application/json", "cf-connecting-ip": "10.1.0.2" },
       body: JSON.stringify({ playerId: uuid(), secret: secret(), clientId: uuid(), admin: true }),
@@ -146,8 +149,21 @@ describe("auth", () => {
     expect(((await ok.json()) as any).name).toBe("GLASS WIZARD");
     const bad = await SELF.fetch("https://api/v1/me", { method: "PATCH", headers: auth(p), body: JSON.stringify({ name: "fuck" }) });
     expect(bad.status).toBe(400);
+    expect(await bad.json()).toEqual({ error: "name" });
     const limit = await SELF.fetch("https://api/v1/me", { method: "PATCH", headers: auth(p), body: JSON.stringify({ name: "A".repeat(30) }) });
     expect(limit.status).toBe(400);
+  });
+});
+
+describe("rename filter", () => {
+  it("refuses stems, leet and split spellings, keeping the old name", async () => {
+    const p = await register();
+    for (const name of ["fucker", "sh1t head", "fu ck baron", "class a55"]) {
+      const r = await SELF.fetch("https://api/v1/me", { method: "PATCH", headers: auth(p), body: JSON.stringify({ name }) });
+      expect(r.status, name).toBe(400);
+    }
+    const after = await SELF.fetch("https://api/v1/me", { headers: auth(p) });
+    expect(((await after.json()) as any).name).toBe(p.name);
   });
 });
 
@@ -173,6 +189,27 @@ describe("scores + boards", () => {
     const other = await board(p, "city");
     expect(other.json.rows).toHaveLength(0);
     expect(other.json.me).toBeNull();
+  });
+  it("masks a stored name the list has since caught, on the board only", async () => {
+    const p = await register();
+    await submit(p, run("park", 20));
+    await env.DB.prepare("UPDATE players SET name = ?1 WHERE id = ?2").bind("FUCK BARON", p.playerId).run();
+    const b = await board(p, "park");
+    const mine = b.json.rows.find((r: any) => r.me);
+    expect(mine.name).toBe("PLAYER");
+    expect(mine.tag).toBe(p.tag);
+    const row = await env.DB.prepare("SELECT name FROM players WHERE id = ?1").bind(p.playerId).first<{ name: string }>();
+    expect(row?.name).toBe("FUCK BARON"); // read-time only; the row is untouched
+  });
+  it("a name carrying SQL is just a bad name", async () => {
+    const p = await register();
+    const before = await env.DB.prepare("SELECT COUNT(*) AS n FROM players").first<{ n: number }>();
+    const r = await SELF.fetch("https://api/v1/me", { method: "PATCH", headers: auth(p), body: JSON.stringify({ name: "x'; DROP TABLE players; --" }) });
+    expect(r.status).toBe(400);
+    const after = await env.DB.prepare("SELECT COUNT(*) AS n FROM players").first<{ n: number }>();
+    expect(after?.n).toBe(before?.n);
+    const me = await SELF.fetch("https://api/v1/me", { headers: auth(p) });
+    expect(((await me.json()) as any).name).toBe(p.name);
   });
   it("rejects an implausible run with the field", async () => {
     const p = await register();

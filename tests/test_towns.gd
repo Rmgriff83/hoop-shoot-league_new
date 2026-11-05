@@ -20,3 +20,4 @@ func run(t) -> void:
 	t.eq(Towns.normalize("  salt   harbor! "), "SALT HARBOR", "normalize: upper, single spaces, no punctuation")
 	t.eq(Towns.normalize("a very long town name indeed"), "A VERY LONG TOWN", "normalize caps at %d" % Towns.TOWN_MAX)
 	t.ok(Towns.valid("BLUE MESA") and not Towns.valid("") and not Towns.valid("blue mesa") and not Towns.valid("  BLUE"), "valid wants a tidy non-empty town")
+	t.ok(not Towns.valid("FUCKVILLE") and not Towns.valid("SH1T CREEK") and Towns.valid("HANCOCK PARK"), "…with nothing from the blocked list (the other phone reads it)")
