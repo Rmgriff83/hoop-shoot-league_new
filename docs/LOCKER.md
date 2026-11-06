@@ -151,8 +151,10 @@ ledger (the price must land in a tier and keep the catalog in band).
   too. Only when nothing unowned is left at your level does a plate pay
   **150 back**.
 - A win pops the card: NEW BALL · name · rarity · n/93 BALLS · **SET AS
-  YOUR BALL?** or NEW NET · name · n/8 NETS · **HANG IT ON YOUR COURTS?** —
-  EQUIP / KEEP · AGAIN · 300 (AGAIN is the PLAY path). An epic or legend
+  YOUR BALL?** with EQUIP / KEEP, or NEW NET · name · n/8 NETS · **ADDED TO
+  YOUR LOCKER** with KEEP only (Ross, 2026-11-06: a net is not equipped from
+  the card; it is hung from the locker, court by court) — then AGAIN · 300
+  (AGAIN is the PLAY path). An epic or legend
   plate takes the screen with rotating rays (`game/ui/prize_rays.gd`) and
   the jackpot fanfare.
 - A prize you have won but not looked at in the locker is **unseen**: the

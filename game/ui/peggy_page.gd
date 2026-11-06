@@ -9,9 +9,10 @@ extends HomePage
 ## flashing — then the joystick aims and DROP drops. Short of tickets with
 ## no credit, the small PLAY is greyed with NEED n MORE and the cap shows its
 ## red X; the joystick still moves the crane. A win pops the prize card over
-## the page: NEW BALL (SET AS YOUR BALL?) or NEW NET (HANG IT ON YOUR
-## COURTS?), EQUIP / KEEP, AGAIN · 300; an epic or legend plate dims harder
-## and turns the rays. `< BACK` returns to the locker.
+## the page: NEW BALL (SET AS YOUR BALL?) with EQUIP / KEEP, or NEW NET
+## (ADDED TO YOUR LOCKER) with KEEP only — a net is hung from the locker,
+## where each court is picked (Ross, 2026-11-06) — then AGAIN · 300; an epic
+## or legend plate dims harder and turns the rays. `< BACK` returns to the locker.
 
 const TIER_COLOR := PeggyMachine.TIER_COLOR
 const PLAY_Y := 0.34
@@ -336,21 +337,19 @@ func _show_card(prize: Dictionary) -> void:
 		_card_text(col, name_, 30, true)
 		var total := int(prize.get("roster_size", CosmeticLibrary.nets().size() if is_net else CosmeticLibrary.balls().size()))
 		_card_text(col, "%s · %d/%d %s" % [rarity.to_upper(), int(prize.get("owned_after", 0)), total, "NETS" if is_net else "BALLS"], 14)
-		_card_text(col, "ADDED TO YOUR LOCKER" if big else ("HANG IT ON YOUR COURTS?" if is_net else "SET AS YOUR BALL?"), 16)
+		_card_text(col, "ADDED TO YOUR LOCKER" if big or is_net else "SET AS YOUR BALL?", 16)
 		var row := HBoxContainer.new()
 		row.alignment = BoxContainer.ALIGNMENT_CENTER
 		row.add_theme_constant_override("separation", 12)
 		col.add_child(row)
-		var equip := _card_button("EQUIP", RetroTheme.LIGHT["gold"])
-		equip.name = "Equip"
-		equip.pressed.connect(func() -> void:
-			if is_net:
-				App.select_net_everywhere(id)
-			else:
+		if not is_net:   # a ball can be set from here; a net is hung from the locker
+			var equip := _card_button("EQUIP", RetroTheme.LIGHT["gold"])
+			equip.name = "Equip"
+			equip.pressed.connect(func() -> void:
 				App.select("ball", id)
-			_dismiss_card()
-		)
-		row.add_child(equip)
+				_dismiss_card()
+			)
+			row.add_child(equip)
 		var keep := _card_button("KEEP", CREAM)
 		keep.name = "Keep"
 		keep.pressed.connect(_dismiss_card)

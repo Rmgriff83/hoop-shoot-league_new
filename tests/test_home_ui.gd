@@ -538,7 +538,9 @@ func _widgets(t) -> void:
 	var card_words := []
 	for l in page.prize_card().find_children("*", "Label", true, false):
 		card_words.push_back(str(l.text))
-	t.ok(card_words.has("NEW NET") and card_words.has("HANG IT ON YOUR COURTS?") and card_words.has("RARE · 3/8 NETS"), "a net card says so (%s)" % str(card_words))
+	t.ok(card_words.has("NEW NET") and card_words.has("ADDED TO YOUR LOCKER") and card_words.has("RARE · 3/8 NETS"), "a net card says so (%s)" % str(card_words))
+	t.ok(page.prize_card().find_child("Equip", true, false) == null and page.prize_card().find_child("Keep", true, false) != null, "a net is not equipped from the card: KEEP only (Ross, 2026-11-06)")
+	t.ok(not card_words.has("HANG IT ON YOUR COURTS?"), "…and nothing asks to hang it")
 	page._dismiss_card()
 	page._show_card({"slot": 0, "base": "epic", "rarity": "epic", "kind": "ball", "id": "tiger", "refund": 0, "owned_after": 3, "roster_size": 47, "result": {}})
 	t.ok(page._rays != null, "an epic pull turns the rays")
