@@ -29,6 +29,8 @@ const BEEP_DB := -8.0
 const GO_DB := -6.0
 const TICK_DB := -10.0
 const RING_DB := -10.0
+## The card-play sound's level over its normalised clip.
+const CARD_DB := 0.0
 ## A rattling ball can hit the rim several times; play the miss clip once per burst.
 const MISS_RATE_LIMIT_S := 0.6
 
@@ -98,7 +100,7 @@ func _ready() -> void:
 		"ice_freeze", "ice_crack_0", "ice_crack_1", "ice_shatter",
 		"peggy_press", "peggy_servo", "peggy_ticket", "peggy_peg_0", "peggy_peg_1", "peggy_peg_2",
 		"peggy_win", "peggy_jackpot", "match_loss", "chime_win", "chime_big", "level_up", "swish_register", "streak_coin", "match_defeat", "ticket_shuffle",
-		"countdown_beep", "countdown_go", "time_up_ring", "xp_tick",
+		"countdown_beep", "countdown_go", "time_up_ring", "xp_tick", "card_play",
 		"click_0", "click_1", "click_2", "click_3", "click_4",
 		"fx/fire_burst", "fx/ice_form", "fx/ice_break", "fx/ice_swish", "fx/fire_out",
 	]:
@@ -913,6 +915,14 @@ func net_rustle() -> void:
 
 func score_pop(is_swish: bool) -> void:
 	_play("score_pop_swish" if is_swish else "score_pop")
+
+
+## A power-up card played, yours or theirs, as the dealt card flies (Ross,
+## 2026-11-06): an ElevenLabs-generated UX sound (credited), cut to its onset,
+## faded out, mono and peak-normalised to −1 dBFS (about −27 LUFS). It replaced
+## the swish score pop.
+func card_play() -> void:
+	_play("card_play", CARD_DB)
 
 
 ## Time up — a match's (each period's) or a time trial's end (Ross,

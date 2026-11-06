@@ -95,6 +95,13 @@ func run(t) -> void:
 		by_author[str(c.get("author", ""))] = c
 	t.eq(CreditsScreen.attribution_line(by_author.get("theplax", {})), "Breaking Glass Mix.wav by theplax -- https://freesound.org/s/546671/ -- License: Attribution 4.0", "ice break attribution, verbatim")
 	t.eq(CreditsScreen.attribution_line(by_author.get("cmusounddesign", {})), "mp glass break.wav by cmusounddesign -- https://freesound.org/s/85184/ -- License: Attribution 4.0", "swish break attribution, verbatim")
+	# The card-play sound (2026-11-06): ElevenLabs-generated, credited, cut to
+	# its onset (no lead silence) and normalised; the deal plays it.
+	t.ok(by_author.has("ElevenLabs Sound Effects"), "the card-play sound credits ElevenLabs")
+	var card_snd: AudioStream = load("res://assets/audio/card_play.wav")
+	t.ok(card_snd != null and card_snd.get_length() > 1.2 and card_snd.get_length() < 1.5, "card-play clip trimmed to ~1.36 s")
+	var deal_src := FileAccess.get_file_as_string("res://game/screens/heat_screen.gd")
+	t.ok(deal_src.contains("Sfx.card_play()") and sfx != null and sfx.has_method("card_play"), "a dealt card plays Sfx.card_play()")
 	var brk: AudioStream = load("res://assets/audio/fx/ice_break.wav")
 	var sw: AudioStream = load("res://assets/audio/fx/ice_swish.wav")
 	t.ok(brk != null and brk.get_length() > 1.5 and brk.get_length() < 1.8, "generic ice break clip whole (~1.7 s)")

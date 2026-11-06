@@ -181,6 +181,13 @@
       "url": "https://freesound.org/people/breviceps/sounds/447918/",
       "license": "see the source page",
       "used_for": "The tickets gained on the end pages (the ticket stream's shuffle)"
+    },
+    {
+      "title": "Card play UX sound (AI-generated)",
+      "author": "ElevenLabs Sound Effects",
+      "url": "https://elevenlabs.io/sound-effects",
+      "license": "see the source page",
+      "used_for": "A power-up card played in a match (trimmed, normalised)"
     }
   ],
   "fonts": [

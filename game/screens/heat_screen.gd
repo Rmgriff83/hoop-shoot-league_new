@@ -1110,7 +1110,7 @@ func _deal_card(card: Dictionary, from: Rect2, to: Vector2) -> void:
 	_deal.size = from.size
 	_deal.modulate = Color.WHITE
 	_deal.visible = true
-	Sfx.score_pop(true)
+	Sfx.card_play()
 	_deal_tween = create_tween()
 	_deal_tween.set_parallel(true)
 	# Out of the slot and up to size in the middle.
