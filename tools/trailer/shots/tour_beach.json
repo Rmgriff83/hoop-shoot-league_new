@@ -13,7 +13,8 @@
   {
    "do": "play",
    "mode": "trial",
-   "area": "beach"
+   "area": "beach",
+   "settle": 1.8
   },
   {
    "do": "mark",

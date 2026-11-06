@@ -13,7 +13,8 @@
   {
    "do": "play",
    "mode": "trial",
-   "area": "city"
+   "area": "city",
+   "settle": 1.8
   },
   {
    "do": "mark",

@@ -5,12 +5,12 @@ extends RefCounted
 ## Level 6 with every court open, tickets, a dozen balls and five nets, the
 ## park and the city on chain, a cage season under way, cards in hand, a
 ## ranked tier, a few time-trial runs. The name and hometown are Ross's
-## (GO BLAZERS of PORTLAND, picked at Checkpoint A); league opponents are the
+## (BILLY BONGO of EUGENE, picked at Checkpoint A); league opponents are the
 ## game's shooters; board rows come from tools/trailer/fixtures.
 
-const NAME := "GO BLAZERS"   # Ross's pick, 2026-11-06
+const NAME := "BILLY BONGO"   # Ross's pick, 2026-11-06 (GO BLAZERS read as the NBA team)
 const TAG := "58"
-const TOWN := "PORTLAND"
+const TOWN := "EUGENE"
 const LEVEL := 6
 const TICKETS := 2480
 const BALLS_PER_RARITY := {"common": 5, "rare": 4, "epic": 2, "legend": 1}

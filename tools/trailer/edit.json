@@ -69,12 +69,12 @@
     {
      "at": "4.1",
      "clip": "tour_cage",
-     "from": "poster-0.75"
+     "from": "poster-0.5"
     },
     {
      "at": "4.3",
      "clip": "tour_beach",
-     "from": "poster-0.75"
+     "from": "poster-0.5"
     },
     {
      "at": "5.1",
@@ -84,7 +84,7 @@
     {
      "at": "5.3",
      "clip": "tour_city",
-     "from": "poster-0.75"
+     "from": "poster-0.5"
     },
     {
      "at": "6.1",
@@ -240,12 +240,12 @@
     {
      "at": "5.1",
      "clip": "tour_cage",
-     "from": "poster-0.75"
+     "from": "poster-0.5"
     },
     {
      "at": "5.3",
      "clip": "tour_beach",
-     "from": "poster-0.75"
+     "from": "poster-0.5"
     },
     {
      "at": "6.1",
@@ -255,7 +255,7 @@
     {
      "at": "7.1",
      "clip": "tour_city",
-     "from": "poster-0.75"
+     "from": "poster-0.5"
     },
     {
      "at": "7.3",

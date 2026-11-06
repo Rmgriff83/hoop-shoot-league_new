@@ -13,7 +13,8 @@
   {
    "do": "play",
    "mode": "trial",
-   "area": "cage"
+   "area": "cage",
+   "settle": 1.8
   },
   {
    "do": "mark",
