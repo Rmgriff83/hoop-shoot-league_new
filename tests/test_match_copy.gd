@@ -35,6 +35,16 @@ func run(t) -> void:
 	t.eq(MatchCopy.header({"location": "city", "reason": "forfeit"}), "ONLINE MATCH · CITY · THEY LEFT", "a forfeit header")
 	t.eq(HeatCopy.header({"online": true, "location": "cage"}, {}), "ONLINE MATCH · CAGE", "HeatCopy hands online heats to MatchCopy")
 	t.eq(HeatCopy.header({}, {}), "QUICK HEAT", "…and keeps QUICK HEAT for the test heat")
+	# The page's title is stacked (Ross, 2026-11-06): ONLINE MATCH, the court under it.
+	t.eq([HeatCopy.title({"online": true, "location": "beach"}), HeatCopy.title_sub({"online": true, "location": "beach"})], ["ONLINE MATCH", "BEACH"], "an online match's title, the court under it")
+	t.eq(HeatCopy.title_sub({"online": true, "location": "city", "reason": "forfeit"}), "CITY · THEY LEFT", "…with how it ended")
+	t.eq(HeatCopy.title_sub({"online": true, "location": "park", "reason": "void"}), "PARK · VOID", "…or that it was void")
+	t.eq([HeatCopy.title_sub({"league": {"id": "cage"}}), HeatCopy.title_sub({})], ["", ""], "a league match and a quick heat have no second line")
+	var title_w := UiFont.display().get_string_size("ONLINE MATCH", HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(36)).x
+	t.ok(title_w <= 648.0, "ONLINE MATCH fits the page at the title's size (%.0f px of 648)" % title_w)
+	for area in ["cage", "beach", "park", "city"]:
+		var line: String = HeatCopy.title_sub({"online": true, "location": area, "reason": "forfeit"})
+		t.ok(UiFont.display().get_string_size(line, HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(24)).x <= 648.0, "…and so does its longest second line (%s)" % line)
 	# The payout (docs/BACKEND.md → Ranked → Stage B).
 	t.eq(MatchCopy.spoils_panel({"ranked": true, "spoils": {"captured": ["ice", "fire7"], "lost": [], "insured": null}}), {"caption": "SPOILS · DEEP FREEZE, HEAT CHECK", "card": "ice", "lost": false}, "the spoils you took")
 	t.eq(MatchCopy.spoils_panel({"ranked": true, "spoils": {"captured": [], "lost": ["fire7"], "insured": null}}), {"caption": "LOST · HEAT CHECK", "card": "fire7", "lost": true}, "what you lost")

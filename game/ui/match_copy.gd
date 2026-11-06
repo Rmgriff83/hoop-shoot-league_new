@@ -290,6 +290,21 @@ static func header(heat: Dictionary) -> String:
 	return "ONLINE MATCH · %s" % area
 
 
+## The post-match page's title for an online match, and the line stacked
+## under it: the court, with how it ended (Ross, 2026-11-06: the one-line
+## `ONLINE MATCH · BEACH` at the title's size ran off the right edge).
+static func post_title(_heat: Dictionary) -> String:
+	return "ONLINE MATCH"
+
+
+static func post_title_sub(heat: Dictionary) -> String:
+	var area := RanksCopy.tab_name(str(heat.get("location", "cage")))
+	match str(heat.get("reason", "")):
+		"forfeit": return "%s · THEY LEFT" % area
+		"void": return "%s · VOID" % area
+	return area
+
+
 ## The post-match REMATCH card by state: "" (nothing yet), offered (we
 ## asked), wanted (they asked), both (tipping off), gone (they left).
 static func rematch_title(state: String) -> String:

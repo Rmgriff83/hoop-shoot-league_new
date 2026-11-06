@@ -156,6 +156,14 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	title.name = "Title"
 	RetroTheme.dithered(title)
 	head.add_child(title)
+	# An online match: its court on a line of its own under the title (Ross,
+	# 2026-11-06: on one line at 36 it ran off the right edge).
+	var sub_text := HeatCopy.title_sub(heat)
+	if sub_text != "":
+		var sub := _text(sub_text, 24, CREAM, true)
+		sub.name = "TitleSub"
+		RetroTheme.dithered(sub)
+		head.add_child(sub)
 
 	# The score block, left: the result, the score (+ OT), the opponent.
 	var sb := _vbox(18)

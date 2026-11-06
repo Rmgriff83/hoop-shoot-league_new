@@ -86,8 +86,14 @@ static func result(heat: Dictionary) -> Dictionary:
 static func title(heat: Dictionary) -> String:
 	var league := league_of(heat)
 	if league.is_empty():
-		return MatchCopy.header(heat) if bool(heat.get("online", false)) else "QUICK HEAT"
+		return MatchCopy.post_title(heat) if bool(heat.get("online", false)) else "QUICK HEAT"
 	return str(LeagueData.league(str(league.get("id", ""))).get("name", "LEAGUE")).to_upper()
+
+
+## The line stacked under the title: an online match's court (and how it
+## ended); "" for a league match or a quick heat.
+static func title_sub(heat: Dictionary) -> String:
+	return MatchCopy.post_title_sub(heat) if league_of(heat).is_empty() and bool(heat.get("online", false)) else ""
 
 
 ## The line over the title: `SEASON 2 · DAY 4` / `SEMI 2 · GAME 3`; "" outside a league.
