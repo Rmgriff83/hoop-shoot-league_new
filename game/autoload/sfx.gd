@@ -41,7 +41,7 @@ var _ball := {}             # "bounce"/"pickup"/"release" → Array[AudioStream]
 ## Recorded contact sounds that belong to the WORLD rather than to any cosmetic
 ## set — a pole sounds like a pole whichever hoop is bolted to it. Same shape as
 ## _hoop/_ball so it can use the same non-repeating picker.
-var _generic := {}          # "pole" / "fence" → Array[AudioStream]
+var _generic := {}          # "pole" / "fence" / "board" → Array[AudioStream]
 
 ## A typed Array, not a PackedStringArray: a constructor call is not a constant
 ## expression, so PackedStringArray([...]) cannot be a const.
@@ -59,7 +59,19 @@ const FENCE_CLIPS: Array[String] = [
 	"res://assets/audio/fx/fence_sound_3.wav",
 	"res://assets/audio/fx/fence_sound_4.wav",
 ]
-## The clips ring for 1.5–2.2 s: a ball rattling between the gate and the
+## Ross's backboard hits (2026-11-06, his own recordings): every board,
+## whichever hoop, unless a hoop set names its own board_clips. They replaced
+## the synthetic thud (which the cage's foam and gutters still use, as "pad").
+const BOARD_CLIPS: Array[String] = [
+	"res://assets/audio/fx/board_sound_1.wav",
+	"res://assets/audio/fx/board_sound_2.wav",
+	"res://assets/audio/fx/board_sound_3.wav",
+	"res://assets/audio/fx/board_sound_4.wav",
+]
+## The recordings sit ~10 dB over the synthetic thud they replaced (RMS −23
+## against −33 dBFS); this brings them most of the way back.
+const BOARD_GAIN_DB := -6.0
+## The fence clips ring for 1.5–2.2 s: a ball rattling between the gate and the
 ## gutters starts one every this often, not a stack of them.
 const FENCE_RATE_LIMIT_S := 0.3
 ## The deck funnel's red gutters (build_cage.py FUNNEL h 0.18): a funnel hit
@@ -766,6 +778,8 @@ func _ensure_generic() -> void:
 		_generic["pole"] = _load_list(PackedStringArray(POLE_CLIPS))
 	if not _generic.has("fence"):
 		_generic["fence"] = _load_list(PackedStringArray(FENCE_CLIPS))
+	if not _generic.has("board"):
+		_generic["board"] = _load_list(PackedStringArray(BOARD_CLIPS))
 
 
 ## Contact event from the sim: kind ∈ rim | board | floor, speed in m/s.
@@ -822,9 +836,14 @@ func contact(kind: String, speed: float) -> void:
 			if _net_kind == "chain":
 				_play("chain_rattle_%d" % (variant % 2), vol - 6.0)
 		"board":
+			# A hoop that names its own board_clips gets them; every other board
+			# plays Ross's recorded hits, a random one each time and never the
+			# same twice running. No clips loaded → the synthetic thud.
 			if contact_source("board") == "hoop":
 				_play_stream(_hoop["board"][variant], vol)
-			else:
+				return
+			_ensure_generic()
+			if not _play_from(_generic, "generic", "board", vol + BOARD_GAIN_DB):
 				_play("board_thud_%d" % variant, vol)
 		"floor":
 			# The ball's own bounces: any number of clips, a random one each hit

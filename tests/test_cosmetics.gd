@@ -150,6 +150,26 @@ func run(t) -> void:
 		sfx.gain_db = 0.0
 		t.eq(p_repeats, 0, "a pole hit never repeats the previous clip")
 		t.eq(p_seen.size(), 3, "pole hits use all three clips (%d distinct in 40)" % p_seen.size())
+		# Backboard hits: Ross's four recordings (2026-11-06), the same picker,
+		# on any hoop without its own board_clips.
+		for i in 4:
+			t.ok(FileAccess.file_exists("res://assets/audio/fx/board_sound_%d.wav" % (i + 1)),
+				"board_sound_%d ships" % (i + 1))
+		t.eq(sfx.contact_source("board"), "generic", "the classic hoop leaves the board to the recordings")
+		sfx.gain_db = -80.0
+		var b_last := -1
+		var b_repeats := 0
+		var b_seen := {}
+		for i in 40:
+			sfx.contact("board", 4.0)
+			var bidx := int(sfx._last.get("generic:board", -1))
+			if bidx == b_last:
+				b_repeats += 1
+			b_seen[bidx] = true
+			b_last = bidx
+		sfx.gain_db = 0.0
+		t.eq(b_repeats, 0, "a board hit never repeats the previous clip")
+		t.eq(b_seen.size(), 4, "board hits use all four clips (%d distinct in 40)" % b_seen.size())
 		# Fence hits: Ross's four recordings (2026-11-06), the same picker.
 		for i in 4:
 			t.ok(FileAccess.file_exists("res://assets/audio/fx/fence_sound_%d.wav" % (i + 1)),

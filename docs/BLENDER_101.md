@@ -544,6 +544,12 @@ event's normal and position: the cage's sides, roof and ball gate and the whole 
 rattle; the cage's foam back (`ArenaSet.back_wall_fence = false`) and its low deck gutters
 play a soft synthetic thud instead. Beach and park walls stay silent (`wall_sound`).
 
+**Backboard sounds (2026-11-06):** Ross's four recorded board hits
+(`assets/audio/fx/board_sound_1..4.wav`, 16-bit mono, his own) play on every backboard hit, a
+random one never twice running, `Sfx.BOARD_GAIN_DB` (−6) under their recorded level, on any
+hoop whose set names no `board_clips` (none do today). Props (the city scoreboard) borrow them.
+The synthetic `board_thud_*` is left only for the cage's foam back and gutters.
+
 **Area ambience (2026-09-16):** an arena set can list looping background layers
 (`ambient_clips` + per-layer `ambient_gains_db`, `ambient_fade_s`). `Sfx.start_ambience(arena)`
 plays them (faded in, random start offsets, kept alive through pause) while the area's game
