@@ -72,7 +72,8 @@ const BOARD_CLIPS: Array[String] = [
 ]
 ## The recordings sit ~10 dB over the synthetic thud they replaced (RMS −23
 ## against −33 dBFS); this brings them most of the way back.
-const BOARD_GAIN_DB := -6.0
+## Ross, 2026-11-06: −6 was a bit quiet on the phone → −3.
+const BOARD_GAIN_DB := -3.0
 ## The fence clips ring for 1.5–2.2 s: a ball rattling between the gate and the
 ## gutters starts one every this often, not a stack of them.
 const FENCE_RATE_LIMIT_S := 0.3

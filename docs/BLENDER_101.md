@@ -546,7 +546,7 @@ play a soft synthetic thud instead. Beach and park walls stay silent (`wall_soun
 
 **Backboard sounds (2026-11-06):** Ross's four recorded board hits
 (`assets/audio/fx/board_sound_1..4.wav`, 16-bit mono, his own) play on every backboard hit, a
-random one never twice running, `Sfx.BOARD_GAIN_DB` (−6) under their recorded level, on any
+random one never twice running, `Sfx.BOARD_GAIN_DB` (−3; −6 was a bit quiet) under their recorded level, on any
 hoop whose set names no `board_clips` (none do today). Props (the city scoreboard) borrow them.
 The synthetic `board_thud_*` is left only for the cage's foam back and gutters.
 
