@@ -152,8 +152,12 @@ def build(edit, name, draft):
             if s["clip"] not in seen:
                 seen[s["clip"]] = (add_input(["-i", mov]), add_input(["-i", wav]))
             vi, ai = seen[s["clip"]]
-            f0 = src_frame(marks_of(layout, s["clip"]), s["from"])
+            marks = marks_of(layout, s["clip"])
+            f0 = src_frame(marks, s["from"])
             step = SRC_FPS // fps
+            have = int(marks.get("end", 0)) + 30   # half a second is kept past the out mark
+            if f0 < 0 or f0 + n * step > have:
+                sys.exit("%s: '%s' from %s needs frames %d-%d of a %d-frame clip (lengthen the shot or move `from`)" % (name, s["clip"], s["from"], f0, f0 + n * step, have))
             vf.append("[%d:v]trim=start_frame=%d:end_frame=%d,setpts=PTS-STARTPTS,fps=%d,scale=%d:%d:flags=area,setsar=1[v%d]" % (vi, f0, f0 + n * step, fps, w, h, i))
             t0, t1 = f0 / SRC_FPS, (f0 + n * step) / SRC_FPS
             af.append("[%d:a]atrim=start=%.5f:end=%.5f,asetpts=PTS-STARTPTS,aresample=48000,volume=%.3f[a%d]" % (ai, t0, t1, s["sfx"], i))

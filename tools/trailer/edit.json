@@ -59,12 +59,12 @@
     {
      "at": "3.1",
      "clip": "flick_hard",
-     "from": "poster-0.5"
+     "from": "poster-0.25"
     },
     {
      "at": "3.3",
      "clip": "flick_flat",
-     "from": "poster-0.5"
+     "from": "poster-0.25"
     },
     {
      "at": "4.1",
@@ -114,7 +114,7 @@
     {
      "at": "9.3",
      "clip": "card_magnet",
-     "from": "in+0.4"
+     "from": "poster-0.7"
     },
     {
      "at": "10.1",
@@ -230,12 +230,12 @@
     {
      "at": "4.1",
      "clip": "flick_hard",
-     "from": "poster-0.5"
+     "from": "poster-0.25"
     },
     {
      "at": "4.3",
      "clip": "flick_flat",
-     "from": "poster-0.5"
+     "from": "poster-0.25"
     },
     {
      "at": "5.1",
@@ -290,7 +290,7 @@
     {
      "at": "11.3",
      "clip": "card_magnet",
-     "from": "in+0.4"
+     "from": "poster-0.7"
     },
     {
      "at": "12.3",

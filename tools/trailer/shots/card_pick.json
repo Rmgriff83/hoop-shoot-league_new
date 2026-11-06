@@ -30,14 +30,30 @@
   },
   {
    "do": "wait",
-   "s": 1.0
+   "s": 0.25
+  },
+  {
+   "do": "drag_card",
+   "card": "ice",
+   "slot": 0,
+   "s": 0.5
+  },
+  {
+   "do": "wait",
+   "s": 0.2
   },
   {
    "do": "poster"
   },
   {
+   "do": "drag_card",
+   "card": "fire7",
+   "slot": 1,
+   "s": 0.5
+  },
+  {
    "do": "wait",
-   "s": 1.0
+   "s": 0.6
   },
   {
    "do": "mark",

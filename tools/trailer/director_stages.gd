@@ -84,6 +84,69 @@ func stage_ready(step: Dictionary) -> void:
 	await d.call("_until", "running", 20.0)
 
 
+## {card, slot, s}: on the pre-match page, drag an owned card up into a
+## loadout slot with real pointer input, as a finger does (drag-to-arm).
+func stage_drag_card(step: Dictionary) -> void:
+	var sc := _scene()
+	var page: PreMatchPage = sc.call("prematch_page") if sc != null and sc.has_method("prematch_page") else null
+	if page == null:
+		d.call("_problem", "a card drag with no pre-match page")
+		return
+	var cid := str(step.get("card", "ice"))
+	var btn: Control = null
+	var holder: Control = null
+	for n in page.find_children("*", "TextureButton", true, false):
+		for c in (n as Control).gui_input.get_connections():
+			var bound: Array = (c["callable"] as Callable).get_bound_arguments()
+			if bound.size() >= 2 and str(bound[0]) == cid:
+				btn = n
+				holder = bound[1]
+	var slot: Control = page.find_child("Slot%d" % int(step.get("slot", 0)), true, false)
+	var stage: Control = page.get("_stage")
+	if btn == null or slot == null or stage == null:
+		d.call("_problem", "no owned '%s' card or slot to drag to" % cid)
+		return
+	# The page reads the pointer's real position, which injected events do not
+	# move; so its own drag is driven directly along a finger's path: the same
+	# ghost, hover highlight and arm as a real drag.
+	var inv := stage.get_global_transform().affine_inverse()
+	var from: Vector2 = inv * btn.get_global_rect().get_center()
+	var to: Vector2 = inv * slot.get_global_rect().get_center()
+	page.set("_drag", {"id": cid, "from": from, "moved": false, "holder": holder, "held": 0.0})
+	await d.call("_sleep", 0.08)
+	page.call("_start_ghost")
+	var frames := maxi(8, int(float(step.get("s", 0.55)) * 60.0))
+	var slot_i := int(step.get("slot", 0))
+	var slot_size: Vector2 = page.get("YOU_SLOT")
+	for i in frames:
+		var k := float(i + 1) / float(frames)
+		var e := 1.0 - (1.0 - k) * (1.0 - k)
+		var at := from.lerp(to, e) + Vector2(sin(k * PI) * 14.0, 0.0)   # a finger's arc, not a ruler's line
+		var ghost: Control = page.get("_ghost")
+		if ghost != null:
+			ghost.position = at - Vector2(slot_size.x / 2.0, slot_size.y * 0.62)
+		# Over the slot for the last stretch: the page's own hover look (it reads
+		# the real pointer for this, so the state is set as _move_ghost sets it).
+		var over := k >= 0.7
+		if over != (int(page.get("_hover")) == slot_i):
+			page.set("_hover", slot_i if over else -1)
+			var highlights: Array = page.get("_highlights")
+			var nodes: Array = page.get("_you_slot_nodes")
+			for j in highlights.size():
+				(highlights[j] as Control).visible = over and j == slot_i
+				(nodes[j] as Control).scale = Vector2.ONE * (1.08 if over and j == slot_i else 1.0)
+			if ghost != null:
+				ghost.rotation_degrees = 0.0 if over else -6.0
+				ghost.scale = Vector2(0.95, 0.95) if over else Vector2(1.05, 1.05)
+		await d.get_tree().process_frame
+	await d.call("_sleep", 0.12)
+	var up := InputEventMouseButton.new()
+	up.button_index = MOUSE_BUTTON_LEFT
+	up.pressed = false
+	page.call("_input", up)
+	await d.call("_sleep", 0.1)
+
+
 ## {slot, id}: play a card from the tray (dealt in if the level kept it out).
 func stage_card(step: Dictionary) -> void:
 	var sc := _scene()
