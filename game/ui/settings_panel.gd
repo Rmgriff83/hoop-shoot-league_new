@@ -48,6 +48,7 @@ var _music_switch: PixelSwitch
 var _sfx_switch: PixelSwitch
 var _tuning_switch: PixelSwitch
 var _gates_switch: PixelSwitch
+var _record_switch: PixelSwitch
 var _card_name: Label
 var _card_tag: Label
 var _card_town: Label
@@ -659,6 +660,15 @@ func _build_dev() -> void:
 		App.set_league_gating(not App.league_gating)
 		_gates_switch.set_on(App.league_gating))
 	col.add_child(gates)
+	col.add_child(_rule())
+	# RECORD FLICKS (2026-11-06): every flick saved for the trailer's replay
+	# (game/debug/flick_recorder.gd; tools/trailer/pull_flicks.sh pulls the file).
+	var rec := _switch_row("RecordFlicks", "RECORD FLICKS", "SAVE EVERY FLICK FOR THE TRAILER", App.record_flicks)
+	_record_switch = rec.find_child("Switch", true, false)
+	rec.pressed.connect(func() -> void:
+		App.set_record_flicks(not App.record_flicks)
+		_record_switch.set_on(App.record_flicks))
+	col.add_child(rec)
 
 
 func has_tuning() -> bool:
@@ -667,6 +677,10 @@ func has_tuning() -> bool:
 
 func has_gates() -> bool:
 	return _gates_switch != null
+
+
+func has_record_flicks() -> bool:
+	return _record_switch != null
 
 
 func has_difficulty() -> bool:

@@ -66,6 +66,9 @@ var last_run_was_global_best := false
 ## Tuning mode: shows the on-device touch tuning strip in the time trial.
 ## Persisted in SaveService's "tuning" part (device-local).
 var tuning_mode := false
+## Debug builds: every flick is written to user://trailer/flicks.jsonl for the
+## trailer's replay (game/debug/flick_recorder.gd; Settings → DEV).
+var record_flicks := false
 
 ## Shot help, in three steps: nothing, just the numbers beside the held ball,
 ## or the numbers plus the dotted arc. A fresh game starts on NUMBERS (Ross,
@@ -192,6 +195,7 @@ func _ready() -> void:
 	tuning_mode = bool(saved.get("tuningMode", false))
 	if OS.is_debug_build():
 		league_gating = bool(saved.get("gates", false))
+		record_flicks = bool(saved.get("recordFlicks", false))
 	shot_help = shot_help_from_saved(SaveService.get_settings().get("shotHelp", SHOT_HELP_DEFAULT))
 	music_on = bool(SaveService.get_settings().get("musicOn", false))
 	_read_sound_settings()
@@ -236,6 +240,14 @@ func _resolve_cosmetics() -> void:
 func set_tuning_mode(on: bool) -> void:
 	tuning_mode = on
 	SaveService.put_tuning(on, SaveService.get_tuning().get("fields", {}))
+
+
+## Dev builds only: record every flick for the trailer (a release build ignores this).
+func set_record_flicks(on: bool) -> void:
+	if not OS.is_debug_build():
+		return
+	record_flicks = on
+	SaveService.put_tuning_record(on)
 
 
 ## Dev builds only: the level gates on or off (a release build ignores this).

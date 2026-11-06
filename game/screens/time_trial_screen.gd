@@ -23,6 +23,7 @@ var _court: CourtGeometry
 var _pool: BallPool
 var _hud: Hud
 var _overlay: TuningOverlay
+var _recorder: FlickRecorder   # debug: Ross's flicks for the trailer (Settings → DEV → RECORD FLICKS)
 var _preview: AimPreview
 var _readout: AimReadout
 ## Where this shot's wind-up started, on the hand plane. The shot-help numbers
@@ -157,6 +158,9 @@ func _ready() -> void:
 	input.flick_charging.connect(_on_charging)
 	input.flick_charging.connect(_on_feel_rate)
 	input.flick_released.connect(_on_flick)
+	if FlickRecorder.enabled():
+		_recorder = FlickRecorder.new()
+		add_child(_recorder)
 	_after_ready()
 	# The first-shot tutorial (design 38a): once, before the first offline match's countdown.
 	if not _defer_tutorial():
@@ -642,6 +646,8 @@ func _on_net_changed(_id: String) -> void:
 ## Leaving a mode that swapped the hoop's sounds restores the player's set,
 ## and never leaves the tree paused behind us.
 func _exit_tree() -> void:
+	if _recorder != null:
+		_recorder.flush()
 	if App.room != null and bool(App.next_heat.get("remote", false)) and not _finished_handed_off:
 		App.cancel_online()   # quitting an online heat forfeits it
 	get_tree().paused = false
@@ -1336,6 +1342,8 @@ func _on_flick(sample: Dictionary) -> void:
 		var lead := _lead_geo(launch["angle_deg"], launch["speed"], launch.get("dist", trial.geo.hoop_x))
 		launch = FlickMap.map_windup(sample, tuning, lead, origin)
 	_overlay.record_flick(sample, launch)
+	if _recorder != null:
+		_recorder.note_flick(_record_ctx(), sample, launch, origin, tuning.to_dict(), trial.geo)
 	if launch.is_empty():
 		_refresh_readout()  # cancelled gesture: ball stays in hand, so do the numbers
 		_feel_cancel()
@@ -1555,8 +1563,18 @@ func _handle_event(ev: Dictionary) -> void:
 				_finish()
 
 
+## Where a recorded flick was thrown from, for the trailer's replay.
+func _record_ctx() -> Dictionary:
+	var area := str(_mode.get("location", "cage"))
+	return {"mode": App.next_mode, "area": area, "practice": _practice, "heat": bool(_mode.get("heat", false)),
+		"spot": _spot_index, "moving": trial.moving,
+		"ball": App.ball_set.id if App.ball_set != null else "", "net": App.net_set_for(area).id}
+
+
 func _on_outcome(outcome: Dictionary, buzzer_beater: bool) -> void:
 	_overlay.record_outcome(outcome)
+	if _recorder != null:
+		_recorder.note_outcome(outcome)
 	var streak: int = outcome.get("streak", trial.streak)
 	var pts: int = outcome["points"]
 	var accent := _court.info.accent_color

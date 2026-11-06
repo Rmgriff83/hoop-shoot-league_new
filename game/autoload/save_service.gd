@@ -278,7 +278,16 @@ func get_tuning() -> Dictionary:
 ## undo snapshot (below) rides along untouched.
 func put_tuning(mode: bool, fields: Dictionary) -> void:
 	_tuning = {"updatedAt": _now_ms(), "tuningMode": mode, "fields": fields.duplicate(),
-		"undo": _tuning.get("undo", {}), "net": _tuning.get("net", {}), "gates": _tuning.get("gates", false)}
+		"undo": _tuning.get("undo", {}), "net": _tuning.get("net", {}), "gates": _tuning.get("gates", false),
+		"recordFlicks": _tuning.get("recordFlicks", false)}
+	_write_json(TUNING_PART, _tuning)
+
+
+## Dev: record every flick for the trailer (game/debug/flick_recorder.gd).
+## Device-local, on the tuning part so a store build never carries it.
+func put_tuning_record(on: bool) -> void:
+	_tuning["recordFlicks"] = on
+	_tuning["updatedAt"] = _now_ms()
 	_write_json(TUNING_PART, _tuning)
 
 

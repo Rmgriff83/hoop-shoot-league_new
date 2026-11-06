@@ -29,3 +29,6 @@ addons/AdmobPlugin/ios_export.cfg
 addons/AdmobPlugin/android_export.cfg
 # RevenueCat public SDK keys (appl_/goog_), kept out of git like the keystore; see store_keys.example.json.
 store_keys.json
+
+# The trailer: raw frames, clips, drafts, finals and pulled flick recordings (docs/TRAILER.md).
+marketing/trailer/

@@ -722,6 +722,7 @@ func _widgets(t) -> void:
 	_app().set_sfx_sound(was_sfx)
 	t.eq(panel.has_tuning(), OS.is_debug_build(), "tuning switch only in a debug build")
 	t.eq(panel.has_gates(), OS.is_debug_build(), "the LEVEL GATES switch only in a debug build")
+	t.eq(panel.has_record_flicks(), OS.is_debug_build(), "the RECORD FLICKS switch only in a debug build")
 	if OS.is_debug_build():
 		var was_gating: bool = _app().league_gating
 		(panel.find_child("Gates", true, false) as Button).pressed.emit()
