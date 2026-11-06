@@ -10,6 +10,15 @@ func run(t) -> void:
 	t.close(beach.ambient_gain_db(5), 0.0, 1e-6, "missing gain → 0 dB")
 	t.eq(beach.validate(), PackedStringArray(), "beach arena validates (clip exists)")
 	t.eq(cage.ambient_clips.size(), 1, "cage has its arcade ambience")
+	# The park and the city share Ross's park-bg loop (2026-11-06).
+	var park: ArenaSet = CosmeticLibrary.get_arena("park")
+	var city: ArenaSet = CosmeticLibrary.get_arena("city")
+	for a in [park, city]:
+		t.eq(a.ambient_clips, PackedStringArray(["res://assets/arena/park/ambience/park_bg.ogg"]), "%s plays the park-bg loop" % a.id)
+		t.close(a.ambient_gain_db(0), 6.0, 1e-6, "%s: +6 dB (the recording means −43 dBFS)" % a.id)
+		t.eq(a.validate(), PackedStringArray(), "%s arena validates (clip exists)" % a.id)
+	var bg: AudioStream = load(park.ambient_clips[0])
+	t.ok(bg != null and absf(bg.get_length() - 10.9) < 0.2, "park-bg loads (%.1f s)" % (bg.get_length() if bg else 0.0))
 	var stream: AudioStream = load(beach.ambient_clips[0])
 	t.ok(stream != null and stream.get_length() > 60.0, "seagulls load as a long stream (%.0f s)" % (stream.get_length() if stream else 0.0))
 	var sfx = Engine.get_main_loop().root.get_node_or_null("Sfx")
@@ -28,6 +37,12 @@ func run(t) -> void:
 	t.ok(sfx.ambience_stopping(), "stop begins a fade")
 	sfx.start_ambience(beach)
 	t.ok(not sfx.ambience_stopping() and sfx.ambience_layer_count() == 1, "same area returning cancels the fade")
+	sfx.start_ambience(park)
+	t.ok(sfx.ambience_id() == "park" and sfx.ambience_layer_count() == 1, "the park's loop is up")
+	t.ok((sfx._amb_players[0].stream as AudioStreamOggVorbis).loop, "…looping")
+	sfx.start_ambience(city)
+	t.ok(sfx.ambience_id() == "city" and sfx.ambience_layer_count() == 1, "the city restarts the same loop under its own id")
+	sfx.start_ambience(beach)
 	var silent := ArenaSet.new()
 	silent.id = "silent"
 	sfx.start_ambience(silent)

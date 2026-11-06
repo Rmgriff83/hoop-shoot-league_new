@@ -555,7 +555,7 @@ The synthetic `board_thud_*` is left only for the cage's foam back and gutters.
 plays them (faded in, random start offsets, kept alive through pause) while the area's game
 screens or league dashboard are open; leaving fades them out, and re-entering the same area
 cancels the fade. Encode clips with `tools/import_ambience.sh <arena> <name> <source.wav>`
-(ffmpeg → Ogg Vorbis under `assets/arena/<arena>/ambience/`). The beach ships seagulls at +12 dB (a very quiet recording, mean −49 dBFS), the cage an arcade-hall recording at −16 dB (mean −23 dBFS); measure new clips with `ffmpeg -af volumedetect` and set the gain so the mean lands near −37 dBFS. Title music: `App.TITLE_MUSIC` → `Sfx.start_music` on the title and credits screens (same
+(ffmpeg → Ogg Vorbis under `assets/arena/<arena>/ambience/`). The beach ships seagulls at +12 dB (a very quiet recording, mean −49 dBFS), the cage an arcade-hall recording at −16 dB (mean −23 dBFS); the park and the city share Ross's own `park/ambience/park_bg.ogg` loop (10.9 s, 2026-11-06) at +6 dB (mean −43 dBFS); measure new clips with `ffmpeg -af volumedetect` and set the gain so the mean lands near −37 dBFS. Title music: `App.TITLE_MUSIC` → `Sfx.start_music` on the title and credits screens (same
 layer channel; an area's ambience replaces it); encode loops with `tools/import_music.sh`
 into `assets/music/`. Third-party
 sounds are credited in `data/credits.json` (title, author, url, license, used_for), shown on the
