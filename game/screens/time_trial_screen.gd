@@ -1470,7 +1470,9 @@ func _handle_event(ev: Dictionary) -> void:
 				Sfx.score_pop(true)
 				_court.rim_pop_from({"number": "", "word": "ZAP", "color": RimMagnet.GOLD})
 				return
-			Sfx.contact(c["kind"], c["speed"])
+			# A wall hit is fence or the cage's foam / gutters (Sfx.wall_surface).
+			var surface: String = Sfx.wall_surface(c, base_geo, _arena_set.back_wall_fence) if c["kind"] == "wall" else c["kind"]
+			Sfx.contact(surface, c["speed"])
 			# GROUND ONLY. The dent offsets the ball's drawn position by up to
 			# R_BALL * MAX_SQUASH (3.6 cm) into the surface so the flattened
 			# face stays planted. On the floor that is invisible and correct;

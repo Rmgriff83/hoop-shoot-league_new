@@ -150,6 +150,31 @@ func run(t) -> void:
 		sfx.gain_db = 0.0
 		t.eq(p_repeats, 0, "a pole hit never repeats the previous clip")
 		t.eq(p_seen.size(), 3, "pole hits use all three clips (%d distinct in 40)" % p_seen.size())
+		# Fence hits: Ross's four recordings (2026-11-06), the same picker.
+		for i in 4:
+			t.ok(FileAccess.file_exists("res://assets/audio/fx/fence_sound_%d.wav" % (i + 1)),
+				"fence_sound_%d ships" % (i + 1))
+		var was_wall: bool = sfx.wall_sound
+		sfx.wall_sound = true
+		sfx.gain_db = -80.0
+		var f_last := -1
+		var f_repeats := 0
+		var f_seen := {}
+		for i in 40:
+			sfx._last_fence_usec = -1_000_000   # past the rattle limit
+			sfx.contact("wall", 4.0)
+			var fidx := int(sfx._last.get("generic:fence", -1))
+			if fidx == f_last:
+				f_repeats += 1
+			f_seen[fidx] = true
+			f_last = fidx
+		var stamped: int = sfx._last_fence_usec
+		sfx.contact("wall", 4.0)
+		t.eq(sfx._last_fence_usec, stamped, "a second fence hit inside the rattle limit starts nothing")
+		sfx.gain_db = 0.0
+		sfx.wall_sound = was_wall
+		t.eq(f_repeats, 0, "a fence hit never repeats the previous clip")
+		t.eq(f_seen.size(), 4, "fence hits use all four clips (%d distinct in 40)" % f_seen.size())
 		# Random, never the same clip twice running (the hoop swish picker).
 		sfx.gain_db = -80.0
 		var last := -1
@@ -361,9 +386,25 @@ func _wall_sound(t) -> void:
 		return
 	var was: bool = sfx.wall_sound
 	sfx.wall_sound = false
+	var stamp: int = sfx._last_fence_usec
 	sfx.contact("wall", 5.0)   # returns before any clip is picked
+	sfx.contact("pad", 5.0)
 	sfx.wall_sound = was
-	t.ok(true, "a silent wall plays nothing (no clip picked)")
+	t.eq(sfx._last_fence_usec, stamp, "a silent wall plays nothing (no clip picked)")
+	# Which face rang (Sfx.wall_surface): fence everywhere but the cage's foam
+	# back and its low deck gutters.
+	t.ok(not CosmeticLibrary.get_arena("cage").back_wall_fence and CosmeticLibrary.get_arena("city").back_wall_fence, "the cage's back is foam, the city's is fence")
+	var cage := SimGeometry.arcade()
+	var hit := func(px: float, py: float, pz: float, nx: float, ny: float, nz: float) -> Dictionary:
+		return {"kind": "wall", "pos": {"x": px, "y": py, "z": pz}, "normal": {"x": nx, "y": ny, "z": nz}, "speed": 3.0}
+	t.eq(sfx.wall_surface(hit.call(3.8, 1.5, 1.14, 0.0, 0.0, -1.0), cage, false), "wall", "the cage's side mesh is fence")
+	t.eq(sfx.wall_surface(hit.call(2.0, 3.78, 0.0, 0.0, -1.0, 0.0), cage, false), "wall", "…its roof")
+	t.eq(sfx.wall_surface(hit.call(1.37, 0.3, 0.2, 1.0, 0.0, 0.0), cage, false), "wall", "…its ball gate")
+	t.eq(sfx.wall_surface(hit.call(2.5, 1.2, 0.8, 0.3, 0.0, -0.95), cage, false), "wall", "…the side above the gutter line")
+	t.eq(sfx.wall_surface(hit.call(4.19, 1.6, 0.0, -1.0, 0.0, 0.0), cage, false), "pad", "the foam behind the hoop thuds")
+	t.eq(sfx.wall_surface(hit.call(2.5, 0.12, 0.8, 0.3, 0.0, -0.95), cage, false), "pad", "…and so does a roll along the gutters")
+	t.eq(sfx.wall_surface(hit.call(5.58, 1.6, 0.0, -1.0, 0.0, 0.0), SimGeometry.city(), true), "wall", "the city's back fence rattles")
+	t.eq(sfx.wall_surface(hit.call(0.0, 0.5, 8.48, 0.0, 0.0, -1.0), SimGeometry.city(), true), "wall", "…and its side fence")
 
 
 func _net_overrides(t) -> void:

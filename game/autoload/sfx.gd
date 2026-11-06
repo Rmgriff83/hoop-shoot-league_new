@@ -41,7 +41,7 @@ var _ball := {}             # "bounce"/"pickup"/"release" → Array[AudioStream]
 ## Recorded contact sounds that belong to the WORLD rather than to any cosmetic
 ## set — a pole sounds like a pole whichever hoop is bolted to it. Same shape as
 ## _hoop/_ball so it can use the same non-repeating picker.
-var _generic := {}          # "pole" → Array[AudioStream]
+var _generic := {}          # "pole" / "fence" → Array[AudioStream]
 
 ## A typed Array, not a PackedStringArray: a constructor call is not a constant
 ## expression, so PackedStringArray([...]) cannot be a const.
@@ -50,11 +50,27 @@ const POLE_CLIPS: Array[String] = [
 	"res://assets/audio/fx/pole_sound_2.wav",
 	"res://assets/audio/fx/pole_sound_3.wav",
 ]
+## Ross's chain-link fence hits (2026-11-06, his own recordings): the cage's
+## sides, roof and ball gate and the city's fence. They replaced the synthetic
+## clang.
+const FENCE_CLIPS: Array[String] = [
+	"res://assets/audio/fx/fence_sound_1.wav",
+	"res://assets/audio/fx/fence_sound_2.wav",
+	"res://assets/audio/fx/fence_sound_3.wav",
+	"res://assets/audio/fx/fence_sound_4.wav",
+]
+## The clips ring for 1.5–2.2 s: a ball rattling between the gate and the
+## gutters starts one every this often, not a stack of them.
+const FENCE_RATE_LIMIT_S := 0.3
+## The deck funnel's red gutters (build_cage.py FUNNEL h 0.18): a funnel hit
+## with the ball's centre below their top is the gutter, not the side fence.
+const GUTTER_TOP_Y := 0.18 + SimConstants.R_BALL
 var _hoop_id := ""
 var _ball_id := ""
 var _rng := RandomNumberGenerator.new()
 var _last := {}             # table key → last index played
 var _last_miss_usec := -1_000_000
+var _last_fence_usec := -1_000_000
 
 
 func _ready() -> void:
@@ -64,7 +80,6 @@ func _ready() -> void:
 	_ensure_buses()
 	apply_sound_settings()   # the saved switches, whichever autoload came first
 	for name_ in [
-		"rim_clang_0", "rim_clang_1", "rim_clang_2",
 		"board_thud_0", "board_thud_1", "board_thud_2",
 		"bounce_0", "bounce_1", "bounce_2",
 		"swish", "net", "chain_rattle_0", "chain_rattle_1", "score_pop", "score_pop_swish",
@@ -542,6 +557,20 @@ var gain_db := 0.0
 ## ArenaSet.wall_sound: the beach's unseen walls make no noise.
 var wall_sound := true
 
+
+## What a "wall" contact hit: "wall" (fencing: Ross's fence clips) or "pad"
+## (the cage's egg-crate foam behind the hoop and its low deck gutters: a soft
+## thud). The sim calls every enclosure face a wall; the event's normal and
+## position tell them apart. back_is_fence = ArenaSet.back_wall_fence.
+static func wall_surface(c: Dictionary, geo: SimGeometry, back_is_fence: bool) -> String:
+	var n: Dictionary = c["normal"]
+	var pos: Dictionary = c["pos"]
+	if float(n["x"]) < -0.7:
+		return "wall" if back_is_fence else "pad"
+	if geo.has_funnel() and float(pos["x"]) < geo.funnel_x1 and absf(float(n["z"])) > 0.5 and float(pos["y"]) < GUTTER_TOP_Y:
+		return "pad"
+	return "wall"
+
 ## The live rim's rigidity (SimGeometry.rim_rigidity): 1.0 = the arcade cage.
 ## A stiffer rim rings TIGHTER and QUIETER — pitch rises as sqrt(r), the same
 ## law as its wobble rate, and level falls as 1/r, the same law as its swing.
@@ -735,6 +764,8 @@ func _play_from(table: Dictionary, prefix: String, kind: String, volume_db := 0.
 func _ensure_generic() -> void:
 	if not _generic.has("pole"):
 		_generic["pole"] = _load_list(PackedStringArray(POLE_CLIPS))
+	if not _generic.has("fence"):
+		_generic["fence"] = _load_list(PackedStringArray(FENCE_CLIPS))
 
 
 ## Contact event from the sim: kind ∈ rim | board | floor, speed in m/s.
@@ -745,13 +776,28 @@ func contact(kind: String, speed: float) -> void:
 	var vol := lerpf(-6.0, 0.0, intensity)
 	match kind:
 		"wall":
-			# Chain-link / concrete: a softer rattle. This is the ONLY user of the
-			# synthetic clang now — the rim itself plays the hoop's recorded clips
-			# (see miss_on_rim), so it no longer borrows a rim hit to get here.
+			# Fencing (wall_surface): Ross's recorded chain-link hits, a random
+			# one each time and never the same twice running, at most one per
+			# FENCE_RATE_LIMIT_S. No clips loaded → the pad's thud.
 			if not wall_sound:
 				return
+			var now := Time.get_ticks_usec()
+			if now - _last_fence_usec < int(FENCE_RATE_LIMIT_S * 1_000_000.0):
+				return
+			_ensure_generic()
 			var wall_i := minf(speed * 0.5 / 7.0, 1.0)
-			_play("rim_clang_%d" % clampi(int(wall_i * 3.0), 0, 2), lerpf(-6.0, 0.0, wall_i))
+			if _play_from(_generic, "generic", "fence", lerpf(-6.0, 0.0, wall_i)):
+				_last_fence_usec = now
+			else:
+				contact("pad", speed)
+			return
+		"pad":
+			# The cage's foam back and deck gutters: the synthetic board thud
+			# (not the hoop's recorded backboard), softer.
+			if not wall_sound:
+				return
+			var pad_i := minf(speed * 0.5 / 7.0, 1.0)
+			_play("board_thud_%d" % clampi(int(pad_i * 3.0), 0, 2), lerpf(-12.0, -6.0, pad_i))
 			return
 		"prop":
 			# A speaker cabinet or the scoreboard: the board's thud, a touch softer.

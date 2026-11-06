@@ -537,6 +537,13 @@ same twice running (the same picker the hoop's swishes use). The classic ball sh
 recorded bounces in `assets/balls/classic/sfx/`, converted to 16-bit mono 44.1 kHz by
 `tools/import_ball_sfx.sh` (afconvert). Rim, board, wall and pole hits keep their own sounds.
 
+**Fence sounds (2026-11-06):** Ross's four chain-link recordings
+(`assets/audio/fx/fence_sound_1..4.wav`, 16-bit mono, his own) play on every fence hit, a
+random one never twice running, at most one per 0.3 s. `Sfx.wall_surface` reads the wall
+event's normal and position: the cage's sides, roof and ball gate and the whole city fence
+rattle; the cage's foam back (`ArenaSet.back_wall_fence = false`) and its low deck gutters
+play a soft synthetic thud instead. Beach and park walls stay silent (`wall_sound`).
+
 **Area ambience (2026-09-16):** an arena set can list looping background layers
 (`ambient_clips` + per-layer `ambient_gains_db`, `ambient_fade_s`). `Sfx.start_ambience(arena)`
 plays them (faded in, random start offsets, kept alive through pause) while the area's game

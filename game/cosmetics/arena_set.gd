@@ -70,6 +70,9 @@ extends CosmeticSet
 ## Does a ball hitting the enclosure's walls make a sound? The beach lost
 ## its fence (2026-10-02) but keeps the sim's walls: they stay silent there.
 @export var wall_sound := true
+## Is the wall behind the hoop fencing (Sfx.wall_surface)? The city's is; the
+## cage's is egg-crate foam over brick, which thuds instead of rattling.
+@export var back_wall_fence := true
 
 ## Attach BeachFx (animated Ocean waves + tide-driven Shore) at build time.
 @export var ocean := false
