@@ -267,6 +267,42 @@ since 2026-10-19); the pill shows TICKETS, the one wallet.
   closes. The tour's buttons are `TourSkip` / `TourBack` / `TourNext` (the home
   has its own `Prev` / `Next` chevrons). `--qa-splash` snaps
   `walkthrough_00..06`; `tests/test_walkthroughs.gd`.
+  **Since 2026-11-06 the overlay also runs 36b and 36c**, and learned three
+  things for them: a step's `pre` / `title` are data (so `welcome` serves both
+  "WELCOME TO / HOOP SHOOT LEAGUE" and "WELCOME TO THE / ARCADE LEAGUE"; a
+  tour's `bookend_top` moves its spotless cards, default 520); a `gift` kind
+  (the ticket icon, 84 px turned −14°, beside `pre` 22 over the gold title
+  40); `step_changed(index, step)`, emitted before a card's spot is resolved
+  so the host can switch what is under the dim, `refresh()` to re-aim at a
+  target that moved, and `start(id, resolve, vars)` filling `{TOKENS}` in the
+  copy. A plain step whose resolver answers Rect2() has no spotlight and
+  rests like a bookend.
+  **The league tour** (`"league"`, 36b; bookends at 480; count `n / 7`):
+  WELCOME TO THE {LEAGUE} (SHOW ME), THE TABS (`tabs`: the row), MATCH /
+  TABLE / SCHED / CARDS / STATS (each: its tab + the panes' area, and
+  `LeagueContext.show_tab(tab, true)` switches the real tab at once), GOOD
+  LUCK! (LET'S PLAY); however it closes the league is left on MATCH. It runs
+  when ENTER LEAGUE has slid in (`title_screen._maybe_league_tour`) for a
+  player with no league game behind them; anyone else has it marked seen
+  (Ross: new players only). Its numbers come from the league's own config
+  (`title_screen.league_tour_vars`: LEAGUE, AREA, SECONDS, GAMES, TOP), so the
+  cage reads as the design's words and the other leagues as themselves. Rects
+  come from `LeagueContext.tab_rect` / `tabs_rect` / `panes_rect` (the tab
+  buttons are rebuilt on every switch, so their faces are worked out from the
+  row). `--qa-league-tour` snaps `league_tour_00..07`.
+  **The free-play tour** (`"peggy"`, 36c; count `n / 3`): YOU EARNED A / FREE
+  PLAY! over the home (OPEN PEGGY), then PEGGY slid in from the home with no
+  locker under it (`_open_peggy(true)`): THIS IS PEGGY (no spotlight: the
+  design nulls it), THE PRIZES (`slots`: `PeggyMachine.slots_rect()`, the
+  plates through the machine's camera), ON THE HOUSE (`play`: PLAY, reading
+  FREE; GOT IT). `<` back to the first card slides PEGGY out and the home
+  back. It starts when `App.peggy_tour_due()` (a free play in hand, the tour
+  unseen; docs/LOCKER.md → Free plays) and the home is showing — on arrival,
+  or when BACK TO HOME closes the league that CONTINUE SEASON landed in.
+  SKIP or GOT IT with PEGGY open leaves the player there; that PEGGY's
+  `< BACK` lands in the locker, built then (Ross, 2026-11-06). The rarity
+  line names the game's tiers (blue common, green rare, pink epic), not the
+  design's words. `--qa-first-play` snaps `first_play_*`.
 - **Settings** (`game/ui/settings_panel.gd`, a `HomePage`; redesigned
   2026-10-25 from design "Settings v2" 42a): the menu button slides it in
   like the locker, a see-through full page over the area under a 60 % wash.

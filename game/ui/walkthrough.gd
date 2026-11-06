@@ -9,9 +9,15 @@ extends CanvasLayer
 ## spotlight. Steps come from Walkthroughs (data/walkthroughs.json); the
 ## hosting screen passes `resolve(target_id) -> Rect2` (design px) and
 ## listens for `closed(completed)`; SKIP and the last NEXT both mark the
-## tour seen (App.mark_walkthrough_seen).
+## tour seen (App.mark_walkthrough_seen). 36b (the league) and 36c (the free
+## PEGGY play) run on the same overlay: `step_changed` lets the host switch
+## a tab or slide a page under the dim, `refresh()` re-aims at a target that
+## moved, and `vars` fill the copy's {TOKENS}.
 
 signal closed(completed: bool)
+## A card is about to show (before its spot is resolved): the host slides a
+## page in or switches a tab, so the rect it then answers with is the new one.
+signal step_changed(index: int, step: Dictionary)
 
 const DIM := Color(14.0 / 255.0, 11.0 / 255.0, 9.0 / 255.0, 0.82)
 const GOLD := Color("#F0B84A")
@@ -44,6 +50,7 @@ var _spot_tween: Tween
 var _card_tween: Tween
 var _pulse := 0.0
 var _done := false
+var _bookend_top := BOOKEND_TOP
 
 
 func _init() -> void:
@@ -51,9 +58,10 @@ func _init() -> void:
 	UiLayout.anchor_layer(self)   # the dim covers the real screen; spots come from the (anchored) home
 
 
-func start(p_tour: String, p_resolve: Callable) -> bool:
+func start(p_tour: String, p_resolve: Callable, p_vars := {}) -> bool:
 	tour_id = p_tour
-	steps = Walkthroughs.tour(p_tour)
+	steps = Walkthroughs.fill(Walkthroughs.tour(p_tour), p_vars)
+	_bookend_top = Walkthroughs.bookend_top(p_tour)
 	_resolve = p_resolve
 	if steps.is_empty():
 		return false
@@ -176,6 +184,13 @@ func _finish(completed: bool) -> void:
 func _show_step(first: bool) -> void:
 	var st := step()
 	var kind := str(st.get("kind", "plain"))
+	step_changed.emit(_index, st)
+	_aim(st, kind, first)
+	_build_card(st, kind)
+
+
+## Resolve the step's spot and send the spotlight there.
+func _aim(st: Dictionary, kind: String, instant: bool) -> void:
 	var target := Rect2()
 	if kind == "plain" and _resolve.is_valid():
 		var r: Variant = _resolve.call(str(st["id"]))
@@ -185,12 +200,27 @@ func _show_step(first: bool) -> void:
 	_has_spot = target.size != Vector2.ZERO
 	_target = target
 	if _has_spot:
-		_glide_to(target, first or not had)
+		_glide_to(target, instant or not had)
 	else:
 		_set_spot(Rect2())
 	if _dim != null:
 		_dim.queue_redraw()
-	_build_card(st, kind)
+
+
+## The thing a step points at moved or only now exists (a page slid in, a
+## model loaded): ask again, glide there and put the card against it.
+func refresh() -> void:
+	if _done or _card == null:
+		return
+	var st := step()
+	var was := _target
+	_aim(st, str(st.get("kind", "plain")), false)
+	if _target == was:
+		return
+	if _card_tween != null and _card_tween.is_valid():
+		_card_tween.kill()
+	_card.position.y = _card_rest()
+	_card.modulate.a = 1.0
 
 
 func _build_card(st: Dictionary, kind: String) -> void:
@@ -212,11 +242,33 @@ func _build_card(st: Dictionary, kind: String) -> void:
 	_card.add_child(col)
 	match kind:
 		"welcome":
-			var pre := _words("WELCOME TO", 24, true)
+			var pre := _words(str(st.get("pre", "WELCOME TO")), 24, true)
 			pre.name = "Pre"
 			pre.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 			col.add_child(pre)
-			col.add_child(_big_gold("Title", "HOOP SHOOT\nLEAGUE"))
+			col.add_child(_big_gold("Title", str(st.get("title", ""))))
+		"gift":
+			# The free play (design 36c): the ticket, turned, beside YOU EARNED A / FREE PLAY!
+			var head := HBoxContainer.new()
+			head.name = "Gift"
+			head.add_theme_constant_override("separation", 22)
+			head.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			col.add_child(head)
+			var ticket := PixelIcon.new("icon_ticket", Vector2(84, 84), 4.0)
+			ticket.name = "Ticket"
+			ticket.turn = -14.0
+			ticket.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+			head.add_child(ticket)
+			var lines := VBoxContainer.new()
+			lines.name = "Lines"
+			lines.add_theme_constant_override("separation", 16)
+			lines.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			head.add_child(lines)
+			var earned := _words(str(st.get("pre", "")), 22, true)
+			earned.name = "Pre"
+			earned.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+			lines.add_child(earned)
+			lines.add_child(_big_gold("Title", str(st.get("title", "")), 40))
 		"end":
 			col.add_child(_big_gold("Title", str(st.get("title", "THAT'S IT!"))))
 		_:
@@ -289,12 +341,7 @@ func _build_card(st: Dictionary, kind: String) -> void:
 	# the bookends at the design's resting spot; then rise and fade in.
 	_card.size = Vector2(CARD_W, 0)
 	_card.reset_size()
-	var h := _card_height()
-	# Screen coordinates (an anchored layer): the target is one too.
-	var top := BOOKEND_TOP
-	if _has_spot:
-		top = (_target.end.y + GAP) if not card_above() else (_target.position.y - GAP - h)
-	top = clampf(top, UiLayout.header_top(20.0), UiLayout.screen_height() - h - 20.0)
+	var top := _card_rest()
 	_card.position = Vector2(CARD_X, top + 16.0)
 	_card.modulate.a = 0.0
 	if _card_tween != null and _card_tween.is_valid():
@@ -306,6 +353,17 @@ func _build_card(st: Dictionary, kind: String) -> void:
 	else:
 		_card.position.y = top
 		_card.modulate.a = 1.0
+
+
+## Where the card rests: below a spot in the upper half, above one in the
+## lower half, a card with no spot at the tour's bookend line. Screen
+## coordinates (an anchored layer): the target is one too.
+func _card_rest() -> float:
+	var h := _card_height()
+	var top := _bookend_top
+	if _has_spot:
+		top = (_target.end.y + GAP) if not card_above() else (_target.position.y - GAP - h)
+	return clampf(top, UiLayout.header_top(20.0), UiLayout.screen_height() - h - 20.0)
 
 
 ## The card's height from its contents (the layout runs the same frame off-tree).
@@ -341,8 +399,8 @@ static func _words(text: String, size_: int, display := false) -> Label:
 	return l
 
 
-static func _big_gold(name_: String, text: String) -> Label:
-	var l := RetroTheme.display(text, 46, GOLD)
+static func _big_gold(name_: String, text: String, size_ := 46) -> Label:
+	var l := RetroTheme.display(text, size_, GOLD)
 	l.name = name_
 	l.add_theme_color_override("font_outline_color", RetroTheme.SCENE_OUTLINE)
 	l.add_theme_constant_override("outline_size", RetroTheme.OUTLINE_SIZE)

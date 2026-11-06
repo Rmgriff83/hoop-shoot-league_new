@@ -333,5 +333,31 @@ func _app(t) -> void:
 	app.mark_prizes_seen()
 	t.ok(app.grant_cosmetic("hoop", "street"), "a hoop can be granted too")
 	t.ok(app.owns("hoop", "street") and app.unseen_prizes().is_empty(), "…without flagging a prize")
+	# Free plays (docs/LOCKER.md → Free plays): a PLAY that costs no tickets,
+	# given once per reason, used before any tickets.
+	var cf: Dictionary = SaveService.get_cosmetics()
+	cf["tickets"] = 0
+	cf["peggy"] = {"drops": app.drop_count(), "credit": false}
+	SaveService.put_cosmetics(cf)
+	t.eq(app.peggy_free_plays(), 0, "no free play to start with")
+	t.ok(app.grant_peggy_free(PeggyGifts.FIRST_PLAY), "a reason grants a free play")
+	t.ok(not app.grant_peggy_free(PeggyGifts.FIRST_PLAY), "…once: the same reason is refused")
+	t.ok(not app.grant_peggy_free(""), "…and a reason is required")
+	t.eq(app.peggy_free_plays(), 1, "one free play in hand")
+	var drops_was: int = app.drop_count()
+	t.ok(app.peggy_insert_ticket(), "PLAY with a free play and no tickets credits the machine")
+	t.eq(app.tickets(), 0, "…spending no tickets")
+	t.eq(app.peggy_free_plays(), 0, "…the free play is used")
+	t.ok(app.peggy_credit(), "…and the credit is in the save")
+	var freebie: Dictionary = app.peggy_drop(0.1)
+	t.ok(not freebie.is_empty() and app.drop_count() == drops_was + 1, "the free play drops like any other")
+	cf = SaveService.get_cosmetics()
+	cf["tickets"] = 0
+	SaveService.put_cosmetics(cf)
+	t.ok(not app.peggy_insert_ticket(), "after it, PLAY needs tickets again")
+	t.ok(app.grant_peggy_free("test_extra", 2) and app.peggy_free_plays() == 2, "another reason can give more than one")
+	app.grant_tickets(300)
+	t.ok(app.peggy_insert_ticket(), "with tickets AND a free play…")
+	t.eq([app.tickets(), app.peggy_free_plays()], [300, 1], "…the free play goes first")
 	SaveService.put_cosmetics(cos_before)
 	SaveService.put_settings(set_before)

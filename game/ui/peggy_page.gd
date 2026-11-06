@@ -22,10 +22,15 @@ const HEAD_ROW := 104.0
 ## The big PLAY (design 30a): 420 wide, 50 / 46 round PLAY 64 and the 30 px price.
 const BIG_PLAY := Vector2(420, 215)
 const SMALL_PLAY_W := 230.0
+const GOLD := Color("#F0B84A")
+## The 1 FREE tab overhangs PLAY's top-right corner (design 36c: right -5, top -10).
+const FREE_TAB_OUT := Vector2(5.0, 10.0)
 
 var _machine: PeggyMachine
 var _play: ShadowCard
 var _play_need: Label
+var _play_free: Label
+var _free_tab: PanelContainer
 var _play_shine: Control
 var _card: Control
 var _rays: PrizeRays
@@ -102,12 +107,39 @@ func _build() -> void:
 	var price := words("%d" % PeggyPrizes.DROP_COST, 30, true)
 	price.name = "Price"
 	cost.add_child(price)
+	# A free play in hand (design 36c): FREE in gold where the price was, and
+	# a gold "1 FREE" tab over the top-right corner.
+	_play_free = words("FREE", 30, true)
+	_play_free.name = "Free"
+	_play_free.add_theme_color_override("font_color", GOLD)
+	_play_free.visible = false
+	col.add_child(_play_free)
 	_play_need = words("", 16)
 	_play_need.name = "Need"
 	_play_need.visible = false
 	col.add_child(_play_need)
 	_play.pressed.connect(_on_play)
 	root.add_child(_play)
+	_free_tab = PanelContainer.new()
+	_free_tab.name = "FreeTab"
+	_free_tab.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var tab_box := StyleBoxFlat.new()
+	tab_box.bg_color = GOLD
+	tab_box.border_color = RetroTheme.SCENE_OUTLINE
+	tab_box.set_border_width_all(2)
+	tab_box.content_margin_left = 10.0
+	tab_box.content_margin_right = 10.0
+	tab_box.content_margin_top = 5.0
+	tab_box.content_margin_bottom = 5.0
+	_free_tab.add_theme_stylebox_override("panel", tab_box)
+	var tab_word := Label.new()
+	tab_word.name = "Word"
+	tab_word.add_theme_font_override("font", UiFont.display())
+	tab_word.add_theme_font_size_override("font_size", UiFont.snap(14))
+	tab_word.add_theme_color_override("font_color", RetroTheme.SCENE_OUTLINE)
+	_free_tab.add_child(tab_word)
+	_free_tab.visible = false
+	root.add_child(_free_tab)
 	_layout_play()
 	_refresh_machine()
 
@@ -152,6 +184,9 @@ func _layout_play() -> void:
 	_play_shine.size = Vector2(w, hgt)
 	_play_shine.visible = not short
 	_play.position = Vector2(roundf((FRAME_SIZE.x - w) * 0.5), frame_height() * PLAY_Y)
+	if _free_tab != null:
+		_free_tab.reset_size()
+		_free_tab.position = _play.position + Vector2(w + FREE_TAB_OUT.x - _free_tab.size.x, -FREE_TAB_OUT.y)
 
 
 func set_view_active(on: bool) -> void:
@@ -173,18 +208,24 @@ func _refresh_machine() -> void:
 func _refresh_play() -> void:
 	if _play == null:
 		return
-	var short := PeggyPrizes.DROP_COST - App.tickets()
+	var free := App.peggy_free_plays()
+	var short := 0 if free > 0 else PeggyPrizes.DROP_COST - App.tickets()   # a free play needs no tickets
 	var busy := _machine.is_busy() or _machine.credit()
 	_play.visible = not busy and _card == null
 	_play.disabled = short > 0
 	_play_need.visible = short > 0
+	(_play.get_node("Col/Cost") as Control).visible = free <= 0
+	_play_free.visible = free > 0
+	_free_tab.visible = free > 0 and _play.visible
+	(_free_tab.get_node("Word") as Label).text = "%d FREE" % free
 	if short > 0:
 		_play_need.text = "NEED %s MORE" % RetroTheme.thousands(short)
 	var grey := short > 0
 	_play.color = GREY_EDGE if grey else RetroTheme.LIGHT["orange"]
 	_play.tint = 0.55
 	for l in _play.find_children("*", "Label", true, false):
-		(l as Label).add_theme_color_override("font_color", GREY_TEXT if grey else CREAM)
+		if l != _play_free:   # FREE keeps its gold
+			(l as Label).add_theme_color_override("font_color", GREY_TEXT if grey else CREAM)
 	var icon: PixelIcon = _play.find_child("Icon", true, false)
 	if icon != null:
 		icon.modulate.a = 0.5 if grey else 1.0
@@ -221,6 +262,23 @@ func machine() -> PeggyMachine:
 
 func play_button() -> ShadowCard:
 	return _play
+
+
+## Where a tour points on this page (design 36c), in screen coordinates as
+## the page rests: "play" is the PLAY button, "slots" the seven prize
+## plates. Rect2() for anything else, or while the machine is still loading.
+func tour_rect(id: String) -> Rect2:
+	var slide := Vector2(root.position.x - FRAME_POS.x, 0.0)   # mid-slide: where it will rest
+	match id:
+		"play":
+			if _play == null:
+				return Rect2()
+			var size_ := _play.size - Vector2.ONE * ShadowStyle.OFFSET
+			return Rect2(_play.get_global_rect().position - slide, size_).grow(14.0)
+		"slots":
+			var r := _machine.slots_rect() if _machine != null else Rect2()
+			return Rect2(r.position - slide, r.size) if r.size != Vector2.ZERO else Rect2()
+	return Rect2()
 
 
 # ---- the prize card -------------------------------------------------------------------
@@ -297,11 +355,12 @@ func _show_card(prize: Dictionary) -> void:
 		keep.name = "Keep"
 		keep.pressed.connect(_dismiss_card)
 		row.add_child(keep)
-	var again := _card_button("AGAIN · %d" % PeggyPrizes.DROP_COST, RetroTheme.LIGHT["orange"])
+	var free_left := App.peggy_free_plays() > 0
+	var again := _card_button("AGAIN · FREE" if free_left else "AGAIN · %d" % PeggyPrizes.DROP_COST, RetroTheme.LIGHT["orange"])
 	again.name = "Again"
 	again.custom_minimum_size = Vector2(300, 60 + ShadowStyle.OFFSET)
 	again.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	if App.tickets() < PeggyPrizes.DROP_COST:
+	if not free_left and App.tickets() < PeggyPrizes.DROP_COST:
 		again.text = "NEED %s MORE" % RetroTheme.thousands(PeggyPrizes.DROP_COST - App.tickets())
 		again.disabled = true
 	again.pressed.connect(func() -> void:

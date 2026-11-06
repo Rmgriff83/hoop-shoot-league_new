@@ -1,12 +1,33 @@
 {
   "home": {
     "steps": [
-      {"id": "welcome", "kind": "welcome", "body": "Shoot hoops, win your league, earn new courts & extras, master the online leaderboard. Play for keeps.", "cta": "LET'S GO"},
+      {"id": "welcome", "kind": "welcome", "pre": "WELCOME TO", "title": "HOOP SHOOT\nLEAGUE", "body": "Shoot hoops, win your league, earn new courts & extras, master the online leaderboard. Play for keeps.", "cta": "LET'S GO"},
       {"id": "three", "title": "DOWN HERE..", "body": "You'll find the area's league, along with time trial and practice mode. Compete in league mode to increase your level and unlock new areas."},
       {"id": "top", "title": "UP HERE..", "body": "Is where you can see your current level & tickets, access your locker and settings."},
       {"id": "online", "title": "PLAY ONLINE", "body": "Check the rankings and challenge other players head to head."},
       {"id": "board", "title": "TOP 5", "body": "The best time trial scores in this area. Tap the list to see the full board."},
       {"id": "end", "kind": "end", "title": "THAT'S IT!", "body": "You're all set. Now get shooting.", "cta": "LET'S SHOOT"}
+    ]
+  },
+  "league": {
+    "bookend_top": 480,
+    "steps": [
+      {"id": "welcome", "kind": "welcome", "pre": "WELCOME TO THE", "title": "{LEAGUE}", "body": "Matches are {SECONDS}-second heats against shooters from the {AREA}. Play a {GAMES}-game season, finish in the top {TOP} to make the playoffs, and win it all for the title. Every heat earns XP and tickets.", "cta": "SHOW ME"},
+      {"id": "tabs", "title": "THE TABS", "body": "Everything about your league lives in these five tabs."},
+      {"id": "HEAT", "title": "MATCH", "body": "Your next heat: who you're facing, the cards they own, and PLAY to tip off."},
+      {"id": "TABLE", "title": "TABLE", "body": "The season standings. Finish in the top {TOP} to make the playoffs."},
+      {"id": "SCHED", "title": "SCHED", "body": "Every heat this season, the ones you have played and the ones still to come."},
+      {"id": "CARDS", "title": "CARDS", "body": "Power-up cards. Buy them in the shop with tickets, then arm up to 3 before each heat."},
+      {"id": "STATS", "title": "STATS", "body": "Your season and career numbers: record, points per game, best heats and titles."},
+      {"id": "end", "kind": "end", "title": "GOOD LUCK!", "body": "Tap PLAY on the MATCH tab when you're ready.", "cta": "LET'S PLAY"}
+    ]
+  },
+  "peggy": {
+    "steps": [
+      {"id": "gift", "kind": "gift", "pre": "YOU EARNED A", "title": "FREE PLAY!", "body": "Nice first game! Here's a free play on PEGGY, the prize machine.", "cta": "OPEN PEGGY"},
+      {"id": "machine", "title": "THIS IS PEGGY", "body": "Spend tickets here to win rewards: new balls, nets and more."},
+      {"id": "slots", "title": "THE PRIZES", "body": "Your puck lands in one of these slots. The dot is its rarity: blue common, green rare, pink epic. Level up to unlock rarer prizes."},
+      {"id": "play", "title": "ON THE HOUSE", "body": "This one is free. After that, each play costs {COST} tickets. Tap PLAY, steer with the stick and hit DROP. Your prizes go to the LOCKER, where you can view and equip them.", "cta": "GOT IT"}
     ]
   }
 }

@@ -358,7 +358,7 @@ func top_scores(limit := 10, location := "") -> Array:
 
 
 func score_count() -> int:
-	return _scores["docs"].size()
+	return Array(_scores.get("docs", [])).size()   # an unloaded part (headless tests) is just empty
 
 
 ## Is this score a new device best (for that court)?

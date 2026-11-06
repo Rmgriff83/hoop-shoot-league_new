@@ -342,6 +342,18 @@ func _widgets(t) -> void:
 	t.ok(peggy != null and (peggy.find_child("Word", true, false) as Label).text == "PLAY PEGGY", "PLAY PEGGY sits under the head")
 	t.eq((peggy.find_child("Sub", true, false) as Label).text, "WIN BALLS + NETS · 300 TICKETS", "…saying what a play costs")
 	t.ok(not (peggy.find_child("Shine", true, false) as Control).visible, "…dull while a drop is out of reach")
+	# A free play in hand (design 36c): the row says so and shines.
+	t.eq([LockerPanel.peggy_sub(0), LockerPanel.peggy_sub(1), LockerPanel.peggy_sub(2)],
+		["WIN BALLS + NETS · 300 TICKETS", "WIN BALLS + NETS · 1 FREE PLAY", "WIN BALLS + NETS · 2 FREE PLAYS"], "the row's second line: the price or the free plays")
+	var cos_free: Dictionary = SaveService.get_cosmetics()
+	cos_free["peggy"] = {"drops": 0, "free": 1}
+	SaveService.put_cosmetics(cos_free)
+	locker._fill()
+	t.eq((peggy.find_child("Sub", true, false) as Label).text, "WIN BALLS + NETS · 1 FREE PLAY", "a free play shows on PLAY PEGGY")
+	t.ok((peggy.find_child("Shine", true, false) as Control).visible, "…which shines with no tickets")
+	cos_free["peggy"] = {"drops": 0}
+	SaveService.put_cosmetics(cos_free)
+	locker._fill()
 	var asked := [false]
 	locker.peggy_requested.connect(func() -> void: asked[0] = true)
 	peggy.pressed.emit()
@@ -531,6 +543,33 @@ func _widgets(t) -> void:
 	page._show_card({"slot": 0, "base": "epic", "rarity": "epic", "kind": "ball", "id": "tiger", "refund": 0, "owned_after": 3, "roster_size": 47, "result": {}})
 	t.ok(page._rays != null, "an epic pull turns the rays")
 	page._dismiss_card()
+	# A free play in hand (design 36c): PLAY is the big live button whatever
+	# the tickets, FREE in gold where the price was, a gold "1 FREE" tab.
+	var cfree: Dictionary = SaveService.get_cosmetics()
+	cfree["tickets"] = 0
+	cfree["peggy"] = {"drops": 0, "credit": false, "free": 1}
+	SaveService.put_cosmetics(cfree)
+	page._refresh_machine()
+	var pb := page.play_button()
+	var free_word: Label = pb.find_child("Free", true, false)
+	var free_tab: Control = page.find_child("FreeTab", true, false)
+	t.ok(pb.visible and not pb.disabled and not need.visible, "with a free play PLAY is live at 0 tickets")
+	t.eq(pb.custom_minimum_size, PeggyPage.BIG_PLAY + Vector2.ONE * ShadowStyle.OFFSET, "…the big PLAY")
+	t.ok(free_word.visible and free_word.text == "FREE" and free_word.get_theme_color("font_color") == PeggyPage.GOLD, "…reading FREE in gold")
+	t.ok(not (pb.find_child("Cost", true, false) as Control).visible, "…with the price gone")
+	t.ok(free_tab.visible and (free_tab.find_child("Word", true, false) as Label).text == "1 FREE", "…and the 1 FREE tab")
+	t.ok(not page.machine().locked(), "…the cap is not locked")
+	page._on_play()
+	t.eq([app.tickets(), app.peggy_free_plays()], [0, 0], "PLAY uses the free play, no tickets")
+	page.machine()._process(PeggyMachine.FEED_S + 0.1)
+	t.ok(app.peggy_credit() and not free_tab.visible, "…the machine is credited and the tab is gone")
+	cfree = SaveService.get_cosmetics()
+	cfree["peggy"] = {"drops": 1, "credit": false, "free": 0}
+	SaveService.put_cosmetics(cfree)
+	page._refresh_machine()
+	t.ok(pb.disabled and need.visible and need.text == "NEED 300 MORE" and not free_word.visible and not free_tab.visible, "after it PLAY is the usual one: NEED 300 MORE")
+	t.eq(page.tour_rect("nope"), Rect2(), "the tour asks for play or slots only")
+	t.ok(page.tour_rect("play").size.x > PeggyPage.SMALL_PLAY_W, "…PLAY's rect, grown")
 	page.close()
 	SaveService.put_cosmetics(cos_before)
 	# The league in context: enter without a scene change, build the panel.
@@ -601,6 +640,16 @@ func _widgets(t) -> void:
 	lc._show_tab("STATS")
 	t.eq(lc.current_tab(), "STATS", "tabs switch")
 	t.eq(tabs, ["STATS"], "and say so")
+	# The league tour (design 36b) switches the real tab at once and reads the tabs' rects.
+	lc.show_tab("TABLE", true)
+	t.ok(lc.current_tab() == "TABLE" and (lc.find_child("Pane_TABLE", true, false) as Control).visible and not (lc.find_child("Pane_STATS", true, false) as Control).visible, "show_tab(…, true) switches with no slide")
+	t.eq(tabs, ["STATS", "TABLE"], "…and says so (the floats follow)")
+	t.ok(lc.tab_rect("nope") == Rect2() and lc.tab_rect("HEAT").size.y == LeagueContext.TAB_H, "a tab's face is TAB_H tall")
+	t.ok(lc.tab_rect("STATS").position.x > lc.tab_rect("HEAT").position.x and lc.tabs_rect().encloses(lc.tab_rect("CARDS")), "the tabs sit left to right inside the row")
+	tabs.clear()
+	lc._show_tab("STATS")
+	tabs.clear()
+	tabs.push_back("STATS")
 	lc.go_loadout()
 	t.eq(lc.current_tab(), "CARDS", "go_loadout lands on CARDS")
 	lc.free()

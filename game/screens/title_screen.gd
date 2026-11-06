@@ -149,6 +149,8 @@ func _ready() -> void:
 	if App.pending_walkthrough == "home" and _archive == null and not is_league_open():
 		App.pending_walkthrough = ""
 		_start_walkthrough("home")
+	elif _peggy_tour_ready():
+		_start_peggy_tour()
 	else:
 		_welcome()
 
@@ -310,25 +312,109 @@ func cards_view() -> FloatCards:
 var _walkthrough: Walkthrough
 
 
-func _start_walkthrough(id: String) -> void:
+func _start_walkthrough(id: String, vars := {}) -> void:
 	if _walkthrough != null or App.walkthrough_seen(id):
 		_welcome()
 		return
 	_walkthrough = Walkthrough.new()
 	_walkthrough.name = "Walkthrough"
+	_walkthrough.step_changed.connect(_on_tour_step.bind(id))
 	_walkthrough.closed.connect(func(_completed: bool) -> void:
 		_walkthrough = null
+		if id == "league" and _league != null:
+			_league.show_tab("HEAT", true)   # however it ends, the league is left on MATCH (design 36b)
 		_welcome()
 	)
 	add_child(_walkthrough)
-	if not _walkthrough.start(id, _walkthrough_rect):
+	if not _walkthrough.start(id, _walkthrough_rect, vars):
 		_walkthrough.queue_free()
 		_walkthrough = null
 		_welcome()
 
 
-## The home chrome's rectangle for a tour target (design px), Rect2() for none.
+## A tour's card is about to show: what sits under the dim follows it. The
+## league tour (36b) switches the real tab at once; the free-play tour (36c)
+## has PEGGY in from its second card on, and the home back under its first.
+func _on_tour_step(_i: int, step: Dictionary, tour: String) -> void:
+	var sid := str(step.get("id", ""))
+	match tour:
+		"league":
+			if _league != null:
+				_league.show_tab(sid if LeagueContext.TABS.has(sid) else "HEAT", true)
+		"peggy":
+			if str(step.get("kind", "")) == "gift":
+				_tour_close_peggy()
+			elif _peggy == null:
+				_open_peggy(true)
+				if _peggy != null:
+					# The plates' spot needs the model: re-aim when it lands.
+					_peggy.machine().model_loaded.connect(func() -> void:
+						if _walkthrough != null:
+							_walkthrough.refresh.call_deferred())
+
+
+## The free-play tour (design 36c): once, the first time the home shows
+## after the first finished time trial or match gave the free PEGGY play.
+func _peggy_tour_ready() -> bool:
+	return App.peggy_tour_due() and not App.qa_skip_tours and _walkthrough == null and _archive == null and not is_league_open() \
+		and _locker == null and _peggy == null and _wrap == null and _new_season == null and _store == null \
+		and _settings == null and _ranks == null and _lobby == null and not _switching
+
+
+func _start_peggy_tour() -> void:
+	_start_walkthrough("peggy", {"COST": PeggyPrizes.DROP_COST})
+
+
+## `<` back to the tour's first card: PEGGY out to the right, the home back.
+func _tour_close_peggy() -> void:
+	if _peggy == null:
+		return
+	var page := _peggy
+	_peggy = null
+	page.set_meta("tour_back", true)
+	page.slide_out(false, true)
+	_slide_home(false)
+
+
+## The league tour (design 36b): once, the first time ENTER LEAGUE opens —
+## for a player with no league game behind them (Ross, 2026-11-06: the new
+## tours are for new players; anyone else has it marked seen).
+func _maybe_league_tour() -> void:
+	if not _open or _league == null or _walkthrough != null or App.qa_skip_tours or App.walkthrough_seen("league"):
+		return
+	if _wrap != null or _new_season != null or _store != null or not is_inside_tree():
+		return
+	if int(App.first_play_facts().get("league_games", 0)) > 0:
+		App.mark_walkthrough_seen("league")
+		return
+	_start_walkthrough("league", league_tour_vars(_league.league_id))
+
+
+## The league tour's copy is the league's own numbers (cage: ARCADE LEAGUE,
+## Arcade Cage, 90, 14, 4 — the design's words).
+static func league_tour_vars(league_id: String) -> Dictionary:
+	var cfg := LeagueData.league(league_id)
+	var arena := CosmeticLibrary.get_arena(str(cfg.get("location", league_id)))
+	return {
+		"LEAGUE": str(cfg.get("name", "LEAGUE")).to_upper().replace(" ", "\n"),
+		"AREA": str(arena.display_name) if arena != null else "area",
+		"SECONDS": int(cfg.get("heat_seconds", 90)),
+		"GAMES": Array(cfg.get("roster", [])).size() * int(cfg.get("rounds", 2)),
+		"TOP": int(cfg.get("playoff_teams", 4)),
+	}
+
+
+## A tour target's rectangle on screen, Rect2() for none: the home chrome's
+## parts (36a), the league's tabs and panes (36b), PEGGY's plates and PLAY (36c).
 func _walkthrough_rect(target: String) -> Rect2:
+	if LeagueContext.TABS.has(target) or target == "tabs":
+		if _league == null:
+			return Rect2()
+		if target == "tabs":
+			return _league.tabs_rect().grow(10.0)
+		return _league.tab_rect(target).grow(10.0).merge(_league.panes_rect().grow(6.0))
+	if target == "slots" or target == "play":
+		return _peggy.tour_rect(target) if _peggy != null else Rect2()
 	if _chrome == null:
 		return Rect2()
 	var league := _chrome_rect("LeagueCard")
@@ -864,6 +950,7 @@ func _open_league(instant := false) -> void:
 		_league_slide.kill()
 	_league_slide = create_tween()
 	_league_slide.tween_method(_slide_step.bind(true), 0.0, 1.0, SLIDE_S)
+	_league_slide.finished.connect(_maybe_league_tour)   # the first time in a league (design 36b)
 
 
 ## BACK TO HOME: slide the league out and the home block back in.
@@ -882,6 +969,9 @@ func _close_league() -> void:
 		_league = null
 	_rebuild_float(false)
 	_refresh_ticker()
+	# CONTINUE SEASON landed in the league: the free-play tour waited for the home.
+	if not _open and _peggy_tour_ready():
+		_start_peggy_tour()
 
 
 func is_league_open() -> bool:
@@ -1362,6 +1452,12 @@ var _home_slide: Tween
 func _open_locker() -> void:
 	if _store != null or _locker != null or _peggy != null or _wrap != null or _new_season != null or _settings != null or _ranks != null or _lobby != null or _switching:
 		return
+	_make_locker()
+	_slide_home(true)
+	_locker.slide_in()
+
+
+func _make_locker() -> void:
 	_locker = LockerPanel.new()
 	_locker.name = "LockerPanel"
 	_locker.closed.connect(func() -> void:
@@ -1373,29 +1469,38 @@ func _open_locker() -> void:
 	_locker.peggy_requested.connect(_open_peggy)
 	_locker.store_requested.connect(_open_store)
 	add_child(_locker)
-	_slide_home(true)
-	_locker.slide_in()
 
 
 ## PEGGY (docs/LOCKER.md), from the locker's PEGGY button: the locker slides
-## out under it to the left and comes back when PEGGY closes.
-func _open_peggy() -> void:
-	if _store != null or _peggy != null or _locker == null or _switching:
+## out under it to the left and comes back when PEGGY closes. `from_home`
+## (the free-play tour, design 36c) opens it over the home with no locker
+## under it; its `< BACK` still lands in the locker, built then, where the
+## prize sits (Ross, 2026-11-06).
+func _open_peggy(from_home := false) -> void:
+	if _store != null or _peggy != null or _switching or (_locker == null) != from_home:
 		return
-	_peggy = PeggyPage.new()
-	_peggy.name = "PeggyPage"
+	var page := PeggyPage.new()
+	_peggy = page
+	page.name = "PeggyPage"
 	_peggy.closed.connect(func() -> void:
+		if page.has_meta("tour_back"):
+			return   # the tour's `<`: the home is already on its way back
 		_peggy = null
 		_refresh_locker_badge()
 		_refresh_ticker()
-		if _locker != null:
+		if _locker == null:
+			_make_locker()
+		else:
 			_locker._fill()
-			_locker.slide_in(true)
+		_locker.slide_in(true)
 	)
 	_peggy.store_requested.connect(_open_store)
-	add_child(_peggy)
-	_locker.slide_out(true, false)
-	_peggy.slide_in()
+	add_child(page)
+	if _locker != null:
+		_locker.slide_out(true, false)
+	else:
+		_slide_home(true)
+	page.slide_in()
 
 
 ## The whole home UI (the chrome: top bar, zone, chevrons, cards, ticker)

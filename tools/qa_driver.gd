@@ -54,13 +54,14 @@ func _ready() -> void:
 	# keeps it — this autoload runs in every build, so the skip must not be the
 	# default (Ross's phone never saw the tutorial, 2026-10-24).
 	App.qa_skip_tutorial = skips_tutorial(args)
+	App.qa_skip_tours = _has_prefixed(args, "--qa")   # the two tour passes start theirs by hand
 	# QA passes keep instant scene moves (their sleeps assume them); --qa-loading
 	# exercises the loader and raises the screen at once.
 	if App.loader != null:
 		App.loader.instant = _has_prefixed(args, "--qa") and not args.has("--qa-loading")
 		App.loader.force_show = args.has("--qa-loading")
 		PeggyMachine.threaded = not App.loader.instant
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-pause-practice") or args.has("--qa-prematch-series") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live") or args.has("--qa-ads") or args.has("--qa-platform") or args.has("--qa-machines") or args.has("--qa-park-snow") or args.has("--qa-net-hang") or args.has("--qa-shield")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-pause-practice") or args.has("--qa-prematch-series") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live") or args.has("--qa-ads") or args.has("--qa-platform") or args.has("--qa-machines") or args.has("--qa-park-snow") or args.has("--qa-net-hang") or args.has("--qa-shield") or args.has("--qa-first-play") or args.has("--qa-league-tour")):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# Achievements earned during a pass, in the log (docs/ACHIEVEMENTS.md).
@@ -117,6 +118,10 @@ func _ready() -> void:
 		_run_park.call_deferred()
 	elif args.has("--qa-peggy"):
 		_run_peggy.call_deferred()
+	elif args.has("--qa-first-play"):
+		_run_first_play.call_deferred()
+	elif args.has("--qa-league-tour"):
+		_run_league_tour.call_deferred()
 	elif args.has("--qa-store-live"):
 		_run_store_live.call_deferred()
 	elif args.has("--qa-platform"):
@@ -2313,6 +2318,116 @@ func _run_match_end() -> void:
 
 ## The archive opens in front of the home on a cold launch: close it (or
 ## pick an area through it) before tapping the home's own buttons.
+## The free PEGGY play (design 36c): one free play in hand with the tour
+## unseen and too few tickets to buy a play; the home shows the gift card,
+## OPEN PEGGY slides PEGGY in, the tour walks the machine, the plates and
+## PLAY (reading FREE), then the play is used, the prize kept, and `< BACK`
+## lands in the locker. Restores the save's cosmetics/settings after.
+##   Godot --path hoop_shoot --resolution 360x780 -- --qa-first-play
+func _run_first_play() -> void:
+	await _sleep(1.0)
+	await _close_archive()
+	var cos_before: Dictionary = SaveService.get_cosmetics()
+	var set_before: Dictionary = SaveService.get_settings()
+	var c: Dictionary = SaveService.get_cosmetics()
+	var pg: Dictionary = c.get("peggy", {})
+	pg["free"] = 1
+	pg["credit"] = false
+	c["peggy"] = pg
+	c["tickets"] = 40
+	SaveService.put_cosmetics(c)
+	var st: Dictionary = SaveService.get_settings()
+	st["walkthroughsSeen"] = Array(st.get("walkthroughsSeen", [])).filter(func(x: Variant) -> bool: return str(x) != "peggy")
+	SaveService.put_settings(st)
+	App.to_title()
+	await _sleep(1.6)
+	await _close_archive()
+	var ts: Node = get_tree().current_scene
+	print("QA first-play: due=%s" % App.peggy_tour_due())
+	ts.call("_start_peggy_tour")   # QA passes never start a tour on their own (App.qa_skip_tours)
+	await _sleep(0.6)
+	await _snap("first_play_00")
+	for i in 3:
+		await _click_named("TourNext")
+		await _sleep(1.2 if i == 0 else 0.8)
+		var w: Walkthrough = ts.find_child("Walkthrough", true, false)
+		print("QA first-play: step %d spot=%s rect=%s" % [i + 1, w.has_spot() if w != null else false, w.spot_rect() if w != null else Rect2()])
+		await _snap("first_play_%02d" % (i + 1))
+	await _click_named("TourNext")
+	await _sleep(0.6)
+	await _snap("first_play_free_button")
+	var page: PeggyPage = ts.call("peggy")
+	if page == null:
+		print("QA first-play: no PEGGY page")
+		SaveService.put_cosmetics(cos_before)
+		SaveService.put_settings(set_before)
+		get_tree().quit(1)
+		return
+	var m: PeggyMachine = page.machine()
+	await _click_button_named("PLAY")
+	await _sleep(PeggyMachine.FEED_S + 0.5)
+	print("QA first-play: after PLAY tickets=%d free=%d credit=%s seen=%s" % [App.tickets(), App.peggy_free_plays(), App.peggy_credit(), App.walkthrough_seen("peggy")])
+	await _snap("first_play_credited")
+	m.press()
+	var waited := 0.0
+	while page.prize_card() == null and waited < 20.0:
+		await _sleep(0.2)
+		waited += 0.2
+	await _sleep(0.4)
+	await _snap("first_play_prize")
+	var keep: Button = get_tree().root.find_child("Keep", true, false)
+	if keep != null:
+		keep.pressed.emit()
+	else:
+		page._dismiss_card()
+	await _sleep(PeggyPage.PLAY_BACK_S + 0.4)
+	await _snap("first_play_after")
+	page.close()
+	await _sleep(0.9)
+	print("QA first-play: locker=%s peggy=%s" % [ts.call("locker") != null, ts.call("peggy") != null])
+	await _snap("first_play_locker")
+	SaveService.put_cosmetics(cos_before)
+	SaveService.put_settings(set_before)
+	get_tree().quit()
+
+
+## The league tour (design 36b): the cage league opened, the tour forced
+## (the QA save has league games behind it), every card snapped with the
+## real tab switched under the dim, then MATCH again. Restores the settings.
+##   Godot --path hoop_shoot --resolution 360x780 -- --qa-league-tour
+func _run_league_tour() -> void:
+	await _sleep(1.0)
+	await _close_archive()
+	var set_before: Dictionary = SaveService.get_settings()
+	var ts: Node = get_tree().current_scene
+	ts.call("_open_league")
+	await _sleep(1.0)
+	var lc: LeagueContext = ts.find_child("League", true, false)
+	if lc == null:
+		print("QA league-tour: no league")
+		get_tree().quit(1)
+		return
+	if not bool(ts.call("walkthrough_running")):
+		var st: Dictionary = SaveService.get_settings()
+		st["walkthroughsSeen"] = Array(st.get("walkthroughsSeen", [])).filter(func(x: Variant) -> bool: return str(x) != "league")
+		SaveService.put_settings(st)
+		ts.call("_start_walkthrough", "league", ts.call("league_tour_vars", lc.league_id))
+		await _sleep(0.6)
+	await _snap("league_tour_00")
+	for i in 7:
+		await _click_named("TourNext")
+		await _sleep(0.8)
+		var w: Walkthrough = ts.find_child("Walkthrough", true, false)
+		print("QA league-tour: step %d tab=%s rect=%s" % [i + 1, lc.current_tab(), w.spot_rect() if w != null else Rect2()])
+		await _snap("league_tour_%02d" % (i + 1))
+	await _click_named("TourNext")
+	await _sleep(0.6)
+	print("QA league-tour: closed, tab=%s seen=%s" % [lc.current_tab(), App.walkthrough_seen("league")])
+	await _snap("league_tour_done")
+	SaveService.put_settings(set_before)
+	get_tree().quit()
+
+
 func _close_archive() -> void:
 	var page: AreaArchivePage = get_tree().root.find_child("AreaArchive", true, false)
 	if page != null:

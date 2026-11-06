@@ -223,6 +223,33 @@ releasing the button early spends nothing. `App.peggy_drop(aim)` spends,
 simulates, grants (or refunds), advances, and returns the prize record
 (`last_prize`).
 
+## Free plays (2026-11-06)
+
+A free play is a PLAY that costs no tickets. `cosmetics.peggy.free` counts
+the ones in hand and `cosmetics.peggy.gifts` lists the reasons already
+given, so each reason grants once per save (`core/locker/peggy_gifts.gd`
+`PeggyGifts`, pure; `App.grant_peggy_free(reason, n := 1)`,
+`App.peggy_free_plays()`). `App.peggy_insert_ticket()` uses a free play
+before any tickets; the drop itself is unchanged. The state rides the
+cosmetics part, which the server stores as it is: no Worker work.
+
+While one is in hand the PEGGY page's PLAY is the big live button whatever
+the ticket count, reading PLAY / FREE (gold) with a gold "1 FREE" tab over
+its top-right corner (design "First Time Walkthrough" 36c), the cap is not
+locked, the prize card's AGAIN reads AGAIN · FREE, and the locker's PLAY
+PEGGY row reads "WIN BALLS + NETS · 1 FREE PLAY" and shines.
+
+**The one reason today, `first_play`:** a new player's very first finished
+time trial or match (league, quick or online; never practice).
+`App._note_first_play()` runs at the top of `App.finish_run` and
+`App.settle_heat`, before the play is written, and decides once per save
+(`settings.firstPlayDone`): it grants only when the save shows no earlier
+play (`App.first_play_facts()`: no trial scores, league games, rated online
+games, counted results, xp or PEGGY drops). A player from before this
+shipped gets the flag and no play (Ross: new players only). The free-play
+tour then waits for the home (docs/HOME.md → Walkthroughs). A new award is
+a new reason id passed to `grant_peggy_free`.
+
 ## The cabinet (`tools/blender/build_peggy.py` → `assets/locker/peggy.glb`)
 
 The v2 carnival cabinet (Ross's `peggy-cabinet-v2.js`, 2026-10-15): a face

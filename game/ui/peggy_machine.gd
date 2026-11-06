@@ -378,11 +378,34 @@ func slots() -> Array:
 	return _slots
 
 
+## The seven prize plates on screen (for the free-play tour, design 36c):
+## their sprites through the machine's camera, half a bay past each end and
+## a bay and a half tall, grown 10. Rect2() until the model is in and drawn.
+func slots_rect() -> Rect2:
+	if _cam == null or _sprites.size() < 2 or not is_inside_tree() or _vp.size.x <= 0 or _vp.size.y <= 0:
+		return Rect2()
+	var k := size / Vector2(_vp.size)
+	var lo := Vector2(INF, INF)
+	var hi := Vector2(-INF, -INF)
+	var xs: Array = []
+	for sp in _sprites:
+		var p := _cam.unproject_position((sp as Node3D).global_position) * k
+		lo = lo.min(p)
+		hi = hi.max(p)
+		xs.push_back(p.x)
+	xs.sort()
+	var gap := absf(float(xs[1]) - float(xs[0]))
+	if gap <= 0.0:
+		return Rect2()
+	var r := Rect2(lo.x - gap * 0.5, lo.y - gap * 0.75, hi.x - lo.x + gap, gap * 1.5)
+	return Rect2(global_position + r.position, r.size).grow(10.0)
+
+
 ## Read the save's state: the credit in the machine and whether a play is
 ## affordable (the page calls this on arrival and after every change).
 func refresh_state() -> void:
 	_credit = App.peggy_credit()
-	_locked = not _credit and App.tickets() < PeggyPrizes.DROP_COST
+	_locked = not _credit and App.tickets() < PeggyPrizes.DROP_COST and App.peggy_free_plays() <= 0   # a free play is a play
 	if _xmark != null:
 		_xmark.visible = _locked
 

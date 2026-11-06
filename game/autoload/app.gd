@@ -504,10 +504,69 @@ func peggy_credit() -> bool:
 func peggy_insert_ticket() -> bool:
 	if peggy_credit():
 		return false
+	if peggy_free_plays() > 0:
+		# A free play (docs/LOCKER.md → Free plays): it goes first, no tickets.
+		var c := SaveService.get_cosmetics()
+		var pg: Dictionary = c.get("peggy", {})
+		pg["free"] = PeggyGifts.free_plays(pg) - 1
+		pg["credit"] = true
+		c["peggy"] = pg
+		SaveService.put_cosmetics(c)
+		return true
 	if not spend_tickets(PeggyPrizes.DROP_COST):
 		return false
 	_set_credit(true)
 	return true
+
+
+## Free PEGGY plays in hand (cosmetics.peggy.free): PLAY costs nothing while
+## there is one.
+func peggy_free_plays() -> int:
+	return PeggyGifts.free_plays(Dictionary(SaveService.get_cosmetics().get("peggy", {})))
+
+
+## Give `n` free plays for `reason`, once per reason for the life of the
+## save. False when that reason was already given.
+func grant_peggy_free(reason: String, n := 1) -> bool:
+	var c := SaveService.get_cosmetics()
+	var r := PeggyGifts.grant(Dictionary(c.get("peggy", {})), reason, n)
+	if not bool(r["ok"]):
+		return false
+	c["peggy"] = r["peggy"]
+	SaveService.put_cosmetics(c)
+	return true
+
+
+## The save's first finished time trial or match (design 36c): a new player
+## earns a free PEGGY play. Called before the play is written, so the save
+## still shows whether anything was played before; it decides once
+## (settings.firstPlayDone) and a player from before this shipped gets the
+## flag and no play (Ross, 2026-11-06: new players only).
+func _note_first_play() -> void:
+	var st := SaveService.get_settings()
+	if bool(st.get("firstPlayDone", false)):
+		return
+	var first := PeggyGifts.is_first_play(first_play_facts())
+	st["firstPlayDone"] = true
+	SaveService.put_settings(st)
+	if first:
+		grant_peggy_free(PeggyGifts.FIRST_PLAY)
+
+
+func first_play_facts() -> Dictionary:
+	var games := 0
+	for doc in Dictionary(SaveService.get_campaign().get("leagues", {})).values():
+		if doc is Dictionary and doc.get("career") is Dictionary:
+			games += int(Dictionary(Dictionary(doc["career"]).get("totals", {})).get("games", 0))
+	return {"scores": SaveService.score_count(), "league_games": games,
+		"online_games": int(Net.me_rank.get("games", 0)), "results": Ads.matches_played(),
+		"xp": xp(), "drops": drop_count()}
+
+
+## The free-play tour (design 36c) waits for the home: a free play in hand
+## and the tour not seen. Saved state, so it survives a quit on the way.
+func peggy_tour_due() -> bool:
+	return peggy_free_plays() > 0 and not walkthrough_seen("peggy")
 
 
 func _set_credit(on: bool) -> void:
@@ -709,6 +768,10 @@ func mark_shot_tutorial_seen() -> void:
 
 ## QA passes that enter a match skip the tutorial unless they ask for it (--qa-tutorial).
 var qa_skip_tutorial := false
+## …and never start the league or free-play tours on their own (design 36b /
+## 36c): a pass that finishes a play on a fresh save would leave the next
+## pass's home under a tour. --qa-first-play and --qa-league-tour show them.
+var qa_skip_tours := false
 
 
 ## Has the player seen an area's unlock page? (settings.unlocksSeen)
@@ -1497,6 +1560,7 @@ func start_heat(mode_id: String, cfg: Dictionary) -> void:
 ## `league_end`). The heat screen shows MatchEndOverlay from this, then
 ## to_heat_result(); finish_heat does both for the quick-heat path.
 func settle_heat(result: Dictionary) -> Dictionary:
+	_note_first_play()
 	last_heat = result.duplicate(true)
 	last_heat["opponent"] = next_heat.get("opponent", QUICK_OPPONENT)
 	last_heat["mode"] = next_mode
@@ -2025,6 +2089,7 @@ func start_beach() -> void:
 
 
 func finish_run(run: Dictionary) -> void:
+	_note_first_play()
 	last_run_was_best = SaveService.is_best(run["score"], run.get("location", "cage"))
 	last_run_was_global_best = ResultsCopy.global_best(int(run["score"]), Net.cached_board(str(run.get("location", "cage")), "all"))
 	last_run = SaveService.put_score(run)

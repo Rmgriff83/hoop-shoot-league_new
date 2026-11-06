@@ -127,7 +127,7 @@ func _peggy_button() -> ShadowCard:
 	big.name = "Word"
 	big.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	col.add_child(big)
-	var sub := words("WIN BALLS + NETS · %d TICKETS" % PeggyPrizes.DROP_COST, 15)
+	var sub := words(peggy_sub(App.peggy_free_plays()), 15)
 	sub.name = "Sub"
 	sub.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	col.add_child(sub)
@@ -139,13 +139,24 @@ func _peggy_button() -> ShadowCard:
 	return _peggy
 
 
+## The PLAY PEGGY row's second line: the price, or the free plays in hand.
+static func peggy_sub(free: int) -> String:
+	if free > 0:
+		return "WIN BALLS + NETS · %d FREE PLAY%s" % [free, "" if free == 1 else "S"]
+	return "WIN BALLS + NETS · %d TICKETS" % PeggyPrizes.DROP_COST
+
+
 ## Rebuild the tabs and the current tab's content. Old nodes are removed at
 ## once and freed later: _fill runs from the tabs' own pressed signals, and
 ## freeing the emitter mid-signal left the page half built. `keep_scroll`
 ## puts the list back where it was (a tap on a tile restyles in place).
 func _fill(keep_scroll := false) -> void:
 	set_tickets()
-	_shine.visible = App.tickets() >= PeggyPrizes.DROP_COST
+	var free := App.peggy_free_plays()
+	_shine.visible = free > 0 or App.tickets() >= PeggyPrizes.DROP_COST
+	var sub := _peggy.find_child("Sub", true, false) as Label
+	if sub != null:   # a free play in hand says so (design 36c)
+		sub.text = peggy_sub(free)
 	var was := _scroll_box.scroll_vertical if keep_scroll and _scroll_box != null else 0
 	for c in _tabs.get_children():
 		_tabs.remove_child(c)

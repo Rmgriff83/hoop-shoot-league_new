@@ -238,7 +238,36 @@ func go_loadout() -> void:
 
 
 ## Slide the current pane out and the next one in (the design's translateX).
-func _show_tab(tab: String) -> void:
+## Switch to a tab; `instant` skips the slide (the league tour, design 36b,
+## switches the real tab under its dim so the spotlight lands on settled panes).
+func show_tab(tab: String, instant := false) -> void:
+	_show_tab(tab, instant)
+
+
+## A tab's face on screen, from the row's own rect: five equal tabs. (The
+## buttons are rebuilt on every switch and have no layout until the row
+## sorts, so their own rects can't be asked the frame a tab changes.)
+func tab_rect(tab: String) -> Rect2:
+	var i := TABS.find(tab)
+	if i < 0 or _tab_row == null:
+		return Rect2()
+	var row := _tab_row.get_global_rect()
+	var sep := 10.0 - ShadowStyle.OFFSET
+	var w := (row.size.x - sep * (TABS.size() - 1)) / TABS.size()
+	return Rect2(row.position.x + i * (w + sep), row.position.y, w - ShadowStyle.OFFSET, TAB_H)
+
+
+## The whole tab row's faces.
+func tabs_rect() -> Rect2:
+	return tab_rect(TABS[0]).merge(tab_rect(TABS[TABS.size() - 1]))
+
+
+## The area the panes show in, under the tabs.
+func panes_rect() -> Rect2:
+	return _clip.get_global_rect() if _clip != null else Rect2()
+
+
+func _show_tab(tab: String, instant := false) -> void:
 	if tab == _tab or _switching or not _panes.has(tab):
 		return
 	var dir := 1 if TABS.find(tab) > TABS.find(_tab) else -1
@@ -247,7 +276,7 @@ func _show_tab(tab: String) -> void:
 	_tab = tab
 	_build_tabs()
 	tab_changed.emit(tab)
-	if not is_inside_tree():
+	if instant or not is_inside_tree():
 		old.visible = false
 		new_.visible = true
 		return
