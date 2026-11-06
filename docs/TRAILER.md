@@ -17,6 +17,13 @@ Everything the trailer needs lives in `tools/trailer/`. Everything it makes
 `marketing/trailer/`, which is gitignored. `marketing/` carries a
 `.gdignore`, so Godot never imports or exports anything in it.
 
+## Ross's picks at Checkpoint A (2026-11-06)
+
+- **Copy:** option A on every card: EVERY FLICK COUNTS · FOUR COURTS · RUN
+  THE LEAGUE · PLAY YOUR CARDS · SOLO OR ONLINE · MAKE IT YOURS.
+- **The player:** GO BLAZERS, hometown PORTLAND.
+- **Rendering:** 2x the layout, downscaled once (not native).
+
 ## Re-rendering, start to finish
 
 ```
@@ -41,7 +48,7 @@ Every capture runs on its own save: `-- --save-dir=trailer_save --no-net`
 (`SaveService.dir_from_args`; debug builds only, and a release build
 ignores it). No real save is touched and nothing reaches the server.
 `tools/trailer/make_profile.gd` writes it and refuses the real folder:
-level 6, every court open, 2,480 tickets, 14 balls and 5 nets, the park and
+GO BLAZERS of PORTLAND (Ross's pick), level 6, every court open, 2,480 tickets, 14 balls and 5 nets, the park and
 the city on chain, a cage season at seven and two, cards in hand, PRO II.
 `profile.sh build` keeps a pristine copy and every shot starts from it
 (`profile.sh restore`), so a render is the same every time.

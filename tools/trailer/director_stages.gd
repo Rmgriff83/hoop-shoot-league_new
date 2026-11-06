@@ -205,7 +205,8 @@ func stage_board_rows(step: Dictionary) -> void:
 		return
 	var data := _fixture(str(step.get("fixture", "week_board.json")))
 	if step.get("me") is Dictionary:
-		data = board_with_me(data, int(step["me"].get("rank", 9)), int(step["me"].get("score", 30)), Net.handle())
+		var acct: Dictionary = Net.account()
+		data = board_with_me(data, int(step["me"].get("rank", 9)), int(step["me"].get("score", 30)), str(acct.get("name", "YOU")), str(acct.get("tag", "")))
 	var period := str(step.get("period", "week"))
 	var area := str(step.get("area", page.area()))
 	if page.area() != area or page.period() != period:
@@ -216,11 +217,11 @@ func stage_board_rows(step: Dictionary) -> void:
 
 ## The fixture's rows with YOU placed at `rank` with `score`: the rows below
 ## shift down a place (pure; the test pins it).
-static func board_with_me(data: Dictionary, rank: int, score: int, me_name: String) -> Dictionary:
+static func board_with_me(data: Dictionary, rank: int, score: int, me_name: String, me_tag := "") -> Dictionary:
 	var out := data.duplicate(true)
 	var rows: Array = out.get("rows", []).filter(func(r: Dictionary) -> bool: return not bool(r.get("me", false)))
 	rank = clampi(rank, 1, rows.size() + 1)
-	rows.insert(rank - 1, {"rank": rank, "name": me_name, "tag": "", "score": score, "me": true})
+	rows.insert(rank - 1, {"rank": rank, "name": me_name, "tag": me_tag, "score": score, "me": true})
 	for i in rows.size():
 		rows[i]["rank"] = i + 1
 	out["rows"] = rows
