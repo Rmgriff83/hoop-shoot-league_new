@@ -1,0 +1,51 @@
+{
+ "name": "board_climb",
+ "note": "Bars 10-11. The weekly board: YOU climbing from ninth to fourth.",
+ "themes": [
+  "solo or online"
+ ],
+ "setup": {},
+ "steps": [
+  {
+   "do": "board",
+   "fixture": "week_board.json",
+   "period": "week",
+   "me": {
+    "rank": 9,
+    "score": 33
+   }
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "wait",
+   "s": 0.9
+  },
+  {
+   "do": "board_rows",
+   "fixture": "week_board.json",
+   "period": "week",
+   "me": {
+    "rank": 4,
+    "score": 39
+   }
+  },
+  {
+   "do": "wait",
+   "s": 0.5
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "wait",
+   "s": 0.8
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

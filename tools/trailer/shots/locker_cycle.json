@@ -1,0 +1,57 @@
+{
+ "name": "locker_cycle",
+ "note": "Bar 12. The locker: balls picked on the beat.",
+ "themes": [
+  "customization"
+ ],
+ "setup": {},
+ "steps": [
+  {
+   "do": "locker",
+   "tab": "BALLS"
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "wait",
+   "s": 0.5
+  },
+  {
+   "do": "locker_tap",
+   "ball": "royal"
+  },
+  {
+   "do": "wait",
+   "s": 0.27
+  },
+  {
+   "do": "locker_tap",
+   "ball": "chrome"
+  },
+  {
+   "do": "wait",
+   "s": 0.27
+  },
+  {
+   "do": "locker_tap",
+   "ball": "galaxy"
+  },
+  {
+   "do": "wait",
+   "s": 0.3
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "wait",
+   "s": 0.5
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

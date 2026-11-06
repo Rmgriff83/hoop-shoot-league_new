@@ -1,0 +1,54 @@
+{
+ "name": "trial_run",
+ "note": "Bars 10-11. A time trial on the clock.",
+ "themes": [
+  "solo or online"
+ ],
+ "setup": {
+  "ball": "galaxy",
+  "net": "chain",
+  "trail": true
+ },
+ "steps": [
+  {
+   "do": "play",
+   "mode": "trial",
+   "area": "city"
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "flick",
+   "want": [
+    "SWISH",
+    "MAKE"
+   ],
+   "seed": 61
+  },
+  {
+   "do": "wait",
+   "s": 1.0
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "flick",
+   "want": [
+    "SWISH",
+    "MAKE"
+   ],
+   "seed": 62
+  },
+  {
+   "do": "wait",
+   "s": 1.4
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

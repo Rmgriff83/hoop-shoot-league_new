@@ -1,0 +1,55 @@
+{
+ "name": "tour_beach",
+ "note": "Bars 4-5 (half-bar cuts). The beach at dusk.",
+ "themes": [
+  "nets"
+ ],
+ "setup": {
+  "ball": "royal",
+  "net": "rasta",
+  "trail": false
+ },
+ "steps": [
+  {
+   "do": "play",
+   "mode": "trial",
+   "area": "beach"
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "flick",
+   "want": [
+    "SWISH",
+    "MAKE"
+   ],
+   "seed": 32
+  },
+  {
+   "do": "until",
+   "what": "entered",
+   "timeout": 6
+  },
+  {
+   "do": "wait",
+   "s": 0.12
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "until",
+   "what": "settled"
+  },
+  {
+   "do": "wait",
+   "s": 0.5
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

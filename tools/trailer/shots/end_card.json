@@ -1,0 +1,34 @@
+{
+ "name": "end_card",
+ "note": "The last bar. The splash's neon logo lighting up; the credit (and, on the social cut, FREE ON THE APP STORE) laid over.",
+ "themes": [],
+ "setup": {},
+ "steps": [
+  {
+   "do": "splash"
+  },
+  {
+   "do": "wait",
+   "s": 2.4
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "wait",
+   "s": 2.3
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "wait",
+   "s": 2.4
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

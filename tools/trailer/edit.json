@@ -1,0 +1,388 @@
+{
+ "bpm": 110,
+ "music": "assets/music/title_moog.ogg",
+ "music_credit": "MUSIC · MOOG_SEM 110BPM BY FONOSKOP · CC BY 4.0",
+ "copy_options": {
+  "hook": [
+   "EVERY FLICK\nCOUNTS",
+   "FLICK IT\nYOUR WAY",
+   "ALL IN\nTHE FLICK"
+  ],
+  "courts": [
+   "FOUR COURTS",
+   "FOUR COURTS\nONE BALL",
+   "CAGE BEACH\nPARK CITY"
+  ],
+  "league": [
+   "RUN THE\nLEAGUE",
+   "WIN THE\nLEAGUE",
+   "TAKE THE\nTITLE"
+  ],
+  "cards": [
+   "PLAY YOUR\nCARDS",
+   "FREEZE THEM\nOUT",
+   "CARDS CHANGE\nGAMES"
+  ],
+  "online": [
+   "SOLO OR\nONLINE",
+   "CLIMB THE\nBOARD",
+   "BEAT THE\nBOARD"
+  ],
+  "yours": [
+   "MAKE IT\nYOURS",
+   "YOUR BALL\nYOUR NET",
+   "WIN IT\nWEAR IT"
+  ]
+ },
+ "cuts": {
+  "appstore": {
+   "layout": "appstore",
+   "size": [
+    886,
+    1920
+   ],
+   "fps": 30,
+   "bars": 13,
+   "fade_bars": 1.0,
+   "lufs": -14.0,
+   "timeline": [
+    {
+     "at": "1.1",
+     "clip": "cold_open",
+     "from": "poster-0.9"
+    },
+    {
+     "at": "2.1",
+     "clip": "flick_soft",
+     "from": "in"
+    },
+    {
+     "at": "3.1",
+     "clip": "flick_hard",
+     "from": "poster-0.5"
+    },
+    {
+     "at": "3.3",
+     "clip": "flick_flat",
+     "from": "poster-0.5"
+    },
+    {
+     "at": "4.1",
+     "clip": "tour_cage",
+     "from": "poster-0.75"
+    },
+    {
+     "at": "4.3",
+     "clip": "tour_beach",
+     "from": "poster-0.75"
+    },
+    {
+     "at": "5.1",
+     "clip": "tour_park",
+     "from": "poster-0.6"
+    },
+    {
+     "at": "5.3",
+     "clip": "tour_city",
+     "from": "poster-0.75"
+    },
+    {
+     "at": "6.1",
+     "clip": "league_table",
+     "from": "in"
+    },
+    {
+     "at": "6.3",
+     "clip": "league_heat",
+     "from": "in"
+    },
+    {
+     "at": "7.3",
+     "clip": "league_title",
+     "from": "in+0.4"
+    },
+    {
+     "at": "8.1",
+     "clip": "card_pick",
+     "from": "in"
+    },
+    {
+     "at": "8.3",
+     "clip": "card_freeze",
+     "from": "in"
+    },
+    {
+     "at": "9.3",
+     "clip": "card_magnet",
+     "from": "in+0.4"
+    },
+    {
+     "at": "10.1",
+     "clip": "trial_run",
+     "from": "in"
+    },
+    {
+     "at": "10.3",
+     "clip": "board_climb",
+     "from": "in"
+    },
+    {
+     "at": "11.1",
+     "clip": "ranked_faceoff",
+     "from": "in+0.6"
+    },
+    {
+     "at": "11.3",
+     "clip": "ranked_result",
+     "from": "in+0.8"
+    },
+    {
+     "at": "12.1",
+     "clip": "locker_cycle",
+     "from": "in+0.3"
+    },
+    {
+     "at": "12.2.5",
+     "clip": "peggy_legend",
+     "from": "poster-1.2"
+    },
+    {
+     "at": "12.4",
+     "clip": "kit_pip",
+     "from": "poster-0.4"
+    },
+    {
+     "at": "13.1",
+     "clip": "end_card",
+     "from": "in"
+    }
+   ],
+   "cards": [
+    {
+     "id": "hook",
+     "text": "EVERY FLICK\nCOUNTS",
+     "at": "2.1",
+     "until": "3.1"
+    },
+    {
+     "id": "courts",
+     "text": "FOUR COURTS",
+     "at": "4.1",
+     "until": "5.1"
+    },
+    {
+     "id": "league",
+     "text": "RUN THE\nLEAGUE",
+     "at": "6.1",
+     "until": "7.1"
+    },
+    {
+     "id": "cards",
+     "text": "PLAY YOUR\nCARDS",
+     "at": "8.1",
+     "until": "9.1"
+    },
+    {
+     "id": "online",
+     "text": "SOLO OR\nONLINE",
+     "at": "10.1",
+     "until": "11.1"
+    },
+    {
+     "id": "yours",
+     "text": "MAKE IT\nYOURS",
+     "at": "12.1",
+     "until": "13.1"
+    },
+    {
+     "id": "credit",
+     "text": "",
+     "at": "13.1",
+     "until": "14.1"
+    }
+   ]
+  },
+  "social": {
+   "layout": "social",
+   "size": [
+    1080,
+    1920
+   ],
+   "fps": 60,
+   "bars": 18,
+   "fade_bars": 1.0,
+   "lufs": -14.0,
+   "timeline": [
+    {
+     "at": "1.1",
+     "file": "marketing/brand/hand_flick.mp4"
+    },
+    {
+     "at": "2.1",
+     "clip": "cold_open",
+     "from": "poster-0.9"
+    },
+    {
+     "at": "3.1",
+     "clip": "flick_soft",
+     "from": "in"
+    },
+    {
+     "at": "4.1",
+     "clip": "flick_hard",
+     "from": "poster-0.5"
+    },
+    {
+     "at": "4.3",
+     "clip": "flick_flat",
+     "from": "poster-0.5"
+    },
+    {
+     "at": "5.1",
+     "clip": "tour_cage",
+     "from": "poster-0.75"
+    },
+    {
+     "at": "5.3",
+     "clip": "tour_beach",
+     "from": "poster-0.75"
+    },
+    {
+     "at": "6.1",
+     "clip": "tour_park",
+     "from": "poster-0.9"
+    },
+    {
+     "at": "7.1",
+     "clip": "tour_city",
+     "from": "poster-0.75"
+    },
+    {
+     "at": "7.3",
+     "clip": "rim_city",
+     "from": "poster-0.6"
+    },
+    {
+     "at": "8.1",
+     "clip": "league_table",
+     "from": "in"
+    },
+    {
+     "at": "8.3",
+     "clip": "league_heat",
+     "from": "in"
+    },
+    {
+     "at": "9.3",
+     "clip": "league_title",
+     "from": "in+0.4"
+    },
+    {
+     "at": "10.3",
+     "clip": "card_pick",
+     "from": "in"
+    },
+    {
+     "at": "11.1",
+     "clip": "card_freeze",
+     "from": "in"
+    },
+    {
+     "at": "11.3",
+     "clip": "card_magnet",
+     "from": "in+0.4"
+    },
+    {
+     "at": "12.3",
+     "clip": "trial_run",
+     "from": "in"
+    },
+    {
+     "at": "13.1",
+     "clip": "board_climb",
+     "from": "in"
+    },
+    {
+     "at": "13.3",
+     "clip": "ranked_faceoff",
+     "from": "in+0.6"
+    },
+    {
+     "at": "14.1",
+     "clip": "ranked_result",
+     "from": "in+0.8"
+    },
+    {
+     "at": "15.1",
+     "clip": "locker_cycle",
+     "from": "in+0.3"
+    },
+    {
+     "at": "15.3",
+     "clip": "peggy_legend",
+     "from": "poster-2.4"
+    },
+    {
+     "at": "17.1",
+     "clip": "kit_pip",
+     "from": "poster-0.6"
+    },
+    {
+     "at": "17.3",
+     "clip": "end_card",
+     "from": "in"
+    }
+   ],
+   "cards": [
+    {
+     "id": "hook",
+     "text": "EVERY FLICK\nCOUNTS",
+     "at": "3.1",
+     "until": "4.1"
+    },
+    {
+     "id": "courts",
+     "text": "FOUR COURTS",
+     "at": "5.1",
+     "until": "6.1"
+    },
+    {
+     "id": "league",
+     "text": "RUN THE\nLEAGUE",
+     "at": "8.1",
+     "until": "9.1"
+    },
+    {
+     "id": "cards",
+     "text": "PLAY YOUR\nCARDS",
+     "at": "10.3",
+     "until": "11.3"
+    },
+    {
+     "id": "online",
+     "text": "SOLO OR\nONLINE",
+     "at": "12.3",
+     "until": "13.3"
+    },
+    {
+     "id": "yours",
+     "text": "MAKE IT\nYOURS",
+     "at": "15.1",
+     "until": "16.1"
+    },
+    {
+     "id": "free",
+     "text": "",
+     "at": "18.1",
+     "until": "19.1"
+    },
+    {
+     "id": "credit",
+     "text": "",
+     "at": "17.3",
+     "until": "19.1"
+    }
+   ]
+  }
+ }
+}

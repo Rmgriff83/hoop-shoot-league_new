@@ -1,0 +1,127 @@
+{
+ "area": "cage",
+ "period": "week",
+ "week": 2962,
+ "rows": [
+  {
+   "rank": 1,
+   "name": "PIXEL KID",
+   "tag": "07",
+   "score": 44,
+   "playedAt": 1793990000000,
+   "me": false
+  },
+  {
+   "rank": 2,
+   "name": "SWISH OTTER",
+   "tag": "42",
+   "score": 42,
+   "playedAt": 1793986400000,
+   "me": false
+  },
+  {
+   "rank": 3,
+   "name": "RIM BARON",
+   "tag": "11",
+   "score": 41,
+   "playedAt": 1793982800000,
+   "me": false
+  },
+  {
+   "rank": 4,
+   "name": "CHROME HAWK",
+   "tag": "63",
+   "score": 39,
+   "playedAt": 1793979200000,
+   "me": false
+  },
+  {
+   "rank": 5,
+   "name": "NEON FOX",
+   "tag": "29",
+   "score": 38,
+   "playedAt": 1793975600000,
+   "me": false
+  },
+  {
+   "rank": 6,
+   "name": "BANK PILOT",
+   "tag": "80",
+   "score": 37,
+   "playedAt": 1793972000000,
+   "me": false
+  },
+  {
+   "rank": 7,
+   "name": "GLASS ROVER",
+   "tag": "15",
+   "score": 36,
+   "playedAt": 1793968400000,
+   "me": false
+  },
+  {
+   "rank": 8,
+   "name": "TURBO ACE",
+   "tag": "34",
+   "score": 35,
+   "playedAt": 1793964800000,
+   "me": false
+  },
+  {
+   "rank": 9,
+   "name": "DUNK MAYOR",
+   "tag": "91",
+   "score": 34,
+   "playedAt": 1793961200000,
+   "me": false
+  },
+  {
+   "rank": 10,
+   "name": "CORNER SHARK",
+   "tag": "56",
+   "score": 33,
+   "playedAt": 1793957600000,
+   "me": false
+  },
+  {
+   "rank": 11,
+   "name": "ROOFTOP OWL",
+   "tag": "22",
+   "score": 32,
+   "playedAt": 1793954000000,
+   "me": false
+  },
+  {
+   "rank": 12,
+   "name": "LUCKY JESTER",
+   "tag": "48",
+   "score": 31,
+   "playedAt": 1793950400000,
+   "me": false
+  },
+  {
+   "rank": 13,
+   "name": "ARC WIZARD",
+   "tag": "73",
+   "score": 30,
+   "playedAt": 1793946800000,
+   "me": false
+  },
+  {
+   "rank": 14,
+   "name": "MOON BISON",
+   "tag": "05",
+   "score": 29,
+   "playedAt": 1793943200000,
+   "me": false
+  },
+  {
+   "rank": 15,
+   "name": "COPPER LYNX",
+   "tag": "66",
+   "score": 28,
+   "playedAt": 1793939600000,
+   "me": false
+  }
+ ]
+}

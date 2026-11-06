@@ -10,6 +10,9 @@ const TEAM_ID := "J3X6PY2KB4"
 
 
 func run(t) -> void:
+	# The trailer's capture writes a temporary override.cfg; one left behind
+	# would change every run and ship in a build (tools/build.sh refuses too).
+	t.ok(not FileAccess.file_exists("res://override.cfg"), "no override.cfg left in the project root")
 	var version := str(ProjectSettings.get_setting("application/config/version", ""))
 	var re := RegEx.new()
 	re.compile("^\\d+\\.\\d+\\.\\d+$")

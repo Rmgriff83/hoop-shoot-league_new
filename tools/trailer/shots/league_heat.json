@@ -1,0 +1,62 @@
+{
+ "name": "league_heat",
+ "note": "Bars 6-7. A heat against an AI shooter, the opponent's PiP live.",
+ "themes": [
+  "league"
+ ],
+ "setup": {
+  "ball": "galaxy",
+  "net": "cotton",
+  "trail": true
+ },
+ "steps": [
+  {
+   "do": "league_heat",
+   "area": "cage",
+   "hand": [
+    "ice",
+    "fire7",
+    "magnet6"
+   ]
+  },
+  {
+   "do": "wait",
+   "s": 1.5
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "flick",
+   "want": [
+    "SWISH",
+    "MAKE"
+   ],
+   "seed": 41
+  },
+  {
+   "do": "wait",
+   "s": 1.0
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "flick",
+   "want": [
+    "SWISH",
+    "MAKE"
+   ],
+   "seed": 42
+  },
+  {
+   "do": "wait",
+   "s": 1.6
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

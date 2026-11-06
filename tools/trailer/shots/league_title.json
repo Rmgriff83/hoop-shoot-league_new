@@ -1,0 +1,39 @@
+{
+ "name": "league_title",
+ "note": "Bars 6-7. The title: the match-end page, champions.",
+ "themes": [
+  "league"
+ ],
+ "setup": {},
+ "steps": [
+  {
+   "do": "league_page",
+   "area": "cage",
+   "tab": "HEAT",
+   "instant": true
+  },
+  {
+   "do": "match_end",
+   "case": "champion"
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "wait",
+   "s": 3.2
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "wait",
+   "s": 1.6
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

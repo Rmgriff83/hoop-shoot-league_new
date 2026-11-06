@@ -61,7 +61,7 @@ func _ready() -> void:
 		App.loader.instant = _has_prefixed(args, "--qa") and not args.has("--qa-loading")
 		App.loader.force_show = args.has("--qa-loading")
 		PeggyMachine.threaded = not App.loader.instant
-	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-pause-practice") or args.has("--qa-prematch-series") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live") or args.has("--qa-ads") or args.has("--qa-platform") or args.has("--qa-machines") or args.has("--qa-park-snow") or args.has("--qa-net-hang") or args.has("--qa-shield") or args.has("--qa-first-play") or args.has("--qa-league-tour")):
+	if not (args.has("--qa") or args.has("--qa-splash") or args.has("--qa-hud-side") or args.has("--qa-best") or args.has("--qa-tutorial") or args.has("--qa-unlock") or args.has("--qa-spots") or args.has("--qa-aim") or args.has("--qa-beach") or args.has("--qa-title") or args.has("--qa-results") or args.has("--qa-heat-result") or args.has("--qa-hud") or args.has("--qa-pause-practice") or args.has("--qa-prematch-series") or args.has("--qa-heat") or args.has("--qa-cards") or args.has("--qa-city") or args.has("--qa-park") or args.has("--qa-peggy") or args.has("--qa-match-end") or args.has("--qa-season") or args.has("--qa-area-snaps") or args.has("--qa-archive") or args.has("--qa-net") or args.has("--qa-chain") or args.has("--qa-jack") or args.has("--qa-ladder") or args.has("--qa-wool") or args.has("--qa-rwb") or args.has("--qa-tattered") or args.has("--qa-loading") or args.has("--qa-net-thumbs") or args.has("--qa-ranks") or args.has("--qa-multi") or args.has("--qa-credits") or args.has("--qa-music-guard") or args.has("--qa-store") or args.has("--qa-store-live") or args.has("--qa-ads") or args.has("--qa-platform") or args.has("--qa-machines") or args.has("--qa-park-snow") or args.has("--qa-net-hang") or args.has("--qa-shield") or args.has("--qa-first-play") or args.has("--qa-league-tour") or _arg_value(args, "--qa-trailer=", "") != "" or args.has("--qa-trailer-profile") or _arg_value(args, "--qa-trailer-cards=", "") != ""):
 		return
 	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 	# Achievements earned during a pass, in the log (docs/ACHIEVEMENTS.md).
@@ -118,6 +118,12 @@ func _ready() -> void:
 		_run_park.call_deferred()
 	elif args.has("--qa-peggy"):
 		_run_peggy.call_deferred()
+	elif args.has("--qa-trailer-profile"):
+		_run_trailer_profile.call_deferred()
+	elif _arg_value(args, "--qa-trailer-cards=", "") != "":
+		_run_trailer_cards.call_deferred()
+	elif _arg_value(args, "--qa-trailer=", "") != "":
+		_run_trailer.call_deferred()
 	elif args.has("--qa-first-play"):
 		_run_first_play.call_deferred()
 	elif args.has("--qa-league-tour"):
@@ -2266,8 +2272,12 @@ func _run_ranks() -> void:
 ## The league match-end page (docs/HOME.md → Results): the five moments
 ## staged from heat dicts, each snapped early (the slam / sink) and settled.
 ##   Godot --path hoop_shoot --resolution 360x640 -- --qa-match-end
-func _run_match_end() -> void:
-	await _sleep(0.6)
+## The staged league results behind the match-end page, by case id (win,
+## loss, series, advance, eliminated, final_game, runner_up, champion): the
+## heat dict MatchEndCopy.state reads. Shared with the trailer director.
+const MATCH_END_CASES := ["win", "loss", "series", "advance", "eliminated", "final_game", "runner_up", "champion"]
+
+func match_end_heat(case_id: String) -> Dictionary:
 	var base := {"year": 2, "league_name": "ARCADE LEAGUE", "record_before": [2, 1], "record_after": [3, 1],
 		"place_before": 3, "place_after": 2, "titles_before": 1, "titles_after": 1, "playoff": false, "round": "",
 		"series_id": "", "best_of": 3, "series_before": [0, 0], "series_after": [0, 0], "decided": false,
@@ -2293,12 +2303,23 @@ func _run_match_end() -> void:
 		["champion", true, 46, 40, {"playoff": true, "round": "final", "series_after": [3, 1], "decided": true, "series_won": true, "titles_after": 2}, "fire7"],
 	]
 	for c in cases:
+		if str(c[0]) != case_id:
+			continue
 		var e: Dictionary = base.duplicate(true)
 		e.merge(c[4], true)
 		var heat := {"won": c[1], "player_score": c[2], "ai_score": c[3], "ot": 0, "location": "cage", "mode": "heat",
 			"opponent": LeagueData.shooter("ferry-row") if str(e.get("round", "")) == "final" and str(c[0]) != "champion" else opp,
 			"league": {"id": "cage", "game": "po-sf-1" if bool(e["playoff"]) else "d4", "playoff": e["playoff"]},
 			"tickets": 36 if c[1] else 16, "card_drop": c[5], "league_end": e}
+		return heat
+	return {}
+
+
+func _run_match_end() -> void:
+	await _sleep(0.6)
+	for case_id in MATCH_END_CASES:
+		var c := [case_id]
+		var heat := match_end_heat(case_id)
 		var o := MatchEndOverlay.new()
 		o.name = "MatchEnd"
 		o.build(MatchEndCopy.state(heat))
@@ -2318,6 +2339,47 @@ func _run_match_end() -> void:
 
 ## The archive opens in front of the home on a cold launch: close it (or
 ## pick an area through it) before tapping the home's own buttons.
+## The trailer (docs/TRAILER.md): one shot file played through the real game
+## for Godot's Movie Maker. The director lives in tools/trailer/ and is
+## loaded by path, so nothing the game ships names one of its classes.
+##   tools/trailer/capture.sh tools/trailer/shots/<shot>.json <appstore|social>
+## The trailer's save profile, written into the redirected save folder
+## (tools/trailer/make_profile.gd refuses the real one).
+##   Godot --path hoop_shoot -- --qa-trailer-profile --save-dir=trailer_save --no-net
+func _run_trailer_profile() -> void:
+	await _sleep(0.5)
+	var script: Variant = load("res://tools/trailer/make_profile.gd")
+	var ok: bool = script != null and bool(script.call("build"))
+	get_tree().quit(0 if ok else 1)
+
+
+## The trailer's text cards, rendered by the game as PNG sequences with alpha
+## (tools/trailer/card_scene.gd; tools/trailer/cards.sh <appstore|social>).
+func _run_trailer_cards() -> void:
+	await _sleep(0.6)
+	var script: Variant = load("res://tools/trailer/card_scene.gd")
+	if script == null:
+		get_tree().quit(1)
+		return
+	var n: Node = script.new()
+	n.name = "TrailerCards"
+	add_child(n)
+	var ok: bool = await n.call("render", _arg_value(_args(), "--qa-trailer-cards=", "appstore"))
+	get_tree().quit(0 if ok else 1)
+
+
+func _run_trailer() -> void:
+	var script: Variant = load("res://tools/trailer/director.gd")
+	if script == null:
+		print("QA trailer: no director")
+		get_tree().quit(1)
+		return
+	var d: Node = script.new()
+	d.name = "TrailerDirector"
+	add_child(d)
+	d.call("start", self, _args())
+
+
 ## The free PEGGY play (design 36c): one free play in hand with the tour
 ## unseen and too few tickets to buy a play; the home shows the gift card,
 ## OPEN PEGGY slides PEGGY in, the tour walks the machine, the plates and

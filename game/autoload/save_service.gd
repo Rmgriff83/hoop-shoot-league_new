@@ -7,6 +7,11 @@ extends Node
 ## phase 2); its pending scores are drained by the Net autoload today.
 
 const SAVE_DIR := "user://save"
+## Where the parts live: SAVE_DIR, or user://<name> when a debug build is
+## started with `-- --save-dir=<name>` — the trailer's own profile
+## (docs/TRAILER.md), so no capture ever touches a real save. Read before
+## the first load; a release build ignores the argument.
+var save_dir := SAVE_DIR
 const META_PART := "meta"
 const SCORES_PART := "time_trial_scores"
 ## Device-local flick tuning scratchpad (tuning mode flag + overridden fields).
@@ -46,11 +51,23 @@ var _account: Dictionary = {}
 
 
 func _ready() -> void:
+	save_dir = dir_from_args(OS.get_cmdline_user_args(), OS.is_debug_build())
 	load_all()
 
 
+static func dir_from_args(args: PackedStringArray, debug: bool) -> String:
+	if debug:
+		for a in args:
+			var s := str(a)
+			if s.begins_with("--save-dir="):
+				var n := s.trim_prefix("--save-dir=")
+				if n != "" and n.is_valid_filename() and not n.begins_with("."):
+					return "user://" + n
+	return SAVE_DIR
+
+
 func load_all() -> void:
-	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(SAVE_DIR))
+	DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path(save_dir))
 	_meta = _read_json(META_PART)
 	if _meta.is_empty():
 		var now := _now_ms()
@@ -469,7 +486,7 @@ func clear_pending_link() -> void:
 ## goes, the in-memory parts reset, a new clientId is minted. The next
 ## Net.ensure_account mints a new identity.
 func wipe_all() -> void:
-	var dir := DirAccess.open(SAVE_DIR)
+	var dir := DirAccess.open(save_dir)
 	if dir != null:
 		for f in dir.get_files():
 			dir.remove(f)
@@ -549,7 +566,7 @@ func _now_ms() -> int:
 
 
 func _part_path(part: String) -> String:
-	return "%s/%s.json" % [SAVE_DIR, part]
+	return "%s/%s.json" % [save_dir, part]
 
 
 func _read_json(part: String) -> Dictionary:

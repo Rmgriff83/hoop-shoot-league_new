@@ -1,0 +1,47 @@
+{
+ "name": "card_pick",
+ "note": "Bars 8-9. The pre-match pick: a card dragged up to arm it.",
+ "themes": [
+  "cards"
+ ],
+ "setup": {
+  "ball": "galaxy",
+  "net": "cotton"
+ },
+ "steps": [
+  {
+   "do": "league_heat",
+   "area": "cage",
+   "hand": [
+    "",
+    "",
+    ""
+   ],
+   "spare": [
+    "ice",
+    "fire7",
+    "magnet6"
+   ],
+   "ready": false
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "wait",
+   "s": 1.0
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "wait",
+   "s": 1.0
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

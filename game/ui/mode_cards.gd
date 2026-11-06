@@ -472,7 +472,7 @@ class Sparkle extends Control:
 		mouse_filter = Control.MOUSE_FILTER_IGNORE
 		modulate.a = 0.0
 	func _process(_dt: float) -> void:
-		var v := CssEase.twinkle(Time.get_ticks_msec() / 1000.0 - delay)
+		var v := CssEase.twinkle(GameClock.msec() / 1000.0 - delay)
 		modulate.a = v.x
 		scale = Vector2.ONE * v.y
 		rotation_degrees = v.z

@@ -1,0 +1,34 @@
+{
+ "name": "league_table",
+ "note": "Bars 6-7. The standings: seven and two, in the playoff places.",
+ "themes": [
+  "league"
+ ],
+ "setup": {},
+ "steps": [
+  {
+   "do": "league_page",
+   "area": "cage",
+   "tab": "TABLE"
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "wait",
+   "s": 1.0
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "wait",
+   "s": 1.2
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

@@ -1,0 +1,47 @@
+{
+ "name": "ranked_faceoff",
+ "note": "Bars 10-11. Ranked: the reel finds an opponent, the face-off card pops.",
+ "themes": [
+  "solo or online"
+ ],
+ "setup": {},
+ "steps": [
+  {
+   "do": "lobby"
+  },
+  {
+   "do": "wait",
+   "s": 0.6
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "finding"
+  },
+  {
+   "do": "wait",
+   "s": 1.1
+  },
+  {
+   "do": "found",
+   "area": "beach"
+  },
+  {
+   "do": "wait",
+   "s": 0.9
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "wait",
+   "s": 0.8
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

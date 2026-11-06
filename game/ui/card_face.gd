@@ -65,7 +65,7 @@ static func frame_at(msec: int, p_frames: int, p_fps: float) -> int:
 
 
 func frame_now() -> int:
-	return forced if forced >= 0 else frame_at(Time.get_ticks_msec(), frames, fps)
+	return forced if forced >= 0 else frame_at(GameClock.msec(), frames, fps)
 
 
 func set_frame(i: int) -> void:

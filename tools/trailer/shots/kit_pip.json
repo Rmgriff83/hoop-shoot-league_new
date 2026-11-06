@@ -1,0 +1,54 @@
+{
+ "name": "kit_pip",
+ "note": "Bar 12. The same kit in the other player's window: others see what you wear.",
+ "themes": [
+  "customization"
+ ],
+ "setup": {
+  "ball": "classic",
+  "net": "cotton",
+  "trail": true
+ },
+ "steps": [
+  {
+   "do": "online_heat",
+   "area": "beach",
+   "seconds": 30,
+   "their_kit": {
+    "ball": "galaxy",
+    "net": "rwb"
+   }
+  },
+  {
+   "do": "wait",
+   "s": 2.5
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "flick",
+   "want": [
+    "SWISH",
+    "MAKE"
+   ],
+   "seed": 71
+  },
+  {
+   "do": "wait",
+   "s": 1.2
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "wait",
+   "s": 1.5
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

@@ -1,0 +1,35 @@
+{
+ "name": "ranked_result",
+ "note": "Bars 10-11. The ranked result: the rating change and SPOILS.",
+ "themes": [
+  "solo or online"
+ ],
+ "setup": {},
+ "steps": [
+  {
+   "do": "online_result",
+   "won": true,
+   "you": 44,
+   "them": 39
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "wait",
+   "s": 2.6
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "wait",
+   "s": 1.4
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

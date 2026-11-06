@@ -1,0 +1,51 @@
+{
+ "name": "card_freeze",
+ "note": "Bars 8-9. Deep Freeze ices the opponent's PiP.",
+ "themes": [
+  "cards"
+ ],
+ "setup": {
+  "ball": "galaxy",
+  "net": "cotton",
+  "trail": true
+ },
+ "steps": [
+  {
+   "do": "league_heat",
+   "area": "cage",
+   "hand": [
+    "ice",
+    "fire7",
+    "magnet6"
+   ]
+  },
+  {
+   "do": "wait",
+   "s": 2.0
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "card",
+   "slot": 0,
+   "id": "ice"
+  },
+  {
+   "do": "wait",
+   "s": 1.6
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "wait",
+   "s": 1.2
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

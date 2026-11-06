@@ -88,7 +88,13 @@ var _last_miss_usec := -1_000_000
 var _last_fence_usec := -1_000_000
 
 
+## Movie Maker only: the game clock the rate limits read (GameClock).
+func _process(dt: float) -> void:
+	GameClock.advance(dt)
+
+
 func _ready() -> void:
+	set_process(GameClock.movie)
 	_rng.randomize()
 	# Made here, not in _init: adding buses while the autoloads are still being
 	# built stalled the title (the --qa-title pass never drew a second frame).
@@ -798,7 +804,7 @@ func contact(kind: String, speed: float) -> void:
 			# FENCE_RATE_LIMIT_S. No clips loaded → the pad's thud.
 			if not wall_sound:
 				return
-			var now := Time.get_ticks_usec()
+			var now := GameClock.usec()
 			if now - _last_fence_usec < int(FENCE_RATE_LIMIT_S * 1_000_000.0):
 				return
 			_ensure_generic()
@@ -884,7 +890,7 @@ func rim_pitch() -> float:
 ## A rim hit: the hoop's miss clip, rate-limited so a rattle plays it once.
 ## This IS the rim's sound now, so it carries the rigidity scaling.
 func miss_on_rim() -> void:
-	var now := Time.get_ticks_usec()
+	var now := GameClock.usec()
 	if now - _last_miss_usec < int(MISS_RATE_LIMIT_S * 1_000_000.0):
 		return
 	_last_miss_usec = now

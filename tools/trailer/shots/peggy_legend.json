@@ -1,0 +1,41 @@
+{
+ "name": "peggy_legend",
+ "note": "Bar 12. PEGGY: a real drop onto a legend plate, the prize card with its rays.",
+ "themes": [
+  "customization"
+ ],
+ "setup": {},
+ "steps": [
+  {
+   "do": "peggy"
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "peggy_drop",
+   "want": "legend"
+  },
+  {
+   "do": "until",
+   "what": "peggy_card",
+   "timeout": 30
+  },
+  {
+   "do": "wait",
+   "s": 1.0
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "wait",
+   "s": 1.0
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

@@ -1,0 +1,45 @@
+{
+ "name": "flick_flat",
+ "note": "Bars 2-3. A flat flick rattles out.",
+ "themes": [
+  "shot feel"
+ ],
+ "setup": {
+  "ball": "classic",
+  "net": "cotton",
+  "trail": true
+ },
+ "steps": [
+  {
+   "do": "play",
+   "mode": "trial",
+   "area": "cage"
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "flick",
+   "want": [
+    "IN_AND_OUT",
+    "FRONT_RIM",
+    "SIDE_RIM"
+   ],
+   "seed": 23,
+   "poster_mid": true
+  },
+  {
+   "do": "until",
+   "what": "settled"
+  },
+  {
+   "do": "wait",
+   "s": 0.4
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

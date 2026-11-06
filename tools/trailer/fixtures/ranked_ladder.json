@@ -1,0 +1,193 @@
+{
+ "rows": [
+  {
+   "position": 1,
+   "playerId": "t0",
+   "name": "PIXEL KID",
+   "tag": "07",
+   "tier": "legend",
+   "division": 1,
+   "games": 60,
+   "wins": 46,
+   "losses": 14,
+   "me": false
+  },
+  {
+   "position": 2,
+   "playerId": "t1",
+   "name": "NEON FOX",
+   "tag": "29",
+   "tier": "legend",
+   "division": 2,
+   "games": 58,
+   "wins": 44,
+   "losses": 14,
+   "me": false
+  },
+  {
+   "position": 3,
+   "playerId": "t2",
+   "name": "DUNK MAYOR",
+   "tag": "91",
+   "tier": "mvp",
+   "division": 1,
+   "games": 56,
+   "wins": 42,
+   "losses": 14,
+   "me": false
+  },
+  {
+   "position": 4,
+   "playerId": "t3",
+   "name": "ARC WIZARD",
+   "tag": "73",
+   "tier": "mvp",
+   "division": 1,
+   "games": 54,
+   "wins": 40,
+   "losses": 14,
+   "me": false
+  },
+  {
+   "position": 5,
+   "playerId": "t4",
+   "name": "SWISH OTTER",
+   "tag": "42",
+   "tier": "mvp",
+   "division": 2,
+   "games": 52,
+   "wins": 38,
+   "losses": 14,
+   "me": false
+  },
+  {
+   "position": 6,
+   "playerId": "t5",
+   "name": "BANK PILOT",
+   "tag": "80",
+   "tier": "mvp",
+   "division": 3,
+   "games": 50,
+   "wins": 36,
+   "losses": 14,
+   "me": false
+  },
+  {
+   "position": 7,
+   "playerId": "t6",
+   "name": "CORNER SHARK",
+   "tag": "56",
+   "tier": "allstar",
+   "division": 1,
+   "games": 48,
+   "wins": 34,
+   "losses": 14,
+   "me": false
+  },
+  {
+   "position": 8,
+   "playerId": "t7",
+   "name": "MOON BISON",
+   "tag": "05",
+   "tier": "allstar",
+   "division": 1,
+   "games": 46,
+   "wins": 32,
+   "losses": 14,
+   "me": false
+  },
+  {
+   "position": 9,
+   "playerId": "t8",
+   "name": "RIM BARON",
+   "tag": "11",
+   "tier": "allstar",
+   "division": 2,
+   "games": 44,
+   "wins": 30,
+   "losses": 14,
+   "me": false
+  },
+  {
+   "position": 10,
+   "playerId": "t9",
+   "name": "GLASS ROVER",
+   "tag": "15",
+   "tier": "allstar",
+   "division": 2,
+   "games": 42,
+   "wins": 28,
+   "losses": 14,
+   "me": false
+  },
+  {
+   "position": 11,
+   "playerId": "t10",
+   "name": "ROOFTOP OWL",
+   "tag": "22",
+   "tier": "allstar",
+   "division": 3,
+   "games": 40,
+   "wins": 26,
+   "losses": 14,
+   "me": false
+  },
+  {
+   "position": 12,
+   "playerId": "t11",
+   "name": "COPPER LYNX",
+   "tag": "66",
+   "tier": "pro",
+   "division": 1,
+   "games": 38,
+   "wins": 24,
+   "losses": 14,
+   "me": false
+  },
+  {
+   "position": 13,
+   "playerId": "t12",
+   "name": "CHROME HAWK",
+   "tag": "63",
+   "tier": "pro",
+   "division": 1,
+   "games": 36,
+   "wins": 22,
+   "losses": 14,
+   "me": false
+  },
+  {
+   "position": 14,
+   "playerId": "t13",
+   "name": "TURBO ACE",
+   "tag": "34",
+   "tier": "pro",
+   "division": 1,
+   "games": 34,
+   "wins": 20,
+   "losses": 14,
+   "me": false
+  },
+  {
+   "position": 15,
+   "playerId": "t14",
+   "name": "LUCKY JESTER",
+   "tag": "48",
+   "tier": "pro",
+   "division": 2,
+   "games": 32,
+   "wins": 18,
+   "losses": 14,
+   "me": false
+  }
+ ],
+ "me": {
+  "tier": "pro",
+  "division": 2,
+  "games": 48,
+  "position": 212,
+  "wins": 31,
+  "losses": 17,
+  "cons": 1284.0
+ }
+}

@@ -51,6 +51,13 @@ VERSION="$(sed -n 's/^config\/version="\(.*\)"/\1/p' project.godot)"
 BUILD="$(git rev-list --count HEAD)"
 [[ -n "$VERSION" ]] || { echo "project.godot has no application/config/version"; exit 1; }
 
+# The trailer's capture writes a temporary override.cfg (an oversize borderless
+# window, docs/TRAILER.md) and removes it; one left behind would ship.
+if [[ -f override.cfg ]]; then
+  echo "override.cfg is in the project root (left by a trailer capture?); remove it before building"
+  exit 1
+fi
+
 if [[ "$MODE" == "release" ]]; then
   DIRTY="$(git status --porcelain --untracked-files=no -- . ':!export_presets.cfg')"
   if [[ -n "$DIRTY" ]]; then

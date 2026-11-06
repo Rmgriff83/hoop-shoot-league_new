@@ -1,0 +1,44 @@
+{
+ "name": "flick_soft",
+ "note": "Bars 2-3. A soft flick drops in. The touch trail shows the swipe.",
+ "themes": [
+  "shot feel"
+ ],
+ "setup": {
+  "ball": "classic",
+  "net": "cotton",
+  "trail": true
+ },
+ "steps": [
+  {
+   "do": "play",
+   "mode": "trial",
+   "area": "cage"
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "flick",
+   "want": [
+    "SWISH",
+    "MAKE"
+   ],
+   "seed": 21,
+   "poster_mid": true
+  },
+  {
+   "do": "until",
+   "what": "settled"
+  },
+  {
+   "do": "wait",
+   "s": 0.4
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

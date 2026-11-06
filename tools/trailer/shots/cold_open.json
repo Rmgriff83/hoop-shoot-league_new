@@ -1,0 +1,54 @@
+{
+ "name": "cold_open",
+ "note": "Bar 1. One swish in the cage, the net snap the payoff. Sound only.",
+ "themes": [
+  "nets"
+ ],
+ "setup": {
+  "ball": "classic",
+  "net": "cotton",
+  "trail": false
+ },
+ "steps": [
+  {
+   "do": "play",
+   "mode": "trial",
+   "area": "cage"
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "flick",
+   "want": [
+    "SWISH"
+   ],
+   "seed": 11
+  },
+  {
+   "do": "until",
+   "what": "entered",
+   "timeout": 6
+  },
+  {
+   "do": "wait",
+   "s": 0.12
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "until",
+   "what": "settled"
+  },
+  {
+   "do": "wait",
+   "s": 0.5
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

@@ -32,3 +32,5 @@ store_keys.json
 
 # The trailer: raw frames, clips, drafts, finals and pulled flick recordings (docs/TRAILER.md).
 marketing/trailer/
+# A trailer capture's temporary project-settings override (tools/trailer/capture.sh removes it).
+override.cfg

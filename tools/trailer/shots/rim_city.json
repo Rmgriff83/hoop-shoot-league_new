@@ -1,0 +1,84 @@
+{
+ "name": "rim_city",
+ "note": "Social only. The city's chain from low beside the rim; the social cut's slow-motion moment.",
+ "themes": [
+  "nets"
+ ],
+ "setup": {
+  "ball": "chrome",
+  "net": "chain"
+ },
+ "steps": [
+  {
+   "do": "play",
+   "mode": "trial",
+   "area": "city"
+  },
+  {
+   "do": "hud",
+   "on": false
+  },
+  {
+   "do": "camera",
+   "at": [
+    -0.62,
+    0.16,
+    0.3
+   ],
+   "look": [
+    0,
+    -0.18,
+    0
+   ],
+   "fov": 38
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "flick",
+   "want": [
+    "SWISH",
+    "MAKE"
+   ],
+   "seed": 81
+  },
+  {
+   "do": "until",
+   "what": "entered",
+   "timeout": 6
+  },
+  {
+   "do": "time_scale",
+   "x": 0.2
+  },
+  {
+   "do": "wait",
+   "s": 0.06
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "wait",
+   "s": 0.3
+  },
+  {
+   "do": "time_scale",
+   "x": 1.0
+  },
+  {
+   "do": "until",
+   "what": "settled"
+  },
+  {
+   "do": "wait",
+   "s": 0.5
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

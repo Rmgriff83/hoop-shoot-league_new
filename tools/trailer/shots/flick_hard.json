@@ -1,0 +1,44 @@
+{
+ "name": "flick_hard",
+ "note": "Bars 2-3. A hard flick clangs off the back iron.",
+ "themes": [
+  "shot feel"
+ ],
+ "setup": {
+  "ball": "classic",
+  "net": "cotton",
+  "trail": true
+ },
+ "steps": [
+  {
+   "do": "play",
+   "mode": "trial",
+   "area": "cage"
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "flick",
+   "want": [
+    "BACK_RIM",
+    "BOARD_MISS"
+   ],
+   "seed": 22,
+   "poster_mid": true
+  },
+  {
+   "do": "until",
+   "what": "settled"
+  },
+  {
+   "do": "wait",
+   "s": 0.4
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

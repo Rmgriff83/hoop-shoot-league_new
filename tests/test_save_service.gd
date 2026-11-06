@@ -19,7 +19,41 @@ func _wipe() -> void:
 			DirAccess.remove_absolute(dir + "/" + f)
 
 
+## `-- --save-dir=<name>` (debug builds): the trailer's own profile.
+func _save_dir(t) -> void:
+	t.eq(SaveServiceScript.dir_from_args(PackedStringArray(["--no-net", "--save-dir=trailer_save"]), true), "user://trailer_save", "--save-dir=<name> moves the save to user://<name>")
+	t.eq(SaveServiceScript.dir_from_args(PackedStringArray(["--save-dir=trailer_save"]), false), "user://save", "…never in a release build")
+	t.eq(SaveServiceScript.dir_from_args(PackedStringArray(["--qa-title"]), true), "user://save", "no argument: the usual place")
+	for bad in ["--save-dir=", "--save-dir=../x", "--save-dir=a/b", "--save-dir=.hidden"]:
+		t.eq(SaveServiceScript.dir_from_args(PackedStringArray([bad]), true), "user://save", "a bad name is ignored (%s)" % bad)
+	var scratch := "user://test_save_dir"
+	var abs_dir := ProjectSettings.globalize_path(scratch)
+	var svc: Node = SaveServiceScript.new()
+	svc.save_dir = scratch
+	svc.load_all()
+	var st: Dictionary = svc.get_settings()
+	st["hometown"] = "SCRATCH TOWN"
+	svc.put_settings(st)
+	t.ok(FileAccess.file_exists(scratch + "/settings.json"), "a redirected service writes its parts in its own folder")
+	t.ok(not FileAccess.file_exists("user://save/settings.json") or not FileAccess.get_file_as_string("user://save/settings.json").contains("SCRATCH TOWN"), "…and the usual save is untouched")
+	svc.wipe_all()
+	t.ok(not FileAccess.file_exists(scratch + "/settings.json"), "…a wipe clears that folder")
+	svc.free()
+	if DirAccess.dir_exists_absolute(abs_dir):
+		for f in DirAccess.get_files_at(abs_dir):
+			DirAccess.remove_absolute(abs_dir + "/" + f)
+		DirAccess.remove_absolute(abs_dir)
+	# The movie clock: real time in play, game time under Movie Maker.
+	t.ok(not GameClock.movie and absi(GameClock.usec() - Time.get_ticks_usec()) < 50_000, "in play the game clock is real time")
+	GameClock.movie = true
+	var c0 := GameClock.usec()
+	GameClock.advance(0.5)
+	t.eq([GameClock.usec() - c0, GameClock.msec() - c0 / 1000], [500_000, 500], "under Movie Maker it counts game time")
+	GameClock.movie = false
+
+
 func run(t) -> void:
+	_save_dir(t)
 	_wipe()
 	var svc := _fresh()
 

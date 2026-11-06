@@ -1,0 +1,67 @@
+{
+ "name": "tour_park",
+ "note": "Bars 4-5 (half-bar cuts). The park: the chain rattling in the snow. THE slow-motion moment.",
+ "themes": [
+  "nets"
+ ],
+ "setup": {
+  "ball": "galaxy",
+  "net": "chain",
+  "trail": false
+ },
+ "steps": [
+  {
+   "do": "play",
+   "mode": "trial",
+   "area": "park"
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "flick",
+   "want": [
+    "SWISH",
+    "MAKE"
+   ],
+   "seed": 33
+  },
+  {
+   "do": "until",
+   "what": "entered",
+   "timeout": 6
+  },
+  {
+   "do": "time_scale",
+   "x": 0.2
+  },
+  {
+   "do": "wait",
+   "s": 0.06
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "wait",
+   "s": 0.3
+  },
+  {
+   "do": "time_scale",
+   "x": 1.0
+  },
+  {
+   "do": "until",
+   "what": "settled"
+  },
+  {
+   "do": "wait",
+   "s": 0.5
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}
