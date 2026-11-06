@@ -12,6 +12,13 @@ func run(t) -> void:
 	var root := page.build(fx)
 	t.eq((root.find_child("Title", true, false) as Label).text, "REWARDS", "the title")
 	t.ok(root.find_child("Back", true, false) is ShadowCard, "< back in the head")
+	# ACHIEVEMENTS (only where the platform has a sheet): the word with room either side.
+	var ach := RewardsPage.achievements_button()
+	var ach_word := UiFont.display().get_string_size("ACHIEVEMENTS", HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(16)).x
+	t.eq(ach.text, "ACHIEVEMENTS", "the ACHIEVEMENTS button's word")
+	t.eq(ach.custom_minimum_size.x, ach_word + 2.0 * RewardsPage.ACH_PAD + ShadowStyle.OFFSET, "…with %d px either side of it inside the face (Ross, 2026-11-06)" % int(RewardsPage.ACH_PAD))
+	t.ok(RewardsPage.ACH_PAD >= 16.0 and 76.0 + 20.0 + ach.custom_minimum_size.x < 642.0 - 200.0, "…and the head still has room for REWARDS")
+	ach.free()
 	t.ok(root.find_child("Close", true, false) == null and root.find_child("MeterBar", true, false) == null, "no CLOSE and no drop meter (37a)")
 	# LOGIN DAYS: day 3, the next card at 7.
 	t.eq(page.login_text(), "DAY 3 · 4 MORE TO A CARD", "DAY n and how far the card is")

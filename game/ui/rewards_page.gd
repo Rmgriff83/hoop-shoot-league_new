@@ -112,10 +112,22 @@ func _build_head() -> void:
 	h.add_child(t)
 	# ACHIEVEMENTS (Ross, 2026-11-02): Apple's sheet, where there is one.
 	if Achievements.can_show():
-		var ach := button(MatchCopy.achievements_word(), GOLD, 16, 56.0 - ShadowStyle.OFFSET)
-		ach.name = "AchievementsButton"
+		var ach := achievements_button()
 		ach.pressed.connect(func() -> void: Achievements.show_sheet())
 		h.add_child(ach)
+
+
+## ACHIEVEMENTS with room either side of the word (Ross, 2026-11-06: a bare
+## button is as wide as its word, shadow included, so the word ran edge to
+## edge of the face).
+const ACH_PAD := 20.0
+
+static func achievements_button() -> ShadowCard:
+	var ach := button(MatchCopy.achievements_word(), GOLD, 16, 56.0 - ShadowStyle.OFFSET)
+	ach.name = "AchievementsButton"
+	var word := UiFont.display().get_string_size(MatchCopy.achievements_word(), HORIZONTAL_ALIGNMENT_LEFT, -1, UiFont.snap(16)).x
+	ach.custom_minimum_size.x = ACH_PAD + word + ACH_PAD + ShadowStyle.OFFSET
+	return ach
 
 
 ## A section head: the words, a rule to the note, the note in grey.
