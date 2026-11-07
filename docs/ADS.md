@@ -105,5 +105,8 @@ User ID") and a `TRANSFER` webhook moves the Worker's row.
    RESTORE PURCHASES → OWNED and a `TRANSFER` 200 in the delivery log;
    consent + tracking prompts once; an interstitial before results after the
    grace. For the first round, Google's test unit ids go in `data/ads.json`.
+   The real interstitial unit replaced the test unit on 2026-11-07 for the
+   App Store release. Add your own phones as test devices in AdMob
+   (Settings → Test devices) so their impressions never count.
 7. Later: the Play Console → the Android AdMob app, `goog_` key, the Play
    non-consumable.

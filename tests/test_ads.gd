@@ -60,7 +60,7 @@ func _facade(t, ads, store, save) -> void:
 	t.eq(ads.policy("min_gap_s"), 120, "…120 s between ads")
 	t.eq(ads.policy("upsell_every"), 5, "…the nudge every 5")
 	t.eq(str(ads.platform_cfg("iOS").get("app_id", "")), "ca-app-pub-3569871537594448~6449564013", "data/ads.json: the iOS AdMob app id")
-	t.ok(str(ads.platform_cfg("iOS").get("interstitial", "")).begins_with("ca-app-pub-3940256099942544/"), "…with Google's test interstitial unit for the TestFlight round")
+	t.eq(str(ads.platform_cfg("iOS").get("interstitial", "")), "ca-app-pub-3569871537594448/6439001907", "…and the real interstitial unit (the App Store release, 2026-11-07), never Google's test unit")
 	var real_cfg: Dictionary = ads.cfg
 	ads.cfg = {"ios": {"app_id": "ca-app-pub-REPLACE_ME~REPLACE_ME", "interstitial": "ca-app-pub-REPLACE_ME/REPLACE_ME"}, "policy": real_cfg.get("policy", {})}
 	t.eq(ads.platform_cfg("iOS"), {}, "placeholder ids are no ids")

@@ -1,6 +1,6 @@
 {
-  "_": "Ads (docs/ADS.md, 2026-11-01): AdMob app and interstitial unit ids per store (public, they ship in the app's plist / manifest anyway) and the policy numbers. A placeholder id (REPLACE_ME) means no ads: the Ads facade runs its null backend. iOS since 2026-11-01: the real app id with Google's test interstitial unit (ca-app-pub-3940256099942544/4411468910) for the TestFlight round; the real unit goes in for the App Store release once the AdMob review clears.",
-  "ios": {"app_id": "ca-app-pub-3569871537594448~6449564013", "interstitial": "ca-app-pub-3940256099942544/4411468910"},
+  "_": "Ads (docs/ADS.md, 2026-11-01): AdMob app and interstitial unit ids per store (public, they ship in the app's plist / manifest anyway) and the policy numbers. A placeholder id (REPLACE_ME) means no ads: the Ads facade runs its null backend. iOS: the real app id; Google's test interstitial unit for the TestFlight round (2026-11-01), the real interstitial unit since 2026-11-07 for the App Store release.",
+  "ios": {"app_id": "ca-app-pub-3569871537594448~6449564013", "interstitial": "ca-app-pub-3569871537594448/6439001907"},
   "android": {"app_id": "ca-app-pub-REPLACE_ME~REPLACE_ME", "interstitial": "ca-app-pub-REPLACE_ME/REPLACE_ME"},
   "policy": {"grace_matches": 6, "min_gap_s": 120, "upsell_every": 5}
 }
