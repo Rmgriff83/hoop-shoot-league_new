@@ -141,8 +141,10 @@ screenshots are needed. Apple scales the 6.9" set down for smaller phones.
 
 If App Store Connect calls a set an invalid size, the slot wants another
 size: `python3 -I tools/trailer/store_shots.py --size=1320x2868` (6.9"),
-`--size=1284x2778` or `--size=1242x2688` (6.5"), each written to
-`marketing/trailer/store/<W>x<H>/` (all three made 2026-11-07).
+`--size=1284x2778` or `--size=1242x2688` (6.5"), `--size=1206x2622` or
+`--size=1179x2556` (6.1" / 6.3"), each written to
+`marketing/trailer/store/<W>x<H>/` (all made 2026-11-07). The 6.1" / 6.3"
+slot takes the 886 x 1920 app preview too.
 
 ### Game Center
 
