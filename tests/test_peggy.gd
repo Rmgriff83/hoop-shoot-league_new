@@ -86,6 +86,16 @@ func _board(t) -> void:
 	var ro := PeggyBoard.rarity_odds_from(p, PeggyPrizes.layout(3))
 	t.close(float(ro["common"]) + float(ro["rare"]) + float(ro["epic"]), 1.0, 1e-9, "rarity odds partition the slots")
 	t.ok(float(ro["epic"]) < float(ro["rare"]) and float(ro["rare"]) < float(ro["common"]), "rarer is rarer at level 3")
+	# The odds the page shows (3.1.1): the board's own, from the centre.
+	var shown: Array = PeggyBoard.CENTRE_ODDS
+	var shown_sum := 0.0
+	for s in PeggyBoard.SLOTS:
+		shown_sum += float(shown[s])
+		t.close(float(shown[s]), float(shown[PeggyBoard.SLOTS - 1 - s]), 1e-9, "shown odds are mirrored (slot %d)" % s)
+		t.close(float(shown[s]), p[s], 0.06, "shown odds match the board from the centre (slot %d: %.3f vs %.3f)" % [s, float(shown[s]), p[s]])
+	t.close(shown_sum, 1.0, 1e-9, "shown odds sum to one")
+	var line := PeggyPage.odds_line([{"rarity": "legend"}, {"rarity": "epic"}, {"rarity": "rare"}, {"rarity": "common"}, {"rarity": "rare"}, {"rarity": "epic"}, {"rarity": "legend"}])
+	t.eq(line, "ODDS FROM THE CENTRE\nLEGEND 13% · EPIC 19% · RARE 43% · COMMON 25%", "the odds line for a level 5 layout")
 
 
 static func _roster() -> Array:

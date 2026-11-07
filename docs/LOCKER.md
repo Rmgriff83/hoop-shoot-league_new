@@ -193,6 +193,12 @@ parking the crane at the bumper makes that edge ~26 % — a skill lever, not
 a free epic. Ledger bands: centre 18-40 %, an edge from the centre ≤ 10 %,
 the near edge from the stop 15-40 %.
 
+**The odds on the page (2026-11-06, App Store Review 3.1.1).** Under PLAY,
+while it shows: `ODDS FROM THE CENTRE` over each rarity's chance for the
+plates on the board now (`PeggyPage.odds_line`). They come from
+`PeggyBoard.CENTRE_ODDS`, the centre row above mirrored; `test_peggy` pins
+it to `odds(0.0)`. Re-measure and update it if the board changes.
+
 By level, a drop from the centre / the crane's stop pays:
 lvl 1 rare 13 / 27 %; lvl 3 epic 13 / 27 %, rare 19 / 28 %; lvl 5 legend
 13 / 27 %, epic 19 / 28 %, rare 43 / 30 %.

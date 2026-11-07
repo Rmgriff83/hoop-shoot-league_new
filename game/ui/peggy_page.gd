@@ -26,6 +26,7 @@ const SMALL_PLAY_W := 230.0
 const GOLD := Color("#F0B84A")
 ## The 1 FREE tab overhangs PLAY's top-right corner (design 36c: right -5, top -10).
 const FREE_TAB_OUT := Vector2(5.0, 10.0)
+const ODDS_W := 460.0   # the odds line wraps inside the board
 
 var _machine: PeggyMachine
 var _play: ShadowCard
@@ -33,6 +34,7 @@ var _play_need: Label
 var _play_free: Label
 var _free_tab: PanelContainer
 var _play_shine: Control
+var _odds: Label   # the plates' odds from the centre, under PLAY (App Store Review 3.1.1)
 var _card: Control
 var _rays: PrizeRays
 var _play_back: Tween
@@ -121,6 +123,10 @@ func _build() -> void:
 	col.add_child(_play_need)
 	_play.pressed.connect(_on_play)
 	root.add_child(_play)
+	_odds = words("", 14)
+	_odds.name = "Odds"
+	_odds.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	root.add_child(_odds)
 	_free_tab = PanelContainer.new()
 	_free_tab.name = "FreeTab"
 	_free_tab.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -185,9 +191,26 @@ func _layout_play() -> void:
 	_play_shine.size = Vector2(w, hgt)
 	_play_shine.visible = not short
 	_play.position = Vector2(roundf((FRAME_SIZE.x - w) * 0.5), frame_height() * PLAY_Y)
+	if _odds != null:
+		_odds.position = Vector2(roundf((FRAME_SIZE.x - ODDS_W) * 0.5), _play.position.y + hgt + ShadowStyle.OFFSET + 14.0)
+		_odds.size = Vector2(ODDS_W, 0.0)
+		_odds.visible = _play.visible
 	if _free_tab != null:
 		_free_tab.reset_size()
 		_free_tab.position = _play.position + Vector2(w + FREE_TAB_OUT.x - _free_tab.size.x, -FREE_TAB_OUT.y)
+
+
+## "ODDS FROM THE CENTRE" over "RARE 27% · COMMON 73%" for these plates.
+static func odds_line(plates: Array) -> String:
+	var layout := []
+	for p in plates:
+		layout.append(str((p as Dictionary).get("rarity", "common")))
+	var by := PeggyBoard.rarity_odds_from(PackedFloat64Array(PeggyBoard.CENTRE_ODDS), layout)
+	var parts := PackedStringArray()
+	for r in ["legend", "epic", "rare", "common"]:
+		if by.has(r):
+			parts.append("%s %d%%" % [r.to_upper(), roundi(100.0 * float(by[r]))])
+	return "ODDS FROM THE CENTRE\n" + " · ".join(parts)
 
 
 func set_view_active(on: bool) -> void:
@@ -198,7 +221,10 @@ func set_view_active(on: bool) -> void:
 func _refresh_machine() -> void:
 	if _machine == null:
 		return
-	_machine.set_slots(App.peggy_slots())
+	var plates := App.peggy_slots()
+	_machine.set_slots(plates)
+	if _odds != null:
+		_odds.text = odds_line(plates)
 	_machine.refresh_state()
 	set_tickets()
 	_refresh_play()

@@ -169,22 +169,18 @@ Ads: interstitials appear between games after a new player's first 6 results, ne
 
 Account deletion: Settings > PLAYER > DELETE ACCOUNT (tap twice) deletes the online account and its data.
 
-PEGGY (Locker > PLAY PEGGY) is a prize-drop machine for cosmetic balls and nets: the player aims the drop, every prize plate's rarity is shown before the drop, and plates only hold items the player does not own yet. No real money or tickets can be won.
+PEGGY (Locker > PLAY PEGGY) is a prize-drop machine for cosmetic balls and nets: the player aims the drop, every prize plate's rarity is shown, the odds of each rarity are shown under PLAY before the player spends anything, and plates only hold items the player does not own yet. Nothing of real-world value can be won.
 ```
 
 ### Version Release
 
 **Manually release this version.** You choose launch day after approval.
 
-## PEGGY odds (read before submitting)
+## PEGGY odds (done 2026-11-06)
 
-Guideline 3.1.1: "Apps offering 'loot boxes' or other mechanisms that
-provide randomized virtual items for purchase must disclose the odds of
-receiving each type of item to customers prior to purchase."
-
-A PEGGY play costs 300 tickets, tickets can be bought with money, and the
-drop path has seeded jitter, so the prize is random. The rarity dots are
-shown, but the odds are not. A reviewer could flag this. The safe fix is
-small: an ODDS line or panel on the PEGGY page giving each rarity's
-chance, from `PeggyMachine.odds(aim, n)` and the measured table in
-docs/LOCKER.md. It needs a new build before submission.
+Guideline 3.1.1 asks that random items sold for money show their odds
+before purchase. A PEGGY play costs 300 tickets, and tickets can be bought,
+so the PEGGY page shows a line under PLAY, e.g. `ODDS FROM THE CENTRE` /
+`RARE 13% · COMMON 87%`. It is worked out from the plates currently on the
+board and `PeggyBoard.CENTRE_ODDS` (the board's measured odds from the
+centre). The line is in the build after Build 498.

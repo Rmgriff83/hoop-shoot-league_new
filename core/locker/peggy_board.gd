@@ -43,6 +43,11 @@ const STUCK_STEPS := 60                  # steps (a quarter second) slower than 
 const KICK_V := 0.4
 const KICK_VX := 3.0
 const KICK_VY := 1.5
+## Slot odds for a drop from the centre (tools/peggy_ledger.gd, 1500 drops,
+## mirrored: the board is symmetric). The PEGGY page shows them per rarity
+## before a play (App Store Review 3.1.1: random items for purchase disclose
+## their odds); test_peggy pins them to odds(0.0).
+const CENTRE_ODDS := [0.067, 0.096, 0.2135, 0.247, 0.2135, 0.096, 0.067]
 
 static var _pegs_cache: Array = []
 
