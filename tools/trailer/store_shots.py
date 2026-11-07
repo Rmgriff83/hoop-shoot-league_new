@@ -58,7 +58,7 @@ def picture(frames):
 
 
 def render(name, card, frames, card_y, captioned):
-    out = os.path.join(DST, "captioned" if captioned else "clean", name + ".png")
+    out = os.path.join(_dst(), "captioned" if captioned else "clean", name + ".png")
     os.makedirs(os.path.dirname(out), exist_ok=True)
     cmd = [bc.FFMPEG, "-y", "-loglevel", "error"] + frame_inputs(frames)
     fc = picture(frames)
@@ -69,7 +69,8 @@ def render(name, card, frames, card_y, captioned):
         last = "pic2"
     else:
         last = "pic"
-    fc += "[%s]scale=%d:%d:flags=area,format=rgb24" % (last, OUT_W, OUT_H)
+    # Other slots' sizes differ in shape by < 0.3 %: fill, then trim the few px over.
+    fc += "[%s]scale=%d:%d:force_original_aspect_ratio=increase:flags=area,crop=%d:%d,format=rgb24" % (last, OUT_W, OUT_H, OUT_W, OUT_H)
     subprocess.run(cmd + ["-filter_complex", fc, "-frames:v", "1", out], check=True)
     return out
 
@@ -85,15 +86,25 @@ def sheet(paths, dst):
     subprocess.run(cmd + ["-filter_complex", fc, "-frames:v", "1", dst], check=True)
 
 
+def _dst():
+    """store/ for the 6.9" default; store/<W>x<H>/ for any other size."""
+    return DST if (OUT_W, OUT_H) == (1290, 2796) else os.path.join(DST, "%dx%d" % (OUT_W, OUT_H))
+
+
 def main():
+    """`--size=1320x2868` (6.9"), `--size=1284x2778` or `--size=1242x2688` (6.5") for the other slots."""
+    global OUT_W, OUT_H
+    for a in sys.argv[1:]:
+        if a.startswith("--size="):
+            OUT_W, OUT_H = (int(v) for v in a[len("--size="):].split("x"))
     missing = [c for _, _, fr, _ in SHOTS for c, _ in fr if not os.path.exists(os.path.join(CLIPS, c + ".mov"))]
     if missing:
         print("missing clips (run tools/trailer/capture_all.sh appstore): %s" % ", ".join(sorted(set(missing))))
         return 1
     for captioned in (False, True):
         made = [render(name, card, frames, y, captioned) for name, card, frames, y in SHOTS]
-        sheet(made, os.path.join(DST, "sheet_%s.png" % ("captioned" if captioned else "clean")))
-    print("wrote %d screenshots x 2 sets to %s (1290 x 2796)" % (len(SHOTS), DST))
+        sheet(made, os.path.join(_dst(), "sheet_%s.png" % ("captioned" if captioned else "clean")))
+    print("wrote %d screenshots x 2 sets to %s (%d x %d)" % (len(SHOTS), _dst(), OUT_W, OUT_H))
     return 0
 
 

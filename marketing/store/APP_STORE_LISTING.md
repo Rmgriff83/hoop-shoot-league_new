@@ -139,6 +139,11 @@ order; the first three show in search results.
 The app is iPhone only (`targeted_device_family=0`), so no iPad
 screenshots are needed. Apple scales the 6.9" set down for smaller phones.
 
+If App Store Connect calls a set an invalid size, the slot wants another
+size: `python3 -I tools/trailer/store_shots.py --size=1320x2868` (6.9"),
+`--size=1284x2778` or `--size=1242x2688` (6.5"), each written to
+`marketing/trailer/store/<W>x<H>/` (all three made 2026-11-07).
+
 ### Game Center
 
 Attach the 40 achievements (`hs.ach.*`) in the version's Game Center
