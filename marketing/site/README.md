@@ -3,6 +3,12 @@
 Static pages for the App Store listing's URLs (drafted 2026-11-06). There is
 no build step: upload `hoop-shoot/` to the site root as it is.
 
+**Live since 2026-11-07:** copied into the portfolio repo
+(`~/Documents/projects/portfolio_new`, `public/hoop-shoot/` and
+`public/app-ads.txt`; Vite copies `public/` to the root, Cloudflare Pages
+deploys on push) with `CONTACT_EMAIL` filled in. Edit the copy there; this
+folder keeps the placeholder.
+
 | URL | File | Used as |
 |---|---|---|
 | `https://rossgriffus.com/hoop-shoot/` | `hoop-shoot/index.html` (+ `img/`) | Marketing URL |
