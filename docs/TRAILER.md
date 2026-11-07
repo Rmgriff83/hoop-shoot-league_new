@@ -165,6 +165,18 @@ mixes the music (at full length, looped at the bar-16 seam for the social
 cut) over the shots' SFX (lower while a card is up), and normalises to
 about -14 LUFS. `--validate` checks the data; `--barmap` prints it.
 
+## Store screenshots
+
+`python3 -I tools/trailer/store_shots.py` takes one frame from the App
+Store clips per screenshot, downscales it once to 1290 × 2796 (the 6.9"
+slot, the layout's own shape), and writes `marketing/trailer/store/clean/`
+and `captioned/` (each screenshot under its trailer card, moved off the
+content), plus a sheet of each. Run it after `capture_all.sh appstore` and
+`cards.sh appstore`. The frames and caption positions are the `SHOTS`
+table at the top of the script. The listing text is in
+`marketing/store/APP_STORE_LISTING.md`, and the website pages are in
+`marketing/site/`.
+
 ## Checkpoints
 
 - **A**: `marketing/trailer/checkpoint_a/`: `CHECKPOINT_A.md` (shot list on
