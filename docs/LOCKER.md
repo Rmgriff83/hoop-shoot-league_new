@@ -193,6 +193,12 @@ parking the crane at the bumper makes that edge ~26 % — a skill lever, not
 a free epic. Ledger bands: centre 18-40 %, an edge from the centre ≤ 10 %,
 the near edge from the stop 15-40 %.
 
+**First visit after an install (2026-11-07).** The cabinet's shaders are
+compiled under the first loading screen of a fresh install (`PeggyWarm`,
+docs/PERFORMANCE.md rule 8), and the loaded cabinet is kept for the session
+(`PeggyMachine._scene`), so no visit waits on the glb or a compile; the slot
+spinner (39b) now only shows if PEGGY opens before anything has loaded it.
+
 **The odds on the page (2026-11-06, App Store Review 3.1.1).** Under PLAY,
 while it shows: `ODDS FROM THE CENTRE` over each rarity's chance for the
 plates on the board now (`PeggyPage.odds_line`). They come from

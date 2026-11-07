@@ -50,6 +50,12 @@ const CAP_GREY := Color("#5A514A")
 ## QA passes build synchronously.
 static var threaded := false
 const SPINNER_PX := 40.0
+## The cabinet once loaded, kept for the session: a second visit attaches it
+## at once instead of loading the glb again (PeggyWarm fills it at launch on
+## a fresh install).
+static var _scene: PackedScene
+## Peg mesh name → its index in PeggyBoard.pegs() (`_peg_order`).
+static var _order: Dictionary = {}
 
 var tilt := 0.0
 var _spinner: PixelSpinner
@@ -149,14 +155,17 @@ func _build() -> void:
 	_cam.far = 20.0
 	_vp.add_child(_cam)
 	_rail_y = BOARD_Y0 + PeggyBoard.RELEASE_Y * U + 0.05
-	if threaded and not ResourceLoader.has_cached(GLB) and ResourceLoader.load_threaded_request(GLB, "", true) == OK:
+	if _scene != null:
+		_attach(_scene)
+	elif threaded and not ResourceLoader.has_cached(GLB) and ResourceLoader.load_threaded_request(GLB, "", true) == OK:
 		_pending = true
 		_spinner = PixelSpinner.new(SPINNER_PX)
 		_spinner.name = "SlotSpinner"
 		add_child(_spinner)
 		_center_spinner()
 	else:
-		_attach(load(GLB))
+		keep_scene(load(GLB))
+		_attach(_scene)
 	_fit_camera(Vector2(576, 1000))
 	gui_input.connect(_on_gui_input)
 	resized.connect(func() -> void:
@@ -177,6 +186,11 @@ func _attach(scene: PackedScene, late := false) -> void:
 		refresh_state()
 
 
+static func keep_scene(scene: PackedScene) -> void:
+	if scene != null:
+		_scene = scene
+
+
 ## Whether the cabinet is in (false while the threaded load runs).
 func loaded() -> bool:
 	return _root != null
@@ -194,6 +208,7 @@ func _poll_load() -> void:
 		return
 	_pending = false
 	var scene: PackedScene = ResourceLoader.load_threaded_get(GLB) if st == ResourceLoader.THREAD_LOAD_LOADED else load(GLB)
+	keep_scene(scene)
 	_attach(scene, true)
 	if _spinner != null:
 		_spinner.queue_free()
@@ -330,8 +345,10 @@ func _bind() -> void:
 ## pegs; then dividers), so a hit's peg index from PeggyBoard.simulate()
 ## maps straight onto a mesh.
 static func _peg_order(n: Node) -> int:
-	var table := PeggyBoard.pegs()
 	var nm := String(n.name)
+	if _order.has(nm):
+		return int(_order[nm])
+	var table := PeggyBoard.pegs()
 	var kind := "peg"
 	if nm.begins_with("Bumper"):
 		kind = "bumper"
@@ -339,12 +356,15 @@ static func _peg_order(n: Node) -> int:
 		kind = "divider"
 	var k := nm.trim_prefix("Peg").trim_prefix("Bumper").trim_prefix("Divider").to_int()
 	var seen := 0
+	var at := 999
 	for i in table.size():
 		if table[i]["kind"] == kind:
 			if seen == k:
-				return i
+				at = i
+				break
 			seen += 1
-	return 999
+	_order[nm] = at
+	return at
 
 
 # ---- plates ---------------------------------------------------------------------
@@ -777,6 +797,29 @@ func debug_screen_pos(which: String) -> Vector2:
 
 func cabinet() -> Node3D:
 	return _root
+
+
+## PeggyWarm: every part with its own material variant on screen at once —
+## the plates' prize sprites, the X, the halo, the bay lights, a flashed peg,
+## the big ticket mid-flight — and frozen there (no _process), so one drawn
+## frame compiles everything a visit will ever draw.
+func warm_pose() -> void:
+	set_process(false)
+	var plates: Array = []
+	var kinds := ["ball", "net"]
+	var tiers := TIER_COLOR.keys()
+	for i in PeggyBoard.SLOTS:
+		plates.push_back({"id": "warm", "kind": kinds[i % 2], "rarity": tiers[i % tiers.size()]})
+	set_slots(plates)
+	if _xmark != null:
+		_xmark.visible = true
+	if _halo_mat != null:
+		_halo_mat.albedo_color.a = 0.5
+	for lm in _light_mats:
+		(lm as StandardMaterial3D).albedo_color.a = 0.5
+	if not _pegs.is_empty():
+		(_pegs[0] as MeshInstance3D).material_override = _flash_mat
+	_feed_anim(0.37)
 
 
 func set_view_active(on: bool) -> void:

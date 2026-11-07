@@ -186,6 +186,7 @@ func _ready() -> void:
 	_add_rim_magnet()
 	_build_lights()
 	apply_geometry(geo)
+	RimPop.warm(self, Vector3(geo.hoop_x, geo.hoop_y + POP_LIFT, geo.hoop_z))
 	if debug_markers:
 		_build_debug_markers()
 

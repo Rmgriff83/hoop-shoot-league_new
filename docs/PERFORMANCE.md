@@ -517,6 +517,20 @@ the phone, the asset rules and the check before it ships — is
    `first:<fx>`) is a pipeline compile; warm the material on the pre-match
    page when the tags show more than the one-or-two a match measured in
    Stage 3.
+   **Built 2026-11-07** (a fresh install on Build 506 stalled on PEGGY's
+   first visit and on the first make): every `CourtGeometry` draws one
+   sub-pixel `RimPop` for four frames at load (`RimPop.warm`, the only
+   Label3D material, plus the pop fonts' glyphs), and the first scene move
+   after an install holds the LoadingScreen while `PeggyWarm` draws an
+   invisible, fully posed PEGGY cabinet (its own 2x-MSAA world shares no
+   pipeline with the courts) and writes `user://warm/peggy_<engine>_v<N>.done`
+   (outside the save; a reinstall wipes it with the shader cache; bump
+   `PeggyWarm.VERSION` when the cabinet's materials change). `Sfx` loads the
+   pole/fence/board clips with the hoop. Measured on the Mac from an empty
+   `user://shader_cache` (`--qa-warm=off|on`): first PEGGY frames 105 → 18 ms,
+   first rim pop 32 → 7 ms; with the cache kept and no warm-up, PEGGY 18 ms.
+   Next lever if a first launch still drags: the export's shader baker
+   (`export_presets.cfg`, needs a non-headless export; ask Ross).
 9. **The opponent view is lite** (`CourtGeometry.profile = PIP`): no sun
    shadows, no area fx motion, a static backdrop, drawn at 30 Hz; it keeps the
    fog, the ambient and the sun colour, and the opponent's net, ball and their

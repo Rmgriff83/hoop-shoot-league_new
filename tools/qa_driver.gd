@@ -37,6 +37,11 @@ func _ready() -> void:
 			App.net_override = CosmeticLibrary.get_net(str(a).trim_prefix("--net="))
 	if args.has("--qa-park-chain") and App.net_override == null:
 		App.net_override = CosmeticLibrary.get_net("jack")
+	# `--qa-warm=on|off`: the first PEGGY frame and the first rim pop, timed,
+	# with or without the shader warm-ups (delete user://shader_cache first).
+	if _has_prefixed(args, "--qa-warm="):
+		_run_warm.call_deferred(_arg_value(args, "--qa-warm=", "on") == "on")
+		return
 	if args.has("--qa-perf") or _has_prefixed(args, "--qa-perf="):
 		DirAccess.make_dir_recursive_absolute(ProjectSettings.globalize_path("user://qa"))
 		App.to_title.call_deferred()
@@ -3493,6 +3498,54 @@ const PERF_AREAS := ["cage", "beach", "park", "city"]
 const PERF_MODES := ["heat_pip", "heat_min", "trial"]
 const PERF_WARMUP_S := 3.0
 const PERF_SECONDS := 24.0
+
+## The longest frame over the next `n` frames, ms.
+func _max_frame_ms(n: int) -> float:
+	var worst := 0.0
+	var last := Time.get_ticks_usec()
+	for i in n:
+		await get_tree().process_frame
+		var now := Time.get_ticks_usec()
+		worst = maxf(worst, (now - last) / 1000.0)
+		last = now
+	return worst
+
+
+func _run_warm(on: bool) -> void:
+	RimPop.warm_enabled = on
+	Net.enabled = false
+	App.qa_skip_tours = true
+	App.loader.instant = true   # no loader warm-up: this pass runs PEGGY's by hand
+	App.to_title()
+	await _sleep(4.0)
+	var calm := await _max_frame_ms(30)
+	if on:
+		var w := PeggyWarm.new()
+		add_child(w)
+		while not w.done:
+			await get_tree().process_frame
+		w.queue_free()
+		await _sleep(1.0)
+	else:
+		PeggyMachine.keep_scene(load(PeggyMachine.GLB))   # the load is not what is measured
+	var m := PeggyMachine.new()
+	m.size = Vector2(360, 625)
+	get_tree().root.add_child(m)
+	var peggy := await _max_frame_ms(20)
+	m.queue_free()
+	await _sleep(1.0)
+	var court: CourtGeometry = null
+	for n in get_tree().current_scene.find_children("*", "Node3D", true, false):
+		if n is CourtGeometry:
+			court = n
+			break
+	var pop := -1.0
+	if court != null:
+		court.rim_pop("+2", "SWISH", Color.WHITE)
+		pop = await _max_frame_ms(20)
+	print("QA warm: on=%s calm=%.1f ms, first PEGGY frames max=%.1f ms, first rim pop max=%.1f ms" % [on, calm, peggy, pop])
+	get_tree().quit(0)
+
 
 func _run_perf(args: PackedStringArray) -> void:
 	var areas: Array = Array(_arg_value(args, "--qa-perf=", ",".join(PERF_AREAS)).split(",", false))

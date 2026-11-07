@@ -12,6 +12,8 @@ extends Node
 ##  3. raises the LoadingScreen only if that runs past 0.4 s, and keeps it up
 ##     at least 0.6 s so it never flashes (LoadingCopy.next_step);
 ##  4. changes to the packed scene under the screen, then fades the screen out.
+## On a fresh install the first move also warms PEGGY's shaders under the
+## screen (PeggyWarm), raising it at once and holding it until that is done.
 ## A child of the App autoload, so it and its screen outlive the change.
 
 ## QA passes keep the old instant moves (their fixed sleeps assume them);
@@ -26,6 +28,8 @@ var _screen: LoadingScreen
 var _dest: Dictionary = {}
 var _art := ""
 var _shown_at := -1.0
+var _want_warm := false
+var _warm: PeggyWarm
 
 
 func _ready() -> void:
@@ -65,7 +69,8 @@ func go(path: String, dest: Dictionary, art := "", extras: Array = []) -> void:
 		_fallback()
 		return
 	_busy_button()
-	if force_show:
+	_want_warm = PeggyWarm.needed()
+	if force_show or _want_warm:
 		_show()
 	set_process(true)
 
@@ -91,6 +96,15 @@ func _process(dt: float) -> void:
 					_fallback()
 					return
 				total += 1.0   # an extra that failed: the scene loads it the old way
+	if _want_warm:
+		loaded = false
+		if _warm == null and _screen != null and _screen.shown_for() > 0.0:
+			_warm = PeggyWarm.new()   # under the screen (layer 100), after it has drawn
+			add_child(_warm)
+		elif _warm != null and _warm.done:
+			_warm.queue_free()
+			_warm = null
+			_want_warm = false
 	if _screen != null:
 		_screen.set_progress(0.9 * total / float(maxi(_requests.size(), 1)))
 	match LoadingCopy.next_step(_t, loaded, _screen.shown_for() if _screen != null else -1.0):

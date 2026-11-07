@@ -75,4 +75,17 @@ func run(t) -> void:
 	var m := PeggyMachine.new()
 	t.ok(m.loaded() and m.find_child("SlotSpinner", false, false) == null and not m.is_busy(), "a synchronous build has no spinner")
 	m.free()
+	PeggyMachine.threaded = true
+	var again := PeggyMachine.new()
+	t.ok(again.loaded() and again.find_child("SlotSpinner", false, false) == null, "a second visit attaches the kept cabinet at once, even where loads are threaded")
+	t.eq(again.peg_count(), 84, "…with every peg bound")
+	again.free()
 	PeggyMachine.threaded = was
+	# Shader warm-ups (docs/PERFORMANCE.md rule 8): never without a GPU, and
+	# PEGGY's marker sits outside the save, so it is never synced or restored.
+	t.ok(not PeggyWarm.needed(), "no PEGGY warm-up in a headless run")
+	t.ok(PeggyWarm.marker_path().begins_with("user://warm/") and not PeggyWarm.marker_path().begins_with(SaveService.SAVE_DIR), "the warm marker lives in user://warm, not the save")
+	var court_root := Node3D.new()
+	RimPop.warm(court_root, Vector3.ZERO)
+	t.eq(court_root.get_child_count(), 0, "no rim pop warm-up in a headless run")
+	court_root.free()

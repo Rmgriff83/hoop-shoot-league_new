@@ -244,6 +244,7 @@ func load_hoop_set(set: HoopSet) -> void:
 	_hoop_id = set.id
 	for k in ["make", "miss", "rim", "board"]:
 		_last.erase("hoop:" + k)
+	_ensure_generic()   # the pole / fence / board clips load with the court, not on the first hit
 
 
 ## Load a ball set's sounds (replacing the previous ball's).

@@ -29,6 +29,38 @@ var _scale_mul := 1.0
 var delay := 0.0
 var _labels: Array[Label3D] = []
 var _rig: Node3D
+## A warm-up pop (`warm`): frames left to draw before it frees its holder.
+var _warm_frames := -1
+
+## The glyphs a pop can show, at both sizes (`warm`).
+const WARM_TEXT := "+-0123456789!ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+const WARM_FRAMES := 4   # the PiP draws every other frame
+
+
+## A pop drawn for a few frames at a scene's load, too small to see (a
+## thousandth of the size): it compiles the Label3D material and rasterises
+## the pop fonts there instead of on the first make (a hitch on a fresh
+## install, docs/PERFORMANCE.md rule 8). Under its own holder, so the court's
+## pop scans never count it. Headless runs (no GPU) skip it.
+## QA's --qa-warm=off measures without it.
+static var warm_enabled := true
+
+
+static func warm(parent: Node3D, at: Vector3) -> void:
+	if DisplayServer.get_name() == "headless" or parent == null or not warm_enabled:
+		return
+	var holder := Node3D.new()
+	holder.name = "PopWarm"
+	holder.position = at
+	parent.add_child(holder)
+	var pop := RimPop.new()
+	pop.name = "RimPopWarm"
+	pop._warm_frames = WARM_FRAMES
+	holder.add_child(pop)
+	pop.setup(WARM_TEXT, WARM_TEXT, CREAM, 0.001)
+	for l in pop._labels:
+		l.visible = true
+		l.modulate.a = 1.0
 
 
 func setup(number: String, word: String, color: Color, scale_mul := 1.0) -> void:
@@ -140,4 +172,9 @@ func step(dt: float) -> void:
 
 
 func _process(delta: float) -> void:
+	if _warm_frames >= 0:
+		_warm_frames -= 1
+		if _warm_frames <= 0:
+			get_parent().queue_free()
+		return
 	step(delta)
