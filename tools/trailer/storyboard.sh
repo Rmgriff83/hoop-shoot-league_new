@@ -10,7 +10,7 @@ FFMPEG="/opt/homebrew/bin/ffmpeg"
 LAYOUT="${1:-appstore}"; shift || true
 case "$LAYOUT" in
   appstore) RES=720x1560; SAFE=(--qa-safe-top=118 --qa-safe-bottom=62) ;;   # an iPhone's notch and home bar
-  social)   RES=720x1280; SAFE=() ;;
+  social)   RES=720x1280; SAFE=(--qa-safe-top=0 --qa-safe-bottom=0) ;;   # a 16:9 phone: no notch, no home bar
   *) echo "layout is appstore or social"; exit 1 ;;
 esac
 OUT="$PROJ/marketing/trailer/checkpoint_a/frames/$LAYOUT"

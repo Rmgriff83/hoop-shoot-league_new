@@ -8,6 +8,10 @@ extends Node
 ## 720x1280, scale 0.5), so gesture math lives in window coordinates.
 
 const WIN := Vector2(360, 640)
+## The device id on every pointer event the driver injects: the trailer
+## director swallows pointer events from any other device (a real mouse over
+## the capture window), and these pass.
+const QA_DEVICE := 77
 
 var _outcomes: Array[String] = []
 var _snap_suffix := ""   # --qa-ab=<levers> tags every snap of the run (beach_02@no_shadows)
@@ -3347,6 +3351,7 @@ func _mouse_button(pos: Vector2, pressed: bool) -> void:
 	ev.pressed = pressed
 	ev.position = _window_pos(pos)
 	ev.global_position = ev.position
+	ev.device = QA_DEVICE
 	Input.parse_input_event(ev)
 
 
@@ -3372,6 +3377,7 @@ func _mouse_move(pos: Vector2, rel: Vector2) -> void:
 	# Touch emulation only synthesizes ScreenDrag from motion that reports a
 	# held button — real drags set this automatically, injected ones must too.
 	ev.button_mask = MOUSE_BUTTON_MASK_LEFT
+	ev.device = QA_DEVICE
 	Input.parse_input_event(ev)
 
 

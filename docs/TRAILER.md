@@ -128,9 +128,13 @@ problems). Only the frames from half a second before `in` to half a second
 after `out` are kept.
 
 Frames are 2x the layout: 1440 x 3120 for the App Store cut (the 720 x 1560
-layout, an iPhone's notch and home bar played by `--qa-safe-top/bottom`),
-1440 x 2560 for the social cut (720 x 1280). At exactly 2x every UI pixel
-is a clean square; the cut downscales once.
+layout, an iPhone's notch and home bar played by `--qa-safe-top=118
+--qa-safe-bottom=62`), 1440 x 2560 for the social cut (720 x 1280, a 16:9
+phone: `--qa-safe-top=0 --qa-safe-bottom=0`). The insets are always given:
+the capture window is taller than the Mac's screen, and a measured safe
+area would read the part hanging off the bottom as a giant home bar and
+squash the HUD band (the opponent's window landed on the clock). At exactly
+2x every UI pixel is a clean square; the cut downscales once.
 
 Movie Maker records at the project's window-size override and only gives a
 crisp frame when the window really is that size, which is taller than this

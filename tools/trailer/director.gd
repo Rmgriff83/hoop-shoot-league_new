@@ -78,6 +78,10 @@ func _load_bank() -> void:
 ## The state every shot starts from: no network, no music, no debug UI, the
 ## shot's kit worn (without touching the save), the home showing.
 func _prepare() -> void:
+	var guard := PointerGuard.new()
+	guard.name = "PointerGuard"
+	guard.qa_device = int(driver.QA_DEVICE)
+	get_tree().root.add_child(guard)
 	Net.enabled = false
 	Sfx.set_music_sound(false)
 	App.music_on = false
@@ -89,6 +93,28 @@ func _prepare() -> void:
 	_wear(str(setup.get("ball", "")), str(setup.get("net", "")))
 	await _sleep(0.8)
 	await driver.call("_close_archive")
+
+
+## No real pointer reaches a shot. The Mac's mouse over the capture window
+## once stamped a wall-clock press that a replayed release then measured
+## against (held -61 s: CANCELLED, the shot lost). Godot calls _input in
+## reverse tree order, so the guard keeps itself last under the root and sees
+## every event first; it marks mouse and touch events handled unless the QA
+## driver injected them (QA_DEVICE). The replay itself calls FlickInput and
+## the pages directly, never through the viewport.
+class PointerGuard extends Node:
+	var qa_device := 77
+
+	func _input(event: InputEvent) -> void:
+		if not (event is InputEventMouse or event is InputEventScreenTouch or event is InputEventScreenDrag):
+			return
+		if event.device != qa_device:
+			get_viewport().set_input_as_handled()
+
+	func _process(_dt: float) -> void:
+		var root := get_tree().root
+		if get_index() != root.get_child_count() - 1:
+			root.move_child(self, -1)
 
 
 ## Wear a ball and a net for this shot, as the pause menu's ball cycle does: no save.

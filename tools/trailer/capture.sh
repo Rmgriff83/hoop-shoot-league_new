@@ -35,7 +35,9 @@ trap 'rm -f "$PROJ/override.cfg"' EXIT INT TERM
 printf '[display]\n\nwindow/size/window_width_override=%d\nwindow/size/window_height_override=%d\nwindow/size/borderless=true\n' $W $H > override.cfg
 SHOT_ABS="$(cd "$(dirname "$SHOT")" && pwd)/$(basename "$SHOT")"
 "$PROJ/tools/trailer/profile.sh" restore   # every shot starts from the same save
-case "$LAYOUT" in appstore) SAFE=(--qa-safe-top=118 --qa-safe-bottom=62) ;; *) SAFE=() ;; esac   # an iPhone's notch and home bar
+case "$LAYOUT" in appstore) SAFE=(--qa-safe-top=118 --qa-safe-bottom=62) ;; *) SAFE=(--qa-safe-top=0 --qa-safe-bottom=0) ;; esac   # an iPhone's notch and home bar; a 16:9 phone has neither
+# (Always override: the Movie Maker window is taller than this Mac's screen, and a measured safe area would read the
+# part that hangs off the bottom as a giant home bar and squash the HUD band.)
 caffeinate -dimsu perl -e 'alarm 900; exec @ARGV' "$GODOT" --path "$PROJ" --write-movie "$FRAMES/frame.png" --fixed-fps 60 -- \
   --qa-trailer="$SHOT_ABS" --qa-trailer-layout="$LAYOUT" --qa-trailer-out="$OUT" --save-dir=trailer_save --no-net "${SAFE[@]}" "$@" > "$FRAMES/godot.log" 2>&1 || { echo "✗ godot failed; see $FRAMES/godot.log"; exit 1; }
 rm -f override.cfg
