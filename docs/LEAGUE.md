@@ -337,7 +337,8 @@ season for the pages' recipe; `tests/test_season_moments.gd`,
   series line `SEASON 2 · BEAT PACO 2-1 · 46-40`, the TITLES row (the new
   cup pops at 2.2 s), then two cards at 2.5 s: `+N XP` with the level meter
   filling 2.6 → 3.7 s under CHAMPIONS BONUS (AT THE CAP when the cap left
-  none, MATCH XP when there was no title jump) and the gold tickets card fed
+  none — never in the city, whose band is open; MATCH XP when there was no
+  title jump) and the gold tickets card fed
   by twelve flyers from the cup from 2.7 s; CONTINUE at 3.2 s. Sounds: the
   big chime with the slam, the ticket shuffle with the stream.
 - **39c / 39e / 39f SEASON WRAP-UP** (`game/ui/season_wrap_page.gd`, words

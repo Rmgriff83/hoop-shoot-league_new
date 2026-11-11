@@ -44,6 +44,8 @@ func _levels(t) -> void:
 	t.eq(Progression.area_level("city"), 5, "the city area opens at level 5")
 	t.ok(not Progression.area_unlocked(4, "city") and Progression.area_unlocked(5, "city"), "city gate at 5")
 	t.ok(Progression.at_cap(200, cage) and not Progression.at_cap(199, cage), "at the cap at 200")
+	t.ok(Progression.is_open(city) and not Progression.is_open(cage) and not Progression.is_open(park), "the city's band is open, the rest cap")
+	t.ok(not Progression.at_cap(600, city) and not Progression.at_cap(5000, city), "the city is never at the cap")
 
 
 func _match(t) -> void:
@@ -110,6 +112,21 @@ func _season(t) -> void:
 		Progression.apply_match(fresh, _result(true, 6, 8, 40, 28), park, 1)
 	t.eq(int(fresh["xp"]), 400, "the park caps at 400")
 	t.eq(Progression.level_for(int(fresh["xp"])), 5, "level 5")
+	# The city's band is open (2026-11-11): its matches pay past the top.
+	var city := LeagueData.league("city")
+	fresh["seasonKey"] = ""
+	var any_capped := false
+	for i in 60:
+		any_capped = any_capped or bool(Progression.apply_match(fresh, _result(true, 6, 8, 40, 28), city, 1)["capped"])
+	t.ok(int(fresh["xp"]) > 600 and not any_capped, "the city pays past 600 (%d XP), never capped" % int(fresh["xp"]))
+	t.ok(Progression.level_for(int(fresh["xp"])) > 7, "past level 7")
+	# Its title still lands on the top, and adds nothing above it.
+	var champ := Progression.empty_state()
+	champ["xp"] = 420
+	t.eq(Progression.apply_title(champ, city), {"gained": 180, "level_before": 5, "level_after": 7, "capped": false}, "a city title at level 5 lifts you to 7")
+	champ["xp"] = 750
+	t.eq(int(Progression.apply_title(champ, city)["gained"]), 0, "past 7 a title adds nothing")
+	t.eq(int(champ["xp"]), 750, "and takes nothing")
 
 
 func _gates(t) -> void:
@@ -130,6 +147,10 @@ func _gates(t) -> void:
 
 func _data(t) -> void:
 	t.eq(Progression.validate(), PackedStringArray(), "the shipped bands, unlocks and card levels hold together")
+	# Only the last league may be open.
+	var leagues: Array = LeagueData.leagues().duplicate(true)
+	leagues[0]["levels"]["open"] = true
+	t.ok(Progression.validate_leagues(leagues, CardDefs.all()).has("league cage is open but beach follows it"), "an open band on any league but the last fails")
 	t.eq(LeagueData.validate(), PackedStringArray(), "the league data validates with its bands")
 	t.eq(CardDefs.validate(), PackedStringArray(), "the card data validates with its levels")
 

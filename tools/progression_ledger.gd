@@ -18,9 +18,9 @@ func _initialize() -> void:
 	print("LEAGUES")
 	for l in LeagueData.leagues():
 		var rule: Variant = l.get("unlock", null)
-		print("  %-7s levels %d -> %d  unlock %s  xp x%.2f  cap at %d XP" % [
+		print("  %-7s levels %d -> %d  unlock %s  xp x%.2f  cap at %d XP%s" % [
 			l["id"], Progression.min_level(l), Progression.cap_level(l), ("level %d" % int(rule["level"])) if rule is Dictionary else "open",
-			float(l.get("xp_mult", 1.0)), Progression.cap_xp(l)])
+			float(l.get("xp_mult", 1.0)), Progression.cap_xp(l), ", open (matches pay past it)" if Progression.is_open(l) else ""])
 		for row in ProgressionBudget.seasons(l):
 			print("    %-9s season: %3d XP = %.2f levels  (band %.2f-%.2f)  %s" % [row["id"], row["xp"], row["levels"], row["band"][0], row["band"][1], "ok" if row["ok"] else "OUT"])
 	print("")

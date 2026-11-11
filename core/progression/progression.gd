@@ -4,9 +4,12 @@ extends RefCounted
 ## league matches, scaled by how well you played; each league spans a band
 ## of levels and caps there (the cap is the next card's level and the next
 ## league's unlock); a season pays about a level (soft-capped), the title
-## jumps you to the cap. Levels gate cards (you can hold one early, not play
-## it) and areas. Every number is data/progression.json + the `levels` /
-## `unlock` / `xp_mult` rows in data/leagues.json and `level` on each card.
+## jumps you to the cap. The last league's band is `open` (Ross, 2026-11-11):
+## its matches keep paying past the top, so the level never stops; the title
+## still lands on the top and adds nothing above it. Levels gate cards (you
+## can hold one early, not play it) and areas. Every number is
+## data/progression.json + the `levels` / `unlock` / `xp_mult` rows in
+## data/leagues.json and `level` on each card.
 ## State is the save's `progress` part: {xp, seasonXp, seasonKey}.
 
 const PATH := "res://data/progression.json"
@@ -73,9 +76,15 @@ static func min_level(league: Dictionary) -> int:
 	return int(Dictionary(league.get("levels", {})).get("min", start_level()))
 
 
-## At the league's cap: its matches pay nothing more.
+## An open band (the last league): matches pay past the top, the level
+## never stops there.
+static func is_open(league: Dictionary) -> bool:
+	return bool(Dictionary(league.get("levels", {})).get("open", false))
+
+
+## At the league's cap: its matches pay nothing more. Never in an open league.
 static func at_cap(xp: int, league: Dictionary) -> bool:
-	return xp >= cap_xp(league)
+	return not is_open(league) and xp >= cap_xp(league)
 
 
 # ---- a match ---------------------------------------------------------------------
@@ -119,7 +128,7 @@ static func match_xp(result: Dictionary, league: Dictionary, season_xp: int, pla
 
 
 ## Fold a match into the state: {gained, level_before, level_after, capped}.
-## `capped`: the league's cap took some or all of it.
+## `capped`: the league's cap took some or all of it (never in an open league).
 static func apply_match(state: Dictionary, result: Dictionary, league: Dictionary, year: int) -> Dictionary:
 	var key := "%s:%d" % [str(league.get("id", "")), year]
 	if str(state.get("seasonKey", "")) != key:
@@ -128,13 +137,14 @@ static func apply_match(state: Dictionary, result: Dictionary, league: Dictionar
 	var before := int(state.get("xp", 0))
 	var pay := match_xp(result, league, int(state.get("seasonXp", 0)), bool(Dictionary(result.get("league", {})).get("playoff", false)))
 	var gained := int(pay["gained"])
-	var after := mini(before + gained, maxi(cap_xp(league), before))
+	var after := before + gained if is_open(league) else mini(before + gained, maxi(cap_xp(league), before))
 	state["xp"] = after
 	state["seasonXp"] = int(state.get("seasonXp", 0)) + (after - before)
 	return {"gained": after - before, "level_before": level_for(before), "level_after": level_for(after), "capped": after - before < gained}
 
 
-## The title: straight to the league's cap. {gained, level_before, level_after}.
+## The title: straight to the league's cap (in an open league: the band's
+## top, nothing above it). {gained, level_before, level_after}.
 static func apply_title(state: Dictionary, league: Dictionary) -> Dictionary:
 	var before := int(state.get("xp", 0))
 	var after := maxi(before, cap_xp(league))
@@ -189,10 +199,14 @@ static func area_unlocked(level: int, location: String) -> bool:
 
 
 ## The shipped data holds together: bands run start → cap → next min, a
-## league's unlock is the previous cap, every card's level is a band edge.
+## league's unlock is the previous cap, every card's level is a band edge,
+## only the last league's band is open.
 static func validate() -> PackedStringArray:
+	return validate_leagues(LeagueData.leagues(), CardDefs.all())
+
+
+static func validate_leagues(leagues: Array, cards: Array) -> PackedStringArray:
 	var problems := PackedStringArray()
-	var leagues := LeagueData.leagues()
 	var edges := {}
 	var prev_cap := -1
 	for i in leagues.size():
@@ -203,6 +217,8 @@ static func validate() -> PackedStringArray:
 			continue
 		if int(lv["cap"]) <= int(lv["min"]):
 			problems.push_back("league %s band does not rise" % l.get("id", "?"))
+		if is_open(l) and i < leagues.size() - 1:
+			problems.push_back("league %s is open but %s follows it" % [l.get("id", "?"), leagues[i + 1].get("id", "?")])
 		edges[int(lv["min"])] = true
 		edges[int(lv["cap"])] = true
 		if i == 0 and int(lv["min"]) != start_level():
@@ -215,7 +231,7 @@ static func validate() -> PackedStringArray:
 		if float(l.get("xp_mult", 1.0)) <= 0.0:
 			problems.push_back("league %s xp_mult must be positive" % l.get("id", "?"))
 		prev_cap = int(lv["cap"])
-	for c in CardDefs.all():
+	for c in cards:
 		if not c.has("level"):
 			problems.push_back("card %s has no level" % c.get("id", "?"))
 		elif not edges.has(int(c["level"])):

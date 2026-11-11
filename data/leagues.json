@@ -248,7 +248,8 @@
         "title_tickets": 220},
       "levels": {
         "min": 5,
-        "cap": 7
+        "cap": 7,
+        "open": true
       },
       "xp_mult": 1.0
     }

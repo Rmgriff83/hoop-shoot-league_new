@@ -34,7 +34,7 @@ save's `progress` part holds `{xp, seasonXp, seasonKey}`.
 | Arcade (cage) | 1 → 3 | — | 200 |
 | Beach | 3 → 4 | level 3 | 300 |
 | Park | 4 → 5 | level 4 | 400 |
-| City | 5 → 7 | level 5 | 600 |
+| City | 5 → 7, **open** | level 5 | 600 |
 
 The park (2026-10-15) took a level out of the beach's band: Ross wanted
 it to open at 4, one area per level, so the beach caps at 4 and the park
@@ -44,6 +44,14 @@ A league's matches never push XP past its cap (`Progression.apply_match`
 clamps; `capped` says so). The next league starts where this one caps and
 `unlock.level` is that cap — `Progression.validate()` refuses data that
 breaks the chain, and every card's level must be a band edge.
+
+**The last league's band is open** (`levels.open: true`, Ross, 2026-11-11,
+after his level stuck at 7 with the city title won): its matches keep paying
+past the top, so the level never stops — `Progression.is_open`, and
+`at_cap` is never true there (no `LEVEL 7 · CAP`, the meter keeps moving).
+The top (7) is still the band's edge: where the title lands, a card level,
+and where the next league will start. `validate()` refuses `open` on any
+league but the last, so the flag moves when a league is added.
 
 | Card | Level |
 |---|---|
@@ -71,7 +79,9 @@ season resets the count.)
 
 **The title** (`Progression.apply_title`): straight to the league's cap,
 from anywhere in the band. Winning the Arcade League at level 1 makes you
-level 3 and opens the beach at once.
+level 3 and opens the beach at once. In the open city a title lifts a
+level-5 or -6 champion to 7; past 7 it adds nothing (the season's match XP
+is the earning; the post-match card reads MATCH XP, not CHAMPIONS BONUS).
 
 ## 3. Pacing (the ledger, 14-game seasons, no title)
 
@@ -114,7 +124,9 @@ calibration makes a rating worth the same share on every hoop — does not feel 
 
 ## Adding a league
 
-Give it `levels: {min: <previous cap>, cap: <min + 2>}`, `unlock: {level:
+Give it `levels: {min: <previous cap>, cap: <min + 2>, open: true}` and
+take `open` off the league before it (the city's band then caps at 7 like
+the others; a player already past 7 keeps their level), `unlock: {level:
 <previous cap>}`, `xp_mult` (1.0 unless its matches should pay differently),
 and put the cards that should open with it at `level: <its min>` or `<its
 cap>`. Run `tools/progression_ledger.gd`; the suite's `test_progression.gd`
@@ -128,7 +140,9 @@ is not a band edge fails `Progression.validate()`.
 
 ## Not modelled (yet)
 
-- Anything above level 7: the next league adds the next band.
+- Anything to open above level 7: no card, no area yet. Levels keep
+  counting in the city (the open band); the next league adds the next band
+  and the next card.
 - Online, the level is **trusted only so far** (docs/BACKEND.md → Ranked,
   2026-10-19): the server accepts a reported level only upward, and no faster
   than `data/ranked.json` → `level_trust` allows (1 + a grace level + 2 a
