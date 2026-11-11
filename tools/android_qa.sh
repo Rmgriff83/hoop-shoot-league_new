@@ -9,7 +9,7 @@
 set -e
 PROJ="$(cd "$(dirname "$0")/.." && pwd)"
 ADB="$HOME/Library/Android/sdk/platform-tools/adb"
-PKG="com.rossgriffus.hoopshoot"
+PKG="com.rossgriffus.hoopshootleague"
 ARGS="$*"
 [[ -n "$ARGS" ]] || { echo "usage: tools/android_qa.sh --qa-<mode> [...]"; exit 1; }
 DEV=${ANDROID_SERIAL:-$("$ADB" devices | awk -F'\t' 'NR>1 && $2=="device" {print $1; exit}')}

@@ -399,7 +399,7 @@ func record_flick(sample: Dictionary, launch: Dictionary) -> void:
 ## The calibration trace (docs/HOME.md → The flick): while tuning mode is on,
 ## every release appends its gesture to user://qa/flick_trace.json — one JSON
 ## line per flick — for tools/flick_trace.gd to replay through the estimators.
-##   adb shell run-as com.rossgriffus.hoopshoot cat files/qa/flick_trace.json > build/qa/flick_trace.json
+##   adb shell run-as com.rossgriffus.hoopshootleague cat files/qa/flick_trace.json > build/qa/flick_trace.json
 func _trace_flick(sample: Dictionary, launch: Dictionary) -> void:
 	if not App.tuning_mode or not sample.has("trace"):
 		return

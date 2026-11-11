@@ -1145,7 +1145,7 @@ readings; with tuning mode on, every release appends its gesture to
 `user://qa/flick_trace.json` and the logcat `FLICK` line carries `sh`, `ema`,
 `peak`, `held`. Pull the file and replay it:
 
-    adb shell run-as com.rossgriffus.hoopshoot cat files/qa/flick_trace.json > build/qa/flick_trace.json
+    adb shell run-as com.rossgriffus.hoopshootleague cat files/qa/flick_trace.json > build/qa/flick_trace.json
     godot --headless --path . -s tools/flick_trace.gd -- build/qa/flick_trace.json
 
 It prints each flick's old and new reading, the ratio (what to scale the

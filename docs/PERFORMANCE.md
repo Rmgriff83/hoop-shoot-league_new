@@ -51,7 +51,7 @@ budget and the rules live in.
   shader that writes `ALPHA` without a scissor) as a fraction of the screen, in
   screens-worth (an upper bound on blended overdraw).
 - **On the phone**: `tools/android_qa.sh` writes the args into
-  `files/qa_args.txt` (`adb shell run-as com.rossgriffus.hoopshoot`), launches
+  `files/qa_args.txt` (`adb shell run-as com.rossgriffus.hoopshootleague`), launches
   the installed build, waits for `files/qa/perf.json` and pulls it with the
   snaps to `build/qa/<model>/`. `QaDriver._args()` reads that file ONCE at launch
   when the command line carries nothing and deletes it, so a QA mode can never

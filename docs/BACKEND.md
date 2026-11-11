@@ -851,7 +851,7 @@ is a *pending purchase* the phone CLAIMs, like `/v1/rewards/claim`.
   2. A RevenueCat project with two apps: **iOS** bundle
      `com.rossgriffus.hoopshootleague` (upload the In-App Purchase Key .p8
      and an App Store Connect API key) and **Android**
-     `com.rossgriffus.hoopshoot` (the Play service-account JSON — needs the
+     `com.rossgriffus.hoopshootleague` (the Play service-account JSON — needs the
      Play Console account, which does not exist yet). Their public SDK keys
      (`appl_…`, `goog_…`) go into **`store_keys.json`** (gitignored;
      `store_keys.example.json` is the template).

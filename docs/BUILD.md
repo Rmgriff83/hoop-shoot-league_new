@@ -2,9 +2,10 @@
 
 The app is **Hoop Shoot League** (Ross, 2026-10-24): `application/config/name`
 is the iOS display name and the Android presets' `package/name` the launcher
-label; the Android package stays `com.rossgriffus.hoopshoot` (installed on the
-phone), the iOS bundle id is `com.rossgriffus.hoopshootleague` (registered with
-Apple under that name), and the Mac's `user://` folder
+label; both stores use one id, `com.rossgriffus.hoopshootleague` (registered
+with Apple under that name; the Android package moved to it on 2026-11-10,
+before the first Play upload — Play never lets it change afterwards, and the
+phone's old `com.rossgriffus.hoopshoot` install is a separate app now), and the Mac's `user://` folder
 followed the name: `~/Library/Application Support/Godot/app_userdata/Hoop Shoot League/`
 (the old `Hoop Shoot` folder was copied over once, 2026-10-24; QA snaps land in its `qa/`).
 
@@ -72,7 +73,7 @@ its own; if gradle misbehaves, `rm -rf android` and rerun.
 
 The Play Console account does not exist yet (2026-10-24). When it does:
 Play Console → the app → Testing → Internal testing → create a release →
-upload `build/hoop_shoot.aab`. The package is `com.rossgriffus.hoopshoot`.
+upload `build/hoop_shoot.aab`. The package is `com.rossgriffus.hoopshootleague`.
 
 ### iOS: Xcode signs, Ross archives
 

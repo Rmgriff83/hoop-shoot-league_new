@@ -10,7 +10,7 @@ PROJ="$(cd "$(dirname "$0")/.." && pwd)"
 GODOT="/Applications/Godot_mono.app/Contents/MacOS/Godot"
 ADB="$HOME/Library/Android/sdk/platform-tools/adb"
 APK="$PROJ/build/hoop_shoot.apk"
-PKG="com.rossgriffus.hoopshoot"
+PKG="com.rossgriffus.hoopshootleague"
 
 if [[ "$1" != "--no-export" ]]; then
   echo "▶ exporting debug APK…"

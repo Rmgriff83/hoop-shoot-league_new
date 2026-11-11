@@ -7,7 +7,7 @@
 set -e
 PROJ="$(cd "$(dirname "$0")/../.." && pwd)"
 ADB="$HOME/Library/Android/sdk/platform-tools/adb"
-PKG="com.rossgriffus.hoopshoot"
+PKG="com.rossgriffus.hoopshootleague"
 OUT_DIR="$PROJ/marketing/trailer/flicks"
 DEV=$("$ADB" devices | awk -F'\t' 'NR>1 && $2=="device" {print $1; exit}')
 if [[ -z "$DEV" ]]; then

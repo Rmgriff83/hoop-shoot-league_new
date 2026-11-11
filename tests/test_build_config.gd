@@ -3,8 +3,9 @@
 ## with one bundle id and Ross's Apple team, and the build number tools/build.sh
 ## writes — the same on every preset (a half-applied rewrite shows here).
 
-const BUNDLE_ID := "com.rossgriffus.hoopshoot"
-## The iOS id carries the full name (Ross, 2026-10-24: registered with Apple as this).
+const BUNDLE_ID := "com.rossgriffus.hoopshootleague"
+## The iOS id carries the full name (Ross, 2026-10-24: registered with Apple as this);
+## Android moved to the same id before the first Play upload (Ross, 2026-11-10).
 const IOS_BUNDLE_ID := "com.rossgriffus.hoopshootleague"
 const TEAM_ID := "J3X6PY2KB4"
 
