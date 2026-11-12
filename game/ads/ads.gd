@@ -1,13 +1,18 @@
 extends Node
-## `Ads` (autoload; docs/ADS.md, Ross 2026-11-01): interstitials before the
-## results screen for everyone who does not own remove_ads, through an
-## AdsBackend (AdMob on the phone, the null one elsewhere). The two results
-## moves in App (`finish_run`, `to_heat_result`) go through
-## `before_results(then)`: the policy decides, the ad plays with the game's
-## sound off, and `then` runs when it closes — or at once when there is
-## nothing to show, or after GUARD_S when the network never answers. An
-## owner never starts the SDK (no consent or tracking prompts); buying
-## remove_ads mid-session stops the ads at the next policy check.
+## `Ads` (autoload; docs/ADS.md, Ross 2026-11-01): interstitials between
+## games for everyone who does not own remove_ads, through an AdsBackend
+## (AdMob on the phone, the null one elsewhere). Two moves, apart since
+## 2026-11-12: `count_result()` counts a finished result toward the grace,
+## `gate(then, where)` asks the policy and plays the ad — with the game's
+## sound off — and runs `then` when it closes, or at once when there is
+## nothing to show, or after GUARD_S when the network never answers.
+## `before_results(then)` is both (the AI heats and the time trials: the ad
+## before the results); an online heat counts at the buzzer and gates on
+## the way OUT (App.leave_online); practice gates once on QUIT after
+## `practice_min_s` of play (`after_practice`), counting nothing. An owner
+## never starts the SDK (no consent or tracking prompts); buying remove_ads
+## mid-session stops the ads at the next policy check. `last_reason` says
+## why the last gate did or did not show one (debug: a push_warning too).
 
 ## An interstitial is going up / came down (`shown` false = nothing played).
 signal ad_started
@@ -17,12 +22,17 @@ const PATH := "res://data/ads.json"
 const PLACEHOLDER := "REPLACE_ME"
 ## An ad that never reports back is given up on after this long.
 const GUARD_S := 8.0
-const DEFAULT_POLICY := {"grace_matches": 6, "min_gap_s": 120, "upsell_every": 5}
+const DEFAULT_POLICY := {"grace_matches": 3, "min_gap_s": 120, "upsell_every": 5, "practice_min_s": 300}
+## Every verdict `last_reason` can hold.
+const REASONS := ["shown", "failed", "owner", "not_started", "not_loaded", "grace", "gap", "practice_short"]
 
 var backend: AdsBackend = AdsBackend.new()
 var cfg: Dictionary = {}
 var last_ad_at := -1.0
 var ads_shown := 0
+## Why the last gate did (shown) or did not show an ad — one of REASONS.
+## Nothing user-facing: the QA driver and the debug log read it.
+var last_reason := ""
 var _started := false
 var _showing := false
 var _then: Callable = Callable()
@@ -102,7 +112,9 @@ func matches_played() -> int:
 	return int(SaveService.get_settings().get("adMatches", 0))
 
 
-func _count_match() -> void:
+## A finished result (a heat's, a trial's) toward the grace. Practice is
+## not one.
+func count_result() -> void:
 	var s := SaveService.get_settings()
 	s["adMatches"] = int(s.get("adMatches", 0)) + 1
 	SaveService.put_settings(s)
@@ -112,28 +124,70 @@ func _now() -> float:
 	return float(clock.call()) if clock.is_valid() else Time.get_ticks_msec() / 1000.0
 
 
-## Would the next results show an ad (the policy, right now)?
-func due() -> bool:
-	return AdPolicy.should_show({
+## The policy's verdict right now: "" to show, else why not (AdPolicy.reason).
+func reason() -> String:
+	if _showing:
+		return "not_loaded"   # one is up already
+	return AdPolicy.reason({
 		"owner": owner(), "available": backend.available() and _started, "ready": backend.ready(),
 		"matches_played": matches_played(), "grace_matches": policy("grace_matches"),
 		"last_ad_at": last_ad_at, "now": _now(), "min_gap_s": policy("min_gap_s"),
 	})
 
 
-## The gate before a results screen: `then` moves there, after the ad or at once.
+## Would a gate show an ad (the policy, right now)?
+func due() -> bool:
+	return reason() == ""
+
+
+## The gate before a results screen: the result counts toward the grace,
+## and `then` moves there, after the ad or at once. The policy decides
+## BEFORE the count: the grace is the results before this one.
 func before_results(then: Callable) -> void:
-	var show := not _showing and due()
-	_count_match()   # after the decision: the grace is the results BEFORE this one
-	if not show:
-		then.call()
+	var r := reason()
+	count_result()
+	_run(r, then, "results")
+
+
+## The gate on its own (nothing counted): `then` runs after the ad or at
+## once. `where` names the moment for the debug log (online, practice…).
+func gate(then: Callable, where: String) -> void:
+	_run(reason(), then, where)
+
+
+## Leaving practice: one chance at an ad when the session's live play ran
+## `practice_min_s` or more; under that, straight on. Never a result.
+func after_practice(play_s: float, then: Callable) -> void:
+	if play_s < float(policy("practice_min_s")):
+		_note("practice_short", "practice")
+		_call(then)
 		return
+	gate(then, "practice")
+
+
+func _run(why: String, then: Callable, where: String) -> void:
+	if why != "":
+		_note(why, where)
+		_call(then)
+		return
+	_note("shown", where)
 	_then = then
 	_showing = true
 	_mute(true)
 	ad_started.emit()
 	backend.show_interstitial()
 	_guard()
+
+
+func _note(why: String, where: String) -> void:
+	last_reason = why
+	if OS.is_debug_build():
+		push_warning("ads: %s (%s)" % [why, where])
+
+
+func _call(then: Callable) -> void:
+	if then.is_valid():
+		then.call()
 
 
 func showing() -> bool:
@@ -159,11 +213,12 @@ func _finish(shown: bool) -> void:
 		last_ad_at = _now()
 		ads_shown += 1
 		_upsell_pending = AdPolicy.upsell_due(ads_shown, policy("upsell_every"))
+	else:
+		last_reason = "failed"   # it went up on the policy's word and never played
 	ad_finished.emit(shown)
 	var then := _then
 	_then = Callable()
-	if then.is_valid():
-		then.call()
+	_call(then)
 	backend.load_interstitial()   # the next one, ready before the next results
 
 

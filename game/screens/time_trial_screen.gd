@@ -39,6 +39,11 @@ var _pull_px := 0.0
 
 ## Endless practice (mode.endless): no clock, no results, BACK returns to title.
 var _practice := false
+## Practice's live play time (docs/ADS.md → Practice): ticked while the run is
+## live — not paused (the tree's pause stops the frames), not in the
+## background, not during the first-shot lesson. QUIT after `practice_min_s`
+## of it is the session's one chance at an ad.
+var _play_clock := PracticeClock.new()
 ## Streak tier the screen has already announced (0 = none; reset on a miss).
 var _tier_shown := 1
 
@@ -478,9 +483,33 @@ func _add_pause_button(layer: CanvasLayer) -> void:
 	_pause_layer.hud_side_changed.connect(_on_hud_side_changed)
 	_pause_layer.quit.connect(func() -> void:
 		resume_game()
-		App.to_title()
+		_quit_to_title()
 	)
 	add_child(_pause_layer)
+
+
+## QUIT: practice gets its one chance at an ad after practice_min_s of live
+## play (Ads.after_practice; never a result toward the grace), the rest go
+## straight home.
+func _quit_to_title() -> void:
+	if _practice:
+		Ads.after_practice(_play_clock.seconds, App.to_title)
+	else:
+		App.to_title()
+
+
+## Practice's live play so far, in seconds (tests, QA).
+func play_seconds() -> float:
+	return _play_clock.seconds
+
+
+## The app in the background: practice's clock stops (Net has the only other
+## such handler: net_client.gd).
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
+		_play_clock.suspend()
+	elif what == NOTIFICATION_APPLICATION_RESUMED or what == NOTIFICATION_APPLICATION_FOCUS_IN:
+		_play_clock.resume()
 
 
 ## MUSIC (every mode, 2026-10-16): the note at the bottom (left, or right
@@ -1371,6 +1400,8 @@ func _process(dt: float) -> void:
 		_step_tutorial(minf(dt, MAX_FRAME_DT))   # the real rules wait for the lesson
 	elif not _match_held():
 		_step_rules(minf(dt, MAX_FRAME_DT))
+		if _practice:
+			_play_clock.tick(dt)   # live play only: not the lesson, not a hold
 	_process_shuffle(dt)
 	_follow_music_setting()
 

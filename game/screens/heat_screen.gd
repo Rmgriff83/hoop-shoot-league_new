@@ -170,8 +170,9 @@ func prematch_message(kind: String, msg: Variant) -> void:
 				if is_instance_valid(_prematch):
 					_prematch.start_countdown(float(Dictionary(msg).get("countdown_s", 5)))
 		"failed":
-			# They left, the room expired, the socket died: back home.
-			App.to_title()
+			# They left, the room expired, the socket died: back home — through
+			# the online exit (a rematch's room that failed: the ad, if due).
+			App.leave_online(App.to_title)
 
 
 func prematch_open() -> bool:
@@ -1594,7 +1595,7 @@ func _after_match_end() -> void:
 		App.mark_unlock_seen(id)
 		App.home_card = maxi(0, AreaArchiveCopy.index_of(id))
 		App.show_archive = false
-		App.to_title())
+		Ads.before_results(App.to_title))   # the result counts and gates here as LATER's does (2026-11-12)
 	page.later.connect(func() -> void:
 		App.mark_unlock_seen(area)
 		App.to_heat_result())

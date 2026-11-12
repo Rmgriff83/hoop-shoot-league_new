@@ -1363,8 +1363,7 @@ func start_shoot_around() -> void:
 		return
 	_shoot_bonus_pending = true
 	var area := str(last_heat.get("location", "cage"))
-	cancel_online()
-	start_area("trial", area if area_unlocked(area) else "cage")
+	leave_online(func() -> void: start_area("trial", area if area_unlocked(area) else "cage"))
 
 
 ## Close a room node that is no longer `room`: a MatchClient drains its
@@ -1401,6 +1400,16 @@ func cancel_online() -> void:
 		_ranked_search += 1   # stops the poll loop
 		Net.request_json("match", HTTPClient.METHOD_POST, "/v1/match/leave", {"area": "any", "ranked": true})
 	match_how = ""
+
+
+## Out of the online flow from its post-match page (docs/ADS.md, Ross
+## 2026-11-12): the room closes FIRST, then the interstitial if the policy
+## says so, then `then` — an ad's loss of focus never lands on an open room.
+## HOME, SHOOT AROUND?, the room ending under the player (`then` empty: the
+## page stays), a rematch that failed. A rematch that goes shows nothing.
+func leave_online(then: Callable) -> void:
+	cancel_online()
+	Ads.gate(then, "online")
 
 
 # ---- routing -------------------------------------------------------------------
@@ -1590,8 +1599,16 @@ func settle_heat(result: Dictionary) -> Dictionary:
 
 
 func to_heat_result() -> void:
-	# An interstitial first, when the ad policy says so (Ads; owners of remove_ads never see one).
-	Ads.before_results(func() -> void: _move(HEAT_RESULT_SCENE, "postmatch", str(last_heat.get("location", "cage"))))
+	var move := func() -> void: _move(HEAT_RESULT_SCENE, "postmatch", str(last_heat.get("location", "cage")))
+	if bool(last_heat.get("online", false)):
+		# Online (Ross, 2026-11-12): the result counts, the page comes at once —
+		# the room is still open with its rematch window; the ad waits for the
+		# way OUT (leave_online).
+		Ads.count_result()
+		move.call()
+	else:
+		# An interstitial first, when the ad policy says so (Ads; owners of remove_ads never see one).
+		Ads.before_results(move)
 
 
 func finish_heat(result: Dictionary) -> void:

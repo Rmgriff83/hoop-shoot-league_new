@@ -65,6 +65,9 @@ var _drop_scroll: ScrollContainer
 var _score_label: Label
 var _court: CourtGeometry
 var _cam: Camera3D
+## The room ended under this page and its ad had its chance (watch_room).
+var _gone_gated := false
+var _room_watch: Callable = Callable()
 
 
 func _ready() -> void:
@@ -80,6 +83,8 @@ func _ready() -> void:
 	ui.add_child(chrome)
 	AdsUpsell.maybe_toast(chrome)
 	_start_fx.call_deferred()
+	if bool(heat.get("online", false)):
+		watch_room.call_deferred()
 
 
 func _process(dt: float) -> void:
@@ -356,9 +361,50 @@ func build_chrome(heat: Dictionary, doc: Dictionary, cfg: Dictionary) -> Control
 	home.add_theme_font_override("font", UiFont.display())
 	home.add_theme_font_size_override("font_size", UiFont.snap(20))
 	RetroTheme.on_scene(home)
-	home.pressed.connect(App.to_title)
+	# Online the ad plays on the way out, the room closed first (App.leave_online).
+	home.pressed.connect(func() -> void:
+		if online and not _gone_gated:
+			App.leave_online(App.to_title)
+		else:
+			App.to_title()
+	)
 	foot.add_child(home)
 	return chrome
+
+
+## The room ending under the player on an online page (the rematch window
+## expiring, them leaving, a rematch that failed to open): the card reads
+## THEY LEFT and the online flow is over, so the ad — if due — plays right
+## then, over the page, once; HOME after it gates nothing (Ross, 2026-11-12).
+func watch_room() -> void:
+	if _gone_gated or _room_watch.is_valid():
+		return
+	if App.rematch_state == "gone":
+		_room_gone()
+		return
+	_room_watch = func(state: String) -> void:
+		if state == "gone":
+			_room_gone()
+	App.rematch_changed.connect(_room_watch)
+	tree_exited.connect(unwatch_room)
+
+
+func unwatch_room() -> void:
+	if _room_watch.is_valid() and App.rematch_changed.is_connected(_room_watch):
+		App.rematch_changed.disconnect(_room_watch)
+	_room_watch = Callable()
+
+
+func _room_gone() -> void:
+	if _gone_gated:
+		return
+	_gone_gated = true
+	App.leave_online(Callable())
+
+
+## Whether this page has already had its ad (the room ending under it).
+func gone_gated() -> bool:
+	return _gone_gated
 
 
 ## The drops row: 311 × 150 teal cards 20 apart from x 36; more than two

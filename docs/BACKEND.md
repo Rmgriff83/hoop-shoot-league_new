@@ -321,7 +321,9 @@ build at any server.
   it with its current loadout (revalidated by the Worker) and the new
   `start` tips off. Leaving the page (HOME) closes the socket and the other
   phone's card reads `THEY LEFT`. `App.offer_rematch`, `App.rematch_state`,
-  `MatchCopy.rematch_*`.
+  `MatchCopy.rematch_*`. The client's interstitial (docs/ADS.md, 2026-11-12)
+  never plays before the page: it plays on the way out, after the room is
+  closed, so the window is never eaten by an ad.
 - **Later**: rejoin after a drop (the room already re-sends `start` to a
   reconnect), an online card-drop system (the ranked ladder landed
   2026-10-19 → Ranked).
