@@ -7,6 +7,8 @@ extends RefCounted
 
 const EDIT := "res://tools/trailer/edit.json"
 const SHOTS := "res://tools/trailer/shots"
+const STORY_V2 := "res://tools/trailer/v2/storyboard.json"
+const SHOTS_V2 := "res://tools/trailer/v2/shots"
 const Director := preload("res://tools/trailer/director.gd")
 const Stages := preload("res://tools/trailer/director_stages.gd")
 const CardScene := preload("res://tools/trailer/card_scene.gd")
@@ -136,6 +138,63 @@ func run(t) -> void:
 			t.ok(not src.contains("FlickSynth") and not src.contains("res://tools/trailer"), "%s names nothing of the trailer's" % path.trim_prefix("res://"))
 	t.ok(FileAccess.get_file_as_string("res://tools/qa_driver.gd").contains("load(\"res://tools/trailer/director.gd\")"), "the QA driver loads the director by path")
 	t.ok(Director != null and CardScene != null, "the director and the card scene compile")
+	_v2(t, stages)
+
+
+## Trailer v2 (docs/TRAILER.md → v2): the storyboard's parts tile the global
+## 60 fps timeline exactly, every hit's frame is round(t * 60), the copy keeps
+## to the brief, and the v2 shots speak the director's verbs.
+func _v2(t, stages) -> void:
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(STORY_V2))
+	t.ok(parsed is Dictionary and parsed.get("parts") is Array, "the v2 storyboard parses")
+	if not (parsed is Dictionary):
+		return
+	var sb: Dictionary = parsed
+	var timing: Dictionary = sb["timing"]
+	var total := int(timing["total_frames"])
+	t.eq(total, int(roundf(float(timing["bars"]) * 4.0 * 60.0 / float(timing["bpm"]) * 60.0)), "v2: 18 bars at 110 BPM are 2356 frames")
+	t.eq(total, 2356, "v2: the master is 2356 frames")
+	var at := 0
+	var parts: Array = sb["parts"]
+	for p in parts:
+		var tag := "v2 part %d" % int(p["part"])
+		t.eq(int(p["start_frame"]), at, "%s starts where the one before ends" % tag)
+		t.eq(int(p["frames"]), int(p["end_frame"]) - int(p["start_frame"]), "%s: frames = end - start" % tag)
+		t.ok(absf(float(p["start_frame"]) - roundf(float(p["start_s"]) * 60.0)) <= 1.0, "%s starts on round(t * 60)" % tag)
+		at = int(p["end_frame"])
+		for h in p.get("hits", []):
+			t.eq(int(h["part_frame"]), int(h["frame"]) - int(p["start_frame"]), "%s hit %d.%d: part_frame = frame - start" % [tag, int(h["bar"]), int(h["beat"])])
+			t.ok(absf(float(h["frame"]) - roundf(float(h["t_s"]) * 60.0)) <= 1.0, "%s hit %d.%d is on round(t * 60)" % [tag, int(h["bar"]), int(h["beat"])])
+		if p.get("text") != null:
+			var text := str(p["text"])
+			t.eq(text, text.to_upper(), "%s: the card is all caps" % tag)
+			for w in BANNED:
+				t.ok(not text.to_lower().contains(w), "%s: the card avoids '%s'" % [tag, w])
+			var display := UiFont.display()
+			for ch in text.replace(" · ", "\n"):
+				t.ok(ch == "\n" or display.has_char(ch.unicode_at(0)), "%s: the display font has '%s'" % [tag, ch])
+	t.eq(at, total, "v2: the last part ends on the last frame")
+	t.eq(parts.size(), 8, "v2: eight parts")
+	# The v2 shots: verbs the director or its stages know, an in and an out.
+	for file in DirAccess.get_files_at(SHOTS_V2):
+		if not str(file).ends_with(".json"):
+			continue
+		var shot: Variant = JSON.parse_string(FileAccess.get_file_as_string("%s/%s" % [SHOTS_V2, file]))
+		t.ok(shot is Dictionary and shot.get("steps") is Array, "v2 %s parses" % file)
+		if not (shot is Dictionary):
+			continue
+		t.eq(str(shot["name"]) + ".json", str(file), "v2 %s is named as its file" % file)
+		var marks := []
+		for step in shot["steps"]:
+			var verb := str(step.get("do", ""))
+			t.ok(DIRECTOR_VERBS.has(verb) or stages.has_method("stage_" + verb), "v2 %s: the director knows '%s'" % [file, verb])
+			if verb == "mark":
+				marks.push_back(str(step.get("name", "")))
+		t.ok(marks.has("in") and marks.has("out"), "v2 %s marks its in and out" % file)
+	# The music recipe is the one the stem is built from: song bars 3-16, then 5-8 again fading.
+	var recipe := str(Dictionary(sb["music"]).get("ffmpeg", ""))
+	t.ok(recipe.contains("atrim=start=4.363636") and recipe.contains("atrim=start=8.727273:end=17.454545") and recipe.contains("curve=qsin"), "v2: the music recipe is the storyboard's")
+	t.ok(FileAccess.file_exists("res://" + str(Dictionary(sb["music"])["source"])), "v2: the song is there")
 
 
 func _scripts(dir: String) -> Array:

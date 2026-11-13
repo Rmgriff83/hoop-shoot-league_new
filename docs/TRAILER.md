@@ -185,6 +185,61 @@ table at the top of the script. The listing text is in
 - **B**: `marketing/trailer/draft/` (960 high).
 - **C**: `marketing/trailer/final/`, checked with `build_cut.py --check`.
 
+## v2 — "Play for keeps" (2026-11-12)
+
+The second trailer, built ONE PART AT A TIME from Ross's storyboard,
+`tools/trailer/v2/storyboard.json`: 8 parts (his 8 scenes), 18 bars at
+110 BPM, 60 fps, **2356 frames**, master **1080 × 2340**. Every boundary is
+`round(t × 60)` on the GLOBAL timeline — a bar is 130.9 frames — so a part's
+length is its `end_frame − start_frame` from the JSON and is never computed
+per part. The hits are in the JSON too (`frame` / `part_frame`).
+
+Everything v2 lives in `tools/trailer/v2/` and writes under
+`marketing/trailer/v2/` (gitignored):
+
+```
+python3 -I tools/trailer/v2/v2.py music                music.wav: the JSON's recipe (song bars 3–16, then
+                                                       bars 5–8 fading out, qsin), 48 kHz, exactly 2356 frames
+python3 -I tools/trailer/v2/v2.py conform raw/partNN/x.mov
+                                                       a phone recording → conform/partNN/x.mov (+ .wav)
+python3 -I tools/trailer/v2/v2.py insets conform/partNN/x.mov
+                                                       the recording's HUD against the headless reference
+tools/trailer/v2/capture.sh <shot>                     a v2 shot through Movie Maker → v2/clips/<shot>.mov
+python3 -I tools/trailer/v2/v2.py part N               part N's deliverables + the hit report
+```
+
+**Sources.** Parts 1, 2, 3, 4, 7 and 8 are rendered by the game (the
+director on the trailer save, `tools/trailer/v2/shots/`); parts 5 and 6 are
+Ross's online match, recorded on his iPhone 16 (his POV) and his friend's
+iPhone XR (theirs). Headless frames are the App Store layout at 2×
+(1440 × 3120 = 720 × 1560) and are downscaled ONCE to the master with the
+area filter. Recordings are conformed first: scaled to 1080 wide (the 16's
+1179 × 2556 down ×0.916, the XR's 828 × 1792 up ×1.304 with lanczos), the
+last pixels cropped (the 16: 2 px) or padded (the XR: 1 px top and bottom)
+to 2340, and iOS's variable frame rate made a constant 60.
+
+**Insets.** The headless HUD must sit where the iPhone 16's does, so v2
+renders with `--qa-safe-top=108 --qa-safe-bottom=62`: the 16's 59 pt / 34 pt
+insets at 3× scaled by 720 / 1179 (`UiLayout` measures a real phone the same
+way, in design px). `tools/trailer/capture.sh` takes them as
+`TRAILER_SAFE_TOP` / `TRAILER_SAFE_BOTTOM` (and the output folder as
+`TRAILER_OUT`); v1 keeps its 118 / 62. `v2.py insets` lays a recording's
+frame over `clips/hud_ref.mov` (the practice HUD at 108 / 62) and prints the
+offset it finds in the top and bottom HUD bands, with a side-by-side and
+blend PNG in `v2/insets/` to read by eye.
+
+**Per part** (`marketing/trailer/v2/parts/partNN/`): `partNN_clean.mov` (no
+text) and `partNN_text.mov` (the game-rendered text card), identical frames
+otherwise, all-intra H.264 crf 10, exactly `frames` long, the game's SFX
+only (the music runs unbroken in the final assembly); `partNN_sfx.wav`;
+`partNN_review.mp4` (the text version with its slice of music.wav, for a
+phone); `partNN_sheet.png` (one frame per beat, labelled bar.beat and the
+hit). The report says where each hit landed against its target frame
+(anything over 2 frames is flagged), which sources were used, and what was
+approximated. Text cards are the game's (card_scene.gd): one position and
+size locked on part 1 for every part; part 7's line is two lines; part 8 has
+none (its badges and legal lines are its own).
+
 ## Recording flicks
 
 The footage is driven by real flicks, recorded on the Android dev phone and

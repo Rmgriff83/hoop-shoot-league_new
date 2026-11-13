@@ -26,7 +26,9 @@ esac
 # TRAILER_W / TRAILER_H override the frame size (the crispness comparison renders one shot at the final size).
 W="${TRAILER_W:-$W}"; H="${TRAILER_H:-$H}"
 NAME="$(basename "$SHOT" .json)${TRAILER_SUFFIX:-}"
-OUT="$PROJ/marketing/trailer/clips/$LAYOUT"
+# TRAILER_OUT puts the clip elsewhere (v2: marketing/trailer/v2/clips); TRAILER_SAFE_TOP / _BOTTOM play another phone
+# (v2: the iPhone 16's 108 / 62, so the HUD lines up with Ross's recordings; v1 keeps its 118 / 62).
+OUT="${TRAILER_OUT:-$PROJ/marketing/trailer/clips/$LAYOUT}"
 FRAMES="$PROJ/marketing/trailer/frames/$LAYOUT/$NAME"
 rm -rf "$FRAMES"; mkdir -p "$FRAMES" "$OUT"
 cd "$PROJ"
@@ -35,7 +37,7 @@ trap 'rm -f "$PROJ/override.cfg"' EXIT INT TERM
 printf '[display]\n\nwindow/size/window_width_override=%d\nwindow/size/window_height_override=%d\nwindow/size/borderless=true\n' $W $H > override.cfg
 SHOT_ABS="$(cd "$(dirname "$SHOT")" && pwd)/$(basename "$SHOT")"
 "$PROJ/tools/trailer/profile.sh" restore   # every shot starts from the same save
-case "$LAYOUT" in appstore) SAFE=(--qa-safe-top=118 --qa-safe-bottom=62) ;; *) SAFE=(--qa-safe-top=0 --qa-safe-bottom=0) ;; esac   # an iPhone's notch and home bar; a 16:9 phone has neither
+case "$LAYOUT" in appstore) SAFE=(--qa-safe-top=${TRAILER_SAFE_TOP:-118} --qa-safe-bottom=${TRAILER_SAFE_BOTTOM:-62}) ;; *) SAFE=(--qa-safe-top=0 --qa-safe-bottom=0) ;; esac   # an iPhone's notch and home bar; a 16:9 phone has neither
 # (Always override: the Movie Maker window is taller than this Mac's screen, and a measured safe area would read the
 # part that hangs off the bottom as a giant home bar and squash the HUD band.)
 caffeinate -dimsu perl -e 'alarm 900; exec @ARGV' "$GODOT" --path "$PROJ" --write-movie "$FRAMES/frame.png" --fixed-fps 60 -- \

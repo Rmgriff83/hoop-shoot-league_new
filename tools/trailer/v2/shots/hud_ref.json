@@ -1,0 +1,33 @@
+{
+ "name": "hud_ref",
+ "note": "v2 reference: the practice HUD on the cage at the iPhone 16's insets (108 / 62), for v2.py insets.",
+ "themes": [],
+ "setup": {
+  "ball": "classic",
+  "net": "cotton",
+  "trail": false
+ },
+ "steps": [
+  {
+   "do": "play",
+   "mode": "practice",
+   "area": "cage",
+   "settle": 1.0
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "wait",
+   "s": 0.5
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}
