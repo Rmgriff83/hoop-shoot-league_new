@@ -102,6 +102,7 @@ which was used (`synth:<TYPE>`), and Checkpoint A marks those shots.
 | `flicks` `{n, want, seed}` | flick after flick while the clock runs: a heat played to its buzzer (v2 part 3); each waits for a ready ball and gives up when the period ends |
 | `watch` `{what: buzzer\|done, name}` | marks the frame a heat's clock runs out / the heat is done (both sides' balls down), from the sidelines while later steps run |
 | `clinch_day` `{seed}` | the cage campaign on the regular season's last day, one win from the top seed and not yet clinched (`tools/trailer/v2/clinch_doc.gd`) |
+| `cards` `{area, have: {id: n}, loadout}` | one league's card bucket set exactly (v2 part 4 stages the bought card out of it, so the shop buy grows a new slot); `drag_card` takes a `mark` and marks the ghost's lift (`mark`) and the drop (`mark_drop`) |
 | `wear`, `tap`, `call` | change kit, press a named button, call a method |
 
 Flick replay: each movie frame advances the replay's own clock by 1/60 s
@@ -317,6 +318,25 @@ page is what has to go — `done` lands wherever the last ball does, so the
 skip is measured per take, from the scrim's frame). A final-day clinching
 win has no YOU WIN page in the game: the PLAYOFFS page is that win's page.
 A whole heat renders ~6500 frames at this Mac's ~5 fps: `TRAILER_ALARM=2700`.
+
+Part 4 (2026-11-13) is one director run cut in two: bar 9 on the cage
+league page (`cards` stages the bucket without Deep Freeze; the CARDS tab,
+Deep Freeze's price and CONFIRM are pressed 5 frames before 9.1 / 9.2 / 9.3
+— a button fires on its release — so the shop slides in on the downbeat,
+the ask (X / CONFIRM) shows on 9.2 and the buy's flight into YOUR CARDS
+starts on 9.3; the game's 0.7 s flight lands 10 frames after 9.4, inside
+the hold), then `league_heat` with `ready false` and the pre-match page
+(`pm`, the page settled: the cut on 10.1), `drag_card` with its `mark` so
+the ghost lifts on 10.2 and drops into slot 0 on 10.3, a hold on READY.
+Deep Freeze because it is the shop's first row: Magnet's row is below the
+pane's fold, out of a tap's reach. The text card leaves the locked slot at
+the cut — the storyboard part's `card_y` (`[{part_frame, y}]`, honoured by
+`card_scene.gd`) puts it at design y 538, the gap between the OPPONENT panel
+and YOU, because at y 1010 it would sit on the loadout slots the drag lands
+in; on the league page the locked slot covers the SHOP title (the price row
+is clear). The game's own landing: the flown card is freed on arrival and
+the new slot grows from 0 width over the next ~0.3 s (slotGrow), so the card
+blinks for a few frames at frame 108 — left as the game does it.
 
 Part 1 (2026-11-12): the lit splash, NEW GAME pressed on 1.3, the real 0.3 s
 slide (the storyboard's 1.4 / 2.1 come 28 / 43 frames early — flagged, the

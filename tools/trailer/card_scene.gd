@@ -86,11 +86,16 @@ func render_v2(only: Array = []) -> bool:
 			if str(h.get("what", "")).to_lower().contains("text card in"):
 				card_in = int(h["part_frame"])
 		var frames := int(p["frames"]) - card_in
+		# A part may move the card off the slot from a frame on (`card_y`: the
+		# shot's action is under the slot there — part 4's loadout slots).
+		var moves: Array = []
+		for m in p.get("card_y", []):
+			moves.push_back({"at": int(m["part_frame"]) - card_in, "y": float(m["y"])})
 		var node := build_card_v2(id, str(p["text"]).replace(" · ", "\n"))
 		var dir := ProjectSettings.globalize_path("%s/v2/cards/%s" % [OUT_ROOT, id])
 		var still := ProjectSettings.globalize_path("%s/v2/cards/stills/%s.png" % [OUT_ROOT, id])
-		await _render_sequence(node, frames, dir, still)
-		print("TRAILER card: v2/%s in at %d, %d frames" % [id, card_in, frames])
+		await _render_sequence(node, frames, dir, still, moves)
+		print("TRAILER card: v2/%s in at %d, %d frames%s" % [id, card_in, frames, "" if moves.is_empty() else ", moves " + str(moves)])
 	return true
 
 
@@ -108,15 +113,19 @@ func _make_viewport(design: Vector2i) -> void:
 
 ## The card's frames: the tour card's rise and fade in, a short fade out that
 ## ends on the last frame; the settled frame saved as the still.
-func _render_sequence(node: Control, frames: int, dir: String, still: String) -> int:
+func _render_sequence(node: Control, frames: int, dir: String, still: String, moves: Array = []) -> int:
 	_vp.add_child(node)
 	DirAccess.make_dir_recursive_absolute(dir)
 	for old in DirAccess.get_files_at(dir):
 		DirAccess.remove_absolute(dir + "/" + old)
 	DirAccess.make_dir_recursive_absolute(still.get_base_dir())
-	var rest_y := node.position.y
+	var home_y := node.position.y
 	var seconds := float(frames) / 60.0
 	for i in frames:
+		var rest_y := home_y
+		for m in moves:   # [{at, y}]: the card sits at y from frame `at` on (a cut's new placement)
+			if i >= int(m["at"]):
+				rest_y = float(m["y"])
 		var k := pose(float(i) / 60.0, seconds)
 		node.modulate.a = k.x
 		node.position.y = rest_y + k.y

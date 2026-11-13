@@ -403,9 +403,17 @@
    "text_note": "Held across both bars",
    "notes": [
     "Use the same card in both halves so it reads as one card travelling from the shop to the match.",
-    "Both halves are touch-driven: do the taps a little early and trim so each lands on its beat."
+    "Both halves are touch-driven: do the taps a little early and trim so each lands on its beat.",
+    "Built 2026-11-13: Deep Freeze (the shop's first row; Magnet's row is below the pane's fold), staged out of the cage bucket so the buy grows a new slot in YOUR CARDS. The buy is the game's two taps (price -> X / CONFIRM -> buy): the price on 9.2, CONFIRM on 9.3 (the flight starts there), the land inside the 9.4 hold. The text card moves up at the cut (card_y)."
    ],
-   "cut_out": "Cut on the downbeat"
+   "cut_out": "Cut on the downbeat",
+   "card_y": [
+    {
+     "part_frame": 131,
+     "y": 538,
+     "why": "The pre-match page's loadout slots sit under the locked slot (design y 1009-1138); from the cut the card sits in the gap between the OPPONENT panel and YOU (520-685), over the VS."
+    }
+   ]
   },
   {
    "part": 5,

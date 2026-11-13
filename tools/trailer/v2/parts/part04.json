@@ -1,0 +1,31 @@
+{
+ "part": 4,
+ "segments": [
+  {
+   "clip": "part04",
+   "from": "in",
+   "frames": 131
+  },
+  {
+   "clip": "part04",
+   "from": "pm",
+   "frames": 131
+  }
+ ],
+ "hit_marks": {
+  "9.1": "in+1",
+  "9.2": "price+5",
+  "9.3": "confirm+5",
+  "9.4": "confirm+47",
+  "10.1": "pm",
+  "10.2": "drag",
+  "10.3": "drag_drop"
+ },
+ "notes": [
+  "One director run, two slices: bar 9 on the league page from the CARDS tab's press (`in`), bar 10 on the pre-match page (`pm`, the page settled); the cut between them is the storyboard's (the game goes through a loading screen there).",
+  "A button fires on its release, 5 frames after the press: the CARDS tab, the price and CONFIRM are pressed 5 frames before their beats. The shop's buy is two taps in the game (the price asks, CONFIRM buys): 9.2 is the ask, 9.3 the buy.",
+  "The card's flight from the shop row into YOUR CARDS is the game's 0.7 s (CssEase.FLY_S): launched on 9.3 it lands 42 frames later, 10 frames after 9.4 — inside the hold; the beat itself is the card in flight.",
+  "Deep Freeze is the card (the shop's first row — Magnet's row is below the pane's fold, out of reach of a tap without a scroll); the cage bucket is staged without it so YOUR CARDS grows a new slot for it, and it is the one card with a x1 on the pre-match page.",
+  "The text card moves up at the cut (storyboard card_y: design y 538, the gap between the OPPONENT panel and YOU): at the locked slot it would cover the loadout slots the drag lands in."
+ ]
+}

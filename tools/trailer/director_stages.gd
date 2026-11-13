@@ -115,6 +115,9 @@ func stage_drag_card(step: Dictionary) -> void:
 	page.set("_drag", {"id": cid, "from": from, "moved": false, "holder": holder, "held": 0.0})
 	await d.call("_sleep", 0.08)
 	page.call("_start_ghost")
+	var mark := str(step.get("mark", ""))   # {mark}: the frames the ghost lifts (`mark`) and the card drops (`mark_drop`)
+	if mark != "":
+		(d.get("_marks") as Dictionary)[mark] = Engine.get_frames_drawn()
 	var frames := maxi(8, int(float(step.get("s", 0.55)) * 60.0))
 	var slot_i := int(step.get("slot", 0))
 	var slot_size: Vector2 = page.get("YOU_SLOT")
@@ -143,8 +146,31 @@ func stage_drag_card(step: Dictionary) -> void:
 	var up := InputEventMouseButton.new()
 	up.button_index = MOUSE_BUTTON_LEFT
 	up.pressed = false
+	if mark != "":
+		(d.get("_marks") as Dictionary)[mark + "_drop"] = Engine.get_frames_drawn()
 	page.call("_input", up)
 	await d.call("_sleep", 0.1)
+
+
+## {area, have: {id: n}, loadout: [id|null × 3]}: one league's card bucket set
+## exactly (the trailer save owns two of every kind — a shop buy of a kind you
+## already own only bumps its badge; a new kind grows a slot open).
+func stage_cards(step: Dictionary) -> void:
+	var area := str(step.get("area", "cage"))
+	var doc: Dictionary = App.cards_doc()
+	var b := CardDefs.league_doc(doc, area)
+	var have: Dictionary = step.get("have", {})
+	var inv := {}
+	for id in have:
+		if int(have[id]) > 0:
+			inv[str(id)] = int(have[id])
+	b["inventory"] = inv
+	var lo: Array = step.get("loadout", [null, null, null])
+	b["loadout"] = [null, null, null]
+	for i in mini(lo.size(), CardDefs.SLOTS):
+		if lo[i] != null and str(lo[i]) != "" and inv.has(str(lo[i])):
+			b["loadout"][i] = str(lo[i])
+	SaveService.put_cards(doc)
 
 
 ## {slot, id}: play a card from the tray (dealt in if the level kept it out).

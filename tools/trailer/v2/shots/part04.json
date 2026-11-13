@@ -1,0 +1,110 @@
+{
+ "name": "part04",
+ "note": "v2 part 4 (bars 9-10): EARN POWER-UPS, SET YOUR LOADOUT. The cage league page on MATCH; the CARDS tab tapped on 9.1 (the shop slides in), Deep Freeze's price on 9.2 (X / CONFIRM), CONFIRM on 9.3 (the card flies up into YOUR CARDS, which grows a slot for it: the save is staged without it in the cage), a hold. Then the league's next heat: the pre-match page (`pm`), Deep Freeze dragged from YOUR CARDS into slot 0 (lifts on 10.2, drops on 10.3), a hold on READY. A button fires on its release, 5 frames after the press.",
+ "themes": [],
+ "setup": {},
+ "steps": [
+  {
+   "do": "cards",
+   "area": "cage",
+   "have": {
+    "fire7": 2,
+    "magnet6": 2,
+    "shield5": 2
+   },
+   "loadout": [
+    null,
+    null,
+    null
+   ]
+  },
+  {
+   "do": "league_page",
+   "area": "cage",
+   "tab": "HEAT"
+  },
+  {
+   "do": "wait",
+   "s": 1.2
+  },
+  {
+   "do": "mark",
+   "name": "tab"
+  },
+  {
+   "do": "tap",
+   "name": "Tab_CARDS"
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "at",
+   "frame": 28,
+   "from": "in"
+  },
+  {
+   "do": "mark",
+   "name": "price"
+  },
+  {
+   "do": "tap",
+   "name": "Buy_ice"
+  },
+  {
+   "do": "at",
+   "frame": 61,
+   "from": "in"
+  },
+  {
+   "do": "mark",
+   "name": "confirm"
+  },
+  {
+   "do": "tap",
+   "name": "Confirm_ice"
+  },
+  {
+   "do": "at",
+   "frame": 170,
+   "from": "in"
+  },
+  {
+   "do": "league_heat",
+   "area": "cage",
+   "hand": [
+    "",
+    "",
+    ""
+   ],
+   "spare": [],
+   "ready": false
+  },
+  {
+   "do": "mark",
+   "name": "pm"
+  },
+  {
+   "do": "at",
+   "frame": 29,
+   "from": "pm"
+  },
+  {
+   "do": "drag_card",
+   "card": "ice",
+   "slot": 0,
+   "s": 0.44,
+   "mark": "drag"
+  },
+  {
+   "do": "at",
+   "frame": 170,
+   "from": "pm"
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}
