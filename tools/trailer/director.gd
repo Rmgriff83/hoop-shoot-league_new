@@ -172,6 +172,10 @@ func _do(step: Dictionary) -> void:
 			await _flick(step)
 		"mark":
 			_marks[str(step.get("name", "in"))] = Engine.get_frames_drawn()
+		"at":   # {frame, from}: hold until exactly `frame` frames after the mark `from` ("in"): hits placed by count, not by timer
+			var base := int(_marks.get(str(step.get("from", "in")), Engine.get_frames_drawn()))
+			while Engine.get_frames_drawn() - base < int(step.get("frame", 0)):
+				await get_tree().process_frame
 		"poster":
 			await _poster(step)
 		"time_scale":

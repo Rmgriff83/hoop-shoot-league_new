@@ -89,13 +89,15 @@ which was used (`synth:<TYPE>`), and Checkpoint A marks those shots.
 | `flick` `{want: [types], seed, nth, id, plain, poster_mid, then}` | one flick: a recording, or a stand-in |
 | `until` `{what}` | `running`, `ready`, `resolved`, `settled`, `entered` (a ball in the net), `peggy_card` |
 | `wait` `{s}`, `mark` `{name}`, `poster`, `end` | time, a named frame, the storyboard frame |
+| `at` `{frame, from}` | hold until exactly `frame` frames after the mark `from` (`in`): v2 places its hits by count |
 | `time_scale` `{x}` | true slow motion: the sim and the net run slower, 60 real frames a second |
 | `camera` `{at, look, fov}` / `{off}`, `hud` `{on}` | the social cut's rim camera (refused in an App Store shot) |
 | `league_heat`, `ready`, `card`, `league_page`, `league_tab`, `match_end`, `season_wrap` | the league (`director_stages.gd`) |
 | `results`, `board`, `board_rows` | a time-trial result; the ranks page with staged rows (a second `board_rows` is the climb) |
 | `lobby`, `finding`, `found`, `online_heat`, `online_result` | ranked online against QaFakePeer |
 | `locker`, `locker_tap`, `peggy`, `peggy_drop` `{want: legend}` | the locker; a real PEGGY drop aimed by the board's own sim |
-| `splash` | the splash's neon logo with its menu hidden (the end card) |
+| `splash` `{fresh, menu}` | the splash's neon logo with its menu hidden (the end card); `fresh` shows NEW GAME as a first install does, `menu` keeps the menu (v2's opening) |
+| `new_player` `{seed}` | the NEW PLAYER page NEW GAME opened, its rolls on a seed (`tools/trailer/v2/roll_seeds.gd` lists them); marks `page` and `land` |
 | `wear`, `tap`, `call` | change kit, press a named button, call a method |
 
 Flick replay: each movie frame advances the replay's own clock by 1/60 s
@@ -205,8 +207,16 @@ python3 -I tools/trailer/v2/v2.py conform raw/partNN/x.mov
 python3 -I tools/trailer/v2/v2.py insets conform/partNN/x.mov
                                                        the recording's HUD against the headless reference
 tools/trailer/v2/capture.sh <shot>                     a v2 shot through Movie Maker → v2/clips/<shot>.mov
+tools/trailer/v2/cards.sh N                            part N's text card frames (minutes: 2 s a frame)
 python3 -I tools/trailer/v2/v2.py part N               part N's deliverables + the hit report
 ```
+
+A part is a shot (`tools/trailer/v2/shots/partNN.json`, the director's verbs,
+hits placed with `at {frame}` from the `in` mark) plus a part file
+(`tools/trailer/v2/parts/partNN.json`: which clip frames fill it, which mark
+is each hit, what was approximated). A QA click presses on one frame and
+releases five later, and a button fires on the release: press five frames
+early when the change is the hit, on the beat when the pressed look is.
 
 **Sources.** Parts 1, 2, 3, 4, 7 and 8 are rendered by the game (the
 director on the trailer save, `tools/trailer/v2/shots/`); parts 5 and 6 are
@@ -236,9 +246,19 @@ only (the music runs unbroken in the final assembly); `partNN_sfx.wav`;
 phone); `partNN_sheet.png` (one frame per beat, labelled bar.beat and the
 hit). The report says where each hit landed against its target frame
 (anything over 2 frames is flagged), which sources were used, and what was
-approximated. Text cards are the game's (card_scene.gd): one position and
-size locked on part 1 for every part; part 7's line is two lines; part 8 has
-none (its badges and legal lines are its own).
+approximated. Text cards are the game's (card_scene.gd `render_v2`): the
+tour panel at x 36, 648 wide, **y 1010** (design px; over the floor in the
+shooting view, under LET'S PLAY on the NEW PLAYER page, clear of both HUD
+bands at 108 / 62), each line **32 px** Press Start (18 glyphs a line; a
+longer line wraps inside the panel), in from the part's "text card in" hit
+with the tour card's rise, out with its 0.2 s fade on the part's last
+frame — locked on part 1 (2026-11-12) for every part. Part 7's line is two
+lines; part 8 has none (its badges and legal lines are its own).
+
+Part 1 (2026-11-12): the lit splash, NEW GAME pressed on 1.3, the real 0.3 s
+slide (the storyboard's 1.4 / 2.1 come 28 / 43 frames early — flagged, the
+honest pace kept), the card in on 2.1, the dice re-rolling on 2.2 / 2.3 on
+seed 45 (TUNNEL SHARK #77 of PINE HOLLOW → NEON COMET → GOLDEN SHORE).
 
 ## Recording flicks
 

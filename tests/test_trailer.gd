@@ -13,7 +13,7 @@ const Director := preload("res://tools/trailer/director.gd")
 const Stages := preload("res://tools/trailer/director_stages.gd")
 const CardScene := preload("res://tools/trailer/card_scene.gd")
 const BANNED := ["physics", "realistic", "roguelite", "roguelike", "ultimate", "experience", "immersive", "next-level", "revolutionary", "deckbuilder"]
-const DIRECTOR_VERBS := ["wait", "play", "spot", "until", "flick", "mark", "poster", "time_scale", "camera", "hud", "wear", "tap", "call", "end"]
+const DIRECTOR_VERBS := ["wait", "play", "spot", "until", "flick", "mark", "at", "poster", "time_scale", "camera", "hud", "wear", "tap", "call", "end"]
 
 
 func _beats(pos: String) -> float:

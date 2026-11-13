@@ -1,0 +1,23 @@
+{
+ "part": 1,
+ "segments": [
+  {
+   "clip": "part01",
+   "from": "in",
+   "frames": 262
+  }
+ ],
+ "hit_marks": {
+  "1.1": "in",
+  "1.3": "tap",
+  "1.4": "page",
+  "2.1": "land",
+  "2.2": "roll_name+5",
+  "2.3": "roll_town+5"
+ },
+ "notes": [
+  "The game's splash -> NEW PLAYER transition is 0.3 s (the storyboard allows 1.1 s between the tap and the landing): the tap is on 1.3 (the pressed button on the beat), the slide starts on its release 5 frames later and the card lands 18 frames after that, so 1.4 and 2.1 come early. The text card still comes in on 2.1.",
+  "A button fires on its release, 5 frames after the press: the dice are pressed 5 frames before 2.2 and 2.3 so the name and town change on the beat (the die spins 0.3 s after).",
+  "Seed 45 for the page's rolls: TUNNEL SHARK #77 of PINE HOLLOW, then NEON COMET, then GOLDEN SHORE."
+ ]
+}

@@ -198,9 +198,16 @@ func stage_match_end(step: Dictionary) -> void:
 
 
 ## The splash: the ball drops, the neon HOOP SHOOT LEAGUE flickers on (the end card).
-func stage_splash(_step: Dictionary) -> void:
+## {fresh: true} shows NEW GAME as a first install does (App.qa_fresh; nothing is
+## created unless LET'S PLAY is pressed); {menu: true} keeps the menu and the
+## social icons (v2's opening flow). The defaults hide them: the logo alone.
+func stage_splash(step: Dictionary) -> void:
+	if bool(step.get("fresh", false)):
+		App.qa_fresh = true
 	d.get_tree().change_scene_to_file("res://game/screens/splash_screen.tscn")
 	await d.call("_sleep", 0.05)
+	if bool(step.get("menu", false)):
+		return
 	# The logo alone: the menu and the social icons stay out of the end card.
 	var sc := _scene()
 	if sc == null:
@@ -217,6 +224,32 @@ func stage_splash(_step: Dictionary) -> void:
 			c.visibility_changed.connect(func() -> void:
 				if c.visible:
 					c.visible = false)
+
+
+## {seed}: the NEW PLAYER page the splash's NEW GAME just opened (v2 part 1).
+## On the frame it appears (its frame still off-screen to the right) its rolls
+## are re-done on our seed, so the name, tag and hometown — and the two die
+## taps after — read the same every render; marks `page` then, and `land`
+## when the frame has slid home (HomePage.slide_in, 0.3 s).
+func stage_new_player(step: Dictionary) -> void:
+	var page: NewPlayerPage = null
+	for i in 120:
+		page = d.get_tree().root.find_child("NewPlayerPage", true, false) as NewPlayerPage
+		if page != null:
+			break
+		await d.get_tree().process_frame
+	if page == null:
+		d.call("_problem", "no NEW PLAYER page opened")
+		return
+	if step.has("seed"):
+		page.rng.reseed(int(step["seed"]))
+		page._roll_all()
+	d.get("_marks")["page"] = Engine.get_frames_drawn()
+	for i in 60:
+		if page.root.position.x <= HomePage.FRAME_POS.x + 0.5:
+			break
+		await d.get_tree().process_frame
+	d.get("_marks")["land"] = Engine.get_frames_drawn()
 
 
 ## {variant: champs | out}: a season played through on a fixed seed, its

@@ -1,0 +1,336 @@
+"""Trailer v2: one part's deliverables from its clips (v2.py part N; docs/TRAILER.md -> v2).
+
+A part file, tools/trailer/v2/parts/partNN.json:
+  segments   [{clip, from, offset, frames}]  clips under marketing/trailer/v2/clips (the director's
+                                               .mov/.wav/.marks.json); `from` is a mark, `offset` frames
+                                               after it; the segments' frames add up to the part's
+  card_in    the part frame the text card comes in (default: the hit that says "text card in")
+  hit_marks  {"bar.beat": "mark" | "mark+n" | "mark-n"}  which mark of the clip each hit's moment is
+  notes      what was approximated, for the report
+Writes marketing/trailer/v2/parts/partNN/: partNN_clean.mov, partNN_text.mov (all-intra crf 10, exactly
+`frames` long, the game's SFX only), partNN_sfx.wav, partNN_review.mp4 (text + its slice of music.wav),
+partNN_sheet.png (one frame per beat, labelled), partNN_report.md (hits landed vs target, sources,
+approximations). Stdlib only: the sheet's labels are a built-in 5x7 font.
+"""
+import json, os, struct, subprocess, sys, zlib
+
+import v2
+
+FPS = v2.FPS
+MASTER = v2.MASTER
+TILE = (216, 468)            # a sheet tile: the master at 0.2
+FONT_SCALE = 2
+GRID_COLS = 8
+
+
+def seg_sources(clip):
+    base = os.path.join(v2.OUT, "clips", clip)
+    mov, wav, marks = base + ".mov", base + ".wav", base + ".marks.json"
+    for p in (mov, wav, marks):
+        if not os.path.exists(p):
+            sys.exit("missing %s (tools/trailer/v2/capture.sh %s)" % (p, clip))
+    return mov, wav, json.load(open(marks))
+
+
+def mark_frame(marks, spec):
+    """A clip frame from "in", "land+5", "tap-3" (frames)."""
+    name, off = spec, 0
+    for sign in "+-":
+        if sign in spec[1:]:
+            i = spec.rindex(sign)
+            name, off = spec[:i], int(spec[i:])
+            break
+    if name not in marks:
+        return None
+    return int(marks[name]) + off
+
+
+def beat_frames(sb, part):
+    """Every beat of the part's bars as (bar, beat, part_frame), rounded on the global timeline."""
+    bpm = float(sb["timing"]["bpm"])
+    out = []
+    for bar in range(int(part["bars"][0]), int(part["bars"][1]) + 1):
+        for beat in range(1, 5):
+            t = ((bar - 1) * 4 + (beat - 1)) * 60.0 / bpm
+            out.append((bar, beat, int(round(t * FPS)) - int(part["start_frame"])))
+    return out
+
+
+def build(n):
+    sb = v2.story()
+    part = next(p for p in sb["parts"] if int(p["part"]) == n)
+    pid = "part%02d" % n
+    spec_path = os.path.join(v2.V2, "parts", pid + ".json")
+    if not os.path.exists(spec_path):
+        sys.exit("no part file %s" % spec_path)
+    spec = json.load(open(spec_path))
+    frames = int(part["frames"])
+    segs = spec["segments"]
+    if sum(int(s["frames"]) for s in segs) != frames:
+        sys.exit("%s: the segments add up to %d frames, the part is %d" % (pid, sum(int(s["frames"]) for s in segs), frames))
+    out_dir = os.path.join(v2.OUT, "parts", pid)
+    os.makedirs(out_dir, exist_ok=True)
+    dst = lambda tail: os.path.join(out_dir, "%s_%s" % (pid, tail))
+    # The text card: from its hit to the part's last frame (card_scene.gd render_v2 made the frames).
+    card_in = spec.get("card_in")
+    if card_in is None:
+        card_in = 0
+        for h in part.get("hits", []):
+            if "text card in" in str(h.get("what", "")).lower():
+                card_in = int(h["part_frame"])
+    has_card = part.get("text") is not None
+    card_seq = os.path.join(v2.OUT, "cards", pid, "f%04d.png")
+    if has_card and not os.path.exists(card_seq % 0):
+        sys.exit("missing card frames %s (tools/trailer/v2/cards.sh)" % os.path.dirname(card_seq))
+    # Inputs and the graph: each segment trimmed by frame, concatenated at the clip size, then the one downscale.
+    inputs, vf, af = [], [], []
+    def add_input(args):
+        inputs.append(args)
+        return len(inputs) - 1
+    placed = []   # (segment, its part frame, its clip's first frame, marks, sources) for the report
+    at = 0
+    for i, s in enumerate(segs):
+        mov, wav, mk = seg_sources(s["clip"])
+        f0 = mark_frame(mk["marks"], str(s.get("from", "in")))
+        if f0 is None:
+            sys.exit("%s: clip %s has no mark '%s'" % (pid, s["clip"], s.get("from")))
+        f0 += int(s.get("offset", 0))
+        nseg = int(s["frames"])
+        have = int(mk["marks"].get("end", 0)) + 30
+        if f0 < 0 or f0 + nseg > have:
+            sys.exit("%s: '%s' from %s needs clip frames %d-%d of %d (lengthen the shot or move `from`)" % (pid, s["clip"], s.get("from"), f0, f0 + nseg, have))
+        vi, ai = add_input(["-i", mov]), add_input(["-i", wav])
+        vf.append("[%d:v]trim=start_frame=%d:end_frame=%d,setpts=PTS-STARTPTS[v%d]" % (vi, f0, f0 + nseg, i))
+        af.append("[%d:a]atrim=start=%.6f:end=%.6f,asetpts=PTS-STARTPTS,aresample=48000[a%d]" % (ai, f0 / FPS, (f0 + nseg) / FPS, i))
+        placed.append((s, at, f0, mk))
+        at += nseg
+    vf.append("%sconcat=n=%d:v=1:a=0,split[vraw1][vraw2]" % ("".join("[v%d]" % i for i in range(len(segs))), len(segs)))
+    af.append("%sconcat=n=%d:v=0:a=1,asplit=3[sfx1][sfx2][sfx3]" % ("".join("[a%d]" % i for i in range(len(segs))), len(segs)))
+    down = "scale=%d:%d:flags=area,setsar=1" % MASTER
+    vf.append("[vraw1]%s[vclean]" % down)
+    if has_card:
+        ci = add_input(["-framerate", str(FPS), "-i", card_seq])
+        t0 = card_in / FPS
+        vf.append("[%d:v]setpts=PTS+%.6f/TB[card]" % (ci, t0))
+        vf.append("[vraw2][card]overlay=0:0:eof_action=pass:enable='gte(t,%.6f)'[vtext0]" % t0)
+        vf.append("[vtext0]%s[vtext]" % down)
+    else:
+        vf.append("[vraw2]%s[vtext]" % down)
+    cmd = [v2.FFMPEG, "-y", "-loglevel", "error"]
+    for a in inputs:
+        cmd += a
+    cmd += ["-filter_complex", ";".join(vf + af)]
+    audio = ["-c:a", "pcm_s16le", "-ar", "48000", "-ac", "2"]
+    cmd += ["-map", "[vclean]", "-map", "[sfx1]", "-frames:v", str(frames)] + v2.MEZZ + audio + [dst("clean.mov")]
+    cmd += ["-map", "[vtext]", "-map", "[sfx2]", "-frames:v", str(frames)] + v2.MEZZ + audio + [dst("text.mov")]
+    cmd += ["-map", "[sfx3]"] + audio + [dst("sfx.wav")]
+    v2.run(cmd)
+    # The review: the text version with the part's slice of the music, the SFX under it.
+    music = os.path.join(v2.OUT, "music.wav")
+    if not os.path.exists(music):
+        sys.exit("no music.wav (v2.py music)")
+    a, b = int(part["start_frame"]) / FPS, int(part["end_frame"]) / FPS
+    v2.run([v2.FFMPEG, "-y", "-loglevel", "error", "-i", dst("text.mov"), "-i", music, "-filter_complex",
+            "[1:a]atrim=start=%.6f:end=%.6f,asetpts=PTS-STARTPTS,volume=-3dB[m];[0:a]volume=-5dB[s];[m][s]amix=inputs=2:normalize=0:duration=first[a]" % (a, b),
+            "-map", "0:v", "-map", "[a]", "-c:v", "libx264", "-preset", "fast", "-crf", "18", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", dst("review.mp4")])
+    # The sheet and the report.
+    beats = beat_frames(sb, part)
+    hits = {("%d.%d" % (int(h["bar"]), int(h["beat"]))): h for h in part.get("hits", [])}
+    sheet(dst("text.mov"), beats, hits, dst("sheet.png"))
+    report = report_lines(part, pid, spec, placed, hits, frames, dst)
+    open(dst("report.md"), "w").write("\n".join(report) + "\n")
+    print("\n".join(report))
+    return 0
+
+
+def report_lines(part, pid, spec, placed, hits, frames, dst):
+    lines = ["# %s — %s (bars %d–%d, frames %d–%d, %d frames)" % (pid, part["title"], part["bars"][0], part["bars"][1], part["start_frame"], part["end_frame"], frames), ""]
+    # Lengths.
+    for tail in ("clean.mov", "text.mov"):
+        n = v2.count_frames(dst(tail))
+        lines.append("- %s: %d frames%s" % (tail, n, "" if n == frames else "  **WRONG (wanted %d)**" % frames))
+    wf = v2.wav_frames(dst("sfx.wav"))
+    lines.append("- sfx.wav: %.2f frames%s" % (wf, "" if abs(wf - frames) < 1.0 else "  **WRONG**"))
+    lines.append("- review.mp4, sheet.png: " + os.path.dirname(dst("x")))
+    # Hits.
+    lines += ["", "| hit | what | target | landed | delta |", "|---|---|---|---|---|"]
+    hit_marks = spec.get("hit_marks", {})
+    for key in sorted(hits, key=lambda k: tuple(int(x) for x in k.split("."))):
+        h = hits[key]
+        target = int(h["part_frame"])
+        landed = None
+        mspec = hit_marks.get(key)
+        if mspec:
+            for s, at, f0, mk in placed:
+                f = mark_frame(mk["marks"], mspec)
+                if f is not None and f0 <= f <= f0 + int(s["frames"]):
+                    landed = at + (f - f0)
+                    break
+        if landed is None:
+            lines.append("| %s | %s | %d | — | (no mark%s) |" % (key, h["what"], target, ": " + mspec if mspec else ""))
+        else:
+            d = landed - target
+            lines.append("| %s | %s | %d | %d | %+d%s |" % (key, h["what"], target, landed, d, "  **FLAG**" if abs(d) > 2 else ""))
+    # Sources.
+    lines += ["", "Sources:"]
+    for s, at, f0, mk in placed:
+        extra = []
+        if mk.get("flicks"):
+            extra.append("flicks " + ", ".join(mk["flicks"]))
+        if mk.get("problems"):
+            extra.append("PROBLEMS " + "; ".join(mk["problems"]))
+        lines.append("- part frames %d–%d: %s.mov from clip frame %d (mark %s%+d)%s" % (at, at + int(s["frames"]), s["clip"], f0, s.get("from", "in"), int(s.get("offset", 0)), ("; " + "; ".join(extra)) if extra else ""))
+    if spec.get("notes"):
+        lines += ["", "Approximated / notes:"] + ["- " + n for n in spec["notes"]]
+    return lines
+
+
+# ---- the sheet ---------------------------------------------------------------------------
+
+FONT = {
+    "A": [" ### ", "#   #", "#   #", "#####", "#   #", "#   #", "#   #"],
+    "B": ["#### ", "#   #", "#   #", "#### ", "#   #", "#   #", "#### "],
+    "C": [" ####", "#    ", "#    ", "#    ", "#    ", "#    ", " ####"],
+    "D": ["#### ", "#   #", "#   #", "#   #", "#   #", "#   #", "#### "],
+    "E": ["#####", "#    ", "#    ", "#### ", "#    ", "#    ", "#####"],
+    "F": ["#####", "#    ", "#    ", "#### ", "#    ", "#    ", "#    "],
+    "G": [" ####", "#    ", "#    ", "# ###", "#   #", "#   #", " ####"],
+    "H": ["#   #", "#   #", "#   #", "#####", "#   #", "#   #", "#   #"],
+    "I": ["#####", "  #  ", "  #  ", "  #  ", "  #  ", "  #  ", "#####"],
+    "J": ["    #", "    #", "    #", "    #", "#   #", "#   #", " ### "],
+    "K": ["#   #", "#  # ", "# #  ", "##   ", "# #  ", "#  # ", "#   #"],
+    "L": ["#    ", "#    ", "#    ", "#    ", "#    ", "#    ", "#####"],
+    "M": ["#   #", "## ##", "# # #", "#   #", "#   #", "#   #", "#   #"],
+    "N": ["#   #", "##  #", "# # #", "#  ##", "#   #", "#   #", "#   #"],
+    "O": [" ### ", "#   #", "#   #", "#   #", "#   #", "#   #", " ### "],
+    "P": ["#### ", "#   #", "#   #", "#### ", "#    ", "#    ", "#    "],
+    "Q": [" ### ", "#   #", "#   #", "#   #", "# # #", "#  # ", " ## #"],
+    "R": ["#### ", "#   #", "#   #", "#### ", "# #  ", "#  # ", "#   #"],
+    "S": [" ####", "#    ", "#    ", " ### ", "    #", "    #", "#### "],
+    "T": ["#####", "  #  ", "  #  ", "  #  ", "  #  ", "  #  ", "  #  "],
+    "U": ["#   #", "#   #", "#   #", "#   #", "#   #", "#   #", " ### "],
+    "V": ["#   #", "#   #", "#   #", "#   #", "#   #", " # # ", "  #  "],
+    "W": ["#   #", "#   #", "#   #", "# # #", "# # #", "## ##", "#   #"],
+    "X": ["#   #", "#   #", " # # ", "  #  ", " # # ", "#   #", "#   #"],
+    "Y": ["#   #", "#   #", " # # ", "  #  ", "  #  ", "  #  ", "  #  "],
+    "Z": ["#####", "    #", "   # ", "  #  ", " #   ", "#    ", "#####"],
+    "0": [" ### ", "#   #", "#  ##", "# # #", "##  #", "#   #", " ### "],
+    "1": ["  #  ", " ##  ", "  #  ", "  #  ", "  #  ", "  #  ", " ### "],
+    "2": [" ### ", "#   #", "    #", "   # ", "  #  ", " #   ", "#####"],
+    "3": ["#####", "   # ", "  #  ", "   # ", "    #", "#   #", " ### "],
+    "4": ["   # ", "  ## ", " # # ", "#  # ", "#####", "   # ", "   # "],
+    "5": ["#####", "#    ", "#### ", "    #", "    #", "#   #", " ### "],
+    "6": ["  ## ", " #   ", "#    ", "#### ", "#   #", "#   #", " ### "],
+    "7": ["#####", "    #", "   # ", "  #  ", " #   ", " #   ", " #   "],
+    "8": [" ### ", "#   #", "#   #", " ### ", "#   #", "#   #", " ### "],
+    "9": [" ### ", "#   #", "#   #", " ####", "    #", "   # ", " ##  "],
+    " ": ["     "] * 7,
+    ".": ["     ", "     ", "     ", "     ", "     ", "  ## ", "  ## "],
+    ",": ["     ", "     ", "     ", "     ", "  ## ", "  ## ", " #   "],
+    ":": ["     ", "  ## ", "  ## ", "     ", "  ## ", "  ## ", "     "],
+    ";": ["     ", "  ## ", "  ## ", "     ", "  ## ", "  ## ", " #   "],
+    "-": ["     ", "     ", "     ", "#####", "     ", "     ", "     "],
+    "+": ["     ", "  #  ", "  #  ", "#####", "  #  ", "  #  ", "     "],
+    "/": ["    #", "    #", "   # ", "  #  ", " #   ", "#    ", "#    "],
+    "#": [" # # ", " # # ", "#####", " # # ", "#####", " # # ", " # # "],
+    "(": ["  #  ", " #   ", "#    ", "#    ", "#    ", " #   ", "  #  "],
+    ")": ["  #  ", "   # ", "    #", "    #", "    #", "   # ", "  #  "],
+    "'": ["  #  ", "  #  ", "     ", "     ", "     ", "     ", "     "],
+    "?": [" ### ", "#   #", "    #", "   # ", "  #  ", "     ", "  #  "],
+    "!": ["  #  ", "  #  ", "  #  ", "  #  ", "  #  ", "     ", "  #  "],
+    "&": [" ##  ", "#  # ", "#  # ", " ##  ", "# # #", "#  # ", " ## #"],
+    "=": ["     ", "     ", "#####", "     ", "#####", "     ", "     "],
+    "<": ["   # ", "  #  ", " #   ", "#    ", " #   ", "  #  ", "   # "],
+    ">": [" #   ", "  #  ", "   # ", "    #", "   # ", "  #  ", " #   "],
+    "%": ["##  #", "## # ", "   # ", "  #  ", " #   ", "# ## ", "#  ##"],
+}
+CHAR_W = 6 * FONT_SCALE
+LINE_H = 9 * FONT_SCALE
+
+
+class Canvas:
+    def __init__(self, w, h, bg=(24, 24, 28)):
+        self.w, self.h = w, h
+        self.px = bytearray(bytes(bg) * (w * h))
+
+    def blit(self, x, y, w, h, rgb):
+        for r in range(h):
+            if 0 <= y + r < self.h:
+                o = ((y + r) * self.w + x) * 3
+                self.px[o:o + w * 3] = rgb[r * w * 3:(r + 1) * w * 3]
+
+    def text(self, x, y, s, colour=(255, 255, 255)):
+        for ch in s.upper():
+            g = FONT.get(ch, FONT["?"])
+            for r in range(7):
+                for c in range(5):
+                    if g[r][c] == "#":
+                        self.rect(x + c * FONT_SCALE, y + r * FONT_SCALE, FONT_SCALE, FONT_SCALE, colour)
+            x += CHAR_W
+
+    def rect(self, x, y, w, h, colour):
+        row = bytes(colour) * w
+        for r in range(h):
+            if 0 <= y + r < self.h:
+                o = ((y + r) * self.w + x) * 3
+                self.px[o:o + w * 3] = row
+
+    def png(self, path):
+        raw = b"".join(b"\x00" + bytes(self.px[r * self.w * 3:(r + 1) * self.w * 3]) for r in range(self.h))
+        def chunk(tag, data):
+            return struct.pack(">I", len(data)) + tag + data + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF)
+        with open(path, "wb") as f:
+            f.write(b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", self.w, self.h, 8, 2, 0, 0, 0)) + chunk(b"IDAT", zlib.compress(raw, 6)) + chunk(b"IEND", b""))
+
+
+def frame_rgb(mov, frame, size):
+    """One frame of a clip as rgb24 bytes at `size` (by frame number: exact on an all-intra clip)."""
+    return subprocess.run([v2.FFMPEG, "-v", "error", "-i", mov, "-vf", "select=eq(n\\,%d),scale=%d:%d:flags=area" % (frame, size[0], size[1]), "-fps_mode", "passthrough", "-frames:v", "1", "-f", "rawvideo", "-pix_fmt", "rgb24", "-"], check=True, capture_output=True).stdout
+
+
+def wrap(text, width):
+    words, lines, cur = text.split(), [], ""
+    for w in words:
+        if cur and len(cur) + 1 + len(w) > width:
+            lines.append(cur)
+            cur = w
+        else:
+            cur = (cur + " " + w).strip()
+    if cur:
+        lines.append(cur)
+    return lines
+
+
+def sheet(mov, beats, hits, path):
+    """One tile per beat of the text version, labelled bar.beat, the frame, and the hit that should be there."""
+    gap, margin = 8, 12
+    label_h = 4 * LINE_H + 6
+    cell_w, cell_h = TILE[0] + gap, TILE[1] + label_h + gap
+    cols = min(GRID_COLS, len(beats))
+    rows = (len(beats) + cols - 1) // cols
+    cv = Canvas(margin * 2 + cols * cell_w - gap, margin * 2 + rows * cell_h - gap)
+    chars = TILE[0] // CHAR_W
+    for i, (bar, beat, f) in enumerate(beats):
+        x = margin + (i % cols) * cell_w
+        y = margin + (i // cols) * cell_h
+        rgb = frame_rgb(mov, f, TILE) if f >= 0 else b""
+        if len(rgb) == TILE[0] * TILE[1] * 3:
+            cv.blit(x, y, TILE[0], TILE[1], rgb)
+        else:
+            cv.rect(x, y, TILE[0], TILE[1], (60, 20, 20))
+        ly = y + TILE[1] + 4
+        key = "%d.%d" % (bar, beat)
+        cv.text(x, ly, "%s  F%d" % (key, f), (255, 255, 255))
+        h = hits.get(key)
+        if h:
+            for j, line in enumerate(wrap(str(h["what"]), chars)[:3]):
+                cv.text(x, ly + (j + 1) * LINE_H, line, (255, 228, 92))
+        else:
+            cv.text(x, ly + LINE_H, "-", (120, 120, 120))
+    cv.png(path)
+
+
+def main(argv):
+    if not argv:
+        sys.exit("v2.py part N")
+    return build(int(argv[0]))

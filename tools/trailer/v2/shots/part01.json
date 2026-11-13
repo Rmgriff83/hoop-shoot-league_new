@@ -1,0 +1,76 @@
+{
+ "name": "part01",
+ "note": "v2 part 1, Create your hooper (bars 1-2): the lit splash as a new player sees it, NEW GAME on 1.3, the NEW PLAYER card sliding in, the name die on 2.2, the hometown die on 2.3, a hold. Seed 45: TUNNEL SHARK #77 of PINE HOLLOW -> NEON COMET -> GOLDEN SHORE. A button fires on its release, 5 frames after the press (the QA click), so the dice are pressed 5 frames before their beats: the re-roll lands on the beat.",
+ "themes": [],
+ "setup": {},
+ "steps": [
+  {
+   "do": "splash",
+   "fresh": true,
+   "menu": true
+  },
+  {
+   "do": "wait",
+   "s": 4.9
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "at",
+   "frame": 65
+  },
+  {
+   "do": "mark",
+   "name": "tap"
+  },
+  {
+   "do": "tap",
+   "name": "Primary"
+  },
+  {
+   "do": "new_player",
+   "seed": 45
+  },
+  {
+   "do": "at",
+   "frame": 159
+  },
+  {
+   "do": "mark",
+   "name": "roll_name"
+  },
+  {
+   "do": "tap",
+   "name": "RollName"
+  },
+  {
+   "do": "at",
+   "frame": 191
+  },
+  {
+   "do": "mark",
+   "name": "roll_town"
+  },
+  {
+   "do": "tap",
+   "name": "RollTown"
+  },
+  {
+   "do": "at",
+   "frame": 229
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "at",
+   "frame": 292
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}
