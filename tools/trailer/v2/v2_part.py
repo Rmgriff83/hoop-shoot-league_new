@@ -69,6 +69,28 @@ def beat_frames(sb, bars, start_frame):
     return out
 
 
+def zoom_filter(zoom, f0):
+    """A segment's `zoom` {from, to, rect: [x, y, w, h], power}: a zip from the whole frame into `rect`
+    (master px) between the clip frames `from` and `to` — the crop window shrinks on an ease-in
+    (`power`, 2 = quadratic: slow off the mark, fast through the end) until the rect fills the frame's
+    height, its centre sliding from the frame's centre to the rect's; the window stays inside the frame.
+    Returns the filters to append after the master scale ("" when there is no zoom)."""
+    if not zoom:
+        return ""
+    n0, n1 = int(zoom["from"]) - f0, int(zoom["to"]) - f0
+    rx, ry, rw, rh = [float(v) for v in zoom["rect"]]
+    mw, mh = MASTER
+    big = float(zoom.get("factor", mh / rh))
+    cx, cy = rx + rw / 2.0, ry + rh / 2.0
+    # zoompan, one output frame per input (`crop` reads its w/h once, so it cannot shrink per frame);
+    # `in` counts input frames from 1.
+    e = "pow(clip((in-1-%d)/%d\\,0\\,1)\\,%g)" % (n0, max(1, n1 - n0), float(zoom.get("power", 2)))
+    z = "1+%.6f*%s" % (big - 1.0, e)
+    x = "clip(%.3f+%.3f*%s-iw/zoom/2\\,0\\,iw-iw/zoom)" % (mw / 2.0, cx - mw / 2.0, e)
+    y = "clip(%.3f+%.3f*%s-ih/zoom/2\\,0\\,ih-ih/zoom)" % (mh / 2.0, cy - mh / 2.0, e)
+    return ",zoompan=z='%s':x='%s':y='%s':d=1:s=%dx%d:fps=%d,setsar=1" % (z, x, y, mw, mh, FPS)
+
+
 def build(key):
     """`key` is a part number ("2") or one of a part's frames_list segments ("2a"): the segment is built
     on its own, as its slice of the part (its frames, its bar, the part's card already up where it is)."""
@@ -133,7 +155,7 @@ def build(key):
         if f0 < 0 or f0 + nseg > have:
             sys.exit("%s: '%s' from %s needs frames %d-%d of %d (lengthen the shot or move `from`)" % (pid, label, s.get("from"), f0, f0 + nseg, have))
         vi = add_input(["-i", mov])
-        vf.append("[%d:v]trim=start_frame=%d:end_frame=%d,setpts=PTS-STARTPTS,%s[v%d]" % (vi, f0, f0 + nseg, down, i))
+        vf.append("[%d:v]trim=start_frame=%d:end_frame=%d,setpts=PTS-STARTPTS,%s%s[v%d]" % (vi, f0, f0 + nseg, down, zoom_filter(s.get("zoom"), f0), i))
         if wav:
             ai = add_input(["-i", wav])
             af.append("[%d:a]atrim=start=%.6f:end=%.6f,asetpts=PTS-STARTPTS,aresample=48000,aformat=channel_layouts=stereo[a%d]" % (ai, f0 / FPS, (f0 + nseg) / FPS, i))

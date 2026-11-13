@@ -354,6 +354,22 @@ under the tapped row, and under row one it sits above the text card's slot
 with only its CITY button running under the card; under row two (Rasta) it
 was hidden behind it. The text card stays at the locked slot.
 
+Parts 5 and 6a (2026-11-13) are Ross's own online match, recorded on his
+XR (`raw/part05/ross_pov.mov`, conformed: ×1.304 lanczos, 2 px pad, VFR →
+cfr 60). His direction: start on the recording's first frame, and at 5.9 s
+zip into the opponent's picture-in-picture and end. So part 5 is the
+recording's first 262 frames (clock 31.5 → 27.7, YOU 18 → 19, ALLEY 19 →
+20; no director marks — the beats fall where his play fell) and 6a
+(`frames_list` 1571–1702, the storyboard's bar 13) the next 131, with the
+zip from clip frame 354 (his 5.9 s; part 6 frame 92 — the storyboard had
+65) to the slice's last frame: a segment's `zoom` `{from, to, rect, power}`
+in `v2_part.py`, zoompan with a quadratic ease-in from the whole frame into
+the PiP's inner rect (master px 695,352 328×576, measured from its orange
+border), filling the frame by height so the next part cuts straight into
+the friend's full-frame POV (6b, 1702–1833, still to come from his
+recording). Deep Freeze was already played when 5.9 s comes (PLAYED ON
+ALLEY from ~4.5 s), so 13.1/13.2 are not in the slice.
+
 Part 1 (2026-11-12): the lit splash, NEW GAME pressed on 1.3, the real 0.3 s
 slide (the storyboard's 1.4 / 2.1 come 28 / 43 frames early — flagged, the
 honest pace kept), the card in on 2.1, the dice re-rolling on 2.2 / 2.3 on

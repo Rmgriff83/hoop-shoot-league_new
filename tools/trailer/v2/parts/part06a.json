@@ -1,0 +1,26 @@
+{
+ "part": 6,
+ "segments": [
+  {
+   "conform": "part05/ross_pov",
+   "from": 262,
+   "frames": 131,
+   "zoom": {
+    "from": 354,
+    "to": 392,
+    "rect": [
+     695,
+     352,
+     328,
+     576
+    ],
+    "power": 2
+   }
+  }
+ ],
+ "notes": [
+  "The same recording, continued (clip frames 262-393). The zip starts at Ross's 5.9 s (clip 354 = part frame 92; the storyboard had 65) and fills the frame with the PiP on the slice's last frame (392, the frame before 14.1): a quadratic ease-in crop into the PiP's inner rect (master px 695,352 328x576, measured from the orange border), by height, so the land cuts straight into the friend's full-frame POV in 6b.",
+  "The text card (PLAY YOUR CARDS RIGHT) is up from 13.1 and stays put over the zoom.",
+  "Deep Freeze had already been played when the recording's 5.9 s comes (PLAYED ON ALLEY is on screen from about 4.5 s): 13.1 'tap Deep Freeze' and 13.2 'the card fires' are not in this slice."
+ ]
+}

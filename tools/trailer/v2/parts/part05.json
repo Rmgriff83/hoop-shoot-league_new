@@ -1,0 +1,14 @@
+{
+ "part": 5,
+ "segments": [
+  {
+   "conform": "part05/ross_pov",
+   "from": 0,
+   "frames": 262
+  }
+ ],
+ "notes": [
+  "Ross's own online match, recorded on his XR (raw/part05/ross_pov.mov), conformed to the master (x1.304 lanczos, 2 px pad). It starts on the recording's first frame as he asked; no director marks \u2014 the beats land where his play fell.",
+  "Parts 5 and 6a are the recording's first 393 frames in one run: part 5 ends on 13.1 and 6a carries on from the next frame."
+ ]
+}

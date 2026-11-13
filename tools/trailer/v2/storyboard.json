@@ -503,7 +503,8 @@
    "notes": [
     "Play this match on the iPhone 16 yourself and give your friend the XR: your POV is on screen for about 5.5 s, theirs for about 2 s, so the sharper, smoother phone should carry yours.",
     "This scene and the next come from the same match. Pick the stretch where the score is closest, then play the ice card a few seconds later (scene 6).",
-    "Keep both recordings whole; the ice card moment is what syncs the two POVs in the edit."
+    "Keep both recordings whole; the ice card moment is what syncs the two POVs in the edit.",
+    "Built 2026-11-13 from Ross's XR recording from its first frame (his call): clock 31.5 -> 27.2 over the part, YOU 18-19 -> 20-21; the beats fall where his play fell (the report says where)."
    ],
    "cut_out": "Cut on the downbeat"
   },
@@ -597,7 +598,8 @@
     "The PiP draws a simplified court at half rate, so keep the zip quick and get into their real POV fast; that's where the picture is sharp.",
     "Deep Freeze makes them swish through the ice, get caught, or rattle it three times. A shot caught by the ice on 14.3 is the clearest payoff.",
     "Both phones: Do Not Disturb on, start the screen recording from Control Center before the match, and check the recording for the status bar or the red recording pill; crop or cover it in the edit if it shows.",
-    "Each phone lays the HUD out around its own notch or Dynamic Island, so the HUD sits slightly lower on the 16 than on the XR. On the zip into their POV that's expected: it's a different player's screen."
+    "Each phone lays the HUD out around its own notch or Dynamic Island, so the HUD sits slightly lower on the 16 than on the XR. On the zip into their POV that's expected: it's a different player's screen.",
+    "Built 2026-11-13 from Ross's XR recording (raw/part05/ross_pov.mov, conformed): parts 5 and 6a are its first 393 frames, from its first frame as Ross asked; the zip (6a) runs from his 5.9 s (clip frame 354) to the 14.1 downbeat (393), a quadratic ease-in into the PiP's inner rect, filling the frame by its height."
    ],
    "screen_sizes": [
     {
@@ -643,7 +645,29 @@
      "fit": "The 886 × 1920 frame centred, with 97 px side bars on the brick wall or dither. No HUD gets cropped"
     }
    ],
-   "cut_out": "Cut on the downbeat into the outro"
+   "cut_out": "Cut on the downbeat into the outro",
+   "frames_list": [
+    {
+     "id": "6a",
+     "pov": "yours (Ross, XR)",
+     "bar": 13,
+     "start_s": 26.182,
+     "end_s": 28.364,
+     "start_frame": 1571,
+     "end_frame": 1702,
+     "note": "Ross's recording continues from part 5; the zip into the PiP starts 5.9 s into his clip (his call, 2026-11-13) and fills the frame on 14.1."
+    },
+    {
+     "id": "6b",
+     "pov": "theirs (friend)",
+     "bar": 14,
+     "start_s": 28.364,
+     "end_s": 30.545,
+     "start_frame": 1702,
+     "end_frame": 1833,
+     "note": "The friend's recording from the moment the rim ices."
+    }
+   ]
   },
   {
    "part": 7,
