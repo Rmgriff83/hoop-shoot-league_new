@@ -3,12 +3,24 @@
  "segments": [
   {
    "conform": "part05/ross_pov",
-   "from": 0,
-   "frames": 262
+   "from": 50,
+   "frames": 262,
+   "zoom": {
+    "from": 288,
+    "to": 311,
+    "rect": [
+     695,
+     353,
+     331,
+     588
+    ],
+    "power": 2
+   }
   }
  ],
  "notes": [
-  "Ross's own online match, recorded on his XR (raw/part05/ross_pov.mov), conformed to the master (x1.304 lanczos, 2 px pad). It starts on the recording's first frame as he asked; no director marks \u2014 the beats land where his play fell.",
-  "Parts 5 and 6a are the recording's first 393 frames in one run: part 5 ends on 13.1 and 6a carries on from the next frame."
+  "Ross's own online match, recorded on his XR (raw/part05/ross_pov.mov), conformed to the master (x1.304 lanczos, 2 px pad). Part 5 is 262 frames of it ending with the zip into the opponent's picture-in-picture (Ross, 2026-11-13: the zoom at the end of part 5, right after the ice card is played; part 6 is the friend's POV, still to come). No director marks \u2014 the beats land where his play fell.",
+  "Clip frames 50-312 (0.83-5.20 s): Deep Freeze is tapped at clip 275 (part frame 225) and fires at 280 (230, on 12.4); the zip runs from 288 (238, 8 frames after the card leaves the tray) to the part's last frame (311): 24 frames, a zoompan quadratic ease-in from the whole frame into the PiP's inner rect (master px 695,353 331x588, its orange border measured on all sides), filling the frame by height \u2014 the window ends 271 px wide inside the PiP's 331 \u2014 so part 6 cuts straight into the friend's full-frame POV.",
+  "The recording's first 50 frames (0.83 s) are not used: the card has to be played inside the part and the zip has to end on its last frame (Ross, 2026-11-13: quicker and more accurate than the first cut's 39 frames into a rect measured on two sides)."
  ]
 }
