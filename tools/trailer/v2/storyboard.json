@@ -599,7 +599,7 @@
     "Deep Freeze makes them swish through the ice, get caught, or rattle it three times. A shot caught by the ice on 14.3 is the clearest payoff.",
     "Both phones: Do Not Disturb on, start the screen recording from Control Center before the match, and check the recording for the status bar or the red recording pill; crop or cover it in the edit if it shows.",
     "Each phone lays the HUD out around its own notch or Dynamic Island, so the HUD sits slightly lower on the 16 than on the XR. On the zip into their POV that's expected: it's a different player's screen.",
-    "Built 2026-11-13 from Ross's XR recording (raw/part05/ross_pov.mov, conformed): parts 5 and 6a are its first 393 frames, from its first frame as Ross asked; the zip (6a) runs from his 5.9 s (clip frame 354) to the 14.1 downbeat (393), a quadratic ease-in into the PiP's inner rect, filling the frame by its height."
+    "Built 2026-11-13 from Ross's XR recording (raw/part05/ross_pov.mov, conformed): parts 5 and 6a are its first 393 frames, from its first frame as Ross asked; Deep Freeze fires at clip 280 and the zip (6a) runs from 296 to 392, an ease-in (power 2.5) into the PiP's inner rect, filling the frame by its height on the frame before 14.1."
    ],
    "screen_sizes": [
     {
@@ -655,7 +655,7 @@
      "end_s": 28.364,
      "start_frame": 1571,
      "end_frame": 1702,
-     "note": "Ross's recording continues from part 5; the zip into the PiP starts 5.9 s into his clip (his call, 2026-11-13) and fills the frame on 14.1."
+     "note": "Ross's recording continues from part 5; the zip into the PiP starts right after Deep Freeze fires (his call, 2026-11-13: clip frame 296, 0.27 s after the card) and fills the frame on the slice's last frame, so 14.1 lands in the friend's POV."
     },
     {
      "id": "6b",
