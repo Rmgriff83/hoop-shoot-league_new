@@ -259,10 +259,11 @@ lines; part 8 has none (its badges and legal lines are its own).
 Part 2 is built a court at a time (`v2.py part 2a` … `2d`: a slice of a
 part from its `frames_list`, with the part's card already up where the slice
 starts), Ross's real shots cut in after the flyovers. The cage (2a,
-2026-11-12): the home pose pulled 2 m back outside the booth's gate and
-trucked 4 m screen-right over the bar — the booth is only ~0.8 m each side
-of the home camera, so a wide truck from inside goes through its fence
-(`shots/probe_cage.json` holds both passes).
+2026-11-12): from exactly the home pose, trucked 1.5 m screen-right over
+the bar inside the booth — the booth is centred on the hoop, not the home
+camera, so its left fence is ~0.2 m from the start and the room is to the
+right. Ross picked the inside pass over one pulled 2 m back outside the
+gate ("too far out"; `shots/probe_cage.json` holds both).
 
 Part 1 (2026-11-12): the lit splash, NEW GAME pressed on 1.3, the real 0.3 s
 slide (the storyboard's 1.4 / 2.1 come 28 / 43 frames early — flagged, the
