@@ -276,7 +276,14 @@ the first frame at full level. The park (2c, 2026-11-13): the same 3 m
 centred pass (`shots/probe_park.json`), then the SWISH +2 from Ross's park
 recording — the game's spot timer had moved the camera while that ball was
 in the air, so the cut sits exactly on the recording's camera change (beat
-2.75, 7 frames before the swish) and the part never shows the jump.
+2.75, 7 frames before the swish) and the part never shows the jump. The
+city (2d, 2026-11-13): the same 3 m centred pass but trucked screen-LEFT
+(Ross: the city sweep runs right to left; `shots/probe_city.json`), then a
++1 from Ross's city time-trial recording with the net sound's onset on beat
+3 — that clip's only swish happened before it starts, so a re-recorded city
+swish can replace it with the same recipe. Bar 6 is a 130-frame slice.
+An onset, for every court: the first 1/60 s chunk whose RMS is over half
+the sound's peak.
 
 Part 1 (2026-11-12): the lit splash, NEW GAME pressed on 1.3, the real 0.3 s
 slide (the storyboard's 1.4 / 2.1 come 28 / 43 frames early — flagged, the

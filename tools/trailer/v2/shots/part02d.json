@@ -1,0 +1,43 @@
+{
+ "name": "part02d",
+ "note": "v2 part 2d (bar 6): the City flyover. The home background's camera pose trucked 3 m screen-LEFT over the bar, centred on the home pose (Ross: the city sweep runs right to left; the buildings and the fence give the parallax, the hoop holds centre).",
+ "themes": [],
+ "setup": {},
+ "steps": [
+  {
+   "do": "flyover",
+   "area": "city",
+   "from": [
+    0.0,
+    0.0,
+    1.5
+   ],
+   "to": [
+    0.0,
+    0.0,
+    -1.5
+   ],
+   "seconds": 2.1833,
+   "hold_frames": 60
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "at",
+   "frame": 65
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "at",
+   "frame": 161
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

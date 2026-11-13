@@ -1,0 +1,30 @@
+{
+ "part": "2d",
+ "segments": [
+  {
+   "clip": "part02d",
+   "from": "in",
+   "frames": 49
+  },
+  {
+   "conform": "part02/city_make",
+   "from": 152,
+   "frames": 81
+  }
+ ],
+ "hits": [
+  {
+   "key": "6.3",
+   "what": "Real make: the net sound's onset in Ross's recording",
+   "target": 65,
+   "clip": "part02/city_make",
+   "clip_frame": 168
+  }
+ ],
+ "hit_marks": {},
+ "notes": [
+  "Beats 1-2.5 (frames 0-49): the City flyover, the home background's camera pose (TitlePan) trucked screen-LEFT at a constant speed (Ross: the city sweep runs right to left, the other three courts run left to right); the hoop stays the look target.",
+  "Beat 2.5 on (frames 49-130; bar 6 is a 130-frame slice): Ross's city recording (raw/part02/city_make.mov, an iPhone XR at 828x1792, conformed up x1.304; a time trial, 5 s), its second make: a clean drop for +1. NOT a swish: the clip's only SWISH +2 happened just before the recording starts (its text is already up on frame 0, its sound is not in the clip), and both makes inside the clip are +1s. The net sound's onset (conformed frame 168, from the audio: the first frame over half the run's peak) lands on beat 3; +1 and the next ball going up fill beat 4. A re-recorded city swish can replace this with the same recipe.",
+  "The flyover has no game sound; the SFX stem carries the recording's own audio from the cut. The part's text card is already up (it came in on 3.1) and fades out on the part's last frames."
+ ]
+}
