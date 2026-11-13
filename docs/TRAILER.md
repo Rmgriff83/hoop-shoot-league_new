@@ -263,7 +263,12 @@ starts), Ross's real shots cut in after the flyovers. The cage (2a,
 the bar inside the booth — the booth is centred on the hoop, not the home
 camera, so its left fence is ~0.2 m from the start and the room is to the
 right. Ross picked the inside pass over one pulled 2 m back outside the
-gate ("too far out"; `shots/probe_cage.json` holds both).
+gate ("too far out"; `shots/probe_cage.json` holds both). 2a's bar: the
+flyover to beat 2.5, then Ross's own cage make (an XR recording, conformed)
+with the swish's sound onset on beat 3 — the sound is found in the
+recording's audio (its loudest transient), the frame put on the beat. The
+beach (2b): an open court, so the home pose trucked 3 m, centred
+(`shots/probe_beach.json`).
 
 Part 1 (2026-11-12): the lit splash, NEW GAME pressed on 1.3, the real 0.3 s
 slide (the storyboard's 1.4 / 2.1 come 28 / 43 frames early — flagged, the

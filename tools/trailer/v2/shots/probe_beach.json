@@ -1,0 +1,77 @@
+{
+ "name": "probe_beach",
+ "note": "v2 part 2b probe: two beach flyovers in one capture — A the cage's recipe (home pose, 1.5 m right), B a 3 m pass centred on the home pose. Frames at a_in/a_mid/a_out and b_in/b_mid/b_out.",
+ "themes": [],
+ "setup": {},
+ "steps": [
+  {
+   "do": "flyover",
+   "area": "beach",
+   "from": [0.0, 0.0, 0.0],
+   "to": [0.0, 0.0, 1.5],
+   "seconds": 2.1833,
+   "hold_frames": 60
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "mark",
+   "name": "a_in"
+  },
+  {
+   "do": "at",
+   "frame": 65
+  },
+  {
+   "do": "mark",
+   "name": "a_mid"
+  },
+  {
+   "do": "at",
+   "frame": 131
+  },
+  {
+   "do": "mark",
+   "name": "a_out"
+  },
+  {
+   "do": "flyover",
+   "area": "beach",
+   "from": [0.0, 0.0, -1.5],
+   "to": [0.0, 0.0, 1.5],
+   "seconds": 2.1833,
+   "hold_frames": 60
+  },
+  {
+   "do": "mark",
+   "name": "b_in"
+  },
+  {
+   "do": "at",
+   "frame": 65,
+   "from": "b_in"
+  },
+  {
+   "do": "mark",
+   "name": "b_mid"
+  },
+  {
+   "do": "at",
+   "frame": 131,
+   "from": "b_in"
+  },
+  {
+   "do": "mark",
+   "name": "b_out"
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}
