@@ -267,8 +267,12 @@ gate ("too far out"; `shots/probe_cage.json` holds both). 2a's bar: the
 flyover to beat 2.5, then Ross's own cage make (an XR recording, conformed)
 with the swish's sound onset on beat 3 — the sound is found in the
 recording's audio (its loudest transient), the frame put on the beat. The
-beach (2b): an open court, so the home pose trucked 3 m, centred
-(`shots/probe_beach.json`).
+beach (2b, 2026-11-13): an open court, so the home pose trucked 3 m, centred
+(`shots/probe_beach.json`), the same split, then the clean SWISH +3 from
+Ross's beach recording — the game's swish sound, not a rim-touching make's
+net sound; a recording's swish reads in its RMS profile as a sustained burst
+(~5 frames) followed by the floor bounce ~25 frames later, and the onset is
+the first frame at full level.
 
 Part 1 (2026-11-12): the lit splash, NEW GAME pressed on 1.3, the real 0.3 s
 slide (the storyboard's 1.4 / 2.1 come 28 / 43 frames early — flagged, the

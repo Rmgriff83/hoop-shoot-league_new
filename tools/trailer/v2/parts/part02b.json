@@ -4,13 +4,27 @@
   {
    "clip": "part02b",
    "from": "in",
-   "frames": 131
+   "frames": 49
+  },
+  {
+   "conform": "part02/beach_make",
+   "from": 359,
+   "frames": 82
   }
  ],
- "hits": [],
+ "hits": [
+  {
+   "key": "4.3",
+   "what": "Real SWISH: the swish sound's onset in Ross's recording",
+   "target": 65,
+   "clip": "part02/beach_make",
+   "clip_frame": 375
+  }
+ ],
  "hit_marks": {},
  "notes": [
-  "The Beach flyover alone (Ross's real shot to be cut in, as 2a's was): the home background's camera pose (TitlePan) trucked 3 m screen-right at a constant speed over the bar, centred on the home pose; the hoop stays the look target. The beach is open, so the truck is twice the cage's.",
-  "No game sound in a flyover: the SFX stem is silence until a recording is cut in. The part's text card is already up (it came in on 3.1)."
+  "Beats 1-2.5 (frames 0-49): the Beach flyover, the home background's camera pose (TitlePan) trucked 3 m screen-right at a constant speed, centred on the home pose (an open court, so twice the cage's truck); the hoop stays the look target.",
+  "Beat 2.5 on (frames 49-131): Ross's beach recording (raw/part02/beach_make.mov, an iPhone XR at 828x1792, conformed up x1.304), its fourth shot: the clean SWISH +3 (the first make touched the rim: a +1 with the net sound, not the swish). Cut in with the ball on its way down; the swish sound's onset (conformed frame 375, found from the audio: the same sustained-swish-then-floor-bounce shape as the cage's) lands on beat 3; SWISH +3 and the bounce fill beat 4. Cutting on beat 2 instead (recording frame 343) would show the release and the whole arc.",
+  "The flyover has no game sound; the SFX stem carries the recording's own audio from the cut. The part's text card is already up (it came in on 3.1)."
  ]
 }
