@@ -84,7 +84,10 @@ def zoom_filter(zoom, f0):
     cx, cy = rx + rw / 2.0, ry + rh / 2.0
     # zoompan, one output frame per input (`crop` reads its w/h once, so it cannot shrink per frame);
     # `in` counts input frames from 1.
-    e = "pow(clip((in-1-%d)/%d\\,0\\,1)\\,%g)" % (n0, max(1, n1 - n0), float(zoom.get("power", 2)))
+    k = "clip((in-1-%d)/%d\\,0\\,1)" % (n0, max(1, n1 - n0))
+    if zoom.get("out"):   # the mirror: open on the rect and pull back to the whole frame, fast then settling
+        k = "(1-%s)" % k
+    e = "pow(%s\\,%g)" % (k, float(zoom.get("power", 2)))
     z = "1+%.6f*%s" % (big - 1.0, e)
     x = "clip(%.3f+%.3f*%s-iw/zoom/2\\,0\\,iw-iw/zoom)" % (mw / 2.0, cx - mw / 2.0, e)
     y = "clip(%.3f+%.3f*%s-ih/zoom/2\\,0\\,ih-ih/zoom)" % (mh / 2.0, cy - mh / 2.0, e)

@@ -371,6 +371,18 @@ once. (His timestamps were approximate — "5.9 s" was a second after the
 card — so the card's frames were read off the picture: the tray's tile
 changes at 275 and 280.)
 
+Part 6 (2026-11-13) is the friend's recording (`raw/part06/friend_pov.mov`,
+1180×2556, 4.6 s, trimmed by Ross; conformed ×0.915), its first 262
+frames: their rim already iced, DEEP FREEZE PLAYED ON YOU, the card still
+arriving over their hoop, clock 25.4 → 21.0, and they score through the ice
+twice. Ross: "zoom accordingly from the last take at the beginning" — the
+mirror of part 5's zip, a `zoom` with `out: true`: the part opens at ×4 on
+their hoop (a 270×585 window on the backboard, master px 400,1080) and
+pulls back to the whole frame in 24 frames, fast off the cut and settling.
+Match time jumps about a second at the cut (26.4 → 25.4): the clip has 17
+spare frames, so it is taken as trimmed. Their phone draws a debug flick
+readout (49° / 46 %) at the lower left — a debug build; flagged.
+
 Part 1 (2026-11-12): the lit splash, NEW GAME pressed on 1.3, the real 0.3 s
 slide (the storyboard's 1.4 / 2.1 come 28 / 43 frames early — flagged, the
 honest pace kept), the card in on 2.1, the dice re-rolling on 2.2 / 2.3 on
