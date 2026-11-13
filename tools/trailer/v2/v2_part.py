@@ -85,7 +85,10 @@ def build(key):
         if entry is None:
             sys.exit("part %d has no segment '%s' in its frames_list" % (n, key))
         start, end = int(entry["start_frame"]), int(entry["end_frame"])
-        bars = [int(entry["bar"]), int(entry["bar"])]
+        # A slice may run past its bar (the beach, since 2026-11-13): the sheet shows every beat it covers.
+        bpm = float(sb["timing"]["bpm"])
+        last_bar = int(((end - 1) / FPS) * bpm / 60.0 / 4.0) + 1
+        bars = [int(entry["bar"]), max(int(entry["bar"]), last_bar)]
     sub_offset = start - int(part["start_frame"])   # the slice's first frame, in part frames
     frames = end - start
     spec_path = os.path.join(v2.V2, "parts", pid + ".json")
@@ -169,7 +172,7 @@ def build(key):
             "[1:a]atrim=start=%.6f:end=%.6f,asetpts=PTS-STARTPTS,volume=-3dB[m];[0:a]volume=-5dB[s];[m][s]amix=inputs=2:normalize=0:duration=first[a]" % (a, b),
             "-map", "0:v", "-map", "[a]", "-c:v", "libx264", "-preset", "fast", "-crf", "18", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", dst("review.mp4")])
     # The sheet and the report.
-    beats = beat_frames(sb, bars, start)
+    beats = [b for b in beat_frames(sb, bars, start) if 0 <= b[2] < frames]
     hits = {}
     for h in part.get("hits", []):
         f = int(h["part_frame"]) - sub_offset

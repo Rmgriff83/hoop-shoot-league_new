@@ -1,794 +1,795 @@
 {
-  "title": "Hoop Shoot trailer v2 (the 'Play for keeps' cut)",
-  "storyboard": "Hoop Shoot Trailer Board (claude.ai artifact), 2026-11-12",
-  "timing": {
-    "bpm": 110,
-    "beat_s": 0.545,
-    "bar_s": 2.182,
-    "fps": 60,
-    "bars": 18,
-    "total_s": 39.273,
-    "total_frames": 2356,
-    "frame_rule": "Every boundary is round(t * 60) on the GLOBAL timeline, so parts tile exactly: a part's length is end_frame - start_frame (bars are 130.9 frames, not whole numbers)."
-  },
-  "music": {
-    "source": "assets/music/title_moog.ogg",
-    "title": "Moog_SEM 110bpm",
-    "author": "fonoskop",
-    "url": "https://freesound.org/s/856449/",
-    "license": "CC BY 4.0",
-    "cut": [
-      {
-        "song_from_s": 4.364,
-        "song_to_s": "end (34.909)",
-        "trailer_bars": "1-14",
-        "note": "song bars 3-16"
-      },
-      {
-        "song_from_s": 8.727,
-        "song_to_s": 17.455,
-        "trailer_bars": "15-18",
-        "note": "song bars 5-8 again, fading out over all 4 bars with a qsin curve to silence at 39.273 s"
-      }
-    ],
-    "ffmpeg": "ffmpeg -i assets/music/title_moog.ogg -filter_complex \"[0:a]atrim=start=4.363636,asetpts=PTS-STARTPTS,afade=t=out:st=30.540:d=0.004[a];[0:a]atrim=start=8.727273:end=17.454545,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.004,afade=t=out:st=0:d=8.727273:curve=qsin[b];[a][b]concat=n=2:v=0:a=1[out]\" -map \"[out]\" -c:a pcm_s24le music.wav"
-  },
-  "sections": [
-    {
-      "name": "Intro",
-      "bars": [
-        1,
-        2
-      ]
-    },
-    {
-      "name": "Build",
-      "bars": [
-        3,
-        6
-      ]
-    },
-    {
-      "name": "Drop",
-      "bars": [
-        7,
-        14
-      ],
-      "note": "full drums hit at 13.091 s"
-    },
-    {
-      "name": "Outro",
-      "bars": [
-        15,
-        18
-      ],
-      "note": "the build again, fading"
-    }
+ "title": "Hoop Shoot trailer v2 (the 'Play for keeps' cut)",
+ "storyboard": "Hoop Shoot Trailer Board (claude.ai artifact), 2026-11-12",
+ "timing": {
+  "bpm": 110,
+  "beat_s": 0.545,
+  "bar_s": 2.182,
+  "fps": 60,
+  "bars": 18,
+  "total_s": 39.273,
+  "total_frames": 2356,
+  "frame_rule": "Every boundary is round(t * 60) on the GLOBAL timeline, so parts tile exactly: a part's length is end_frame - start_frame (bars are 130.9 frames, not whole numbers)."
+ },
+ "music": {
+  "source": "assets/music/title_moog.ogg",
+  "title": "Moog_SEM 110bpm",
+  "author": "fonoskop",
+  "url": "https://freesound.org/s/856449/",
+  "license": "CC BY 4.0",
+  "cut": [
+   {
+    "song_from_s": 4.364,
+    "song_to_s": "end (34.909)",
+    "trailer_bars": "1-14",
+    "note": "song bars 3-16"
+   },
+   {
+    "song_from_s": 8.727,
+    "song_to_s": 17.455,
+    "trailer_bars": "15-18",
+    "note": "song bars 5-8 again, fading out over all 4 bars with a qsin curve to silence at 39.273 s"
+   }
   ],
-  "rhythm": "Beat 4 of every bar is near-silent: the make lands on beat 3, the net settles through beat 4, the cut lands on the next beat 1.",
-  "parts": [
+  "ffmpeg": "ffmpeg -i assets/music/title_moog.ogg -filter_complex \"[0:a]atrim=start=4.363636,asetpts=PTS-STARTPTS,afade=t=out:st=30.540:d=0.004[a];[0:a]atrim=start=8.727273:end=17.454545,asetpts=PTS-STARTPTS,afade=t=in:st=0:d=0.004,afade=t=out:st=0:d=8.727273:curve=qsin[b];[a][b]concat=n=2:v=0:a=1[out]\" -map \"[out]\" -c:a pcm_s24le music.wav"
+ },
+ "sections": [
+  {
+   "name": "Intro",
+   "bars": [
+    1,
+    2
+   ]
+  },
+  {
+   "name": "Build",
+   "bars": [
+    3,
+    6
+   ]
+  },
+  {
+   "name": "Drop",
+   "bars": [
+    7,
+    14
+   ],
+   "note": "full drums hit at 13.091 s"
+  },
+  {
+   "name": "Outro",
+   "bars": [
+    15,
+    18
+   ],
+   "note": "the build again, fading"
+  }
+ ],
+ "rhythm": "Beat 4 of every bar is near-silent: the make lands on beat 3, the net settles through beat 4, the cut lands on the next beat 1.",
+ "parts": [
+  {
+   "part": 1,
+   "title": "Create your hooper",
+   "bars": [
+    1,
+    2
+   ],
+   "song_bars": [
+    3,
+    4
+   ],
+   "start_s": 0,
+   "end_s": 4.364,
+   "start_frame": 0,
+   "end_frame": 262,
+   "frames": 262,
+   "shot": "The real opening flow, as a new player sees it: the neon splash, a tap on NEW GAME, and the NEW PLAYER card sliding in. A quick re-roll of the name with the die shows it's yours to make.",
+   "hits": [
     {
-      "part": 1,
-      "title": "Create your hooper",
-      "bars": [
-        1,
-        2
-      ],
-      "song_bars": [
-        3,
-        4
-      ],
-      "start_s": 0,
-      "end_s": 4.364,
-      "start_frame": 0,
-      "end_frame": 262,
-      "frames": 262,
-      "shot": "The real opening flow, as a new player sees it: the neon splash, a tap on NEW GAME, and the NEW PLAYER card sliding in. A quick re-roll of the name with the die shows it's yours to make.",
-      "hits": [
-        {
-          "bar": 1,
-          "beat": 1,
-          "t_s": 0,
-          "frame": 0,
-          "part_frame": 0,
-          "what": "The splash: neon wall and sign, music starts"
-        },
-        {
-          "bar": 1,
-          "beat": 3,
-          "t_s": 1.091,
-          "frame": 65,
-          "part_frame": 65,
-          "what": "Tap NEW GAME"
-        },
-        {
-          "bar": 1,
-          "beat": 4,
-          "t_s": 1.636,
-          "frame": 98,
-          "part_frame": 98,
-          "what": "Splash slides out, NEW PLAYER slides in (the silent beat)"
-        },
-        {
-          "bar": 2,
-          "beat": 1,
-          "t_s": 2.182,
-          "frame": 131,
-          "part_frame": 131,
-          "what": "NEW PLAYER card lands; text card in"
-        },
-        {
-          "bar": 2,
-          "beat": 2,
-          "t_s": 2.727,
-          "frame": 164,
-          "part_frame": 164,
-          "what": "Tap the die: PLAYER NAME re-rolls"
-        },
-        {
-          "bar": 2,
-          "beat": 3,
-          "t_s": 3.273,
-          "frame": 196,
-          "part_frame": 196,
-          "what": "Hometown re-rolls"
-        },
-        {
-          "bar": 2,
-          "beat": 4,
-          "t_s": 3.818,
-          "frame": 229,
-          "part_frame": 229,
-          "what": "Hold on the finished card"
-        }
-      ],
-      "capture": "A fresh install (or a trailer save with no player). Splash → NEW GAME → NEW PLAYER, then two die taps. Record the touches at real speed and trim to the hits; about 6 s with handles.",
-      "text": "CREATE YOUR HOOPER",
-      "notes": [
-        "Pick a re-rolled name and hometown that read well on screen, and land on them on beat 2.3."
-      ],
-      "cut_out": "Cut on the downbeat as the hi-hats come in"
+     "bar": 1,
+     "beat": 1,
+     "t_s": 0,
+     "frame": 0,
+     "part_frame": 0,
+     "what": "The splash: neon wall and sign, music starts"
     },
     {
-      "part": 2,
-      "title": "The courts",
-      "bars": [
-        3,
-        6
-      ],
-      "song_bars": [
-        5,
-        8
-      ],
-      "start_s": 4.364,
-      "end_s": 13.091,
-      "start_frame": 262,
-      "end_frame": 785,
-      "frames": 523,
-      "shot": "One court per bar, each landing on the downbeat: a wide flyover in the style of the area home backgrounds, but travelling sideways much further. Optional quick real shot cut in on beat 3.",
-      "frames_list": [
-        {
-          "id": "2a",
-          "court": "Arcade Cage",
-          "bar": 3,
-          "start_s": 4.364,
-          "end_s": 6.545,
-          "start_frame": 262,
-          "end_frame": 393
-        },
-        {
-          "id": "2b",
-          "court": "Beach",
-          "bar": 4,
-          "start_s": 6.545,
-          "end_s": 8.727,
-          "start_frame": 393,
-          "end_frame": 524
-        },
-        {
-          "id": "2c",
-          "court": "Park",
-          "bar": 5,
-          "start_s": 8.727,
-          "end_s": 10.909,
-          "start_frame": 524,
-          "end_frame": 655
-        },
-        {
-          "id": "2d",
-          "court": "City",
-          "bar": 6,
-          "start_s": 10.909,
-          "end_s": 13.091,
-          "start_frame": 655,
-          "end_frame": 785
-        }
-      ],
-      "inside_each_bar": "1–2 flyover · 3 optional real make · 4 net settles (or the flyover keeps moving)",
-      "capture": "Per court: a horizontal camera move across the area at the home background's height and angle, with a wider travel, 2.5 s each, all moving the same direction (left to right) so the four cuts read as one long pan. Optional: a 1 s real make per court, centred on the net.",
-      "text": "PLAY FOR KEEPS ON EVERY COURT",
-      "text_note": "One line, held across all four courts",
-      "text_options": [
-        "PLAY FOR KEEPS ON EVERY COURT",
-        "PLAY FOR KEEPS. FOUR COURTS.",
-        "PLAY FOR KEEPS, ANYWHERE"
-      ],
-      "notes": [
-        "Every court cut lands on a downbeat: 0:04.36, 0:06.55, 0:08.73, 0:10.91.",
-        "If a court gets a real make, land it on beat 3 and let the net settle through the silent beat 4.",
-        "Optional: a small court name in the corner changing on each downbeat (ARCADE CAGE, BEACH, PARK, CITY)."
-      ],
-      "open_question": "You said bars 3–7. I've ended this at the start of bar 7 (0:13.09), because bar 7 is where the drums drop. Four courts fill bars 3–6 exactly. Tell me if you want the City to carry into the drop.",
-      "cut_out": "Hard cut exactly on the drop"
+     "bar": 1,
+     "beat": 3,
+     "t_s": 1.091,
+     "frame": 65,
+     "part_frame": 65,
+     "what": "Tap NEW GAME"
     },
     {
-      "part": 3,
-      "title": "Run the league",
-      "bars": [
-        7,
-        8
-      ],
-      "song_bars": [
-        9,
-        10
-      ],
-      "start_s": 13.091,
-      "end_s": 17.455,
-      "start_frame": 785,
-      "end_frame": 1047,
-      "frames": 262,
-      "shot": "The drop lands on a league win: the YOU WIN page with its flash, rays and confetti. Then the CLINCHED page: your row hops up the standings and PLAYOFFS slams in.",
-      "hits": [
-        {
-          "bar": 7,
-          "beat": 1,
-          "t_s": 13.091,
-          "frame": 785,
-          "part_frame": 0,
-          "what": "YOU WIN: the flash hits on the first drum hit"
-        },
-        {
-          "bar": 7,
-          "beat": 2,
-          "t_s": 13.636,
-          "frame": 818,
-          "part_frame": 33,
-          "what": "Text card in"
-        },
-        {
-          "bar": 7,
-          "beat": 3,
-          "t_s": 14.182,
-          "frame": 851,
-          "part_frame": 66,
-          "what": "Confetti, the score settles"
-        },
-        {
-          "bar": 7,
-          "beat": 4,
-          "t_s": 14.727,
-          "frame": 884,
-          "part_frame": 99,
-          "what": "Hold"
-        },
-        {
-          "bar": 8,
-          "beat": 1,
-          "t_s": 15.273,
-          "frame": 916,
-          "part_frame": 131,
-          "what": "CLINCHED page: the standings, mid-climb"
-        },
-        {
-          "bar": 8,
-          "beat": 2,
-          "t_s": 15.818,
-          "frame": 949,
-          "part_frame": 164,
-          "what": "Your row hops up into a playoff spot"
-        },
-        {
-          "bar": 8,
-          "beat": 3,
-          "t_s": 16.364,
-          "frame": 982,
-          "part_frame": 197,
-          "what": "PLAYOFFS slams in (gold rays)"
-        },
-        {
-          "bar": 8,
-          "beat": 4,
-          "t_s": 16.909,
-          "frame": 1015,
-          "part_frame": 230,
-          "what": "CLINCHED · NO. 1 SEED settles"
-        }
-      ],
-      "capture": "A league win on the final day that clinches a playoff spot, so the YOU WIN beat and the CLINCHED page come from the same run. In the game PLAYOFFS slams 2.5 s after the page opens and the climb runs before it: enter the CLINCHED clip about 1.1 s before the slam so the hop lands on 8.2 and the slam on 8.3.",
-      "text": "RUN THE LEAGUE",
-      "text_note": "Held across both bars",
-      "notes": [
-        "The game's own flash on YOU WIN is the drum hit; keep it on 0:13.09 exactly.",
-        "Let the text card come in a beat after the flash (8 frames or so) so the two don't fight.",
-        "Use a seed that reads as a reward: NO. 1 or NO. 2."
-      ],
-      "cut_out": "Cut on the downbeat"
+     "bar": 1,
+     "beat": 4,
+     "t_s": 1.636,
+     "frame": 98,
+     "part_frame": 98,
+     "what": "Splash slides out, NEW PLAYER slides in (the silent beat)"
     },
     {
-      "part": 4,
-      "title": "Earn power-ups, set your loadout",
-      "bars": [
-        9,
-        10
-      ],
-      "song_bars": [
-        11,
-        12
-      ],
-      "start_s": 17.455,
-      "end_s": 21.818,
-      "start_frame": 1047,
-      "end_frame": 1309,
-      "frames": 262,
-      "shot": "The league page: tap the CARDS tab, buy a card from the SHOP with tickets, and it slides into your lineup. Then the pre-match LOADOUT: drag that card into a slot and it's set for the match.",
-      "hits": [
-        {
-          "bar": 9,
-          "beat": 1,
-          "t_s": 17.455,
-          "frame": 1047,
-          "part_frame": 0,
-          "what": "League page: tap the CARDS tab; text card in"
-        },
-        {
-          "bar": 9,
-          "beat": 2,
-          "t_s": 18,
-          "frame": 1080,
-          "part_frame": 33,
-          "what": "Tap the card's ticket price"
-        },
-        {
-          "bar": 9,
-          "beat": 3,
-          "t_s": 18.545,
-          "frame": 1113,
-          "part_frame": 66,
-          "what": "Card slides into the lineup"
-        },
-        {
-          "bar": 9,
-          "beat": 4,
-          "t_s": 19.091,
-          "frame": 1145,
-          "part_frame": 98,
-          "what": "Hold on it in the lineup"
-        },
-        {
-          "bar": 10,
-          "beat": 1,
-          "t_s": 19.636,
-          "frame": 1178,
-          "part_frame": 131,
-          "what": "Pre-match LOADOUT page"
-        },
-        {
-          "bar": 10,
-          "beat": 2,
-          "t_s": 20.182,
-          "frame": 1211,
-          "part_frame": 164,
-          "what": "Drag the card toward an empty slot"
-        },
-        {
-          "bar": 10,
-          "beat": 3,
-          "t_s": 20.727,
-          "frame": 1244,
-          "part_frame": 197,
-          "what": "It snaps into the slot, set"
-        },
-        {
-          "bar": 10,
-          "beat": 4,
-          "t_s": 21.273,
-          "frame": 1276,
-          "part_frame": 229,
-          "what": "Hold on READY"
-        }
-      ],
-      "capture": "A trailer save with tickets to spend. League page → CARDS tab → buy one card (pick one with a strong face, like Deep Freeze or Magnet) and catch it sliding into the lineup. Then a pre-match LOADOUT with that card dragged in. About 3 s each with handles.",
-      "text": "EARN POWER-UPS, SET YOUR LOADOUT",
-      "text_note": "Held across both bars",
-      "notes": [
-        "Use the same card in both halves so it reads as one card travelling from the shop to the match.",
-        "Both halves are touch-driven: do the taps a little early and trim so each lands on its beat."
-      ],
-      "cut_out": "Cut on the downbeat"
+     "bar": 2,
+     "beat": 1,
+     "t_s": 2.182,
+     "frame": 131,
+     "part_frame": 131,
+     "what": "NEW PLAYER card lands; text card in"
     },
     {
-      "part": 5,
-      "title": "Solo or online",
-      "bars": [
-        11,
-        12
-      ],
-      "song_bars": [
-        13,
-        14
-      ],
-      "start_s": 21.818,
-      "end_s": 26.182,
-      "start_frame": 1309,
-      "end_frame": 1571,
-      "frames": 262,
-      "shot": "Straight into a live online heat against a real player, from your POV. A close game in its last 15 seconds: the clock and the tight score visible, the opponent's picture-in-picture live in the corner.",
-      "hits": [
-        {
-          "bar": 11,
-          "beat": 1,
-          "t_s": 21.818,
-          "frame": 1309,
-          "part_frame": 0,
-          "what": "Cut in mid-heat, clock under 0:15, score within a basket or two; text card in"
-        },
-        {
-          "bar": 11,
-          "beat": 2,
-          "t_s": 22.364,
-          "frame": 1342,
-          "part_frame": 33,
-          "what": "Your flick"
-        },
-        {
-          "bar": 11,
-          "beat": 3,
-          "t_s": 22.909,
-          "frame": 1375,
-          "part_frame": 66,
-          "what": "Make: you go up by one"
-        },
-        {
-          "bar": 11,
-          "beat": 4,
-          "t_s": 23.455,
-          "frame": 1407,
-          "part_frame": 98,
-          "what": "Net settles; the PiP shows them shooting back"
-        },
-        {
-          "bar": 12,
-          "beat": 1,
-          "t_s": 24,
-          "frame": 1440,
-          "part_frame": 131,
-          "what": "Their make lands in the PiP: tied, or they lead"
-        },
-        {
-          "bar": 12,
-          "beat": 2,
-          "t_s": 24.545,
-          "frame": 1473,
-          "part_frame": 164,
-          "what": "Your flick"
-        },
-        {
-          "bar": 12,
-          "beat": 3,
-          "t_s": 25.091,
-          "frame": 1505,
-          "part_frame": 196,
-          "what": "Make: back in front"
-        },
-        {
-          "bar": 12,
-          "beat": 4,
-          "t_s": 25.636,
-          "frame": 1538,
-          "part_frame": 229,
-          "what": "Hold: the clock running down, one point in it"
-        }
-      ],
-      "capture": "An online match with a friend (friend code), both phones screen recording at 60 fps from before tip-off. From your recording: about 6 s in the last 15 s with the lead changing hands, two of your makes and one of theirs in the PiP.",
-      "text": "SOLO OR ONLINE",
-      "notes": [
-        "Play this match on the iPhone 16 yourself and give your friend the XR: your POV is on screen for about 5.5 s, theirs for about 2 s, so the sharper, smoother phone should carry yours.",
-        "This scene and the next come from the same match. Pick the stretch where the score is closest, then play the ice card a few seconds later (scene 6).",
-        "Keep both recordings whole; the ice card moment is what syncs the two POVs in the edit."
-      ],
-      "cut_out": "Cut on the downbeat"
+     "bar": 2,
+     "beat": 2,
+     "t_s": 2.727,
+     "frame": 164,
+     "part_frame": 164,
+     "what": "Tap the die: PLAYER NAME re-rolls"
     },
     {
-      "part": 6,
-      "title": "Play your cards right",
-      "bars": [
-        13,
-        14
-      ],
-      "song_bars": [
-        15,
-        16
-      ],
-      "start_s": 26.182,
-      "end_s": 30.545,
-      "start_frame": 1571,
-      "end_frame": 1833,
-      "frames": 262,
-      "shot": "You play Deep Freeze at a critical point. The edit zips (a fast zoom) into the opponent's picture-in-picture and lands in their POV just as their rim ices over, then their next shot can't get through.",
-      "hits": [
-        {
-          "bar": 13,
-          "beat": 1,
-          "t_s": 26.182,
-          "frame": 1571,
-          "part_frame": 0,
-          "what": "Your POV: tap Deep Freeze; text card in"
-        },
-        {
-          "bar": 13,
-          "beat": 2,
-          "t_s": 26.727,
-          "frame": 1604,
-          "part_frame": 33,
-          "what": "The card fires"
-        },
-        {
-          "bar": 13,
-          "beat": 3,
-          "t_s": 27.273,
-          "frame": 1636,
-          "part_frame": 65,
-          "what": "The zip starts: a fast zoom into their PiP"
-        },
-        {
-          "bar": 13,
-          "beat": 4,
-          "t_s": 27.818,
-          "frame": 1669,
-          "part_frame": 98,
-          "what": "Through the PiP (the silent beat)"
-        },
-        {
-          "bar": 14,
-          "beat": 1,
-          "t_s": 28.364,
-          "frame": 1702,
-          "part_frame": 131,
-          "what": "Land in THEIR POV on the downbeat: the rim ices over, ICED BY CARD"
-        },
-        {
-          "bar": 14,
-          "beat": 2,
-          "t_s": 28.909,
-          "frame": 1735,
-          "part_frame": 164,
-          "what": "They flick"
-        },
-        {
-          "bar": 14,
-          "beat": 3,
-          "t_s": 29.455,
-          "frame": 1767,
-          "part_frame": 196,
-          "what": "The ball is caught by the ice"
-        },
-        {
-          "bar": 14,
-          "beat": 4,
-          "t_s": 30,
-          "frame": 1800,
-          "part_frame": 229,
-          "what": "Hold on the frozen rim"
-        }
-      ],
-      "capture": "Same match, at a moment that matters: the opponent about to tie or take the lead. From your recording: the card tap plus 1.5 s. From your friend's recording: 2.5 s starting just before their rim ices, through their next shot hitting the ice.",
-      "text": "PLAY YOUR CARDS RIGHT",
-      "notes": [
-        "Sync the two recordings on the ice: it shows up in your PiP and on their rim at the same moment.",
-        "The PiP draws a simplified court at half rate, so keep the zip quick and get into their real POV fast; that's where the picture is sharp.",
-        "Deep Freeze makes them swish through the ice, get caught, or rattle it three times. A shot caught by the ice on 14.3 is the clearest payoff.",
-        "Both phones: Do Not Disturb on, start the screen recording from Control Center before the match, and check the recording for the status bar or the red recording pill; crop or cover it in the edit if it shows.",
-        "Each phone lays the HUD out around its own notch or Dynamic Island, so the HUD sits slightly lower on the 16 than on the XR. On the zip into their POV that's expected: it's a different player's screen."
-      ],
-      "screen_sizes": [
-        {
-          "source": "Game layout (what all of these show)",
-          "pixels": "720 × 1560",
-          "shape": "19.5:9",
-          "fit": "The game's base is 720 wide and expands to the phone's height"
-        },
-        {
-          "source": "Master timeline (edit here)",
-          "pixels": "1080 × 2340",
-          "shape": "19.5:9",
-          "fit": "1.5× the layout"
-        },
-        {
-          "source": "Headless renders (Movie Maker)",
-          "pixels": "1440 × 3120",
-          "shape": "19.5:9",
-          "fit": "Use the App Store layout from docs/TRAILER.md, not the 16:9 social layout; scale 0.75 into the master. Set --qa-safe-top/bottom to match the iPhone 16 so its HUD lines up"
-        },
-        {
-          "source": "iPhone 16 screen recording",
-          "pixels": "1179 × 2556",
-          "shape": "19.5:9",
-          "fit": "Scale 0.92 into the master: sharp. Use it for the hero POV"
-        },
-        {
-          "source": "iPhone XR screen recording",
-          "pixels": "828 × 1792",
-          "shape": "19.5:9",
-          "fit": "Scale 1.30 into the master: slightly soft. Fine for the 1 s opponent POV and short inserts"
-        },
-        {
-          "source": "App Store preview export",
-          "pixels": "886 × 1920",
-          "shape": "19.5:9",
-          "fit": "Straight downscale of the master"
-        },
-        {
-          "source": "Social 9:16 export",
-          "pixels": "1080 × 1920",
-          "shape": "9:16",
-          "fit": "The 886 × 1920 frame centred, with 97 px side bars on the brick wall or dither. No HUD gets cropped"
-        }
-      ],
-      "cut_out": "Cut on the downbeat into the outro"
+     "bar": 2,
+     "beat": 3,
+     "t_s": 3.273,
+     "frame": 196,
+     "part_frame": 196,
+     "what": "Hometown re-rolls"
     },
     {
-      "part": 7,
-      "title": "Collect and customize",
-      "bars": [
-        15,
-        16
-      ],
-      "song_bars": [
-        5,
-        6
-      ],
-      "start_s": 30.545,
-      "end_s": 34.909,
-      "start_frame": 1833,
-      "end_frame": 2095,
-      "frames": 262,
-      "shot": "An epic pull from PEGGY: the prize card pops over the machine, the shade drops hard and the rays turn, the ball in its magenta epic plate. Then straight into the locker, flicking through the balls and the nets fast.",
-      "hits": [
-        {
-          "bar": 15,
-          "beat": 1,
-          "t_s": 30.545,
-          "frame": 1833,
-          "part_frame": 0,
-          "what": "Epic prize card pops over PEGGY (NEW BALL); text card in"
-        },
-        {
-          "bar": 15,
-          "beat": 2,
-          "t_s": 31.091,
-          "frame": 1865,
-          "part_frame": 32,
-          "what": "Rays turning, the ball spins"
-        },
-        {
-          "bar": 15,
-          "beat": 3,
-          "t_s": 31.636,
-          "frame": 1898,
-          "part_frame": 65,
-          "what": "Tap EQUIP"
-        },
-        {
-          "bar": 15,
-          "beat": 4,
-          "t_s": 32.182,
-          "frame": 1931,
-          "part_frame": 98,
-          "what": "Whip to the locker (the silent beat)"
-        },
-        {
-          "bar": 16,
-          "beat": 1,
-          "t_s": 32.727,
-          "frame": 1964,
-          "part_frame": 131,
-          "what": "Locker, BALLS tab: fast scroll down the rarity rows"
-        },
-        {
-          "bar": 16,
-          "beat": 2,
-          "t_s": 33.273,
-          "frame": 1996,
-          "part_frame": 163,
-          "what": "Scroll continues, legend row passes"
-        },
-        {
-          "bar": 16,
-          "beat": 3,
-          "t_s": 33.818,
-          "frame": 2029,
-          "part_frame": 196,
-          "what": "Switch to the NETS tab: cotton, chain"
-        },
-        {
-          "bar": 16,
-          "beat": 4,
-          "t_s": 34.364,
-          "frame": 2062,
-          "part_frame": 229,
-          "what": "Tap a net: HANG IT ON"
-        }
-      ],
-      "capture": "A trailer save with tickets and a full-ish locker. PEGGY: one pull that lands an epic ball (a debug seed gets it on the first take; the reveal is the real page), about 3 s from the card popping. Locker: one quick scroll through BALLS and one through NETS, about 3 s, with fingers fast but steady.",
-      "text": "COLLECT NETS & BALLS · CUSTOMIZE YOUR HOOPER",
-      "text_note": "Two lines, held across both bars",
-      "notes": [
-        "The line is longer than the others, so set it as two lines: COLLECT NETS & BALLS / CUSTOMIZE YOUR HOOPER.",
-        "The music is still close to full volume through these two bars; the fade really starts in bar 17.",
-        "Pick an epic ball whose colour pops against PEGGY's background."
-      ],
-      "cut_out": "Cut on the downbeat to the end card"
-    },
-    {
-      "part": 8,
-      "title": "End card",
-      "bars": [
-        17,
-        18
-      ],
-      "song_bars": [
-        7,
-        8
-      ],
-      "start_s": 34.909,
-      "end_s": 39.273,
-      "start_frame": 2095,
-      "end_frame": 2356,
-      "frames": 261,
-      "shot": "The bare splash: the neon wall and sign with no buttons underneath. The App Store badge and an Android coming-soon line sit below the sign. Everything fades out together with the music.",
-      "hits": [
-        {
-          "bar": 17,
-          "beat": 1,
-          "t_s": 34.909,
-          "frame": 2095,
-          "part_frame": 0,
-          "what": "Cut to the bare splash, badges already in place"
-        },
-        {
-          "bar": 17,
-          "beat": 3,
-          "t_s": 36,
-          "frame": 2160,
-          "part_frame": 65,
-          "what": "Hold"
-        },
-        {
-          "bar": 18,
-          "beat": 1,
-          "t_s": 37.091,
-          "frame": 2225,
-          "part_frame": 130,
-          "what": "Whole frame starts fading as the music drops away"
-        },
-        {
-          "bar": 18,
-          "beat": 4,
-          "t_s": 38.727,
-          "frame": 2324,
-          "part_frame": 229,
-          "what": "Black, as the music reaches silence at 0:39.27"
-        }
-      ],
-      "capture": "A headless render of the splash with its buttons hidden (needs a small trailer option in the splash, since the real screen always shows them), about 5 s, then the badges and legal lines added in the edit.",
-      "text": null,
-      "notes": [
-        "App Store badge: Apple's official black \"Download on the App Store\" badge, unmodified, placed first (left of or above any Android mark). It mustn't be animated on its own, so fade the whole frame rather than the badge. If the trailer goes out before the app is live, Apple's pre-order badge is the one to use.",
-        "Android: Google has no \"coming soon\" version of the Get it on Google Play badge, and the badge mustn't be altered. Either turn on pre-registration in the Play Console and use Google's official pre-registration badge, or write COMING SOON TO ANDROID in the game's font with no Google badge.",
-        "Legal lines, small at the bottom of the card: \"Apple and the Apple logo are trademarks of Apple Inc., registered in the U.S. and other countries. App Store is a service mark of Apple Inc.\" Add \"Google Play and the Google Play logo are trademarks of Google LLC.\" only if a Google badge is used. The music credit can go here too.",
-        "Keep clear space around the Apple badge of at least a quarter of its height."
-      ],
-      "cut_out": "end (fade to black with the music)"
+     "bar": 2,
+     "beat": 4,
+     "t_s": 3.818,
+     "frame": 229,
+     "part_frame": 229,
+     "what": "Hold on the finished card"
     }
-  ]
+   ],
+   "capture": "A fresh install (or a trailer save with no player). Splash → NEW GAME → NEW PLAYER, then two die taps. Record the touches at real speed and trim to the hits; about 6 s with handles.",
+   "text": "CREATE YOUR HOOPER",
+   "notes": [
+    "Pick a re-rolled name and hometown that read well on screen, and land on them on beat 2.3."
+   ],
+   "cut_out": "Cut on the downbeat as the hi-hats come in"
+  },
+  {
+   "part": 2,
+   "title": "The courts",
+   "bars": [
+    3,
+    6
+   ],
+   "song_bars": [
+    5,
+    8
+   ],
+   "start_s": 4.364,
+   "end_s": 13.091,
+   "start_frame": 262,
+   "end_frame": 785,
+   "frames": 523,
+   "shot": "One court per bar, each landing on the downbeat: a wide flyover in the style of the area home backgrounds, but travelling sideways much further. Optional quick real shot cut in on beat 3.",
+   "frames_list": [
+    {
+     "id": "2a",
+     "court": "Arcade Cage",
+     "bar": 3,
+     "start_s": 4.364,
+     "end_s": 6.545,
+     "start_frame": 262,
+     "end_frame": 393
+    },
+    {
+     "id": "2b",
+     "court": "Beach",
+     "bar": 4,
+     "start_s": 6.55,
+     "end_s": 9.817,
+     "start_frame": 393,
+     "end_frame": 589
+    },
+    {
+     "id": "2c",
+     "court": "Park",
+     "bar": 5,
+     "start_s": 9.817,
+     "end_s": 11.45,
+     "start_frame": 589,
+     "end_frame": 687
+    },
+    {
+     "id": "2d",
+     "court": "City",
+     "bar": 6,
+     "start_s": 11.45,
+     "end_s": 13.083,
+     "start_frame": 687,
+     "end_frame": 785
+    }
+   ],
+   "inside_each_bar": "1–2 flyover · 3 optional real make · 4 net settles (or the flyover keeps moving)",
+   "capture": "Per court: a horizontal camera move across the area at the home background's height and angle, with a wider travel, 2.5 s each, all moving the same direction (left to right) so the four cuts read as one long pan. Optional: a 1 s real make per court, centred on the net.",
+   "text": "PLAY FOR KEEPS ON EVERY COURT",
+   "text_note": "One line, held across all four courts",
+   "text_options": [
+    "PLAY FOR KEEPS ON EVERY COURT",
+    "PLAY FOR KEEPS. FOUR COURTS.",
+    "PLAY FOR KEEPS, ANYWHERE"
+   ],
+   "notes": [
+    "Every court cut lands on a downbeat: 0:04.36, 0:06.55, 0:08.73, 0:10.91.",
+    "If a court gets a real make, land it on beat 3 and let the net settle through the silent beat 4.",
+    "Optional: a small court name in the corner changing on each downbeat (ARCADE CAGE, BEACH, PARK, CITY).",
+    "Ross, 2026-11-13, after seeing 2a-2d together: the four bars all cut pan -> live on the same beat and sat on the downbeat. 2a keeps its bar; the beach live shot is opened up by a second (2b = 393-589, beats 4.1 to 5.3, its swish on the bar-5 downbeat, 5.1: the recording was paused too soon after the swish to hold on it instead), paid for by the park and city pans (2c = 589-687 starting on 5.3, its swish on 5.4; 2d = 687-785 starting on 6.2, its make on 6.3). The part's own bounds (262-785) and the downbeat on 3.1 / the drop on 7.1 are unchanged."
+   ],
+   "open_question": "You said bars 3–7. I've ended this at the start of bar 7 (0:13.09), because bar 7 is where the drums drop. Four courts fill bars 3–6 exactly. Tell me if you want the City to carry into the drop.",
+   "cut_out": "Hard cut exactly on the drop"
+  },
+  {
+   "part": 3,
+   "title": "Run the league",
+   "bars": [
+    7,
+    8
+   ],
+   "song_bars": [
+    9,
+    10
+   ],
+   "start_s": 13.091,
+   "end_s": 17.455,
+   "start_frame": 785,
+   "end_frame": 1047,
+   "frames": 262,
+   "shot": "The drop lands on a league win: the YOU WIN page with its flash, rays and confetti. Then the CLINCHED page: your row hops up the standings and PLAYOFFS slams in.",
+   "hits": [
+    {
+     "bar": 7,
+     "beat": 1,
+     "t_s": 13.091,
+     "frame": 785,
+     "part_frame": 0,
+     "what": "YOU WIN: the flash hits on the first drum hit"
+    },
+    {
+     "bar": 7,
+     "beat": 2,
+     "t_s": 13.636,
+     "frame": 818,
+     "part_frame": 33,
+     "what": "Text card in"
+    },
+    {
+     "bar": 7,
+     "beat": 3,
+     "t_s": 14.182,
+     "frame": 851,
+     "part_frame": 66,
+     "what": "Confetti, the score settles"
+    },
+    {
+     "bar": 7,
+     "beat": 4,
+     "t_s": 14.727,
+     "frame": 884,
+     "part_frame": 99,
+     "what": "Hold"
+    },
+    {
+     "bar": 8,
+     "beat": 1,
+     "t_s": 15.273,
+     "frame": 916,
+     "part_frame": 131,
+     "what": "CLINCHED page: the standings, mid-climb"
+    },
+    {
+     "bar": 8,
+     "beat": 2,
+     "t_s": 15.818,
+     "frame": 949,
+     "part_frame": 164,
+     "what": "Your row hops up into a playoff spot"
+    },
+    {
+     "bar": 8,
+     "beat": 3,
+     "t_s": 16.364,
+     "frame": 982,
+     "part_frame": 197,
+     "what": "PLAYOFFS slams in (gold rays)"
+    },
+    {
+     "bar": 8,
+     "beat": 4,
+     "t_s": 16.909,
+     "frame": 1015,
+     "part_frame": 230,
+     "what": "CLINCHED · NO. 1 SEED settles"
+    }
+   ],
+   "capture": "A league win on the final day that clinches a playoff spot, so the YOU WIN beat and the CLINCHED page come from the same run. In the game PLAYOFFS slams 2.5 s after the page opens and the climb runs before it: enter the CLINCHED clip about 1.1 s before the slam so the hop lands on 8.2 and the slam on 8.3.",
+   "text": "RUN THE LEAGUE",
+   "text_note": "Held across both bars",
+   "notes": [
+    "The game's own flash on YOU WIN is the drum hit; keep it on 0:13.09 exactly.",
+    "Let the text card come in a beat after the flash (8 frames or so) so the two don't fight.",
+    "Use a seed that reads as a reward: NO. 1 or NO. 2."
+   ],
+   "cut_out": "Cut on the downbeat"
+  },
+  {
+   "part": 4,
+   "title": "Earn power-ups, set your loadout",
+   "bars": [
+    9,
+    10
+   ],
+   "song_bars": [
+    11,
+    12
+   ],
+   "start_s": 17.455,
+   "end_s": 21.818,
+   "start_frame": 1047,
+   "end_frame": 1309,
+   "frames": 262,
+   "shot": "The league page: tap the CARDS tab, buy a card from the SHOP with tickets, and it slides into your lineup. Then the pre-match LOADOUT: drag that card into a slot and it's set for the match.",
+   "hits": [
+    {
+     "bar": 9,
+     "beat": 1,
+     "t_s": 17.455,
+     "frame": 1047,
+     "part_frame": 0,
+     "what": "League page: tap the CARDS tab; text card in"
+    },
+    {
+     "bar": 9,
+     "beat": 2,
+     "t_s": 18,
+     "frame": 1080,
+     "part_frame": 33,
+     "what": "Tap the card's ticket price"
+    },
+    {
+     "bar": 9,
+     "beat": 3,
+     "t_s": 18.545,
+     "frame": 1113,
+     "part_frame": 66,
+     "what": "Card slides into the lineup"
+    },
+    {
+     "bar": 9,
+     "beat": 4,
+     "t_s": 19.091,
+     "frame": 1145,
+     "part_frame": 98,
+     "what": "Hold on it in the lineup"
+    },
+    {
+     "bar": 10,
+     "beat": 1,
+     "t_s": 19.636,
+     "frame": 1178,
+     "part_frame": 131,
+     "what": "Pre-match LOADOUT page"
+    },
+    {
+     "bar": 10,
+     "beat": 2,
+     "t_s": 20.182,
+     "frame": 1211,
+     "part_frame": 164,
+     "what": "Drag the card toward an empty slot"
+    },
+    {
+     "bar": 10,
+     "beat": 3,
+     "t_s": 20.727,
+     "frame": 1244,
+     "part_frame": 197,
+     "what": "It snaps into the slot, set"
+    },
+    {
+     "bar": 10,
+     "beat": 4,
+     "t_s": 21.273,
+     "frame": 1276,
+     "part_frame": 229,
+     "what": "Hold on READY"
+    }
+   ],
+   "capture": "A trailer save with tickets to spend. League page → CARDS tab → buy one card (pick one with a strong face, like Deep Freeze or Magnet) and catch it sliding into the lineup. Then a pre-match LOADOUT with that card dragged in. About 3 s each with handles.",
+   "text": "EARN POWER-UPS, SET YOUR LOADOUT",
+   "text_note": "Held across both bars",
+   "notes": [
+    "Use the same card in both halves so it reads as one card travelling from the shop to the match.",
+    "Both halves are touch-driven: do the taps a little early and trim so each lands on its beat."
+   ],
+   "cut_out": "Cut on the downbeat"
+  },
+  {
+   "part": 5,
+   "title": "Solo or online",
+   "bars": [
+    11,
+    12
+   ],
+   "song_bars": [
+    13,
+    14
+   ],
+   "start_s": 21.818,
+   "end_s": 26.182,
+   "start_frame": 1309,
+   "end_frame": 1571,
+   "frames": 262,
+   "shot": "Straight into a live online heat against a real player, from your POV. A close game in its last 15 seconds: the clock and the tight score visible, the opponent's picture-in-picture live in the corner.",
+   "hits": [
+    {
+     "bar": 11,
+     "beat": 1,
+     "t_s": 21.818,
+     "frame": 1309,
+     "part_frame": 0,
+     "what": "Cut in mid-heat, clock under 0:15, score within a basket or two; text card in"
+    },
+    {
+     "bar": 11,
+     "beat": 2,
+     "t_s": 22.364,
+     "frame": 1342,
+     "part_frame": 33,
+     "what": "Your flick"
+    },
+    {
+     "bar": 11,
+     "beat": 3,
+     "t_s": 22.909,
+     "frame": 1375,
+     "part_frame": 66,
+     "what": "Make: you go up by one"
+    },
+    {
+     "bar": 11,
+     "beat": 4,
+     "t_s": 23.455,
+     "frame": 1407,
+     "part_frame": 98,
+     "what": "Net settles; the PiP shows them shooting back"
+    },
+    {
+     "bar": 12,
+     "beat": 1,
+     "t_s": 24,
+     "frame": 1440,
+     "part_frame": 131,
+     "what": "Their make lands in the PiP: tied, or they lead"
+    },
+    {
+     "bar": 12,
+     "beat": 2,
+     "t_s": 24.545,
+     "frame": 1473,
+     "part_frame": 164,
+     "what": "Your flick"
+    },
+    {
+     "bar": 12,
+     "beat": 3,
+     "t_s": 25.091,
+     "frame": 1505,
+     "part_frame": 196,
+     "what": "Make: back in front"
+    },
+    {
+     "bar": 12,
+     "beat": 4,
+     "t_s": 25.636,
+     "frame": 1538,
+     "part_frame": 229,
+     "what": "Hold: the clock running down, one point in it"
+    }
+   ],
+   "capture": "An online match with a friend (friend code), both phones screen recording at 60 fps from before tip-off. From your recording: about 6 s in the last 15 s with the lead changing hands, two of your makes and one of theirs in the PiP.",
+   "text": "SOLO OR ONLINE",
+   "notes": [
+    "Play this match on the iPhone 16 yourself and give your friend the XR: your POV is on screen for about 5.5 s, theirs for about 2 s, so the sharper, smoother phone should carry yours.",
+    "This scene and the next come from the same match. Pick the stretch where the score is closest, then play the ice card a few seconds later (scene 6).",
+    "Keep both recordings whole; the ice card moment is what syncs the two POVs in the edit."
+   ],
+   "cut_out": "Cut on the downbeat"
+  },
+  {
+   "part": 6,
+   "title": "Play your cards right",
+   "bars": [
+    13,
+    14
+   ],
+   "song_bars": [
+    15,
+    16
+   ],
+   "start_s": 26.182,
+   "end_s": 30.545,
+   "start_frame": 1571,
+   "end_frame": 1833,
+   "frames": 262,
+   "shot": "You play Deep Freeze at a critical point. The edit zips (a fast zoom) into the opponent's picture-in-picture and lands in their POV just as their rim ices over, then their next shot can't get through.",
+   "hits": [
+    {
+     "bar": 13,
+     "beat": 1,
+     "t_s": 26.182,
+     "frame": 1571,
+     "part_frame": 0,
+     "what": "Your POV: tap Deep Freeze; text card in"
+    },
+    {
+     "bar": 13,
+     "beat": 2,
+     "t_s": 26.727,
+     "frame": 1604,
+     "part_frame": 33,
+     "what": "The card fires"
+    },
+    {
+     "bar": 13,
+     "beat": 3,
+     "t_s": 27.273,
+     "frame": 1636,
+     "part_frame": 65,
+     "what": "The zip starts: a fast zoom into their PiP"
+    },
+    {
+     "bar": 13,
+     "beat": 4,
+     "t_s": 27.818,
+     "frame": 1669,
+     "part_frame": 98,
+     "what": "Through the PiP (the silent beat)"
+    },
+    {
+     "bar": 14,
+     "beat": 1,
+     "t_s": 28.364,
+     "frame": 1702,
+     "part_frame": 131,
+     "what": "Land in THEIR POV on the downbeat: the rim ices over, ICED BY CARD"
+    },
+    {
+     "bar": 14,
+     "beat": 2,
+     "t_s": 28.909,
+     "frame": 1735,
+     "part_frame": 164,
+     "what": "They flick"
+    },
+    {
+     "bar": 14,
+     "beat": 3,
+     "t_s": 29.455,
+     "frame": 1767,
+     "part_frame": 196,
+     "what": "The ball is caught by the ice"
+    },
+    {
+     "bar": 14,
+     "beat": 4,
+     "t_s": 30,
+     "frame": 1800,
+     "part_frame": 229,
+     "what": "Hold on the frozen rim"
+    }
+   ],
+   "capture": "Same match, at a moment that matters: the opponent about to tie or take the lead. From your recording: the card tap plus 1.5 s. From your friend's recording: 2.5 s starting just before their rim ices, through their next shot hitting the ice.",
+   "text": "PLAY YOUR CARDS RIGHT",
+   "notes": [
+    "Sync the two recordings on the ice: it shows up in your PiP and on their rim at the same moment.",
+    "The PiP draws a simplified court at half rate, so keep the zip quick and get into their real POV fast; that's where the picture is sharp.",
+    "Deep Freeze makes them swish through the ice, get caught, or rattle it three times. A shot caught by the ice on 14.3 is the clearest payoff.",
+    "Both phones: Do Not Disturb on, start the screen recording from Control Center before the match, and check the recording for the status bar or the red recording pill; crop or cover it in the edit if it shows.",
+    "Each phone lays the HUD out around its own notch or Dynamic Island, so the HUD sits slightly lower on the 16 than on the XR. On the zip into their POV that's expected: it's a different player's screen."
+   ],
+   "screen_sizes": [
+    {
+     "source": "Game layout (what all of these show)",
+     "pixels": "720 × 1560",
+     "shape": "19.5:9",
+     "fit": "The game's base is 720 wide and expands to the phone's height"
+    },
+    {
+     "source": "Master timeline (edit here)",
+     "pixels": "1080 × 2340",
+     "shape": "19.5:9",
+     "fit": "1.5× the layout"
+    },
+    {
+     "source": "Headless renders (Movie Maker)",
+     "pixels": "1440 × 3120",
+     "shape": "19.5:9",
+     "fit": "Use the App Store layout from docs/TRAILER.md, not the 16:9 social layout; scale 0.75 into the master. Set --qa-safe-top/bottom to match the iPhone 16 so its HUD lines up"
+    },
+    {
+     "source": "iPhone 16 screen recording",
+     "pixels": "1179 × 2556",
+     "shape": "19.5:9",
+     "fit": "Scale 0.92 into the master: sharp. Use it for the hero POV"
+    },
+    {
+     "source": "iPhone XR screen recording",
+     "pixels": "828 × 1792",
+     "shape": "19.5:9",
+     "fit": "Scale 1.30 into the master: slightly soft. Fine for the 1 s opponent POV and short inserts"
+    },
+    {
+     "source": "App Store preview export",
+     "pixels": "886 × 1920",
+     "shape": "19.5:9",
+     "fit": "Straight downscale of the master"
+    },
+    {
+     "source": "Social 9:16 export",
+     "pixels": "1080 × 1920",
+     "shape": "9:16",
+     "fit": "The 886 × 1920 frame centred, with 97 px side bars on the brick wall or dither. No HUD gets cropped"
+    }
+   ],
+   "cut_out": "Cut on the downbeat into the outro"
+  },
+  {
+   "part": 7,
+   "title": "Collect and customize",
+   "bars": [
+    15,
+    16
+   ],
+   "song_bars": [
+    5,
+    6
+   ],
+   "start_s": 30.545,
+   "end_s": 34.909,
+   "start_frame": 1833,
+   "end_frame": 2095,
+   "frames": 262,
+   "shot": "An epic pull from PEGGY: the prize card pops over the machine, the shade drops hard and the rays turn, the ball in its magenta epic plate. Then straight into the locker, flicking through the balls and the nets fast.",
+   "hits": [
+    {
+     "bar": 15,
+     "beat": 1,
+     "t_s": 30.545,
+     "frame": 1833,
+     "part_frame": 0,
+     "what": "Epic prize card pops over PEGGY (NEW BALL); text card in"
+    },
+    {
+     "bar": 15,
+     "beat": 2,
+     "t_s": 31.091,
+     "frame": 1865,
+     "part_frame": 32,
+     "what": "Rays turning, the ball spins"
+    },
+    {
+     "bar": 15,
+     "beat": 3,
+     "t_s": 31.636,
+     "frame": 1898,
+     "part_frame": 65,
+     "what": "Tap EQUIP"
+    },
+    {
+     "bar": 15,
+     "beat": 4,
+     "t_s": 32.182,
+     "frame": 1931,
+     "part_frame": 98,
+     "what": "Whip to the locker (the silent beat)"
+    },
+    {
+     "bar": 16,
+     "beat": 1,
+     "t_s": 32.727,
+     "frame": 1964,
+     "part_frame": 131,
+     "what": "Locker, BALLS tab: fast scroll down the rarity rows"
+    },
+    {
+     "bar": 16,
+     "beat": 2,
+     "t_s": 33.273,
+     "frame": 1996,
+     "part_frame": 163,
+     "what": "Scroll continues, legend row passes"
+    },
+    {
+     "bar": 16,
+     "beat": 3,
+     "t_s": 33.818,
+     "frame": 2029,
+     "part_frame": 196,
+     "what": "Switch to the NETS tab: cotton, chain"
+    },
+    {
+     "bar": 16,
+     "beat": 4,
+     "t_s": 34.364,
+     "frame": 2062,
+     "part_frame": 229,
+     "what": "Tap a net: HANG IT ON"
+    }
+   ],
+   "capture": "A trailer save with tickets and a full-ish locker. PEGGY: one pull that lands an epic ball (a debug seed gets it on the first take; the reveal is the real page), about 3 s from the card popping. Locker: one quick scroll through BALLS and one through NETS, about 3 s, with fingers fast but steady.",
+   "text": "COLLECT NETS & BALLS · CUSTOMIZE YOUR HOOPER",
+   "text_note": "Two lines, held across both bars",
+   "notes": [
+    "The line is longer than the others, so set it as two lines: COLLECT NETS & BALLS / CUSTOMIZE YOUR HOOPER.",
+    "The music is still close to full volume through these two bars; the fade really starts in bar 17.",
+    "Pick an epic ball whose colour pops against PEGGY's background."
+   ],
+   "cut_out": "Cut on the downbeat to the end card"
+  },
+  {
+   "part": 8,
+   "title": "End card",
+   "bars": [
+    17,
+    18
+   ],
+   "song_bars": [
+    7,
+    8
+   ],
+   "start_s": 34.909,
+   "end_s": 39.273,
+   "start_frame": 2095,
+   "end_frame": 2356,
+   "frames": 261,
+   "shot": "The bare splash: the neon wall and sign with no buttons underneath. The App Store badge and an Android coming-soon line sit below the sign. Everything fades out together with the music.",
+   "hits": [
+    {
+     "bar": 17,
+     "beat": 1,
+     "t_s": 34.909,
+     "frame": 2095,
+     "part_frame": 0,
+     "what": "Cut to the bare splash, badges already in place"
+    },
+    {
+     "bar": 17,
+     "beat": 3,
+     "t_s": 36,
+     "frame": 2160,
+     "part_frame": 65,
+     "what": "Hold"
+    },
+    {
+     "bar": 18,
+     "beat": 1,
+     "t_s": 37.091,
+     "frame": 2225,
+     "part_frame": 130,
+     "what": "Whole frame starts fading as the music drops away"
+    },
+    {
+     "bar": 18,
+     "beat": 4,
+     "t_s": 38.727,
+     "frame": 2324,
+     "part_frame": 229,
+     "what": "Black, as the music reaches silence at 0:39.27"
+    }
+   ],
+   "capture": "A headless render of the splash with its buttons hidden (needs a small trailer option in the splash, since the real screen always shows them), about 5 s, then the badges and legal lines added in the edit.",
+   "text": null,
+   "notes": [
+    "App Store badge: Apple's official black \"Download on the App Store\" badge, unmodified, placed first (left of or above any Android mark). It mustn't be animated on its own, so fade the whole frame rather than the badge. If the trailer goes out before the app is live, Apple's pre-order badge is the one to use.",
+    "Android: Google has no \"coming soon\" version of the Get it on Google Play badge, and the badge mustn't be altered. Either turn on pre-registration in the Play Console and use Google's official pre-registration badge, or write COMING SOON TO ANDROID in the game's font with no Google badge.",
+    "Legal lines, small at the bottom of the card: \"Apple and the Apple logo are trademarks of Apple Inc., registered in the U.S. and other countries. App Store is a service mark of Apple Inc.\" Add \"Google Play and the Google Play logo are trademarks of Google LLC.\" only if a Google badge is used. The music credit can go here too.",
+    "Keep clear space around the Apple badge of at least a quarter of its height."
+   ],
+   "cut_out": "end (fade to black with the music)"
+  }
+ ]
 }

@@ -4,27 +4,27 @@
   {
    "clip": "part02c",
    "from": "in",
-   "frames": 58
+   "frames": 26
   },
   {
    "conform": "part02/park_make",
    "from": 345,
-   "frames": 73
+   "frames": 72
   }
  ],
  "hits": [
   {
-   "key": "5.3",
+   "key": "5.4",
    "what": "Real SWISH: the swish sound's onset in Ross's recording",
-   "target": 65,
+   "target": 33,
    "clip": "part02/park_make",
    "clip_frame": 352
   }
  ],
  "hit_marks": {},
  "notes": [
-  "Beats 1-2.75 (frames 0-58): the Park flyover, the home background's camera pose (TitlePan) trucked screen-right at a constant speed; the hoop stays the look target.",
-  "Frame 58 on: Ross's park recording (raw/part02/park_make.mp4, an iPhone XR at 828x1792, conformed up x1.304), its third shot: the clean SWISH +2 (the other makes are +1s with the net sound). The game's spot timer moved the camera while that ball was in the air (recording frame 345 is the first frame on the new spot), so the cut lands exactly on that camera change, 7 frames before the swish: the cut is at beat 2.75 rather than 2a/2b's 2.5, so the part never shows the mid-flight jump. The swish sound's onset (conformed frame 352, from the audio) lands on beat 3; SWISH +2 and the ball rolling to the camera fill beat 4.",
+  "Frames 0-26 (global 589-615, from beat 5.3): the Park flyover, the home background's camera pose (TitlePan) trucked screen-right at a constant speed (the first 26 frames of the 3 m centred pass: a glimpse of the court); the hoop stays the look target. The slice starts on beat 5.3 since the beach took the first half of bar 5 (Ross, 2026-11-13).",
+  "Frame 26 on: Ross's park recording (raw/part02/park_make.mp4, an iPhone XR at 828x1792, conformed up x1.304), its third shot: the clean SWISH +2 (the other makes are +1s with the net sound). The game's spot timer moved the camera while that ball was in the air (recording frame 345 is the first frame on the new spot), so the cut lands exactly on that camera change, 7 frames before the swish: the cut sits on that camera change so the slice never shows the mid-flight jump. The swish sound's onset (conformed frame 352, from the audio) lands on beat 5.4 (slice frame 33); SWISH +2 and the ball rolling to the camera fill the rest.",
   "The flyover has no game sound; the SFX stem carries the recording's own audio from the cut. The part's text card is already up (it came in on 3.1)."
  ]
 }

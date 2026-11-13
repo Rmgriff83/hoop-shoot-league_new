@@ -3,23 +3,23 @@
  "segments": [
   {
    "conform": "part02/beach_make",
-   "from": 310,
-   "frames": 131
+   "from": 244,
+   "frames": 196
   }
  ],
  "hits": [
   {
-   "key": "4.3",
+   "key": "5.1",
    "what": "Real SWISH: the swish sound's onset in Ross's recording",
-   "target": 65,
+   "target": 131,
    "clip": "part02/beach_make",
    "clip_frame": 375
   }
  ],
  "hit_marks": {},
  "notes": [
-  "The whole bar (frames 0-131) is Ross's beach recording (raw/part02/beach_make.mov, an iPhone XR at 828x1792, conformed up x1.304), from frame 310: the ball in hand, the flick (recording frame 343), the arc and the clean SWISH +3 \u2014 its fourth shot (the first make touched the rim: a +1 with the net sound, not the swish). The swish sound's onset (conformed frame 375, from the audio) lands on beat 3; SWISH +3 and the bounce fill beat 4.",
-  "No flyover in this bar (Ross, 2026-11-13, after seeing 2a-2d together: every bar cutting from pan to live on the same beat sat too hard on the downbeat \u2014 2a keeps its pan, 2b opens straight on the live shot with the extra second going to the play). The beach flyover capture (clips/part02b.mov, the 3 m centred pass) stays on disk if a pan is wanted again.",
-  "The SFX stem is the recording's own audio for the whole bar. The part's text card is already up (it came in on 3.1)."
+  "The whole slice (frames 0-196, global 393-589 = beats 4.1 to 5.3) is Ross's beach recording (raw/part02/beach_make.mov, an iPhone XR at 828x1792, conformed up x1.304), from frame 244: the previous ball dropping in for +2, the ball in hand, the flick (recording frame 343), the arc and the clean SWISH +3 (its fourth shot; the first make touched the rim: a +1 with the net sound, not the swish). The swish sound's onset (conformed frame 375, from the audio) lands on the bar-5 downbeat (5.1, slice frame 131); SWISH +3 and the bounce fill the half bar to the park's cut on 5.3.",
+  "No flyover here (Ross, 2026-11-13, after seeing 2a-2d together: every bar cutting pan -> live on the same beat sat too hard on the downbeat): 2a keeps its pan, the beach opens straight on the live shot and is opened up by 65 frames, the time coming from the park and city pans. The extra time all goes to the front: Ross paused the game at recording frame 472, so holding past the swish instead (swish on 4.4, out at 473) ends on the PAUSED menu. The beach flyover capture (clips/part02b.mov, the 3 m centred pass) stays on disk.",
+  "The SFX stem is the recording's own audio for the whole slice. The part's text card is already up (it came in on 3.1)."
  ]
 }
