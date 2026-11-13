@@ -4,12 +4,27 @@
   {
    "clip": "part02a",
    "from": "in",
-   "frames": 131
+   "frames": 49
+  },
+  {
+   "conform": "part02/cage_make",
+   "from": 126,
+   "frames": 82
+  }
+ ],
+ "hits": [
+  {
+   "key": "3.3",
+   "what": "Real make: the swish (the sound's onset in Ross's recording)",
+   "target": 65,
+   "clip": "part02/cage_make",
+   "clip_frame": 142
   }
  ],
  "hit_marks": {},
  "notes": [
-  "The Arcade Cage flyover alone (Ross: the flyovers first, his real shots cut in later): the home background's camera pose (TitlePan) trucked screen-right 1.5 m at a constant speed over the bar, starting exactly on the home pose, from inside the booth (Ross's pick, 2026-11-12, over a pass pulled 2 m back outside the gate: too far out); the hoop stays the look target, as the home's own pan does. The booth is centred on the hoop, not the home camera, so the truck runs from the home pose to the right.",
-  "No game sound in a flyover (the court stands alone, no ambience): the SFX stem is silence; the music carries the bar."
+  "Beats 1-2.5 (frames 0-49): the Arcade Cage flyover, the home background's camera pose (TitlePan) trucked screen-right 1.5 m at a constant speed from inside the booth (Ross's pick, 2026-11-12, over a pass pulled 2 m back outside the gate: too far out); the hoop stays the look target, as the home's own pan does.",
+  "Beat 2.5 on (frames 49-131): Ross's cage recording (raw/part02/cage_make.mp4, an iPhone XR at 828x1792, conformed up x1.304), cut in with the ball already dropping; the swish's sound onset (conformed frame 142, found from the audio) lands on beat 3; the +1 and the next ball going up fill beat 4. The cut on 2.5 is a choice: on beat 2 it shows more of the arc, on beat 3 the make would be the first frame.",
+  "The flyover has no game sound; the SFX stem carries the recording's own audio from the cut."
  ]
 }

@@ -23,7 +23,17 @@ FONT_SCALE = 2
 GRID_COLS = 8
 
 
-def seg_sources(clip):
+def seg_sources(seg):
+    """A segment's files: a director clip ({clip}: v2/clips, with its marks) or a conformed phone
+    recording ({conform: "part02/cage_make"}: v2/conform, no marks — `from` is a frame number)."""
+    if seg.get("conform"):
+        base = os.path.join(v2.OUT, "conform", seg["conform"])
+        mov, wav = base + ".mov", base + ".wav"
+        if not os.path.exists(mov):
+            sys.exit("missing %s (v2.py conform <recording>)" % mov)
+        n = v2.count_frames(mov)
+        return mov, (wav if os.path.exists(wav) else None), {"marks": {"in": 0, "end": n - 30}, "flicks": [], "problems": [], "recording": os.path.basename(mov)}
+    clip = seg["clip"]
     base = os.path.join(v2.OUT, "clips", clip)
     mov, wav, marks = base + ".mov", base + ".wav", base + ".marks.json"
     for p in (mov, wav, marks):
@@ -33,7 +43,10 @@ def seg_sources(clip):
 
 
 def mark_frame(marks, spec):
-    """A clip frame from "in", "land+5", "tap-3" (frames)."""
+    """A clip frame from "in", "land+5", "tap-3" (frames), or a plain frame number."""
+    spec = str(spec)
+    if spec.lstrip("-").isdigit():
+        return int(spec)
     name, off = spec, 0
     for sign in "+-":
         if sign in spec[1:]:
@@ -104,36 +117,40 @@ def build(key):
         return len(inputs) - 1
     placed = []   # (segment, its part frame, its clip's first frame, marks, sources) for the report
     at = 0
+    down = "scale=%d:%d:flags=area,setsar=1" % MASTER   # every source to the master once (a conformed recording already is)
     for i, s in enumerate(segs):
-        mov, wav, mk = seg_sources(s["clip"])
-        f0 = mark_frame(mk["marks"], str(s.get("from", "in")))
+        mov, wav, mk = seg_sources(s)
+        label = s.get("clip") or s.get("conform")
+        f0 = mark_frame(mk["marks"], s.get("from", "in"))
         if f0 is None:
-            sys.exit("%s: clip %s has no mark '%s'" % (pid, s["clip"], s.get("from")))
+            sys.exit("%s: %s has no mark '%s'" % (pid, label, s.get("from")))
         f0 += int(s.get("offset", 0))
         nseg = int(s["frames"])
         have = int(mk["marks"].get("end", 0)) + 30
         if f0 < 0 or f0 + nseg > have:
-            sys.exit("%s: '%s' from %s needs clip frames %d-%d of %d (lengthen the shot or move `from`)" % (pid, s["clip"], s.get("from"), f0, f0 + nseg, have))
-        vi, ai = add_input(["-i", mov]), add_input(["-i", wav])
-        vf.append("[%d:v]trim=start_frame=%d:end_frame=%d,setpts=PTS-STARTPTS[v%d]" % (vi, f0, f0 + nseg, i))
-        af.append("[%d:a]atrim=start=%.6f:end=%.6f,asetpts=PTS-STARTPTS,aresample=48000[a%d]" % (ai, f0 / FPS, (f0 + nseg) / FPS, i))
+            sys.exit("%s: '%s' from %s needs frames %d-%d of %d (lengthen the shot or move `from`)" % (pid, label, s.get("from"), f0, f0 + nseg, have))
+        vi = add_input(["-i", mov])
+        vf.append("[%d:v]trim=start_frame=%d:end_frame=%d,setpts=PTS-STARTPTS,%s[v%d]" % (vi, f0, f0 + nseg, down, i))
+        if wav:
+            ai = add_input(["-i", wav])
+            af.append("[%d:a]atrim=start=%.6f:end=%.6f,asetpts=PTS-STARTPTS,aresample=48000,aformat=channel_layouts=stereo[a%d]" % (ai, f0 / FPS, (f0 + nseg) / FPS, i))
+        else:
+            ai = add_input(["-f", "lavfi", "-i", "anullsrc=r=48000:cl=stereo:d=%.6f" % (nseg / FPS)])
+            af.append("[%d:a]atrim=duration=%.6f[a%d]" % (ai, nseg / FPS, i))
         placed.append((s, at, f0, mk))
         at += nseg
-    vf.append("%sconcat=n=%d:v=1:a=0,split[vraw1][vraw2]" % ("".join("[v%d]" % i for i in range(len(segs))), len(segs)))
+    vf.append("%sconcat=n=%d:v=1:a=0,split[vclean][vraw2]" % ("".join("[v%d]" % i for i in range(len(segs))), len(segs)))
     af.append("%sconcat=n=%d:v=0:a=1,asplit=3[sfx1][sfx2][sfx3]" % ("".join("[a%d]" % i for i in range(len(segs))), len(segs)))
-    down = "scale=%d:%d:flags=area,setsar=1" % MASTER
-    vf.append("[vraw1]%s[vclean]" % down)
     if has_card:
         ci = add_input(["-framerate", str(FPS), "-i", card_seq])
         t0 = max(card_in, 0) / FPS
         if card_in < 0:   # the card came in before this slice: skip its first frames
-            vf.append("[%d:v]trim=start_frame=%d,setpts=PTS-STARTPTS[card]" % (ci, -card_in))
+            vf.append("[%d:v]trim=start_frame=%d,setpts=PTS-STARTPTS,%s[card]" % (ci, -card_in, down))
         else:
-            vf.append("[%d:v]setpts=PTS+%.6f/TB[card]" % (ci, t0))
-        vf.append("[vraw2][card]overlay=0:0:eof_action=pass:enable='gte(t,%.6f)'[vtext0]" % t0)
-        vf.append("[vtext0]%s[vtext]" % down)
+            vf.append("[%d:v]setpts=PTS+%.6f/TB,%s[card]" % (ci, t0, down))
+        vf.append("[vraw2][card]overlay=0:0:eof_action=pass:enable='gte(t,%.6f)'[vtext]" % t0)
     else:
-        vf.append("[vraw2]%s[vtext]" % down)
+        vf.append("[vraw2]null[vtext]")
     cmd = [v2.FFMPEG, "-y", "-loglevel", "error"]
     for a in inputs:
         cmd += a
@@ -158,6 +175,10 @@ def build(key):
         f = int(h["part_frame"]) - sub_offset
         if 0 <= f < frames:
             hits["%d.%d" % (int(h["bar"]), int(h["beat"]))] = dict(h, part_frame=f)
+    # The part file's own hits ({key, what, target, clip, clip_frame}: a moment inside a source, like a
+    # recording's make), reported through the segment that carries that source frame.
+    for h in spec.get("hits", []):
+        hits[str(h["key"])] = {"what": h["what"], "part_frame": int(h["target"]), "clip": h.get("clip"), "clip_frame": h.get("clip_frame")}
     sheet(dst("text.mov"), beats, hits, dst("sheet.png"))
     slice_ = dict(part, title=part["title"] + (" — %s" % key if sub else ""), bars=bars, start_frame=start, end_frame=end)
     report = report_lines(slice_, pid, spec, placed, hits, frames, dst)
@@ -183,7 +204,13 @@ def report_lines(part, pid, spec, placed, hits, frames, dst):
         target = int(h["part_frame"])
         landed = None
         mspec = hit_marks.get(key)
-        if mspec:
+        if h.get("clip_frame") is not None:   # a frame of a named source
+            for s, at, f0, mk in placed:
+                if (s.get("clip") or s.get("conform")) == h.get("clip") and f0 <= int(h["clip_frame"]) <= f0 + int(s["frames"]):
+                    landed = at + (int(h["clip_frame"]) - f0)
+                    break
+            mspec = "%s@%s" % (h.get("clip"), h.get("clip_frame"))
+        elif mspec:
             for s, at, f0, mk in placed:
                 f = mark_frame(mk["marks"], mspec)
                 if f is not None and f0 <= f <= f0 + int(s["frames"]):
@@ -202,7 +229,9 @@ def report_lines(part, pid, spec, placed, hits, frames, dst):
             extra.append("flicks " + ", ".join(mk["flicks"]))
         if mk.get("problems"):
             extra.append("PROBLEMS " + "; ".join(mk["problems"]))
-        lines.append("- part frames %d–%d: %s.mov from clip frame %d (mark %s%+d)%s" % (at, at + int(s["frames"]), s["clip"], f0, s.get("from", "in"), int(s.get("offset", 0)), ("; " + "; ".join(extra)) if extra else ""))
+        if mk.get("recording"):
+            extra.append("Ross's recording, conformed")
+        lines.append("- part frames %d–%d: %s from frame %d (%s%+d)%s" % (at, at + int(s["frames"]), (s.get("clip") or s.get("conform")) + ".mov", f0, s.get("from", "in"), int(s.get("offset", 0)), ("; " + "; ".join(extra)) if extra else ""))
     if spec.get("notes"):
         lines += ["", "Approximated / notes:"] + ["- " + n for n in spec["notes"]]
     return lines
