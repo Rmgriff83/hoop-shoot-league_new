@@ -45,30 +45,44 @@ def mark_frame(marks, spec):
     return int(marks[name]) + off
 
 
-def beat_frames(sb, part):
-    """Every beat of the part's bars as (bar, beat, part_frame), rounded on the global timeline."""
+def beat_frames(sb, bars, start_frame):
+    """Every beat of `bars` as (bar, beat, frame from start_frame), rounded on the global timeline."""
     bpm = float(sb["timing"]["bpm"])
     out = []
-    for bar in range(int(part["bars"][0]), int(part["bars"][1]) + 1):
+    for bar in range(bars[0], bars[1] + 1):
         for beat in range(1, 5):
             t = ((bar - 1) * 4 + (beat - 1)) * 60.0 / bpm
-            out.append((bar, beat, int(round(t * FPS)) - int(part["start_frame"])))
+            out.append((bar, beat, int(round(t * FPS)) - start_frame))
     return out
 
 
-def build(n):
+def build(key):
+    """`key` is a part number ("2") or one of a part's frames_list segments ("2a"): the segment is built
+    on its own, as its slice of the part (its frames, its bar, the part's card already up where it is)."""
     sb = v2.story()
+    n = int("".join(ch for ch in key if ch.isdigit()))
+    sub = "".join(ch for ch in key if ch.isalpha())
     part = next(p for p in sb["parts"] if int(p["part"]) == n)
-    pid = "part%02d" % n
+    part_id = "part%02d" % n
+    pid = part_id + sub
+    start, end = int(part["start_frame"]), int(part["end_frame"])
+    bars = [int(part["bars"][0]), int(part["bars"][1])]
+    if sub:
+        entry = next((e for e in part.get("frames_list", []) if str(e.get("id")) == "%d%s" % (n, sub)), None)
+        if entry is None:
+            sys.exit("part %d has no segment '%s' in its frames_list" % (n, key))
+        start, end = int(entry["start_frame"]), int(entry["end_frame"])
+        bars = [int(entry["bar"]), int(entry["bar"])]
+    sub_offset = start - int(part["start_frame"])   # the slice's first frame, in part frames
+    frames = end - start
     spec_path = os.path.join(v2.V2, "parts", pid + ".json")
     if not os.path.exists(spec_path):
         sys.exit("no part file %s" % spec_path)
     spec = json.load(open(spec_path))
-    frames = int(part["frames"])
     segs = spec["segments"]
     if sum(int(s["frames"]) for s in segs) != frames:
-        sys.exit("%s: the segments add up to %d frames, the part is %d" % (pid, sum(int(s["frames"]) for s in segs), frames))
-    out_dir = os.path.join(v2.OUT, "parts", pid)
+        sys.exit("%s: the segments add up to %d frames, the slice is %d" % (pid, sum(int(s["frames"]) for s in segs), frames))
+    out_dir = os.path.join(v2.OUT, "parts", part_id)
     os.makedirs(out_dir, exist_ok=True)
     dst = lambda tail: os.path.join(out_dir, "%s_%s" % (pid, tail))
     # The text card: from its hit to the part's last frame (card_scene.gd render_v2 made the frames).
@@ -78,10 +92,11 @@ def build(n):
         for h in part.get("hits", []):
             if "text card in" in str(h.get("what", "")).lower():
                 card_in = int(h["part_frame"])
-    has_card = part.get("text") is not None
-    card_seq = os.path.join(v2.OUT, "cards", pid, "f%04d.png")
+    card_in -= sub_offset   # relative to this slice: negative = already up when it starts
+    has_card = part.get("text") is not None and card_in < frames
+    card_seq = os.path.join(v2.OUT, "cards", part_id, "f%04d.png")
     if has_card and not os.path.exists(card_seq % 0):
-        sys.exit("missing card frames %s (tools/trailer/v2/cards.sh)" % os.path.dirname(card_seq))
+        sys.exit("missing card frames %s (tools/trailer/v2/cards.sh %d)" % (os.path.dirname(card_seq), n))
     # Inputs and the graph: each segment trimmed by frame, concatenated at the clip size, then the one downscale.
     inputs, vf, af = [], [], []
     def add_input(args):
@@ -110,8 +125,11 @@ def build(n):
     vf.append("[vraw1]%s[vclean]" % down)
     if has_card:
         ci = add_input(["-framerate", str(FPS), "-i", card_seq])
-        t0 = card_in / FPS
-        vf.append("[%d:v]setpts=PTS+%.6f/TB[card]" % (ci, t0))
+        t0 = max(card_in, 0) / FPS
+        if card_in < 0:   # the card came in before this slice: skip its first frames
+            vf.append("[%d:v]trim=start_frame=%d,setpts=PTS-STARTPTS[card]" % (ci, -card_in))
+        else:
+            vf.append("[%d:v]setpts=PTS+%.6f/TB[card]" % (ci, t0))
         vf.append("[vraw2][card]overlay=0:0:eof_action=pass:enable='gte(t,%.6f)'[vtext0]" % t0)
         vf.append("[vtext0]%s[vtext]" % down)
     else:
@@ -129,15 +147,20 @@ def build(n):
     music = os.path.join(v2.OUT, "music.wav")
     if not os.path.exists(music):
         sys.exit("no music.wav (v2.py music)")
-    a, b = int(part["start_frame"]) / FPS, int(part["end_frame"]) / FPS
+    a, b = start / FPS, end / FPS
     v2.run([v2.FFMPEG, "-y", "-loglevel", "error", "-i", dst("text.mov"), "-i", music, "-filter_complex",
             "[1:a]atrim=start=%.6f:end=%.6f,asetpts=PTS-STARTPTS,volume=-3dB[m];[0:a]volume=-5dB[s];[m][s]amix=inputs=2:normalize=0:duration=first[a]" % (a, b),
             "-map", "0:v", "-map", "[a]", "-c:v", "libx264", "-preset", "fast", "-crf", "18", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k", "-movflags", "+faststart", dst("review.mp4")])
     # The sheet and the report.
-    beats = beat_frames(sb, part)
-    hits = {("%d.%d" % (int(h["bar"]), int(h["beat"]))): h for h in part.get("hits", [])}
+    beats = beat_frames(sb, bars, start)
+    hits = {}
+    for h in part.get("hits", []):
+        f = int(h["part_frame"]) - sub_offset
+        if 0 <= f < frames:
+            hits["%d.%d" % (int(h["bar"]), int(h["beat"]))] = dict(h, part_frame=f)
     sheet(dst("text.mov"), beats, hits, dst("sheet.png"))
-    report = report_lines(part, pid, spec, placed, hits, frames, dst)
+    slice_ = dict(part, title=part["title"] + (" — %s" % key if sub else ""), bars=bars, start_frame=start, end_frame=end)
+    report = report_lines(slice_, pid, spec, placed, hits, frames, dst)
     open(dst("report.md"), "w").write("\n".join(report) + "\n")
     print("\n".join(report))
     return 0
@@ -332,5 +355,5 @@ def sheet(mov, beats, hits, path):
 
 def main(argv):
     if not argv:
-        sys.exit("v2.py part N")
-    return build(int(argv[0]))
+        sys.exit("v2.py part N  (or a segment: 2a)")
+    return build(argv[0])

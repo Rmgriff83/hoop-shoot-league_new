@@ -1,0 +1,15 @@
+{
+ "part": "2a",
+ "segments": [
+  {
+   "clip": "part02a",
+   "from": "in",
+   "frames": 131
+  }
+ ],
+ "hit_marks": {},
+ "notes": [
+  "The Arcade Cage flyover alone (Ross: the flyovers first, his real shots cut in later): the home background's camera pose (TitlePan) trucked screen-right at a constant speed over the bar; the hoop stays the look target, as the home's own pan does.",
+  "No game sound in a flyover (the court stands alone, no ambience): the SFX stem is silence; the music carries the bar."
+ ]
+}

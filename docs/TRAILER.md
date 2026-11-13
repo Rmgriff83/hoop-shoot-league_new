@@ -98,6 +98,7 @@ which was used (`synth:<TYPE>`), and Checkpoint A marks those shots.
 | `locker`, `locker_tap`, `peggy`, `peggy_drop` `{want: legend}` | the locker; a real PEGGY drop aimed by the board's own sim |
 | `splash` `{fresh, menu}` | the splash's neon logo with its menu hidden (the end card); `fresh` shows NEW GAME as a first install does, `menu` keeps the menu (v2's opening) |
 | `new_player` `{seed}` | the NEW PLAYER page NEW GAME opened, its rolls on a seed (`tools/trailer/v2/roll_seeds.gd` lists them); marks `page` and `land` |
+| `flyover` `{area, from, to, seconds, hold_frames}` | the area alone in the home background's camera pose, trucked `from` → `to` (metres off that pose; screen-right is +z) at a constant speed, on past `to` for the handles; holds `hold_frames` at `from` first (v2 part 2) |
 | `wear`, `tap`, `call` | change kit, press a named button, call a method |
 
 Flick replay: each movie frame advances the replay's own clock by 1/60 s
@@ -254,6 +255,14 @@ longer line wraps inside the panel), in from the part's "text card in" hit
 with the tour card's rise, out with its 0.2 s fade on the part's last
 frame — locked on part 1 (2026-11-12) for every part. Part 7's line is two
 lines; part 8 has none (its badges and legal lines are its own).
+
+Part 2 is built a court at a time (`v2.py part 2a` … `2d`: a slice of a
+part from its `frames_list`, with the part's card already up where the slice
+starts), Ross's real shots cut in after the flyovers. The cage (2a,
+2026-11-12): the home pose pulled 2 m back outside the booth's gate and
+trucked 4 m screen-right over the bar — the booth is only ~0.8 m each side
+of the home camera, so a wide truck from inside goes through its fence
+(`shots/probe_cage.json` holds both passes).
 
 Part 1 (2026-11-12): the lit splash, NEW GAME pressed on 1.3, the real 0.3 s
 slide (the storyboard's 1.4 / 2.1 come 28 / 43 frames early — flagged, the

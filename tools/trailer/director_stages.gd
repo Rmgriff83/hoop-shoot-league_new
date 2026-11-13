@@ -252,6 +252,93 @@ func stage_new_player(step: Dictionary) -> void:
 	d.get("_marks")["land"] = Engine.get_frames_drawn()
 
 
+## {area, from, to, seconds, hold_frames, fov}: a sideways flyover of an area
+## in the home background's pose (TitlePan: the camera at the arena's
+## title_cam_pos looking at title_look_at, docs/HOME.md), trucked from `from`
+## to `to` — metres added to that position; screen-right is +z — at a
+## constant speed over `seconds`, and on past `to` at the same speed (the
+## handles). v2 part 2. The court stands alone in a scene of its own, as the
+## area snaps build it (CourtGeometry with the LED reading HOOP SHOOT, no
+## HUD, no wash). The step holds `hold_frames` with the camera at `from`
+## (the net settling), returns, and the camera moves from the next frame:
+## `mark in` right after it is the first moving frame.
+func stage_flyover(step: Dictionary) -> void:
+	var area := str(step.get("area", "cage"))
+	var mode := "practice"
+	for a in AreaArchiveCopy.AREAS:
+		if str(a["area"]) == area:
+			mode = str(a["mode"])
+	var arena := CosmeticLibrary.get_arena(area)
+	if arena == null:
+		d.call("_problem", "no arena '%s'" % area)
+		return
+	var tree := d.get_tree()
+	var old := tree.current_scene
+	var root := Node3D.new()
+	root.name = "Flyover"
+	tree.root.add_child(root)
+	tree.current_scene = root
+	if old != null:
+		old.queue_free()
+	var court := CourtGeometry.new()
+	court.name = "Court"
+	court.geo = App.geo_for_mode(mode)
+	court.arena_set = arena
+	court.hoop_set = App.hoop_for_mode(mode)
+	court.net_set = App.net_for_mode(mode)
+	root.add_child(court)
+	court.led.set_text("HOOP SHOOT", court.led.accent_color)
+	var cam := Camera3D.new()
+	cam.name = "FlyCam"
+	root.add_child(cam)
+	var spec := TitlePan.spec_of(arena)
+	UiLayout.frame_camera(cam, float(step.get("fov", spec["fov"])))
+	var mover := FlyoverMover.new()
+	mover.name = "Mover"
+	mover.cam = cam
+	mover.court = court
+	mover.base = spec["cam_pos"]
+	mover.look = spec["look_at"]
+	mover.from = _v3(step.get("from", [0.0, 0.0, -1.5]))
+	mover.to = _v3(step.get("to", [0.0, 0.0, 1.5]))
+	mover.frames = maxf(float(step.get("seconds", 2.1818)) * 60.0, 1.0)
+	mover.hold = int(step.get("hold_frames", 60))
+	root.add_child(mover)
+	mover.apply(0.0)
+	cam.make_current()
+	for i in mover.hold:
+		await tree.process_frame
+
+
+static func _v3(v: Variant) -> Vector3:
+	if v is Array and (v as Array).size() == 3:
+		return Vector3(float(v[0]), float(v[1]), float(v[2]))
+	return Vector3.ZERO
+
+
+## The flyover's camera: after `hold` frames it trucks `from` → `to` over
+## `frames` frames at a constant speed and keeps going; the net idles under it.
+class FlyoverMover extends Node:
+	var cam: Camera3D
+	var court: CourtGeometry
+	var base := Vector3.ZERO
+	var look := Vector3.ZERO
+	var from := Vector3.ZERO
+	var to := Vector3.ZERO
+	var frames := 131.0
+	var hold := 60
+	var _n := 0
+
+	func _process(dt: float) -> void:
+		_n += 1
+		apply(maxf(float(_n - hold), 0.0) / frames)
+		court.step_rim(dt)
+
+	func apply(k: float) -> void:
+		cam.position = base + from + (to - from) * k
+		cam.look_at(look)
+
+
 ## {variant: champs | out}: a season played through on a fixed seed, its
 ## wrap-up page over the league home (design 39c / 39e).
 func stage_season_wrap(step: Dictionary) -> void:

@@ -1,0 +1,35 @@
+{
+ "name": "part02a",
+ "note": "v2 part 2a (bar 3): the Arcade Cage flyover. The home background's camera pose pulled 2 m back, outside the booth's gate, trucked 4 m screen-right over the bar (the booth is only ~0.8 m each side of the home camera, so a wide truck from inside goes through its fence).",
+ "themes": [],
+ "setup": {},
+ "steps": [
+  {
+   "do": "flyover",
+   "area": "cage",
+   "from": [-2.0, 0.0, -2.0],
+   "to": [-2.0, 0.0, 2.0],
+   "seconds": 2.1833,
+   "hold_frames": 60
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "at",
+   "frame": 65
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "at",
+   "frame": 161
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}
