@@ -2,14 +2,9 @@
  "part": "2b",
  "segments": [
   {
-   "clip": "part02b",
-   "from": "in",
-   "frames": 49
-  },
-  {
    "conform": "part02/beach_make",
-   "from": 359,
-   "frames": 82
+   "from": 310,
+   "frames": 131
   }
  ],
  "hits": [
@@ -23,8 +18,8 @@
  ],
  "hit_marks": {},
  "notes": [
-  "Beats 1-2.5 (frames 0-49): the Beach flyover, the home background's camera pose (TitlePan) trucked 3 m screen-right at a constant speed, centred on the home pose (an open court, so twice the cage's truck); the hoop stays the look target.",
-  "Beat 2.5 on (frames 49-131): Ross's beach recording (raw/part02/beach_make.mov, an iPhone XR at 828x1792, conformed up x1.304), its fourth shot: the clean SWISH +3 (the first make touched the rim: a +1 with the net sound, not the swish). Cut in with the ball on its way down; the swish sound's onset (conformed frame 375, found from the audio: the same sustained-swish-then-floor-bounce shape as the cage's) lands on beat 3; SWISH +3 and the bounce fill beat 4. Cutting on beat 2 instead (recording frame 343) would show the release and the whole arc.",
-  "The flyover has no game sound; the SFX stem carries the recording's own audio from the cut. The part's text card is already up (it came in on 3.1)."
+  "The whole bar (frames 0-131) is Ross's beach recording (raw/part02/beach_make.mov, an iPhone XR at 828x1792, conformed up x1.304), from frame 310: the ball in hand, the flick (recording frame 343), the arc and the clean SWISH +3 \u2014 its fourth shot (the first make touched the rim: a +1 with the net sound, not the swish). The swish sound's onset (conformed frame 375, from the audio) lands on beat 3; SWISH +3 and the bounce fill beat 4.",
+  "No flyover in this bar (Ross, 2026-11-13, after seeing 2a-2d together: every bar cutting from pan to live on the same beat sat too hard on the downbeat \u2014 2a keeps its pan, 2b opens straight on the live shot with the extra second going to the play). The beach flyover capture (clips/part02b.mov, the 3 m centred pass) stays on disk if a pan is wanted again.",
+  "The SFX stem is the recording's own audio for the whole bar. The part's text card is already up (it came in on 3.1)."
  ]
 }

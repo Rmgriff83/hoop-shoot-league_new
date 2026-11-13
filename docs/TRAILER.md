@@ -283,7 +283,10 @@ city (2d, 2026-11-13): the same 3 m centred pass but trucked screen-LEFT
 3 — that clip's only swish happened before it starts, so a re-recorded city
 swish can replace it with the same recipe. Bar 6 is a 130-frame slice.
 An onset, for every court: the first 1/60 s chunk whose RMS is over half
-the sound's peak.
+the sound's peak. Seen together (Ross, 2026-11-13) every bar cutting pan →
+live on the same beat sat too hard on the downbeat, so 2a keeps its pan and
+2b is the live shot for the whole bar (ball in hand, flick, arc, swish on
+beat 3); the beach flyover capture stays on disk.
 
 Part 1 (2026-11-12): the lit splash, NEW GAME pressed on 1.3, the real 0.3 s
 slide (the storyboard's 1.4 / 2.1 come 28 / 43 frames early — flagged, the
