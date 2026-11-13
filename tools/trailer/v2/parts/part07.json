@@ -1,0 +1,23 @@
+{
+ "part": 7,
+ "segments": [
+  {
+   "clip": "part07",
+   "from": "in",
+   "frames": 262
+  }
+ ],
+ "hit_marks": {
+  "15.1": "in",
+  "15.3": "equip+5",
+  "15.4": "back+5",
+  "16.1": "scroll-1",
+  "16.3": "nets+5",
+  "16.4": "hang+5"
+ },
+ "notes": [
+  "One continuous take: the real PEGGY drop (the director aims the crane at an epic plate with the board's own sim, then PLAY and DROP as a player does), the prize card's pop as `in`, EQUIP, the game's own < BACK whip from PEGGY into the locker, the BALLS tab flicked down its rarity rows (locker_scroll, 55 frames, a flick's decay), the NETS tab, Wool's HANG IT ON (a first-row net, so the panel opens above the text card; only its CITY button runs under it).",
+  "A button fires on its release, 5 frames after the press: EQUIP, < BACK, the NETS tab and the net tile are pressed 5 frames before their beats (the tab and the tile rebuild the grid a frame later still).",
+  "15.2 (rays turning, the ball spinning) is the page's own motion — no event to mark."
+ ]
+}

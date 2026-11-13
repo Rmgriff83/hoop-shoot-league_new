@@ -1,0 +1,108 @@
+{
+ "name": "part07",
+ "note": "v2 part 7 (bars 15-16): COLLECT NETS & BALLS / CUSTOMIZE YOUR HOOPER. PEGGY from the locker, a real drop aimed at an epic plate; `in` is the prize card's pop (EPIC PULL!, the shade, the rays). EQUIP on 15.3 (pressed 5 frames early: a button fires on its release), < BACK on 15.4 — the game's own whip from PEGGY to the locker — then the BALLS tab flicked down its rarity rows from 16.1, the NETS tab on 16.3, Wool's HANG IT ON on 16.4 (a first-row net: its panel opens above the text card's slot). One continuous take.",
+ "themes": [],
+ "setup": {},
+ "steps": [
+  {
+   "do": "locker",
+   "tab": "BALLS"
+  },
+  {
+   "do": "peggy"
+  },
+  {
+   "do": "wait",
+   "s": 1.0
+  },
+  {
+   "do": "peggy_drop",
+   "want": "epic"
+  },
+  {
+   "do": "until",
+   "what": "peggy_card",
+   "timeout": 30
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "at",
+   "frame": 60,
+   "from": "in"
+  },
+  {
+   "do": "mark",
+   "name": "equip"
+  },
+  {
+   "do": "tap",
+   "name": "Equip"
+  },
+  {
+   "do": "at",
+   "frame": 93,
+   "from": "in"
+  },
+  {
+   "do": "mark",
+   "name": "back"
+  },
+  {
+   "do": "tap",
+   "name": "Back",
+   "under": "PeggyPage"
+  },
+  {
+   "do": "at",
+   "frame": 131,
+   "from": "in"
+  },
+  {
+   "do": "mark",
+   "name": "scroll"
+  },
+  {
+   "do": "locker_scroll",
+   "to": "end",
+   "frames": 55
+  },
+  {
+   "do": "at",
+   "frame": 191,
+   "from": "in"
+  },
+  {
+   "do": "mark",
+   "name": "nets"
+  },
+  {
+   "do": "tap",
+   "name": "Tab_NETS"
+  },
+  {
+   "do": "at",
+   "frame": 224,
+   "from": "in"
+  },
+  {
+   "do": "mark",
+   "name": "hang"
+  },
+  {
+   "do": "tap",
+   "name": "Net_wool"
+  },
+  {
+   "do": "at",
+   "frame": 300,
+   "from": "in"
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

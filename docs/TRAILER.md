@@ -103,7 +103,8 @@ which was used (`synth:<TYPE>`), and Checkpoint A marks those shots.
 | `watch` `{what: buzzer\|done, name}` | marks the frame a heat's clock runs out / the heat is done (both sides' balls down), from the sidelines while later steps run |
 | `clinch_day` `{seed}` | the cage campaign on the regular season's last day, one win from the top seed and not yet clinched (`tools/trailer/v2/clinch_doc.gd`) |
 | `cards` `{area, have: {id: n}, loadout}` | one league's card bucket set exactly (v2 part 4 stages the bought card out of it, so the shop buy grows a new slot); `drag_card` takes a `mark` and marks the ghost's lift (`mark`) and the drop (`mark_drop`) |
-| `wear`, `tap`, `call` | change kit, press a named button, call a method |
+| `locker_scroll` `{to: px\|end, frames}` | the locker's open tab scrolled as a flick does, fast then easing to rest (v2 part 7); `peggy` takes `{drops}` to reseed the plates |
+| `wear`, `tap`, `call` | change kit, press a named button (`tap {name, under}` searches inside a named node when the name is not unique — two pages carry a `Back`), call a method |
 
 Flick replay: each movie frame advances the replay's own clock by 1/60 s
 and feeds the touch points that fall inside it to
@@ -337,6 +338,21 @@ in; on the league page the locked slot covers the SHOP title (the price row
 is clear). The game's own landing: the flown card is freed on arrival and
 the new slot grows from 0 width over the next ~0.3 s (slotGrow), so the card
 blinks for a few frames at frame 108 — left as the game does it.
+
+Part 7 (2026-11-13) is one continuous take: the locker, PEGGY, a real drop
+(`peggy_drop {want: epic}` aims the crane at an epic plate with the board's
+own sim, PLAY, DROP — on the trailer save's first drop the plate holds
+POLKA), the prize card's pop as `in` (EPIC PULL!, the 0.82 shade, the
+magenta rays), EQUIP pressed 5 frames before 15.3, `< BACK` (under
+`PeggyPage`: the locker has one too) 5 frames before 15.4 — the game's own
+slide from PEGGY to the locker is the whip, the bare court shows for the
+silent beat — then `locker_scroll` from 16.1 (55 frames, cubic out: the
+rarity rows run past, POLKA gold in the epic row, the legend row last), the
+NETS tab on 16.3 and Wool's HANG IT ON on 16.4. Wool because it is on the
+cotton group's first row: the panel (name, X, a 3 × 2 grid of courts) opens
+under the tapped row, and under row one it sits above the text card's slot
+with only its CITY button running under the card; under row two (Rasta) it
+was hidden behind it. The text card stays at the locked slot.
 
 Part 1 (2026-11-12): the lit splash, NEW GAME pressed on 1.3, the real 0.3 s
 slide (the storyboard's 1.4 / 2.1 come 28 / 43 frames early — flagged, the

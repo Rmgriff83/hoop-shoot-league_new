@@ -190,8 +190,8 @@ func _do(step: Dictionary) -> void:
 			_show_hud(bool(step.get("on", true)))
 		"wear":
 			_wear(str(step.get("ball", "")), str(step.get("net", "")))
-		"tap":
-			await driver.call("_click_named", str(step.get("name", "")))
+		"tap":   # {name, under}: press a named button (`under` a named node, when the name is not unique)
+			await driver.call("_click_named", str(step.get("name", "")), str(step.get("under", "")))
 		"call":
 			await _call(step)
 		"end":

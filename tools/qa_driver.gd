@@ -463,10 +463,12 @@ func _near_miss_launch(g: SimGeometry) -> Dictionary:
 
 
 ## Click a button by node name (icon buttons carry no text).
-func _click_named(node_name: String) -> void:
-	var b: Control = get_tree().root.find_child(node_name, true, false) as Control
+func _click_named(node_name: String, under := "") -> void:
+	# `under`: search inside that named node (two pages can carry a `Back`).
+	var scope: Node = get_tree().root.find_child(under, true, false) if under != "" else get_tree().root
+	var b: Control = scope.find_child(node_name, true, false) as Control if scope != null else null
 	if b == null or not b.is_visible_in_tree():
-		print("QA: no visible button named '%s'" % node_name)
+		print("QA: no visible button named '%s'%s" % [node_name, (" under '%s'" % under) if under != "" else ""])
 		return
 	var c := _win_of(b)
 	_mouse_button(c, true)

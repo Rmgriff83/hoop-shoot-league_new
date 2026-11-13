@@ -578,13 +578,42 @@ func stage_locker_tap(step: Dictionary) -> void:
 		locker.tap_net(str(step["net"]))
 
 
-## PEGGY from the locker.
-func stage_peggy(_step: Dictionary) -> void:
+## PEGGY from the locker. {drops}: the save's drop count (the plates and the
+## drop are seeded by it: another count, another set of prizes on the plates).
+func stage_peggy(step: Dictionary) -> void:
 	var ts := _scene()
+	if step.has("drops"):
+		var c: Dictionary = SaveService.get_cosmetics()
+		var p: Dictionary = c.get("peggy", {})
+		p["drops"] = int(step["drops"])
+		c["peggy"] = p
+		SaveService.put_cosmetics(c)
 	if ts.call("locker") == null:
 		await stage_locker({})
 	(ts.call("locker") as LockerPanel).peggy_requested.emit()
 	await d.call("_sleep", 1.0)
+
+
+## {to: px | "end", frames}: the locker's open tab scrolled as a flick does —
+## fast off the finger, easing to rest — over `frames` frames.
+func stage_locker_scroll(step: Dictionary) -> void:
+	var locker: LockerPanel = _scene().call("locker")
+	var box: ScrollContainer = locker.get("_scroll_box") if locker != null else null
+	if box == null:
+		d.call("_problem", "a locker scroll with no locker tab")
+		return
+	var from := float(box.scroll_vertical)
+	var to: float
+	if str(step.get("to", "end")) == "end":
+		to = maxf(0.0, box.get_v_scroll_bar().max_value - box.size.y)
+	else:
+		to = float(step.get("to", 0))
+	var frames := maxi(2, int(step.get("frames", 50)))
+	for i in frames:
+		var k := float(i + 1) / float(frames)
+		var e := 1.0 - pow(1.0 - k, 3.0)   # cubic out: the flick's decay
+		box.scroll_vertical = int(roundf(lerpf(from, to, e)))
+		await d.get_tree().process_frame
 
 
 ## {want: legend | epic}: a real drop that lands on a plate of that rarity.
