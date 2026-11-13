@@ -353,6 +353,20 @@ func stage_season_wrap(step: Dictionary) -> void:
 	ts.call("_open_season_wrap")
 
 
+## {seed}: the cage campaign on the regular season's last day, one game from a
+## playoff spot (tools/trailer/v2/clinch_doc.gd) — v2 part 3's YOU WIN / CLINCHED
+## come from the heat that follows, played for real.
+func stage_clinch_day(step: Dictionary) -> void:
+	var script: Variant = load("res://tools/trailer/v2/clinch_doc.gd")
+	var cfg := LeagueData.league("cage")
+	var r: Dictionary = script.build(cfg, int(step.get("seed", 45)))
+	if r.is_empty():
+		d.call("_problem", "no clinch-day table on seed %d" % int(step.get("seed", 45)))
+		return
+	App.save_league_doc(r["doc"], "cage")
+	print("TRAILER " + str(script.describe(r)).replace("\n", "\nTRAILER "))
+
+
 # ---- solo: results and the boards ----------------------------------------------------
 
 

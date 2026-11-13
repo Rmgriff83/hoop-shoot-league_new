@@ -1,0 +1,51 @@
+{
+ "name": "part03",
+ "note": "v2 part 3 (bars 7-8): RUN THE LEAGUE. The cage campaign on its last day, one game from a playoff spot (clinch_day); the heat played to its buzzer with real flicks; the game's own CLINCHED page follows (the standings climb, PLAYOFFS slams). `in` is the buzzer's frame, `done` the heat's.",
+ "themes": [],
+ "setup": {},
+ "steps": [
+  {
+   "do": "clinch_day",
+   "seed": 45
+  },
+  {
+   "do": "league_heat",
+   "area": "cage",
+   "ready": true
+  },
+  {
+   "do": "watch",
+   "what": "buzzer",
+   "name": "in"
+  },
+  {
+   "do": "watch",
+   "what": "done",
+   "name": "done"
+  },
+  {
+   "do": "flicks",
+   "want": ["SWISH", "MAKE"],
+   "n": 80,
+   "seed": 11,
+   "gap_s": 4.0
+  },
+  {
+   "do": "at",
+   "frame": 197,
+   "from": "in"
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "at",
+   "frame": 330,
+   "from": "in"
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}

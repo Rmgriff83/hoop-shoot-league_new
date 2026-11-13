@@ -13,7 +13,7 @@ const Director := preload("res://tools/trailer/director.gd")
 const Stages := preload("res://tools/trailer/director_stages.gd")
 const CardScene := preload("res://tools/trailer/card_scene.gd")
 const BANNED := ["physics", "realistic", "roguelite", "roguelike", "ultimate", "experience", "immersive", "next-level", "revolutionary", "deckbuilder"]
-const DIRECTOR_VERBS := ["wait", "play", "spot", "until", "flick", "mark", "at", "poster", "time_scale", "camera", "hud", "wear", "tap", "call", "end"]
+const DIRECTOR_VERBS := ["wait", "play", "spot", "until", "flick", "flicks", "watch", "mark", "at", "poster", "time_scale", "camera", "hud", "wear", "tap", "call", "end"]
 
 
 func _beats(pos: String) -> float:
@@ -55,7 +55,7 @@ func run(t) -> void:
 		for step in shot["steps"]:
 			var verb := str(step.get("do", ""))
 			t.ok(DIRECTOR_VERBS.has(verb) or stages.has_method("stage_" + verb), "%s: the director knows '%s'" % [file, verb])
-			if verb == "mark":
+			if verb == "mark" or verb == "watch":   # `watch` sets its mark from the sidelines (v2 part 3's buzzer)
 				marks.push_back(str(step.get("name", "")))
 		t.ok(marks.has("in") and marks.has("out"), "%s marks its in and out" % file)
 		t.ok((shot["steps"] as Array).any(func(s: Dictionary) -> bool: return str(s.get("do", "")) == "poster" or bool(s.get("poster_mid", false))), "%s has a storyboard frame" % file)
@@ -188,7 +188,7 @@ func _v2(t, stages) -> void:
 		for step in shot["steps"]:
 			var verb := str(step.get("do", ""))
 			t.ok(DIRECTOR_VERBS.has(verb) or stages.has_method("stage_" + verb), "v2 %s: the director knows '%s'" % [file, verb])
-			if verb == "mark":
+			if verb == "mark" or verb == "watch":   # `watch` sets its mark from the sidelines (v2 part 3's buzzer)
 				marks.push_back(str(step.get("name", "")))
 		t.ok(marks.has("in") and marks.has("out"), "v2 %s marks its in and out" % file)
 	# The music recipe is the one the stem is built from: song bars 3-16, then 5-8 again fading.

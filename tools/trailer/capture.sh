@@ -40,7 +40,8 @@ SHOT_ABS="$(cd "$(dirname "$SHOT")" && pwd)/$(basename "$SHOT")"
 case "$LAYOUT" in appstore) SAFE=(--qa-safe-top=${TRAILER_SAFE_TOP:-118} --qa-safe-bottom=${TRAILER_SAFE_BOTTOM:-62}) ;; *) SAFE=(--qa-safe-top=0 --qa-safe-bottom=0) ;; esac   # an iPhone's notch and home bar; a 16:9 phone has neither
 # (Always override: the Movie Maker window is taller than this Mac's screen, and a measured safe area would read the
 # part that hangs off the bottom as a giant home bar and squash the HUD band.)
-caffeinate -dimsu perl -e 'alarm 900; exec @ARGV' "$GODOT" --path "$PROJ" --write-movie "$FRAMES/frame.png" --fixed-fps 60 -- \
+# TRAILER_ALARM: a whole heat (v2 part 3) renders ~6500 frames at this Mac's ~5 fps — longer than the 15 min a shot gets.
+caffeinate -dimsu perl -e "alarm ${TRAILER_ALARM:-900}; exec @ARGV" "$GODOT" --path "$PROJ" --write-movie "$FRAMES/frame.png" --fixed-fps 60 -- \
   --qa-trailer="$SHOT_ABS" --qa-trailer-layout="$LAYOUT" --qa-trailer-out="$OUT" --save-dir=trailer_save --no-net "${SAFE[@]}" "$@" > "$FRAMES/godot.log" 2>&1 || { echo "✗ godot failed; see $FRAMES/godot.log"; exit 1; }
 rm -f override.cfg
 if grep -qE "SCRIPT ERROR|SHADER ERROR|Parse Error|null instance|previously freed" "$FRAMES/godot.log"; then

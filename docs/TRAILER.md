@@ -99,6 +99,9 @@ which was used (`synth:<TYPE>`), and Checkpoint A marks those shots.
 | `splash` `{fresh, menu}` | the splash's neon logo with its menu hidden (the end card); `fresh` shows NEW GAME as a first install does, `menu` keeps the menu (v2's opening) |
 | `new_player` `{seed}` | the NEW PLAYER page NEW GAME opened, its rolls on a seed (`tools/trailer/v2/roll_seeds.gd` lists them); marks `page` and `land` |
 | `flyover` `{area, from, to, seconds, hold_frames}` | the area alone in the home background's camera pose, trucked `from` → `to` (metres off that pose; screen-right is +z) at a constant speed, on past `to` for the handles; holds `hold_frames` at `from` first (v2 part 2) |
+| `flicks` `{n, want, seed}` | flick after flick while the clock runs: a heat played to its buzzer (v2 part 3); each waits for a ready ball and gives up when the period ends |
+| `watch` `{what: buzzer\|done, name}` | marks the frame a heat's clock runs out / the heat is done (both sides' balls down), from the sidelines while later steps run |
+| `clinch_day` `{seed}` | the cage campaign on the regular season's last day, one win from the top seed and not yet clinched (`tools/trailer/v2/clinch_doc.gd`) |
 | `wear`, `tap`, `call` | change kit, press a named button, call a method |
 
 Flick replay: each movie frame advances the replay's own clock by 1/60 s
@@ -294,6 +297,26 @@ after the swish to hold on it instead), paid for by the park and city pans
 6.2, a 15-frame pan then the make on 6.3). A slice that runs past its bar
 gets every beat it covers on its sheet. The beach flyover capture stays on
 disk.
+
+Part 3 (2026-11-13) is one real run: `clinch_day` writes a cage campaign
+doc on the regular season's last day — `clinch_doc.gd` fills every other
+game of the season (the last day's other games too) and searches results
+until the player is outside the playoff line and not clinched before their
+game, and the top seed after a win; on seed 45 that is five teams at 8-6,
+YOU 7-6 in fifth, Ollie Knots on the day. The heat is then played to its
+buzzer with `flicks` (stand-in flicks: no bank on this Mac; `gap_s 4` —
+back to back they scored 139, which read fake; paced, 57-29) and the game's
+own flow follows: 0.6 s after the heat is done, the CLINCHED page (39a) —
+standings rise 0.3 s, the record flips 1.0 s, the row climbs 1.4–1.95 s,
+PLAYOFFS slams 2.5 s, CLINCHED · NO. 1 SEED 2.9 s, CONTINUE 3.6 s. `watch`
+marks the buzzer (`in`) and `done`. The buzzer's sound sits on 7.1 and the
+slam on 8.3 exactly by cutting the clip once, ON the page's first frame:
+the scrim darkens the whole frame in one step and hides the jump in the
+frames skipped before it (the time between the last ball settling and the
+page is what has to go — `done` lands wherever the last ball does, so the
+skip is measured per take, from the scrim's frame). A final-day clinching
+win has no YOU WIN page in the game: the PLAYOFFS page is that win's page.
+A whole heat renders ~6500 frames at this Mac's ~5 fps: `TRAILER_ALARM=2700`.
 
 Part 1 (2026-11-12): the lit splash, NEW GAME pressed on 1.3, the real 0.3 s
 slide (the storyboard's 1.4 / 2.1 come 28 / 43 frames early — flagged, the

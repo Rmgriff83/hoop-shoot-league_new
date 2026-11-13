@@ -176,6 +176,10 @@ func _do(step: Dictionary) -> void:
 			var base := int(_marks.get(str(step.get("from", "in")), Engine.get_frames_drawn()))
 			while Engine.get_frames_drawn() - base < int(step.get("frame", 0)):
 				await get_tree().process_frame
+		"flicks":   # {n, want, seed}: flick after flick while the clock runs — a heat played to its buzzer
+			await _flicks(step)
+		"watch":   # {what: buzzer|done, name}: mark the frame a heat's buzzer goes / the heat is done, while later steps run
+			_watch(str(step.get("what", "buzzer")), str(step.get("name", step.get("what", "buzzer"))))
 		"poster":
 			await _poster(step)
 		"time_scale":
@@ -335,6 +339,52 @@ func _flick(step: Dictionary) -> void:
 			await _until("resolved", 8.0)
 		"settled":
 			await _until("settled", 10.0)
+
+
+## Flicks until the clock stops (v2 part 3: a league heat won for real): each
+## one waits for a ready ball as `flick` does, but gives up the moment the
+## period ends instead of running `ready`'s timeout into the buzzer.
+func _flicks(step: Dictionary) -> void:
+	var n := int(step.get("n", 80))
+	for i in n:
+		var c := _court()
+		if c == null:
+			return
+		var trial: TimeTrial = c.get("trial")
+		var waited := 0.0
+		while trial.phase == TimeTrial.PHASE_RUNNING and not (not trial.holding and trial.ball_ready()) and waited < 15.0:
+			await get_tree().process_frame
+			waited += get_process_delta_time() / maxf(Engine.time_scale, 0.01)
+		if trial.phase != TimeTrial.PHASE_RUNNING:
+			return
+		var s := step.duplicate()
+		s["nth"] = i
+		s["seed"] = int(step.get("seed", 1)) + i
+		await _flick(s)
+		# `gap_s`: a breath between shots — a player's pace, not a machine's
+		# (54 stand-ins back to back scored 139 in a 90 s heat).
+		if float(step.get("gap_s", 0.0)) > 0.0:
+			await _sleep(float(step.get("gap_s", 0.0)))
+
+
+## A mark set from the sidelines: the frame a heat's clock runs out (`buzzer`)
+## or its heat is done (`done`, both sides' balls down — the match-end page
+## follows 0.6 s later). Runs beside the steps that follow it.
+func _watch(what: String, name: String) -> void:
+	while not _stop:
+		var sc := _scene()
+		if sc != null and "heat" in sc:
+			var h: Heat = sc.get("heat")
+			var ok := false
+			if what == "done":
+				ok = h.done
+			else:
+				ok = h.player.phase == TimeTrial.PHASE_FINISHING or h.player.phase == TimeTrial.PHASE_DONE
+			if ok:
+				_marks[name] = Engine.get_frames_drawn()
+				print("TRAILER watch %s -> %s at frame %d" % [what, name, _marks[name]])
+				return
+		await get_tree().process_frame
 
 
 ## A recording for this court and outcome: the nth that fits, or {}.

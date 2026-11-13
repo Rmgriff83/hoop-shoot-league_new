@@ -1,0 +1,30 @@
+{
+ "part": "3",
+ "segments": [
+  {
+   "clip": "part03",
+   "from": "in",
+   "offset": 2,
+   "frames": 46
+  },
+  {
+   "clip": "part03",
+   "from": "done",
+   "offset": 34,
+   "frames": 216
+  }
+ ],
+ "hits": [],
+ "hit_marks": {
+  "7.1": "in+2",
+  "8.1": "done+118",
+  "8.2": "done+151",
+  "8.3": "done+185",
+  "8.4": "done+208"
+ },
+ "notes": [
+  "One real run (shots/part03.json): the cage campaign put on the regular season's last day by tools/trailer/v2/clinch_doc.gd (every other game of the season filled in: five teams at 8-6, YOU 7-6 in fifth, not yet clinched, Ollie Knots on the day), the heat played to its buzzer with the director's flicks — 20 stand-in flicks at a player's pace, 4 s between shots (no flick bank on this Mac; a first take shot back to back and finished 139-26, which read fake), and the game's own flow from there: the heat is done when the last ball settles, the CLINCHED page (design 39a) opens 0.6 s later — the standings rise at 0.3 s, your record flips at 1.0 s, your row climbs 1.4-1.95 s, PLAYOFFS slams with the flash at 2.5 s, CLINCHED · NO. 1 SEED at 2.9 s, CONTINUE at 3.6 s.",
+  "Measured in the capture: the buzzer's TIME on clip frame 30 (`in`), its sound 2 frames later (the part starts there, so the sound is on the drum hit; a buzzer-beater drops through the net as TIME lights), the last ball settled on clip 61 (`done`), the page's scrim 34 frames after that (clip 95), the flash 151 frames after the scrim (clip 246). Two segments from the one clip: the buzzer on 7.1 through the ball rolling off (clip 32-78), then from the page's own first frame (clip 95) — the 17 frames before the page are skipped so it opens on frame 46 and PLAYOFFS slams on 8.3 exactly. The join IS the page open: the scrim darkens the whole frame in one step, which hides the rolling ball's 17-frame jump; the skipped sound is one floor bounce, dropped whole. Your row's climb starts 1 frame before 8.1 and lands 1 frame before 8.2 (the game's own 1.4 s / 1.95 s); the CLINCHED · NO. 1 SEED line fades in 10 frames before 8.4 (its 2.9 s is 0.4 s after the slam, the beat is 0.55 s after): flagged, the game's timing.",
+  "The game's final-day clinching win has no YOU WIN page: the PLAYOFFS page is that win's page (match_end_copy.gd kind 'clinch'), so the storyboard's 7.1 flash is the buzzer (its sound on the drum hit, TIME on the board) and the win reads from the score. The text card comes in on 7.2 (frame 33), held across both bars."
+ ]
+}
