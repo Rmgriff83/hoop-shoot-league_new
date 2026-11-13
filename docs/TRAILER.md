@@ -272,7 +272,11 @@ beach (2b, 2026-11-13): an open court, so the home pose trucked 3 m, centred
 Ross's beach recording — the game's swish sound, not a rim-touching make's
 net sound; a recording's swish reads in its RMS profile as a sustained burst
 (~5 frames) followed by the floor bounce ~25 frames later, and the onset is
-the first frame at full level.
+the first frame at full level. The park (2c, 2026-11-13): the same 3 m
+centred pass (`shots/probe_park.json`), then the SWISH +2 from Ross's park
+recording — the game's spot timer had moved the camera while that ball was
+in the air, so the cut sits exactly on the recording's camera change (beat
+2.75, 7 frames before the swish) and the part never shows the jump.
 
 Part 1 (2026-11-12): the lit splash, NEW GAME pressed on 1.3, the real 0.3 s
 slide (the storyboard's 1.4 / 2.1 come 28 / 43 frames early — flagged, the

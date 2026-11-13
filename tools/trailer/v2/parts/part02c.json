@@ -1,0 +1,30 @@
+{
+ "part": "2c",
+ "segments": [
+  {
+   "clip": "part02c",
+   "from": "in",
+   "frames": 58
+  },
+  {
+   "conform": "part02/park_make",
+   "from": 345,
+   "frames": 73
+  }
+ ],
+ "hits": [
+  {
+   "key": "5.3",
+   "what": "Real SWISH: the swish sound's onset in Ross's recording",
+   "target": 65,
+   "clip": "part02/park_make",
+   "clip_frame": 352
+  }
+ ],
+ "hit_marks": {},
+ "notes": [
+  "Beats 1-2.75 (frames 0-58): the Park flyover, the home background's camera pose (TitlePan) trucked screen-right at a constant speed; the hoop stays the look target.",
+  "Frame 58 on: Ross's park recording (raw/part02/park_make.mp4, an iPhone XR at 828x1792, conformed up x1.304), its third shot: the clean SWISH +2 (the other makes are +1s with the net sound). The game's spot timer moved the camera while that ball was in the air (recording frame 345 is the first frame on the new spot), so the cut lands exactly on that camera change, 7 frames before the swish: the cut is at beat 2.75 rather than 2a/2b's 2.5, so the part never shows the mid-flight jump. The swish sound's onset (conformed frame 352, from the audio) lands on beat 3; SWISH +2 and the ball rolling to the camera fill beat 4.",
+  "The flyover has no game sound; the SFX stem carries the recording's own audio from the cut. The part's text card is already up (it came in on 3.1)."
+ ]
+}
