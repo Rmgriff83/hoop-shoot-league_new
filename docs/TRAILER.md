@@ -385,6 +385,21 @@ The clip has 17 spare frames, so it is taken as trimmed (match time meets
 part 5's end within 0.2 s). Their phone draws a debug flick
 readout (49° / 46 %) at the lower left — a debug build; flagged.
 
+Part 8 (2026-11-13), the end card: the bare splash (`splash` with its menu
+and social row hidden, `in` 4.9 s in with the neon lit) held for the part;
+one still over it — the storyboard part's `end_card`, rendered by
+`card_scene.gd` to `cards/part08/still.png`: Apple's badge at design y 1010,
+300 wide, drawn only when `marketing/brand/app_store_badge.svg` (or .png)
+exists (it did not at build time: the slot is empty until the file is
+dropped there and `cards.sh 8` + `v2.py part 8` run again), COMING SOON TO
+ANDROID in the game's face under it (Ross had not picked the
+pre-registration badge; this needs no Google mark or legal line), Apple's
+legal line and the music credit small at 1380 / 1450 (the body face is all
+caps, so the legal line reads in caps, wording verbatim) — and the part
+file's `fade_out {from, to}`, the whole frame to black over 18.1–18.4 on
+both the clean and the text version, black to the end as the music fades.
+`v2_part.py` lays a `still.png` over the whole part when one exists.
+
 Part 1 (2026-11-12): the lit splash, NEW GAME pressed on 1.3, the real 0.3 s
 slide (the storyboard's 1.4 / 2.1 come 28 / 43 frames early — flagged, the
 honest pace kept), the card in on 2.1, the dice re-rolling on 2.2 / 2.3 on

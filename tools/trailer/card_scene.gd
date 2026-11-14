@@ -78,7 +78,12 @@ func render_v2(only: Array = []) -> bool:
 		return false
 	_make_viewport(LAYOUTS["appstore"])
 	for p in parsed["parts"]:
-		if p.get("text") == null or (not only.is_empty() and not only.has(int(p["part"]))):
+		if not only.is_empty() and not only.has(int(p["part"])):
+			continue
+		if p.get("end_card") is Dictionary:
+			await _render_end_card("part%02d" % int(p["part"]), p["end_card"])
+			continue
+		if p.get("text") == null:
 			continue
 		var id := "part%02d" % int(p["part"])
 		var card_in := 0
@@ -97,6 +102,88 @@ func render_v2(only: Array = []) -> bool:
 		await _render_sequence(node, frames, dir, still, moves)
 		print("TRAILER card: v2/%s in at %d, %d frames%s" % [id, card_in, frames, "" if moves.is_empty() else ", moves " + str(moves)])
 	return true
+
+
+## v2's end card (part 8): one still, laid over the bare splash by v2_part.py
+## (which fades the whole frame) — Apple's badge (`badge.file`, an .svg or
+## .png under the project, drawn at `badge.w` design px wide at `badge.y`
+## when the file is there; its space is left when not), the Android line
+## under it in the game's face, the legal line and the music credit small at
+## the bottom.
+func _render_end_card(id: String, spec: Dictionary) -> void:
+	var node := Control.new()
+	node.name = "EndCard_" + id
+	node.size = Vector2(LAYOUTS["appstore"])
+	var badge_spec: Dictionary = spec.get("badge", {})
+	var bw := float(badge_spec.get("w", 300))
+	var by := float(badge_spec.get("y", 1010))
+	var badge := _badge_texture(str(badge_spec.get("file", "")), bw)
+	var badge_h := bw / 3.0   # Apple's badge is 3:1 (250 x 83)
+	if badge != null:
+		badge_h = bw * float(badge.get_height()) / float(badge.get_width())
+		var tr := TextureRect.new()
+		tr.name = "Badge"
+		tr.texture = badge
+		tr.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tr.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		tr.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+		tr.position = Vector2(roundf((720.0 - bw) / 2.0), by)
+		tr.size = Vector2(bw, badge_h)
+		node.add_child(tr)
+	var android := _title(str(spec.get("android", "")), int(spec.get("android_size", 22)), BUTTER)
+	android.name = "Android"
+	android.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	android.position = Vector2(0, by + badge_h + float(spec.get("android_gap", 44)))
+	android.size = Vector2(720, 40)
+	node.add_child(android)
+	var legal := RetroTheme.caps(str(spec.get("legal", "")), int(spec.get("small_size", 11)), RetroTheme.SCENE_MUTED)
+	legal.name = "Legal"
+	legal.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	legal.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	legal.add_theme_constant_override("line_spacing", 4)
+	legal.position = Vector2(CARD_X, float(spec.get("legal_y", 1380)))
+	legal.size = Vector2(CARD_W, 60)
+	node.add_child(legal)
+	var credit := RetroTheme.caps(str(spec.get("credit", "")), int(spec.get("small_size", 11)), RetroTheme.SCENE_MUTED)
+	credit.name = "Credit"
+	credit.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	credit.position = Vector2(CARD_X, float(spec.get("credit_y", 1450)))
+	credit.size = Vector2(CARD_W, 24)
+	node.add_child(credit)
+	_vp.add_child(node)
+	var dir := ProjectSettings.globalize_path("%s/v2/cards/%s" % [OUT_ROOT, id])
+	DirAccess.make_dir_recursive_absolute(dir)
+	for old in DirAccess.get_files_at(dir):
+		DirAccess.remove_absolute(dir + "/" + old)
+	await RenderingServer.frame_post_draw
+	await RenderingServer.frame_post_draw
+	var img := _vp.get_texture().get_image()
+	img.save_png(dir + "/still.png")
+	var still := ProjectSettings.globalize_path("%s/v2/cards/stills/%s.png" % [OUT_ROOT, id])
+	DirAccess.make_dir_recursive_absolute(still.get_base_dir())
+	img.save_png(still)
+	_vp.remove_child(node)
+	node.queue_free()
+	print("TRAILER card: v2/%s end card still%s" % [id, "" if badge != null else " — NO BADGE at '%s' (its space is left)" % str(badge_spec.get("file", ""))])
+
+
+## The badge image at `w` design px wide (2x in the frame): an .svg rasterised
+## at that size, or a .png as it is.
+func _badge_texture(file: String, w: float) -> Texture2D:
+	if file == "":
+		return null
+	var path := file if file.begins_with("/") else ProjectSettings.globalize_path("res://" + file)
+	if not FileAccess.file_exists(path):
+		return null
+	var img := Image.new()
+	if path.ends_with(".svg"):
+		var svg := FileAccess.get_file_as_string(path)
+		if img.load_svg_from_string(svg, 1.0) != OK or img.get_width() == 0:
+			return null
+		img.load_svg_from_string(svg, w * SCALE / float(img.get_width()))
+	elif img.load(path) != OK:
+		return null
+	return ImageTexture.create_from_image(img)
 
 
 func _make_viewport(design: Vector2i) -> void:

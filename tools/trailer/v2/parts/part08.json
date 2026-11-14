@@ -1,0 +1,19 @@
+{
+ "part": 8,
+ "segments": [
+  {
+   "clip": "part08",
+   "from": "in",
+   "frames": 261
+  }
+ ],
+ "fade_out": {
+  "from": 130,
+  "to": 229
+ },
+ "notes": [
+  "The bare splash from the director (`splash`: the menu and social row hidden; `in` 4.9 s after the scene starts, the neon lit and the ball at rest), held for the part; the end-card still (cards/part08/still.png) over it for the whole part; the whole frame fades to black from 18.1 (130) to 18.4 (229) and holds black to the end, with the music's own fade.",
+  "The App Store badge is drawn by the card render only when marketing/brand/app_store_badge.svg (or .png) exists \u2014 it did not at build time, so its space (design y 1010, 300 x 100) is empty in this render; re-run tools/trailer/v2/cards.sh 8 and v2.py part 8 once the file is in place.",
+  "Android: COMING SOON TO ANDROID in the game's face (no Google badge, so no Google legal line) \u2014 the storyboard's other option is Google's pre-registration badge, which needs pre-registration on in the Play Console and the badge file."
+ ]
+}

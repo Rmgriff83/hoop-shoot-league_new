@@ -134,10 +134,15 @@ def build(key):
             if "text card in" in str(h.get("what", "")).lower():
                 card_in = int(h["part_frame"])
     card_in -= sub_offset   # relative to this slice: negative = already up when it starts
-    has_card = part.get("text") is not None and card_in < frames
     card_seq = os.path.join(v2.OUT, "cards", part_id, "f%04d.png")
-    if has_card and not os.path.exists(card_seq % 0):
+    still_png = os.path.join(v2.OUT, "cards", part_id, "still.png")   # an end card: one still over the whole part
+    has_still = os.path.exists(still_png)
+    has_card = has_still or (part.get("text") is not None and card_in < frames)
+    if has_card and not has_still and not os.path.exists(card_seq % 0):
         sys.exit("missing card frames %s (tools/trailer/v2/cards.sh %d)" % (os.path.dirname(card_seq), n))
+    # `fade_out` {from, to} (part frames): the whole frame to black, clean and text alike (the end card).
+    fo = spec.get("fade_out")
+    tail = "fade=t=out:s=%d:n=%d" % (int(fo["from"]) - sub_offset, int(fo["to"]) - int(fo["from"])) if fo else "null"
     # Inputs and the graph: each segment trimmed by frame, concatenated at the clip size, then the one downscale.
     inputs, vf, af = [], [], []
     def add_input(args):
@@ -167,18 +172,24 @@ def build(key):
             af.append("[%d:a]atrim=duration=%.6f[a%d]" % (ai, nseg / FPS, i))
         placed.append((s, at, f0, mk))
         at += nseg
-    vf.append("%sconcat=n=%d:v=1:a=0,split[vclean][vraw2]" % ("".join("[v%d]" % i for i in range(len(segs))), len(segs)))
+    vf.append("%sconcat=n=%d:v=1:a=0,split[vclean0][vraw2]" % ("".join("[v%d]" % i for i in range(len(segs))), len(segs)))
+    vf.append("[vclean0]%s[vclean]" % tail)
     af.append("%sconcat=n=%d:v=0:a=1,asplit=3[sfx1][sfx2][sfx3]" % ("".join("[a%d]" % i for i in range(len(segs))), len(segs)))
-    if has_card:
+    if has_still:
+        ci = add_input(["-loop", "1", "-framerate", str(FPS), "-t", "%.6f" % (frames / FPS), "-i", still_png])
+        vf.append("[%d:v]%s[card]" % (ci, down))
+        vf.append("[vraw2][card]overlay=0:0:eof_action=pass[vtext0]")
+    elif has_card:
         ci = add_input(["-framerate", str(FPS), "-i", card_seq])
         t0 = max(card_in, 0) / FPS
         if card_in < 0:   # the card came in before this slice: skip its first frames
             vf.append("[%d:v]trim=start_frame=%d,setpts=PTS-STARTPTS,%s[card]" % (ci, -card_in, down))
         else:
             vf.append("[%d:v]setpts=PTS+%.6f/TB,%s[card]" % (ci, t0, down))
-        vf.append("[vraw2][card]overlay=0:0:eof_action=pass:enable='gte(t,%.6f)'[vtext]" % t0)
+        vf.append("[vraw2][card]overlay=0:0:eof_action=pass:enable='gte(t,%.6f)'[vtext0]" % t0)
     else:
-        vf.append("[vraw2]null[vtext]")
+        vf.append("[vraw2]null[vtext0]")
+    vf.append("[vtext0]%s[vtext]" % tail)
     cmd = [v2.FFMPEG, "-y", "-loglevel", "error"]
     for a in inputs:
         cmd += a

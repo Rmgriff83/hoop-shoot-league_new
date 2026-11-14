@@ -1,0 +1,36 @@
+{
+ "name": "part08",
+ "note": "v2 part 8 (bars 17-18): the end card. The bare splash — the neon wall and the lit HOOP SHOOT LEAGUE sign with no menu under it — held; the badge, the Android line and the legal lines are laid over in the edit (v2_part.py overlays + the storyboard's end_card text), and the whole frame fades to black with the music.",
+ "themes": [],
+ "setup": {},
+ "steps": [
+  {
+   "do": "splash"
+  },
+  {
+   "do": "wait",
+   "s": 4.9
+  },
+  {
+   "do": "mark",
+   "name": "in"
+  },
+  {
+   "do": "at",
+   "frame": 150,
+   "from": "in"
+  },
+  {
+   "do": "poster"
+  },
+  {
+   "do": "at",
+   "frame": 300,
+   "from": "in"
+  },
+  {
+   "do": "mark",
+   "name": "out"
+  }
+ ]
+}
