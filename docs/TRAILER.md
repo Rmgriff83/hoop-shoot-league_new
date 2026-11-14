@@ -359,14 +359,16 @@ Part 5 (2026-11-13) is Ross's own online match, recorded on his XR
 60). His direction, after three passes: the part is this clip alone, it
 zooms into the opponent's picture-in-picture at its END, just after the ice
 card is played, quick and exact — part 6 then opens in the friend's POV.
-So part 5 is clip frames 50–312 (clock 30.7 → 26.3, YOU 18 → 20, ALLEY 19
-→ 20; no director marks — the beats fall where his play fell): Deep Freeze
-is tapped at clip 275 and fires at 280 (part frame 230, on 12.4), and the
-zip runs from 288 to the part's last frame, 24 frames: a segment's `zoom`
-`{from, to, rect, power}` in `v2_part.py`, zoompan with a quadratic ease-in
-from the whole frame into the PiP's inner rect (master px 695,353 331×588,
-its orange border measured on every side), filling the frame by height so
-the window ends inside the PiP. `crop` cannot do this: it reads its size
+So part 5 is clip frames 118–380 (clock 29.5 → 25.2, YOU 18 → 20, ALLEY
+19 → 20; no director marks — the beats fall where his play fell): Deep
+Freeze is tapped at clip 275 and fires at 280 (part frame 162), and a
+second later the zip runs from 340 to the part's last frame, 40 frames (a
+24-frame zip right after the card was "too soon and too fast" — Ross): a
+segment's `zoom` `{from, to, rect, power}` in `v2_part.py`, zoompan with an
+ease-in (power 1.8) from the whole frame into the PiP's inner rect (master
+px 695,353 331×588, its orange border measured on every side), filling the
+frame by height so the window ends inside the PiP; match time then meets
+part 6 within 0.2 s. `crop` cannot do this: it reads its size
 once. (His timestamps were approximate — "5.9 s" was a second after the
 card — so the card's frames were read off the picture: the tray's tile
 changes at 275 and 280.)
@@ -379,8 +381,8 @@ twice. Ross: "zoom accordingly from the last take at the beginning" — the
 mirror of part 5's zip, a `zoom` with `out: true`: the part opens at ×4 on
 their hoop (a 270×585 window on the backboard, master px 400,1080) and
 pulls back to the whole frame in 24 frames, fast off the cut and settling.
-Match time jumps about a second at the cut (26.4 → 25.4): the clip has 17
-spare frames, so it is taken as trimmed. Their phone draws a debug flick
+The clip has 17 spare frames, so it is taken as trimmed (match time meets
+part 5's end within 0.2 s). Their phone draws a debug flick
 readout (49° / 46 %) at the lower left — a debug build; flagged.
 
 Part 1 (2026-11-12): the lit splash, NEW GAME pressed on 1.3, the real 0.3 s
