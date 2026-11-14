@@ -1,6 +1,6 @@
 {
  "name": "part07",
- "note": "v2 part 7 (bars 15-16): COLLECT NETS & BALLS / CUSTOMIZE YOUR HOOPER. PEGGY from the locker, a real drop aimed at an epic plate; `in` is the prize card's pop (EPIC PULL!, the shade, the rays). EQUIP on 15.3 (pressed 5 frames early: a button fires on its release), < BACK on 15.4 — the game's own whip from PEGGY to the locker — then the BALLS tab flicked down its rarity rows from 16.1, the NETS tab on 16.3, Wool's HANG IT ON on 16.4 (a first-row net: its panel opens above the text card's slot). One continuous take.",
+ "note": "v2 part 7 (bars 15-16): COLLECT NETS & BALLS / CUSTOMIZE YOUR HOOPER. PEGGY from the locker, a real drop aimed at an epic plate; `in` is the prize card's pop (EPIC PULL!, the shade, the rays). Ross (2026-11-13): less PEGGY, more locker \u2014 EQUIP on 15.2, < BACK right after (the game's own whip to the locker), then the BALLS tab flicked down its rarity rows through bar 15, the NETS tab on 16.1, its ALL view on 16.2 (the owned five fit one screen) and the whole roster flicked through from 16.3. A button fires on its release, 5 frames after the press. One continuous take.",
  "themes": [],
  "setup": {},
  "steps": [
@@ -30,7 +30,7 @@
   },
   {
    "do": "at",
-   "frame": 60,
+   "frame": 28,
    "from": "in"
   },
   {
@@ -43,7 +43,7 @@
   },
   {
    "do": "at",
-   "frame": 93,
+   "frame": 36,
    "from": "in"
   },
   {
@@ -57,7 +57,7 @@
   },
   {
    "do": "at",
-   "frame": 131,
+   "frame": 84,
    "from": "in"
   },
   {
@@ -67,11 +67,11 @@
   {
    "do": "locker_scroll",
    "to": "end",
-   "frames": 55
+   "frames": 42
   },
   {
    "do": "at",
-   "frame": 191,
+   "frame": 126,
    "from": "in"
   },
   {
@@ -84,16 +84,30 @@
   },
   {
    "do": "at",
-   "frame": 224,
+   "frame": 159,
    "from": "in"
   },
   {
    "do": "mark",
-   "name": "hang"
+   "name": "all"
   },
   {
    "do": "tap",
-   "name": "Net_wool"
+   "name": "View_ALL"
+  },
+  {
+   "do": "at",
+   "frame": 196,
+   "from": "in"
+  },
+  {
+   "do": "mark",
+   "name": "scroll2"
+  },
+  {
+   "do": "locker_scroll",
+   "to": "end",
+   "frames": 62
   },
   {
    "do": "at",

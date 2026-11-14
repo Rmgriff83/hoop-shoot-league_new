@@ -9,15 +9,16 @@
  ],
  "hit_marks": {
   "15.1": "in",
-  "15.3": "equip+5",
-  "15.4": "back+5",
-  "16.1": "scroll-1",
-  "16.3": "nets+5",
-  "16.4": "hang+5"
+  "15.2": "equip+5",
+  "16.1": "nets+5",
+  "16.2": "all+5",
+  "16.3": "scroll2",
+  "15.3": "back+41"
  },
  "notes": [
-  "One continuous take: the real PEGGY drop (the director aims the crane at an epic plate with the board's own sim, then PLAY and DROP as a player does), the prize card's pop as `in`, EQUIP, the game's own < BACK whip from PEGGY into the locker, the BALLS tab flicked down its rarity rows (locker_scroll, 55 frames, a flick's decay), the NETS tab, Wool's HANG IT ON (a first-row net, so the panel opens above the text card; only its CITY button runs under it).",
-  "A button fires on its release, 5 frames after the press: EQUIP, < BACK, the NETS tab and the net tile are pressed 5 frames before their beats (the tab and the tile rebuild the grid a frame later still).",
-  "15.2 (rays turning, the ball spinning) is the page's own motion — no event to mark."
+  "One continuous take, re-cut for Ross (2026-11-13: less PEGGY, more locker): the real PEGGY drop (the crane aimed at an epic plate with the board's own sim, PLAY, DROP), the prize card's pop as `in`, EQUIP on 15.2, < BACK right after (the game's own slide from PEGGY into the locker lands by 15.3), the BALLS tab flicked down its rarity rows through the rest of bar 15 (POLKA gold in the epic row, the legend row last), the NETS tab on 16.1, its ALL view on 16.2 (the five owned nets fit one screen; ALL shows the whole roster, locked tiles and all) and the roster flicked through from 16.3 to the end.",
+  "A button fires on its release, 5 frames after the press: EQUIP, the tab and ALL are pressed 5 frames before their beats (the tab and the view rebuild the grid a frame later still). < BACK is pressed 3 frames after EQUIP fires: PEGGY slides out over 12 frames, the locker slides in 19 frames later and has landed at part frame 77 (15.3 +12 \u2014 the game's own transition); the balls scroll starts at 84, once it is still.",
+  "No HANG IT ON this time (the storyboard's 16.4): the time went to the scrolls, as asked.",
+  "The storyboard's hit labels are the old plan's; in this cut 15.2 is EQUIP, 15.3 the locker's landing, 16.2 the ALL view and 16.3 the nets scroll \u2014 the table maps marks to the storyboard's rows, so read it with that in mind."
  ]
 }

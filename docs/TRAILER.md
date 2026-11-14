@@ -343,16 +343,17 @@ Part 7 (2026-11-13) is one continuous take: the locker, PEGGY, a real drop
 (`peggy_drop {want: epic}` aims the crane at an epic plate with the board's
 own sim, PLAY, DROP — on the trailer save's first drop the plate holds
 POLKA), the prize card's pop as `in` (EPIC PULL!, the 0.82 shade, the
-magenta rays), EQUIP pressed 5 frames before 15.3, `< BACK` (under
-`PeggyPage`: the locker has one too) 5 frames before 15.4 — the game's own
-slide from PEGGY to the locker is the whip, the bare court shows for the
-silent beat — then `locker_scroll` from 16.1 (55 frames, cubic out: the
-rarity rows run past, POLKA gold in the epic row, the legend row last), the
-NETS tab on 16.3 and Wool's HANG IT ON on 16.4. Wool because it is on the
-cotton group's first row: the panel (name, X, a 3 × 2 grid of courts) opens
-under the tapped row, and under row one it sits above the text card's slot
-with only its CITY button running under the card; under row two (Rasta) it
-was hidden behind it. The text card stays at the locked slot.
+magenta rays). Re-cut the same day on Ross's "less PEGGY, more locker":
+EQUIP pressed 5 frames before 15.2, `< BACK` (under `PeggyPage`: the locker
+has one too) right after — the game's own slide from PEGGY to the locker is
+the whip and lands by 15.3 — then `locker_scroll` through the rest of bar
+15 (55 frames, cubic out: the rarity rows run past, POLKA gold in the epic
+row, the legend row last), the NETS tab on 16.1, its ALL view on 16.2 (the
+five owned nets fit one screen, so there was nothing to scroll; ALL shows
+the roster with its locked tiles) and the roster flicked through from 16.3
+to the end (62 frames). The first cut ended on Wool's HANG IT ON instead
+(a first-row net, so the panel cleared the text card's slot); that time
+went to the scrolls. The text card stays at the locked slot.
 
 Part 5 (2026-11-13) is Ross's own online match, recorded on his XR
 (`raw/part05/ross_pov.mov`, conformed: ×1.304 lanczos, 2 px pad, VFR → cfr
