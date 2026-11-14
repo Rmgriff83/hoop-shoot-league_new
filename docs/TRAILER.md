@@ -380,7 +380,7 @@ arriving over their hoop, clock 25.4 → 21.0, and they score through the ice
 twice. Ross: "zoom accordingly from the last take at the beginning" — the
 mirror of part 5's zip, a `zoom` with `out: true`: the part opens at ×4 on
 their hoop (a 270×585 window on the backboard, master px 400,1080) and
-pulls back to the whole frame in 24 frames, fast off the cut and settling.
+pulls back to the whole frame in 40 frames at part 5's zip speed (power 1.8), fast off the cut and settling.
 The clip has 17 spare frames, so it is taken as trimmed (match time meets
 part 5's end within 0.2 s). Their phone draws a debug flick
 readout (49° / 46 %) at the lower left — a debug build; flagged.

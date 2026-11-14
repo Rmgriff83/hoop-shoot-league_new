@@ -7,21 +7,21 @@
    "frames": 262,
    "zoom": {
     "from": 0,
-    "to": 23,
+    "to": 39,
     "rect": [
      265,
      788,
      270,
      585
     ],
-    "power": 2,
+    "power": 1.8,
     "out": true
    }
   }
  ],
  "notes": [
   "The friend's recording (raw/part06/friend_pov.mov, 1180x2556 \u2014 an iPhone 16-class phone \u2014 4.6 s, already trimmed by Ross; conformed x0.915), from its first frame: their rim iced, DEEP FREEZE PLAYED ON YOU, the FREEZE card still arriving over their hoop, clock 25.4, YOU (them) 21 ICED, BLUE (Ross) 20.",
-  "Ross (2026-11-13): 'zoom accordingly from the last take at the beginning' \u2014 the mirror of part 5's zip: part 6 opens at the same x4 on their hoop (a 270x585 window centred on the backboard, master px 400,1080) and pulls back to the whole frame over 24 frames (zoompan `out`, quadratic: fast off the cut, settling).",
+  "Ross (2026-11-13): 'zoom accordingly from the last take at the beginning' \u2014 the mirror of part 5's zip at the same speed: part 6 opens at the same x4 on their hoop (a 270x585 window centred on the backboard, master px 400,1080) and pulls back to the whole frame over 40 frames (zoompan `out`, power 1.8, as part 5's zip in: fast off the cut, settling).",
   "Match time jumps about a second at the cut (part 5 ends at clock 26.4, this clip starts at 25.4): Ross trimmed the clip, and it has only 17 spare frames, so the cut takes it as it is.",
   "Their phone shows a debug flick readout (49 deg / 46 %, later 0.88 s / 110 %) at the lower left: a debug build \u2014 flagged to Ross."
  ]
