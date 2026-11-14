@@ -298,7 +298,10 @@ after the swish to hold on it instead), paid for by the park and city pans
 (2c 589–687 from 5.3, a 26-frame pan then the swish on 5.4; 2d 687–785 from
 6.2, a 15-frame pan then the make on 6.3). A slice that runs past its bar
 gets every beat it covers on its sheet. The beach flyover capture stays on
-disk.
+disk. 2a re-cut once more (Ross, 2026-11-13: "a longer cut for the 3D
+pan"): the whole of bar 3 is the cage flyover's 1.5 m truck, no live make
+in the slice; `parts/part02a.json` keeps the pan-to-3.3 + swish-on-3.4
+recipe as a note if he wants the make back.
 
 Part 3 (2026-11-13) is one real run: `clinch_day` writes a cage campaign
 doc on the regular season's last day — `clinch_doc.gd` fills every other
