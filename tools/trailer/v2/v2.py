@@ -6,6 +6,7 @@
   python3 -I tools/trailer/v2/v2.py insets <conformed.mov> [--at S] [--ref clip.mov]
                                                            where the recording's HUD sits against the headless reference
   python3 -I tools/trailer/v2/v2.py part N                 build part N's deliverables from its clips and report the hits
+  python3 -I tools/trailer/v2/v2.py overlays               every text card as its own transparent PNG (full frame + tight crop)
 
 The plan is tools/trailer/v2/storyboard.json: 18 bars at 110 BPM, 60 fps,
 2356 frames, every boundary round(t * 60) on the GLOBAL timeline (a bar is
@@ -202,6 +203,76 @@ def insets(path, at_s=None, ref=None):
     return 0
 
 
+# ---- overlays: the text cards as transparent PNGs ----------------------------------------
+
+
+def alpha_bbox(path, size):
+    """The opaque box of an RGBA PNG: (x0, y0, x1, y1) inclusive, or None when fully clear."""
+    w, h = size
+    raw = subprocess.run([FFMPEG, "-v", "error", "-i", path, "-filter_complex", "alphaextract", "-f", "rawvideo", "-pix_fmt", "gray", "-"],
+                         check=True, capture_output=True).stdout
+    rows = [y for y in range(h) if any(raw[y * w:(y + 1) * w])]
+    if not rows:
+        return None
+    cols = [x for x in range(w) if any(raw[y * w + x] for y in range(rows[0], rows[-1] + 1))]
+    return cols[0], rows[0], cols[-1], rows[-1]
+
+
+def overlays():
+    """Each part's settled text card (cards/stills/partNN.png, rendered by the game at 2x with a
+    clear background) as its own PNG for Ross to lay over his own edit: the full 1080 x 2340
+    master frame with the card where the pipeline puts it (drop it on as a cutaway at 100 %),
+    and a tight crop with a 24 px margin for placing by hand. Part 4's card moves at its cut,
+    so it gets both placements; part 8 is the end card (badge slot empty until the file exists)."""
+    sb = story()
+    out = os.path.join(OUT, "overlays")
+    os.makedirs(out, exist_ok=True)
+    for old in os.listdir(out):
+        if old.endswith(".png"):
+            os.remove(os.path.join(out, old))
+    margin = 24
+    jobs = []
+    for p in sb["parts"]:
+        pid = "part%02d" % p["part"]
+        still = os.path.join(OUT, "cards", "stills", pid + ".png")
+        if not os.path.exists(still):
+            print("%s: no still (run tools/trailer/v2/cards.sh %d)" % (pid, p["part"]))
+            continue
+        text = p.get("text") or "end card"
+        slug = "".join(c if c.isalnum() else "_" for c in text.lower().replace(" · ", " ")).strip("_")
+        while "__" in slug:
+            slug = slug.replace("__", "_")
+        jobs.append((pid, slug, still))
+        for m in p.get("card_y") or []:
+            # the moved placement: a settled frame of the sequence after the move (fades take 45 frames)
+            card_in = min([h["part_frame"] for h in p.get("hits", []) if "text card in" in h.get("what", "")] or [0])
+            i = int(m["part_frame"]) - card_in + 45
+            frame = os.path.join(OUT, "cards", pid, "f%04d.png" % i)
+            if os.path.exists(frame):
+                jobs.append((pid, slug + "_moved_y%d" % int(m["y"]), frame))
+            else:
+                print("%s: no sequence frame %d for the card_y move" % (pid, i))
+    for pid, slug, src in jobs:
+        box = alpha_bbox(src, HEADLESS)
+        if box is None:
+            print("%s: the still is fully transparent, skipped" % pid)
+            continue
+        full = os.path.join(out, "%s_%s.png" % (pid, slug))
+        run([FFMPEG, "-v", "error", "-y", "-i", src, "-vf", "scale=%d:%d:flags=lanczos" % MASTER, "-pix_fmt", "rgba", "-frames:v", "1", full])
+        x0, y0, x1, y1 = box
+        x0, y0 = max(0, x0 - margin), max(0, y0 - margin)
+        x1, y1 = min(HEADLESS[0] - 1, x1 + margin), min(HEADLESS[1] - 1, y1 + margin)
+        cw, ch = x1 - x0 + 1, y1 - y0 + 1
+        crop = os.path.join(out, "%s_%s_crop.png" % (pid, slug))
+        run([FFMPEG, "-v", "error", "-y", "-i", src, "-vf", "crop=%d:%d:%d:%d,scale=%d:-1:flags=lanczos" % (cw, ch, x0, y0, round(cw * MASTER[0] / HEADLESS[0])),
+             "-pix_fmt", "rgba", "-frames:v", "1", crop])
+        mx, my = round(x0 * MASTER[0] / HEADLESS[0]), round(y0 * MASTER[1] / HEADLESS[1])
+        print("%-44s full %dx%d; crop %dx%d sits at master (%d, %d)  [%s]" % (os.path.basename(full), MASTER[0], MASTER[1],
+              round(cw * MASTER[0] / HEADLESS[0]), round(ch * MASTER[1] / HEADLESS[1]), mx, my, os.path.basename(crop)))
+    print("-> %s" % out)
+    return 0
+
+
 # ---- main ------------------------------------------------------------------------------
 
 
@@ -237,6 +308,8 @@ def main(argv):
         except ImportError:
             sys.exit("part building arrives with part 1")
         return v2_part.main(rest)
+    if cmd == "overlays":
+        return overlays()
     print(__doc__)
     return 1
 
