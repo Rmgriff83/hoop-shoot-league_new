@@ -98,9 +98,12 @@ law asks, the EEA/UK) → on iOS the **tracking prompt**
 the first `load_interstitial_ad`. A failed load retries after 30 s; a
 close reloads at once. Placeholder ids in `data/ads.json` (`REPLACE_ME`)
 mean `platform_cfg()` is empty and nothing starts — Android's state until
-Ross's AdMob Android app exists (the export then carries Google's sample app
+2026-11-15, when Ross created the AdMob Android app (app id
+`…~8532345024`, interstitial `…/5015771848`) for the Play internal test.
+Should a placeholder ever come back, the export carries Google's sample app
 id in the manifest, because the SDK rejects a malformed one at process start
-and the app dies on launch: docs/BUILD.md → The ads plugin).
+and the app dies on launch (docs/BUILD.md → The ads plugin). Android has no
+tracking prompt: consent → `initialize()` directly.
 
 ## Remove ads (the purchase)
 
@@ -155,5 +158,8 @@ User ID") and a `TRANSFER` webhook moves the Worker's row.
    The real interstitial unit replaced the test unit on 2026-11-07 for the
    App Store release. Add your own phones as test devices in AdMob
    (Settings → Test devices) so their impressions never count.
-7. Later: the Play Console → the Android AdMob app, `goog_` key, the Play
-   non-consumable.
+7. Android (2026-11-15): the AdMob Android app's ids are in `data/ads.json`;
+   the same device checklist as step 6 on the Play internal-test install,
+   Ross's Android phone added as an AdMob test device, and the Play
+   Console's "Ads" declaration set to yes. Still later: the `goog_` key and
+   the Play non-consumable (docs/BUILD.md → RevenueCat).
