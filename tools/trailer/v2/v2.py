@@ -7,6 +7,7 @@
                                                            where the recording's HUD sits against the headless reference
   python3 -I tools/trailer/v2/v2.py part N                 build part N's deliverables from its clips and report the hits
   python3 -I tools/trailer/v2/v2.py overlays               every text card as its own transparent PNG (full frame + tight crop)
+  python3 -I tools/trailer/v2/v2.py labels [WxH]           the labels.json set the same way (after cards.sh labels), e.g. 886x1920
 
 The plan is tools/trailer/v2/storyboard.json: 18 bars at 110 BPM, 60 fps,
 2356 frames, every boundary round(t * 60) on the GLOBAL timeline (a bar is
@@ -252,24 +253,58 @@ def overlays():
                 jobs.append((pid, slug + "_moved_y%d" % int(m["y"]), frame))
             else:
                 print("%s: no sequence frame %d for the card_y move" % (pid, i))
-    for pid, slug, src in jobs:
+    export_cards([("%s_%s" % (pid, slug), src) for pid, slug, src in jobs], out, MASTER)
+    return 0
+
+
+def export_cards(jobs, out, size, margin=24):
+    """(name, 2x still) pairs → out/<name>.png, the full frame at `size` with the card in place,
+    and out/<name>_crop.png, the card alone with `margin` (2x px) around it, at the same scale."""
+    sx, sy = size[0] / HEADLESS[0], size[1] / HEADLESS[1]
+    for name, src in jobs:
         box = alpha_bbox(src, HEADLESS)
         if box is None:
-            print("%s: the still is fully transparent, skipped" % pid)
+            print("%s: the still is fully transparent, skipped" % name)
             continue
-        full = os.path.join(out, "%s_%s.png" % (pid, slug))
-        run([FFMPEG, "-v", "error", "-y", "-i", src, "-vf", "scale=%d:%d:flags=lanczos" % MASTER, "-pix_fmt", "rgba", "-frames:v", "1", full])
+        full = os.path.join(out, name + ".png")
+        run([FFMPEG, "-v", "error", "-y", "-i", src, "-vf", "scale=%d:%d:flags=lanczos" % tuple(size), "-pix_fmt", "rgba", "-frames:v", "1", full])
         x0, y0, x1, y1 = box
         x0, y0 = max(0, x0 - margin), max(0, y0 - margin)
         x1, y1 = min(HEADLESS[0] - 1, x1 + margin), min(HEADLESS[1] - 1, y1 + margin)
         cw, ch = x1 - x0 + 1, y1 - y0 + 1
-        crop = os.path.join(out, "%s_%s_crop.png" % (pid, slug))
-        run([FFMPEG, "-v", "error", "-y", "-i", src, "-vf", "crop=%d:%d:%d:%d,scale=%d:-1:flags=lanczos" % (cw, ch, x0, y0, round(cw * MASTER[0] / HEADLESS[0])),
+        crop = os.path.join(out, name + "_crop.png")
+        run([FFMPEG, "-v", "error", "-y", "-i", src, "-vf", "crop=%d:%d:%d:%d,scale=%d:-1:flags=lanczos" % (cw, ch, x0, y0, round(cw * sx)),
              "-pix_fmt", "rgba", "-frames:v", "1", crop])
-        mx, my = round(x0 * MASTER[0] / HEADLESS[0]), round(y0 * MASTER[1] / HEADLESS[1])
-        print("%-44s full %dx%d; crop %dx%d sits at master (%d, %d)  [%s]" % (os.path.basename(full), MASTER[0], MASTER[1],
-              round(cw * MASTER[0] / HEADLESS[0]), round(ch * MASTER[1] / HEADLESS[1]), mx, my, os.path.basename(crop)))
+        print("%-44s full %dx%d; crop %dx%d sits at (%d, %d)  [%s]" % (os.path.basename(full), size[0], size[1],
+              round(cw * sx), round(ch * sy), round(x0 * sx), round(y0 * sy), os.path.basename(crop)))
     print("-> %s" % out)
+
+
+def labels(size_arg=None):
+    """The labels.json set (rendered by `cards.sh labels` → labels/stills/<id>.png) as transparent PNGs,
+    full frame + crop like `overlays`, at the master size or a WxH of the same 1080:2340 shape (an
+    App Store preview: 886x1920, 1290x2796)."""
+    size = MASTER
+    if size_arg:
+        size = tuple(int(v) for v in size_arg.lower().split("x"))
+        if len(size) != 2 or abs(size[0] / size[1] - MASTER[0] / MASTER[1]) > 0.002:
+            sys.exit("labels: the size must be WxH in the master's 1080:2340 shape (886x1920, 1290x2796)")
+    with open(os.path.join(V2, "labels.json")) as f:
+        spec = json.load(f)
+    stills = os.path.join(OUT, "labels", "stills")
+    out = os.path.join(OUT, "labels") if size == MASTER else os.path.join(OUT, "labels", "%dx%d" % size)
+    os.makedirs(out, exist_ok=True)
+    for old in os.listdir(out):
+        if old.endswith(".png"):
+            os.remove(os.path.join(out, old))
+    jobs = []
+    for l in spec["labels"]:
+        still = os.path.join(stills, l["id"] + ".png")
+        if os.path.exists(still):
+            jobs.append((l["id"], still))
+        else:
+            print("%s: no still (run tools/trailer/v2/cards.sh labels)" % l["id"])
+    export_cards(jobs, out, size)
     return 0
 
 
@@ -310,6 +345,8 @@ def main(argv):
         return v2_part.main(rest)
     if cmd == "overlays":
         return overlays()
+    if cmd == "labels":
+        return labels(rest[0] if rest else None)
     print(__doc__)
     return 1
 

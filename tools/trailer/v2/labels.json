@@ -1,0 +1,16 @@
+{
+  "_": "Trailer v2 labels (Ross, 2026-11-15): a second set of text cards for the App Store preview re-cut, rendered like the parts' cards (card_scene.gd build_card_v2: Press Start 32 px, white then butter, the locked slot) but on a BLACK ground instead of the tour card's. tools/trailer/v2/cards.sh labels renders the stills; python3 -I tools/trailer/v2/v2.py labels [WxH] writes the transparent PNGs to marketing/trailer/v2/labels/.",
+  "ground": "#000000",
+  "ground_alpha": 1.0,
+  "flat": true,
+  "_flat": "no see-through face tint or dots over the ground (the tour card's would turn black into charcoal); the white edge and the dithered shadow strip stay. A ' · ' in a text is its line break (the second line is butter); every two-line label is broken by hand so they match (the autowrap breaks 'LEAGUE, TIME TRIAL' early and sets both lines white and tight).",
+  "labels": [
+    {"id": "create_your_hooper", "text": "CREATE YOUR HOOPER"},
+    {"id": "league_time_trial_practice", "text": "LEAGUE, TIME TRIAL · & PRACTICE MODE"},
+    {"id": "play_for_keeps", "text": "PLAY FOR KEEPS."},
+    {"id": "run_the_league", "text": "RUN THE LEAGUE"},
+    {"id": "earn_powerups", "text": "EARN POWERUPS"},
+    {"id": "play_your_cards_right", "text": "PLAY YOUR CARDS · RIGHT"},
+    {"id": "collect_and_customize", "text": "COLLECT & · CUSTOMIZE"}
+  ]
+}

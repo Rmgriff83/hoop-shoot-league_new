@@ -175,6 +175,22 @@ func _v2(t, stages) -> void:
 				t.ok(ch == "\n" or display.has_char(ch.unicode_at(0)), "%s: the display font has '%s'" % [tag, ch])
 	t.eq(at, total, "v2: the last part ends on the last frame")
 	t.eq(parts.size(), 8, "v2: eight parts")
+	# The labels set (the App Store preview re-cut's cards): the same copy rules, unique ids.
+	var labels: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://tools/trailer/v2/labels.json"))
+	t.ok(labels is Dictionary and labels.get("labels") is Array and not Array(labels["labels"]).is_empty(), "v2 labels parse")
+	if labels is Dictionary and labels.get("labels") is Array:
+		var ids := {}
+		for l in labels["labels"]:
+			var text := str(l["text"])
+			var tag := "v2 label %s" % str(l["id"])
+			t.ok(not ids.has(str(l["id"])), "%s: one id each" % tag)
+			ids[str(l["id"])] = true
+			t.eq(text, text.to_upper(), "%s is all caps" % tag)
+			for w in BANNED:
+				t.ok(not text.to_lower().contains(w), "%s avoids '%s'" % [tag, w])
+			var display := UiFont.display()
+			for ch in text.replace(" · ", "\n"):
+				t.ok(ch == "\n" or display.has_char(ch.unicode_at(0)), "%s: the display font has '%s'" % [tag, ch])
 	# The v2 shots: verbs the director or its stages know, an in and an out.
 	for file in DirAccess.get_files_at(SHOTS_V2):
 		if not str(file).ends_with(".json"):

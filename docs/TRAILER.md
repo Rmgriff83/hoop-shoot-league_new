@@ -216,6 +216,8 @@ tools/trailer/v2/capture.sh <shot>                     a v2 shot through Movie M
 tools/trailer/v2/cards.sh N                            part N's text card frames (minutes: 2 s a frame)
 python3 -I tools/trailer/v2/v2.py part N               part N's deliverables + the hit report
 python3 -I tools/trailer/v2/v2.py overlays             every text card as its own transparent PNG → v2/overlays/
+tools/trailer/v2/cards.sh labels                       the labels.json set's stills (seconds) → v2/labels/stills/
+python3 -I tools/trailer/v2/v2.py labels [WxH]         that set as transparent PNGs → v2/labels/ (or v2/labels/WxH/)
 ```
 
 `overlays` (Ross, 2026-11-13, for laying the text over his own iMovie edit)
@@ -227,6 +229,19 @@ and `partNN_<text>_crop.png`, the card alone with a 24 px margin (its master
 position is printed). Part 4 also gets its moved placement (`_moved_y538`,
 the pre-match page's gap); part 8's is the end card's text (the badge slot
 stays empty until the badge file exists). Re-run after `cards.sh N`.
+
+`labels` (Ross, 2026-11-15, for the App Store preview re-cut) is a second
+set of cards on their own, `tools/trailer/v2/labels.json`: the same card
+(Press Start 32 px at the locked slot, white then butter) on the file's
+`ground` — black — and `flat` (card_scene.gd's FlatPanel: the white edge and
+the dithered shadow strip, no face tint or dots, which turn black into
+charcoal). A ` · ` in a text is its line break; every two-line label is
+broken by hand (the autowrap breaks `LEAGUE, TIME TRIAL` a word early and
+sets both lines white and tight). `cards.sh labels` renders one settled
+still each (no sequence), `v2.py labels` writes the full frame + crop pair
+per label like `overlays`; `v2.py labels 886x1920` (or `1290x2796`) writes
+the same at an App Store preview size — the master's 1080:2340 is the same
+shape, so the full frames drop onto those timelines at 100 % too.
 
 A part is a shot (`tools/trailer/v2/shots/partNN.json`, the director's verbs,
 hits placed with `at {frame}` from the `in` mark) plus a part file

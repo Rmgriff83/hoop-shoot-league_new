@@ -32,6 +32,10 @@ const DEFAULT_Y := {"appstore": 1010.0, "social": 820.0}
 ## Start is 1 em a glyph: 18 glyphs fit the panel; a longer line wraps), from
 ## the part's "text card in" hit to its last frame.
 const STORY_V2 := "res://tools/trailer/v2/storyboard.json"
+## A second set of cards on their own (`--qa-trailer-cards=v2labels`): the
+## App Store preview re-cut's labels (Ross, 2026-11-15), the same card on the
+## file's own ground colour (black), one settled still each — no sequence.
+const LABELS_V2 := "res://tools/trailer/v2/labels.json"
 const V2_Y := 1010.0
 const V2_FONT := 32
 const V2_LINE_W := CARD_W - 2.0 * CARD_PAD
@@ -39,7 +43,23 @@ const V2_LINE_W := CARD_W - 2.0 * CARD_PAD
 var _vp: SubViewport
 
 
+## The labels' panel: the tour card's white edge and dithered shadow strip on
+## a flat ground — no see-through face tint, no dots — so a black ground reads
+## black (the game's panel over black still comes out charcoal with the dots).
+class FlatPanel extends ShadowPanel:
+	func _init(p_color := Color.WHITE, pad := 20.0, p_tint := ShadowStyle.TINT) -> void:
+		super(p_color, pad, p_tint)
+
+	func _draw() -> void:
+		var face := Rect2(Vector2.ZERO, size - Vector2.ONE * ShadowStyle.OFFSET)
+		if ground.a > 0.0:
+			draw_rect(face, ground)
+		ShadowStyle.draw_ex(self, size, color, Color(color, 0.0), Color(color, 0.0), Color(color, ShadowStyle.SHADOW_ALPHA), false, false, false)
+
+
 func render(layout: String) -> bool:
+	if layout == "v2labels":
+		return await render_labels()
 	if layout == "v2" or layout.begins_with("v2:"):   # "v2:1,7" renders those parts only (a part is minutes)
 		var only: Array = []
 		for s in layout.trim_prefix("v2:").trim_prefix("v2").split(",", false):
@@ -101,6 +121,34 @@ func render_v2(only: Array = []) -> bool:
 		var still := ProjectSettings.globalize_path("%s/v2/cards/stills/%s.png" % [OUT_ROOT, id])
 		await _render_sequence(node, frames, dir, still, moves)
 		print("TRAILER card: v2/%s in at %d, %d frames%s" % [id, card_in, frames, "" if moves.is_empty() else ", moves " + str(moves)])
+	return true
+
+
+## The labels file's cards, one settled still each (full opacity, at the
+## slot) → marketing/trailer/v2/labels/stills/<id>.png, 1440 x 3120 with
+## alpha; the panel's ground is the file's `ground` (+ `ground_alpha`), flat
+## (no face tint or dots) when the file says `flat`.
+func render_labels() -> bool:
+	var parsed: Variant = JSON.parse_string(FileAccess.get_file_as_string(LABELS_V2))
+	if not (parsed is Dictionary) or not (parsed.get("labels") is Array):
+		print("TRAILER cards: no v2 labels file")
+		return false
+	var ground := Color(str(parsed.get("ground", "#000000")))
+	ground.a = float(parsed.get("ground_alpha", 1.0))
+	_make_viewport(LAYOUTS["appstore"])
+	var dir := ProjectSettings.globalize_path("%s/v2/labels/stills" % OUT_ROOT)
+	DirAccess.make_dir_recursive_absolute(dir)
+	for spec in parsed["labels"]:
+		var id := str(spec["id"])
+		var node := build_card_v2(id, str(spec["text"]).replace(" · ", "\n"), ground, bool(parsed.get("flat", false)))
+		_vp.add_child(node)
+		node.modulate.a = 1.0
+		await RenderingServer.frame_post_draw
+		await RenderingServer.frame_post_draw
+		_vp.get_texture().get_image().save_png("%s/%s.png" % [dir, id])
+		_vp.remove_child(node)
+		node.queue_free()
+		print("TRAILER card: v2/labels/%s (%s)" % [id, str(spec["text"])])
 	return true
 
 
@@ -227,10 +275,10 @@ func _render_sequence(node: Control, frames: int, dir: String, still: String, mo
 
 ## v2's card: the tour panel at the locked slot, each line 32 px (white, then
 ## butter), a long line wrapped inside the panel's width.
-func build_card_v2(id: String, text: String) -> Control:
-	var panel := ShadowPanel.new(RetroTheme.SCENE_TEXT, CARD_PAD, 0.22)
+func build_card_v2(id: String, text: String, ground: Color = CARD_GROUND, flat := false) -> Control:
+	var panel: ShadowPanel = FlatPanel.new(RetroTheme.SCENE_TEXT, CARD_PAD, 0.22) if flat else ShadowPanel.new(RetroTheme.SCENE_TEXT, CARD_PAD, 0.22)
 	panel.name = "Card_" + id
-	panel.ground = CARD_GROUND
+	panel.ground = ground
 	var col := VBoxContainer.new()
 	col.add_theme_constant_override("separation", 14)
 	panel.add_child(col)
