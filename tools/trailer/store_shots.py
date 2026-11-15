@@ -23,6 +23,7 @@ DST = os.path.join(bc.OUT, "store")
 W, H = 1440, 3120            # the clips: 2x the 720 x 1560 layout
 OUT_W, OUT_H = 1290, 2796    # Apple's 6.9" iPhone slot
 CARD_Y = 2018                # where a card's panel sits in its 1440 x 3120 still
+PAD_COLOR = "0x1f0f0c"       # the export's background colour, for a slot squarer than the frame (Play)
 
 # name, card, frames ([clip, frame], or four of them for the 2 x 2 grid), and
 # where the card's panel goes (2x px from the top; None = where the trailer has it).
@@ -69,8 +70,14 @@ def render(name, card, frames, card_y, captioned):
         last = "pic2"
     else:
         last = "pic"
-    # Other slots' sizes differ in shape by < 0.3 %: fill, then trim the few px over.
-    fc += "[%s]scale=%d:%d:force_original_aspect_ratio=increase:flags=area,crop=%d:%d,format=rgb24" % (last, OUT_W, OUT_H, OUT_W, OUT_H)
+    if abs(OUT_W / OUT_H - W / H) < 0.01:
+        # Apple's slots differ in shape by < 0.3 %: fill, then trim the few px over.
+        fc += "[%s]scale=%d:%d:force_original_aspect_ratio=increase:flags=area,crop=%d:%d,format=rgb24" % (last, OUT_W, OUT_H, OUT_W, OUT_H)
+    else:
+        # A squarer slot (Google Play caps screenshots at 2:1, 2026-11-15): the whole
+        # frame, letterboxed on the app's own background colour — a crop cuts the
+        # captions and the HUD.
+        fc += "[%s]scale=%d:%d:force_original_aspect_ratio=decrease:flags=area,pad=%d:%d:(ow-iw)/2:(oh-ih)/2:color=%s,format=rgb24" % (last, OUT_W, OUT_H, OUT_W, OUT_H, PAD_COLOR)
     subprocess.run(cmd + ["-filter_complex", fc, "-frames:v", "1", out], check=True)
     return out
 

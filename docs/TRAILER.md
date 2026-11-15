@@ -183,7 +183,13 @@ content), plus a sheet of each. Run it after `capture_all.sh appstore` and
 `cards.sh appstore`. The frames and caption positions are the `SHOTS`
 table at the top of the script. The listing text is in
 `marketing/store/APP_STORE_LISTING.md`, and the website pages are in
-`marketing/site/`.
+`marketing/site/`. `--size=WxH` writes another slot to
+`marketing/trailer/store/WxH/`: Apple's other sizes are filled and trimmed
+(they differ in shape by < 0.3 %); a squarer slot is letterboxed on the
+app's background colour instead, because a crop cuts the captions — Google
+Play caps screenshots at 2:1, so its set is `--size=1080x2160`
+(2026-11-15; `marketing/store/PLAY_LISTING.md`, which also holds the
+feature graphic recipe).
 
 ## Checkpoints
 
