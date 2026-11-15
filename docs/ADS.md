@@ -97,8 +97,10 @@ law asks, the EEA/UK) → on iOS the **tracking prompt**
 (`request_tracking_authorization`, granted or denied) → `initialize()` →
 the first `load_interstitial_ad`. A failed load retries after 30 s; a
 close reloads at once. Placeholder ids in `data/ads.json` (`REPLACE_ME`)
-mean `platform_cfg()` is empty and nothing starts — today's state until
-Ross's AdMob app exists.
+mean `platform_cfg()` is empty and nothing starts — Android's state until
+Ross's AdMob Android app exists (the export then carries Google's sample app
+id in the manifest, because the SDK rejects a malformed one at process start
+and the app dies on launch: docs/BUILD.md → The ads plugin).
 
 ## Remove ads (the purchase)
 

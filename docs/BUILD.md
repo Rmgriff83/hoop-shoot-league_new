@@ -188,7 +188,13 @@ shows in the log. Xcode resolves the package again when the project opens.
 The Android side rides the gradle (Play) build only, like the store; phone
 deploys show no ads. With placeholder ids in `data/ads.json` the plugin
 ships inert: `AdMobBackend.available()` is true on the phone but
-`Ads.platform_cfg()` is empty, so the SDK never starts.
+`Ads.platform_cfg()` is empty, so the SDK is never initialized. The
+placeholder itself must still never reach the manifest/plist: the Mobile
+Ads SDK validates `com.google.android.gms.ads.APPLICATION_ID` in a content
+provider at process start, before any of our code, and a malformed id kills
+the app on launch (Build 541 did exactly that on the Play internal track,
+2026-11-15). So `build.sh` writes **Google's sample app id** for a platform
+whose `data/ads.json` id is a placeholder — well-formed, publishes nothing.
 
 ### The Game Center plugin (2026-11-01)
 

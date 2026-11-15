@@ -113,8 +113,17 @@ stage_ads_plugin() {
 import json
 ads = json.load(open("data/ads.json"))
 att = "Allowing tracking lets the ads between games pay for Hoop Shoot."
+# A placeholder app id must NOT reach the manifest/plist: the Google Mobile
+# Ads SDK validates com.google.android.gms.ads.APPLICATION_ID in a content
+# provider at process start, before any of our code, and a malformed one kills
+# the app on launch (Build 541, 2026-11-15). Google's sample app ids are
+# well-formed and show nothing; the Ads facade still reads data/ads.json's
+# placeholder and runs the null backend, so the SDK is never initialized.
+SAMPLE = {"ios": "ca-app-pub-3940256099942544~1458002511", "android": "ca-app-pub-3940256099942544~3347511713"}
 for plat, name in (("ios", "ios_export.cfg"), ("android", "android_export.cfg")):
     app_id = str(ads.get(plat, {}).get("app_id", ""))
+    if "REPLACE_ME" in app_id or not app_id.startswith("ca-app-pub-"):
+        app_id = SAMPLE[plat]
     lines = ["; Written by tools/build.sh from data/ads.json — do not edit.", "[General]", "is_real=true", "", "[Debug]", 'app_id="%s"' % app_id, "", "[Release]", 'app_id="%s"' % app_id, ""]
     if plat == "ios":
         lines += ["[ATT]", "att_enabled=true", 'att_text="%s"' % att, ""]
@@ -122,7 +131,7 @@ for plat, name in (("ios", "ios_export.cfg"), ("android", "android_export.cfg"))
 PY
     echo "staged the AdMob plugin from $ADS_PLUGIN"
     python3 -c 'import json,sys; a=json.load(open("data/ads.json")); print(" ".join(p for p in ("ios","android") if "REPLACE_ME" in json.dumps(a.get(p,{}))))' | while read -r plats; do
-      [[ -n "$plats" ]] && echo "data/ads.json still carries placeholder ids for: $plats (those builds show no ads, the null backend)"
+      [[ -n "$plats" ]] && echo "data/ads.json still carries placeholder ids for: $plats (those builds show no ads, the null backend; the manifest/plist carries Google's sample app id so the SDK's start-up check passes)"
     done
   else
     echo "no AdMob plugin at $ADS_PLUGIN (tools/fetch_ads_plugin.sh installs it): no ads"
