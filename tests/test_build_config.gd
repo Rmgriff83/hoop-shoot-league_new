@@ -65,6 +65,20 @@ func run(t) -> void:
 	t.eq(str(cfg.get_value(by_name["Android Play"], "export_path")), "build/hoop_shoot.aab", "the AAB lands under build/")
 	t.eq(str(cfg.get_value(ios, "icons/icon_1024x1024")), icon, "iOS icon is the project icon")
 	t.eq(str(cfg.get_value(android, "version/name", "x")), "", "Android version name falls back to the project version")
+	# The AdMob export configs tools/build.sh writes (gitignored; present on a
+	# machine that has built): a placeholder app id in them reaches the manifest
+	# / plist, and the Mobile Ads SDK kills the app at process start over a
+	# malformed one (Build 541 on the Play internal track, 2026-11-15).
+	for name: String in ["android_export.cfg", "ios_export.cfg"]:
+		var path: String = "res://addons/AdmobPlugin/" + name
+		if not FileAccess.file_exists(path):
+			continue
+		var ex := ConfigFile.new()
+		t.eq(ex.load(path), OK, name + " loads")
+		for section in ["Debug", "Release"]:
+			var app_id := str(ex.get_value(section, "app_id", ""))
+			t.ok(app_id.begins_with("ca-app-pub-") and app_id.contains("~") and not app_id.contains("REPLACE_ME"),
+				"%s [%s] app_id is a well-formed AdMob app id (a placeholder crashes the app on launch): %s" % [name, section, app_id])
 	t.eq(str(cfg.get_value(ios, "application/short_version", "x")), "", "iOS short version falls back to the project version")
 	# The build number: tools/build.sh writes it to every preset at once.
 	var code_a := int(cfg.get_value(android, "version/code", -1))
