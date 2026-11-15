@@ -306,22 +306,6 @@ func ball_rest_point() -> Vector2:
 	return UiLayout.from_screen(_cam.unproject_position(p))
 
 
-## The tutorial's aim line: where the ball is drawn, the rim and the arc, all on
-## screen; {} when there is no line to show. It replaces the 3D dots for the lesson
-## (ShotTutorialCopy.arc_dots says why).
-func tutorial_arc() -> Dictionary:
-	var angle := _demo_read_arc
-	var ball: Vector3 = _pool.to_global(_pool.rest_pos)
-	if trial.holding:
-		angle = FlickMap.windup_angle(_pull_px, UiLayout.DESIGN.y, tuning)
-		ball = _pool.to_global(ShotFeel.held_pos(_pool.to_local(_cam.global_position), _hand_pos, _feel_depth))
-	if is_nan(angle) or _cam.is_position_behind(ball):
-		return {}
-	var rim := Vector3(trial.geo.hoop_x, trial.geo.hoop_y, trial.geo.hoop_z)
-	return {"ball": UiLayout.from_screen(_cam.unproject_position(ball)),
-		"rim": UiLayout.from_screen(_cam.unproject_position(rim)), "angle": angle}
-
-
 func demo_press() -> bool:
 	if not trial.pickup():
 		return false
@@ -402,14 +386,14 @@ func demo_readout(arc_deg: float, pct: float) -> void:
 	if _readout != null:
 		_readout.demo(anchor, arc_deg, pct, origin, trial.geo)
 	_demo_read_arc = arc_deg
+	_refresh_preview()
 
 
 func demo_readout_clear() -> void:
 	_demo_read_arc = NAN
 	if _readout != null:
 		_readout.clear()
-	if not trial.holding:
-		_preview.hide_preview()
+	_refresh_preview()
 
 
 func tutorial_grabbed() -> bool:
@@ -1304,12 +1288,18 @@ static func help_side_offset(side: String) -> float:
 
 
 func _refresh_preview() -> void:
-	if not trial.holding or not _help_full() or _tutorial_help:
+	var frac := 1.0 if App.tuning_mode else HELP_ARC_FRAC
+	if _tutorial_help and not trial.holding and not is_nan(_demo_read_arc):
+		# The lesson's READ YOUR SHOT step: the same dots at the readout's arc, from
+		# the resting ball. (The lesson shows the game's own 3D dots throughout —
+		# Ross, 2026-11-15; a 2D stand-in from 2026-11-03 read as a flattened arc.)
+		_preview.show_preview(_pool.to_global(_pool.rest_pos), _demo_read_arc, _lead_geo(_demo_read_arc, NAN), frac)
+		return
+	if not trial.holding or not _help_full():
 		_preview.hide_preview()
 		return
 	var viewport_h := UiLayout.DESIGN.y
 	var angle := FlickMap.windup_angle(_pull_px, viewport_h, tuning)
-	var frac := 1.0 if App.tuning_mode else HELP_ARC_FRAC
 	_preview.show_preview(_hand_pos, angle, _lead_geo(angle, NAN), frac)
 
 

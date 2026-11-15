@@ -967,7 +967,7 @@ the chrome back, restores the match's rules and the countdown toast slides in. Q
 skip it (`App.qa_skip_tutorial`) except `--qa-tutorial`.
 
 
-**2026-11-03 update (design 38a/38b):** type sizes as the design (title 26, count 18, body 24 with 1.45 leading, buttons 68 tall; PS2P sizes snap to UiFont's steps), shorter copy, the card 104 px from the screen's top edge or under a deeper notch. The finger is the 13 × 18 sprite `assets/ui/icon_finger.png` at × 6, tip at (27, 3). The lesson's aim line is 2D (`ShotTutorialCopy.arc_dots`, the design's dotsFrom plus a sideways bow): the real 3D dots are seen head-on and stack by the rim, so they are off during the lesson. Real matches still use the 3D dots.
+**2026-11-03 update (design 38a/38b):** type sizes as the design (title 26, count 18, body 24 with 1.45 leading, buttons 68 tall; PS2P sizes snap to UiFont's steps), shorter copy, the card 104 px from the screen's top edge or under a deeper notch. The finger is the 13 × 18 sprite `assets/ui/icon_finger.png` at × 6, tip at (27, 3). The lesson's aim line was 2D from this date (`ShotTutorialCopy.arc_dots`, the design's dotsFrom plus a sideways bow, because the real 3D dots are seen head-on). **2026-11-15 (Ross):** gone — it read as the arc flattened off to the right. The lesson now shows the game's own `AimPreview` dots exactly as play does (`_refresh_preview` runs during the lesson; the READ YOUR SHOT step draws them at the readout's arc from the resting ball).
 
 The shot-help numbers sit on the side HUD SIDE names (`help_side_offset` in time_trial_screen.gd), in matches and in the tutorial.
 

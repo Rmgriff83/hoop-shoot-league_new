@@ -46,7 +46,6 @@ const FINGER_TIP := Vector2(27.0, 3.0)
 const FINGER_SHADOW := Vector2(5.0, 6.0)
 const FINGER_SHADOW_COLOR := Color(0.0, 0.0, 0.0, 0.45)
 const FINGER_PRESS_SCALE := 0.9
-const ARC_DOT_COLOR := Color8(255, 237, 158, 189)   # the design's rgba(255,237,158,.74)
 
 var steps: Array = ShotTutorialCopy.STEPS
 var _screen: Object
@@ -56,7 +55,6 @@ var _root: Control
 var _card: ShadowPanel
 var _card_tween: Tween
 var _finger: Finger
-var _arc: ArcDots
 var _hint: Label
 ## The demo's state on the real ball: pressed, and whether this loop's shot went.
 var _demo_holding := false
@@ -90,9 +88,6 @@ func start(screen: Object) -> void:
 	_root.name = "Root"
 	UiLayout.full_rect(_root)
 	add_child(_root)
-	_arc = ArcDots.new()
-	_arc.name = "ArcDots"
-	_root.add_child(_arc)
 	_finger = Finger.new()
 	_finger.name = "Finger"
 	_finger.visible = false
@@ -177,7 +172,6 @@ func _process(dt: float) -> void:
 	if _screen == null:
 		return
 	_t += dt
-	_arc.show_arc(_screen.call("tutorial_arc"))
 	if live():
 		_process_live()
 		return
@@ -363,8 +357,7 @@ func _build_card() -> void:
 	else:
 		_card.position.y = card_y
 		_card.modulate.a = 1.0
-	# The aim line and the hand stay over the card (design 38b).
-	_arc.move_to_front()
+	# The hand stays over the card (design 38b); the aim line is the court's own 3D dots.
 	_finger.move_to_front()
 
 
@@ -423,29 +416,6 @@ static func _words(text: String, size_: int, display := false) -> Label:
 	var l := HomePage.words(text, size_, display)
 	l.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return l
-
-
-## The aim line: the design's dots, on screen over the court.
-class ArcDots extends Control:
-	var dots: Array = []
-
-	func _init() -> void:
-		UiLayout.full_rect(self)
-		mouse_filter = Control.MOUSE_FILTER_IGNORE
-
-	## {ball, rim, angle} or {} for no line.
-	func show_arc(arc: Dictionary) -> void:
-		if arc.is_empty():
-			if not dots.is_empty():
-				dots = []
-				queue_redraw()
-			return
-		dots = ShotTutorialCopy.arc_dots(arc["ball"], arc["rim"], float(arc["angle"]))
-		queue_redraw()
-
-	func _draw() -> void:
-		for d in dots:
-			draw_circle(d["p"], float(d["d"]) / 2.0, ARC_DOT_COLOR)
 
 
 ## The pixel hand (design 38b: icon_finger at 78 × 108, the tip at (27, 3), shrinking
