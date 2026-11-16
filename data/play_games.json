@@ -1,0 +1,5 @@
+{
+  "_": "Play Games Services (docs/BACKEND.md → Platform identity → Android; docs/BUILD.md → The Play Games plugin): the game's numeric Play Games project id (the Play Console's Configuration page; it goes into the manifest as com.google.android.gms.games.APP_ID through a string resource) and the Game server credential's OAuth WEB client id, which the phone hands to requestServerSideAccess so the auth code it gets back can only be exchanged by the Worker that holds that client's secret (a wrangler secret, never here). Both are public, like the AdMob ids. A placeholder (REPLACE_ME) means no Play Games: the export leaves the plugin out and Platform runs its null backend on Android.",
+  "game_id": "REPLACE_ME",
+  "web_client_id": "REPLACE_ME.apps.googleusercontent.com"
+}

@@ -1,9 +1,10 @@
 extends Node
 ## `Platform` (autoload, docs/BACKEND.md → Platform identity): the facade the
 ## game talks to about store sign-in. One `backend` — GameCenterBackend on an
-## iPhone with the plugin, the null PlatformBackend everywhere else (desktop,
-## headless, QA, Android until Play Games) — and the link flow on top of the
-## anonymous account:
+## iPhone with the plugin, PlayGamesBackend on an Android Play build with its
+## plugin, the null PlatformBackend everywhere else (desktop, headless, QA,
+## the gradle-free phone APK) — and the link flow on top of the anonymous
+## account:
 ##   launch → start(): the backend signs in (Game Center's banner or sheet).
 ##   signed in, registered → sync_link(): the provider not linked yet → link.
 ##   409 (the identity already belongs to another account) → `conflict` with
@@ -36,10 +37,19 @@ var _restoring_first := false
 
 
 func _ready() -> void:
-	backend = GameCenterBackend.new()   # the null backend wherever the plugin is absent
+	backend = default_backend()
 	_connect_backend()
 	Net.account_ready.connect(func(_n: String, _t: String) -> void: sync_link())
 	start.call_deferred()
+
+
+## The platform's own backend: Play Games on Android, Game Center elsewhere
+## (iOS). Either is the null backend wherever its plugin's singleton is absent
+## — desktop, headless, QA, the phone APK (no gradle, so no plugin).
+static func default_backend(os_name: String = OS.get_name()) -> PlatformBackend:
+	if os_name == "Android":
+		return PlayGamesBackend.new()
+	return GameCenterBackend.new()
 
 
 func _connect_backend() -> void:

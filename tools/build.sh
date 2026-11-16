@@ -158,11 +158,34 @@ stage_gamecenter_plugin() {
 }
 stage_gamecenter_plugin
 
+# The Play Games Services plugin (docs/BUILD.md → The Play Games plugin):
+# godot-sdk-integrations/godot-play-game-services' two .aar files, fetched by
+# tools/fetch_play_games_plugin.sh into ~/.config/hoop_shoot/playgames and
+# copied in here; addons/PlayGamesPlugin ships them in the gradle (Play) export
+# with the game id from data/play_games.json. Missing binaries or a placeholder
+# id: a warning, and Android runs the null platform backend (no sign-in).
+PG_PLUGIN="$HOME/.config/hoop_shoot/playgames"
+stage_play_games_plugin() {
+  if [[ -f "$PG_PLUGIN/android/play_games.release.aar" && -f "$PG_PLUGIN/android/play_games.debug.aar" ]]; then
+    rm -rf android/play_games
+    mkdir -p android/play_games
+    cp "$PG_PLUGIN/android/play_games.debug.aar" "$PG_PLUGIN/android/play_games.release.aar" android/play_games/
+    touch android/play_games/.gdignore
+    echo "staged the Play Games plugin from $PG_PLUGIN"
+  else
+    echo "no Play Games plugin at $PG_PLUGIN (tools/fetch_play_games_plugin.sh installs it): no Play Games sign-in"
+  fi
+  if grep -q REPLACE_ME data/play_games.json; then
+    echo "data/play_games.json still carries placeholder ids: the Play build ships without the Play Games plugin (no sign-in, no achievements on Android)"
+  fi
+}
+stage_play_games_plugin
+
 godot_export() {  # preset path
   local flag="--export-$MODE"
   "$GODOT" --headless --path "$PROJ" "${INSTALL[@]}" "$flag" "$1" "$2" 2>&1 | tee build/export.log | grep -vE "$NOISE"
   # The plugin's own files must never end up in the pck (see stage_store_plugin).
-  if grep -q 'Storing File: res://ios/plugins/\|Storing File: res://android/revenue_cat/\|Storing File: res://addons/AdmobPlugin/bin/' build/export.log; then
+  if grep -q 'Storing File: res://ios/plugins/\|Storing File: res://android/revenue_cat/\|Storing File: res://android/play_games/\|Storing File: res://addons/AdmobPlugin/bin/' build/export.log; then
     echo "the export packed a plugin's binaries into the pck (a .gdignore is missing?)"
     exit 1
   fi

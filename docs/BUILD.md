@@ -233,6 +233,37 @@ refuses to authenticate without `com.apple.developer.game-center` in the
 entitlements — and Ross switches Game Center on for the app in App Store
 Connect. GameKit links through the `.gdip`'s `system=["GameKit.framework"]`.
 
+### The Play Games plugin (2026-11-15)
+
+Play Games Services sign-in and achievements on Android (docs/BACKEND.md →
+Platform identity → Android) ride the Godot Foundation's
+**godot-sdk-integrations/godot-play-game-services** (MIT; v3.4.0, Play
+Games SDK v2 21.0.0, Godot 4.3+). Only its two `.aar` files are used:
+
+```
+tools/fetch_play_games_plugin.sh      # one pinned release, SHA-256 checked (--force to refetch)
+~/.config/hoop_shoot/playgames/android/play_games.{debug,release}.aar
+```
+
+`tools/build.sh` copies them to `android/play_games/` (gitignored,
+`.gdignore`d) and **`addons/PlayGamesPlugin`** (ours, enabled in
+`project.godot`) ships them in the gradle export with the two Maven
+dependencies and the manifest's `com.google.android.gms.games.APP_ID`
+meta-data. The plugin's own addon is not vendored: its GDScript wrappers are
+autoloads around the Android singleton (`game/net/play_games_backend.gd`
+talks to the singleton directly, as the Game Center backend does) and its
+export script keeps the game id in `export_presets.cfg`. Ours reads
+**`data/play_games.json`** — the numeric Play Games project id and the Game
+server credential's OAuth *web* client id, both public — and writes the id
+to `android/build/res/values/play_games.xml` as the `game_services_project_id`
+string resource at export (Google reads APP_ID as a resource; a bare number
+in the manifest is parsed as an int and rejected). **Placeholder ids leave
+the plugin out of the build entirely** (no `.aar`, no dependencies, no
+meta-data): the SDK throws at `PlayGamesSdk.initialize` without an APP_ID,
+and an absent singleton is simply the null backend. The gradle-free phone
+APK never carries it either. The web client's *secret* is a Worker secret
+(`PLAY_GAMES_CLIENT_SECRET`), never in the repo or the app.
+
 ## The icon
 
 `assets/icon/icon_1024.png` is Ross's final icon (design 46b NEON BALL,

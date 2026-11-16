@@ -23,6 +23,7 @@ const MILESTONE_MAP := {
 static var _doc: Dictionary = {}
 static var _by_key: Dictionary = {}
 static var _by_apple: Dictionary = {}
+static var _by_play: Dictionary = {}
 
 
 static func _load() -> void:
@@ -33,6 +34,9 @@ static func _load() -> void:
 	for a in all():
 		_by_key[str(a["key"])] = a
 		_by_apple[str(a.get("apple_id", ""))] = str(a["key"])
+		var play := str(a.get("play_id", ""))
+		if play != "":
+			_by_play[play] = str(a["key"])
 
 
 ## The rows in the roster's order.
@@ -65,6 +69,18 @@ static func apple_id(key: String) -> String:
 static func key_for_apple_id(id: String) -> String:
 	_load()
 	return str(_by_apple.get(id, ""))
+
+
+## The Play Games id Google generated for a key ("" until
+## tools/play_achievements.mjs has written it into the roster).
+static func play_id(key: String) -> String:
+	return str(get_def(key).get("play_id", ""))
+
+
+## The key behind a Play Games id ("" when it is not ours, or for "").
+static func key_for_play_id(id: String) -> String:
+	_load()
+	return str(_by_play.get(id, "")) if id != "" else ""
 
 
 static func points(key: String) -> int:
@@ -110,6 +126,7 @@ static func validate() -> PackedStringArray:
 			out.push_back("category %s: colour must be #RRGGBB" % str(c.get("id", "")))
 	var seen_keys := {}
 	var seen_apple := {}
+	var seen_play := {}
 	var total := 0
 	for a in rows:
 		var key := str(a.get("key", ""))
@@ -141,6 +158,14 @@ static func validate() -> PackedStringArray:
 			out.push_back("%s: source must be phone or server" % key)
 		if not a.has("play_id"):
 			out.push_back("%s: play_id missing" % key)
+		else:
+			# Google's generated ids (CgkI…): opaque, unique; "" until written.
+			var play := str(a.get("play_id", ""))
+			if play != "" and not RegEx.create_from_string("^[A-Za-z0-9_-]{8,}$").search(play):
+				out.push_back("%s: play_id '%s' is not a Play Games id" % [key, play])
+			if play != "" and seen_play.has(play):
+				out.push_back("duplicate play id %s" % play)
+			seen_play[play] = true
 	if total > APPLE_TOTAL_MAX:
 		out.push_back("points total %d over Apple's %d" % [total, APPLE_TOTAL_MAX])
 	for m in MILESTONE_MAP.values():

@@ -80,6 +80,25 @@ func run(t) -> void:
 			t.ok(app_id.begins_with("ca-app-pub-") and app_id.contains("~") and not app_id.contains("REPLACE_ME"),
 				"%s [%s] app_id is a well-formed AdMob app id (a placeholder crashes the app on launch): %s" % [name, section, app_id])
 	t.eq(str(cfg.get_value(ios, "application/short_version", "x")), "", "iOS short version falls back to the project version")
+	# The Android plugins ride the gradle (Play) export through export addons
+	# enabled in project.godot, never through preset lines (docs/BUILD.md).
+	var enabled: PackedStringArray = ProjectSettings.get_setting("editor_plugins/enabled", PackedStringArray())
+	for addon in ["res://addons/godotx_revenue_cat/plugin.cfg", "res://addons/AdmobPlugin/plugin.cfg", "res://addons/PlayGamesPlugin/plugin.cfg"]:
+		t.ok(addon in enabled and FileAccess.file_exists(addon), "%s is enabled and present" % addon)
+	# data/play_games.json (docs/BUILD.md → The Play Games plugin): the game id
+	# and the web client id, real or both placeholders — never half-filled, since
+	# a shipped SDK without an APP_ID throws at initialize and a real id with a
+	# placeholder client could never prove anything.
+	var pg: Variant = JSON.parse_string(FileAccess.get_file_as_string("res://data/play_games.json"))
+	t.ok(pg is Dictionary and Dictionary(pg).has("game_id") and Dictionary(pg).has("web_client_id"), "data/play_games.json has game_id and web_client_id")
+	if pg is Dictionary:
+		var gid := str(Dictionary(pg).get("game_id", ""))
+		var wcid := str(Dictionary(pg).get("web_client_id", ""))
+		t.eq(gid.contains("REPLACE_ME"), wcid.contains("REPLACE_ME"), "…both real or both placeholders")
+		if not gid.contains("REPLACE_ME"):
+			t.ok(gid.is_valid_int() and wcid.ends_with(".apps.googleusercontent.com"), "…a numeric game id and an OAuth web client id")
+	for s in ["tools/fetch_play_games_plugin.sh", "tools/fetch_store_plugin.sh", "tools/fetch_ads_plugin.sh"]:
+		t.ok(FileAccess.get_unix_permissions(ProjectSettings.globalize_path("res://" + s)) & 64, "%s is executable" % s)
 	# The build number: tools/build.sh writes it to every preset at once.
 	var code_a := int(cfg.get_value(android, "version/code", -1))
 	var code_p := int(cfg.get_value(play, "version/code", -2))

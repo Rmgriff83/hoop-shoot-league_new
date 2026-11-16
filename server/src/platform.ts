@@ -2,10 +2,10 @@
  * Platform identity proofs (docs/BACKEND.md → Platform identity). The game
  * hands the server a proof it got from Game Center or Play Games; a verifier
  * turns it into the platform's stable player id (`subject`) or throws. Game
- * Center's check is real (2026-11-01); Play Games stays a stub until its
- * plugin lands — its routes answer 501 — and a `test` verifier exists only in
- * the Vitest env so every flow (link, 409, restore, unlink, delete) is
- * covered without a platform.
+ * Center's check is real (2026-11-01), Play Games' too (2026-11-15; 501
+ * `not_implemented` only while the Worker lacks its Google secrets), and a
+ * `test` verifier exists only in the Vitest env so every flow (link, 409,
+ * restore, unlink, delete) is covered without a platform.
  */
 import type { Env } from "./env";
 import { sha256Hex } from "./auth";
@@ -178,10 +178,87 @@ export class GameCenterVerifier implements ProofVerifier {
  * The id is the next-generation PER-GAME Play Games player id: stable for this
  * PGS project across devices. The cross-game `developer_player_key` changes on
  * a developer-account transfer and is never a key here.
+ * The code is taken once (platform_proofs, like a Game Center signature)
+ * before Google is asked — Google refuses a reused code too, but the row
+ * spares the round trip and keeps the restore route's no-bearer rule honest.
+ * Without PLAY_GAMES_CLIENT_ID / PLAY_GAMES_CLIENT_SECRET (Worker secrets)
+ * the provider is not wired: 501, which the game does not back off from.
  */
-class PlayGamesVerifier implements ProofVerifier {
-  async verify(_proof: unknown): Promise<Verified> {
-    throw new NotImplemented("playgames");
+export const PG_TOKEN_URL = "https://oauth2.googleapis.com/token";
+export const PG_PLAYER_URL = "https://www.googleapis.com/games/v1/players/me";
+const PG_CODE_MAX = 512;
+const PG_ID_MAX = 128;
+const PG_TIMEOUT_MS = 8_000;
+
+export type GoogleFetcher = (url: string, init: RequestInit) => Promise<Response>;
+let googleFetcher: GoogleFetcher | null = null;
+/** Tests: a stand-in for Google's token and players endpoints (null restores fetch). */
+export function setGoogleFetcher(f: GoogleFetcher | null): void {
+  googleFetcher = f;
+}
+async function googleFetch(url: string, init: RequestInit): Promise<Response> {
+  if (googleFetcher) return googleFetcher(url, init);
+  return fetch(url, { ...init, signal: AbortSignal.timeout(PG_TIMEOUT_MS) });
+}
+
+export class PlayGamesVerifier implements ProofVerifier {
+  constructor(private env: Env, private now: () => number = Date.now) {}
+
+  async verify(proof: unknown): Promise<Verified> {
+    const clientId = this.env.PLAY_GAMES_CLIENT_ID;
+    const clientSecret = this.env.PLAY_GAMES_CLIENT_SECRET;
+    if (!clientId || !clientSecret) throw new NotImplemented("playgames");
+    if (!proof || typeof proof !== "object" || Array.isArray(proof)) throw new BadProof("proof");
+    const p = proof as Record<string, unknown>;
+    for (const k of Object.keys(p)) {
+      if (!["serverAuthCode", "playerId"].includes(k)) throw new BadProof("field");
+    }
+    const code = p.serverAuthCode;
+    if (typeof code !== "string" || code.length < 1 || code.length > PG_CODE_MAX || !/^[\x21-\x7e]+$/.test(code)) throw new BadProof("serverAuthCode");
+    const claimed = p.playerId;
+    if (typeof claimed !== "string" || claimed.length < 1 || claimed.length > PG_ID_MAX || !/^[A-Za-z0-9_-]+$/.test(claimed)) throw new BadProof("playerId");
+
+    // Once only, before Google is asked.
+    const hash = await sha256Hex(code);
+    try {
+      await this.env.DB.prepare("INSERT INTO platform_proofs (sig_hash, seen_at) VALUES (?1, ?2)").bind(hash, this.now()).run();
+    } catch (e) {
+      if (String((e as Error)?.message ?? e).includes("UNIQUE")) throw new BadProof("replay");
+      throw e;
+    }
+
+    // 2. the code for an access token (scope games_lite), with the Game server credential.
+    const form = new URLSearchParams({ grant_type: "authorization_code", code, client_id: clientId, client_secret: clientSecret, redirect_uri: "" });
+    let token: string;
+    try {
+      const r = await googleFetch(PG_TOKEN_URL, { method: "POST", headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" }, body: form.toString() });
+      if (!r.ok) throw new BadProof("exchange");
+      const j = (await r.json()) as Record<string, unknown>;
+      if (typeof j.access_token !== "string" || j.access_token.length === 0) throw new BadProof("token");
+      token = j.access_token;
+    } catch (e) {
+      if (e instanceof BadProof) throw e;
+      throw new BadProof("exchange");
+    }
+
+    // 3. who the token belongs to; it must be who the phone said.
+    let player: Record<string, unknown>;
+    try {
+      const r = await googleFetch(PG_PLAYER_URL, { method: "GET", headers: { authorization: `Bearer ${token}`, accept: "application/json" } });
+      if (!r.ok) throw new BadProof("player");
+      const j = (await r.json()) as unknown;
+      if (!j || typeof j !== "object" || Array.isArray(j)) throw new BadProof("player");
+      player = j as Record<string, unknown>;
+    } catch (e) {
+      if (e instanceof BadProof) throw e;
+      throw new BadProof("player");
+    }
+    const subject = player.playerId;
+    if (typeof subject !== "string" || subject.length < 1 || subject.length > PG_ID_MAX) throw new BadProof("player");
+    if (subject !== claimed) throw new BadProof("player_mismatch");
+    const out: Verified = { subject };
+    if (typeof player.displayName === "string" && player.displayName.length > 0) out.displayName = player.displayName.slice(0, 64);
+    return out;
   }
 }
 
@@ -204,7 +281,7 @@ export function verifierFor(env: Env, provider: unknown): ProofVerifier | null {
     case "gamecenter":
       return new GameCenterVerifier(env);
     case "playgames":
-      return new PlayGamesVerifier();
+      return new PlayGamesVerifier(env);
     case "test":
       return env.PLATFORM_TEST_VERIFIER === "on" ? new TestVerifier() : null;
     default:

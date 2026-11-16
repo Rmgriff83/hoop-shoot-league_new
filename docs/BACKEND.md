@@ -657,8 +657,9 @@ the server". Ross's calls: per-device secrets, deletion wipes the phone too,
 **Routes (`server/src/platform_routes.ts`, behind `FEATURE_PLATFORM`, bodies
 ≤ 4 KB, unknown fields → 400).**
 - `POST /v1/link {provider, proof}` (auth, 5/hour): the verifier turns the
-  proof into a subject (501 `not_implemented` for gamecenter/playgames today,
-  401 `proof_rejected`, 400 `provider`). Already bound to the caller → 200
+  proof into a subject (401 `proof_rejected`, 400 `provider`; 501
+  `not_implemented` only for playgames on a Worker without its Google
+  secrets). Already bound to the caller → 200
   `{linked, already: true}`; unbound → bound, 200; bound to **another**
   player → 409 `{error: "conflict", provider, name, tag, level}` — accounts
   are never merged, the game asks. A re-link with a new subject replaces the
@@ -681,8 +682,9 @@ the server". Ross's calls: per-device secrets, deletion wipes the phone too,
 
 **Verifiers (`server/src/platform.ts`).** `ProofVerifier.verify(proof) →
 {subject, displayName?, meta?}`. `gamecenter` is real (below); `playgames`
-throws `NotImplemented` (→ 501) with the real check written out in its
-comment block; `test` exists only when `PLATFORM_TEST_VERIFIER = "on"`, a
+is real too (2026-11-15, further below) and throws `NotImplemented` (→ 501)
+only while `PLAY_GAMES_CLIENT_ID` / `PLAY_GAMES_CLIENT_SECRET` are unset;
+`test` exists only when `PLATFORM_TEST_VERIFIER = "on"`, a
 Miniflare binding in `vitest.config.ts` that is never a wrangler var, so
 every flow is under test (`server/test/platform.test.ts`: link, 409,
 restore, per-device vs transfer, cap, unlink, deletion, throttles, kill
@@ -764,8 +766,24 @@ onto a new phone with `remove_ads` still listed by `/v1/me`).
   Game Center plugin): `authenticate` / `is_authenticated` /
   `request_identity_verification_signature`, answered through the plugin's
   event queue, which the backend drains every `POLL_S` while something is
-  pending (`SIGN_IN_WAIT_S`, `PROOF_WAIT_S` guards). `Platform._ready` always
-  constructs it; without the singleton it is the null backend.
+  pending (`SIGN_IN_WAIT_S`, `PROOF_WAIT_S` guards). Without the singleton it
+  is the null backend.
+- Android (2026-11-15): `PlayGamesBackend` (`game/net/play_games_backend.gd`)
+  over the godot-play-game-services `GodotPlayGameServices` singleton
+  (docs/BUILD.md → The Play Games plugin), which answers through signals.
+  `sign_in` asks `isAuthenticated` (Google signs the player in by itself at
+  start) and shows `signIn()`'s UI once per launch on a no; a yes is followed
+  by `loadCurrentPlayer`, whose `playerId` / `displayName` make the sign-in.
+  The proof is `{serverAuthCode, playerId}` from
+  `requestServerSideAccess(web_client_id, false)` (`data/play_games.json`);
+  the plugin says nothing on a failure, so `PROOF_WAIT_S` is the only guard.
+  Achievements map `apple_id → key → play_id` (`AchievementDefs.play_id`,
+  `key_for_play_id`) so `Achievements` keeps speaking Apple ids; a key whose
+  `play_id` is still "" cannot be reported (unlock false → parked).
+  `Platform.default_backend(os)` picks it on Android, Game Center elsewhere;
+  placeholder ids in `data/play_games.json` make it unavailable even with the
+  plugin present (the export leaves the plugin out then anyway).
+  `tests/test_play_games_backend.gd` drives it over a stand-in singleton.
 - Tests: `tests/test_platform.gd` drives it with `FakePlatformBackend`
   (`tests/fake_platform_backend.gd`, via `Platform.use_backend`) and
   `Net.transport`, a scripted stand-in for HTTPRequest — the launch link,
@@ -786,15 +804,40 @@ onto a new phone with `remove_ads` still listed by `/v1/me`).
   An account from before 2026-11-01 was never linked and cannot be found by
   a reinstall; everything registered from the first Game Center build
   (2026-11-01) on can.
-- Android: the Play Games Services v2 plugin → `PlayGamesBackend`
-  (`provider_id "playgames"`, proof `{serverAuthCode, playerId}` from
-  `GamesSignInClient.requestServerSideAccess(WEB_CLIENT_ID, false)`); in the
-  Play Console a Game server credential (OAuth web client) whose id and secret
-  become Worker secrets (`wrangler secret put`); the verifier: exchange the
-  code at `https://oauth2.googleapis.com/token`, `GET
+- Android: the client side is built (above). Ross's side: the Play Games
+  Services project in the Play Console (linked to the Play Cloud project), an
+  **Android** OAuth credential per signing key (the Play App Signing key's
+  SHA-1 and the upload key's), a **Game server** credential (an OAuth web
+  client) and himself as a tester; the project id and the web client id into
+  `data/play_games.json`, the web client's id and secret into the Worker
+  (`wrangler secret put PLAY_GAMES_CLIENT_ID` / `PLAY_GAMES_CLIENT_SECRET`).
+  The Worker: flip the `playgames` verifier from `NotImplemented` to real —
+  exchange the code at `https://oauth2.googleapis.com/token`, `GET
   https://www.googleapis.com/games/v1/players/me`, subject = its `playerId`,
-  equal to the client's claim — then flip it from `NotImplemented` to real,
-  keeping the `test` one Vitest-only.
+  equal to the client's claim — keeping the `test` one Vitest-only. Then the
+  40 achievements (docs/ACHIEVEMENTS.md → Play Games).
+
+**The Play Games verifier (`PlayGamesVerifier`, 2026-11-15).** The proof is
+`{serverAuthCode, playerId}`: the single-use server auth code the phone got
+from `requestServerSideAccess(web_client_id, false)` and the per-game player
+id it saw. The check, per Google's "server-side access to Play Games
+Services": (1) shape — exactly those two fields, the code printable ASCII
+≤ 512, the id `[A-Za-z0-9_-]` ≤ 128; (2) **once only** — `sha256(code)` into
+`platform_proofs` before Google is asked (the same table and prune as the
+Game Center signatures; a reused code is `replay`, no round trip); (3) `POST
+https://oauth2.googleapis.com/token` as a form — `grant_type=
+authorization_code`, the code, the Game server credential's `client_id` and
+`client_secret` (Worker secrets `PLAY_GAMES_CLIENT_ID` /
+`PLAY_GAMES_CLIENT_SECRET`, `wrangler secret put`), an empty `redirect_uri`
+— for an access token (scope games_lite); (4) `GET
+https://www.googleapis.com/games/v1/players/me` with it → `playerId`, which
+must equal the claim (`player_mismatch`), and `displayName` kept as the
+identity's meta. Every Google refusal, a missing token, a malformed answer
+or a network failure is a 401 `proof_rejected`, never a 500; 8 s timeouts.
+Tests go through `setGoogleFetcher` (`server/test/playgames.test.ts`: the
+exchange's exact form and bearer, the shape refusals with no fetch, each
+Google no, the replay, the outage, the unwired 501, and the routes — link,
+409, restore with a fresh code, forged, unknown → 404, unlink).
 
 ## Ticket store (built 2026-10-31): RevenueCat, the webhook, pending → CLAIM
 

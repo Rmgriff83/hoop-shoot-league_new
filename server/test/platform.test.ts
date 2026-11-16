@@ -82,13 +82,17 @@ describe("link", () => {
     expect((await link(p, { provider: "test" })).status).toBe(400);
     expect(((await (await me(p)).json()) as any).providers).toEqual([]);
   });
-  it("gamecenter checks its proof (gamecenter.test.ts); playgames answers 501 until its verifier exists", async () => {
+  it("gamecenter checks its proof (gamecenter.test.ts); playgames too (playgames.test.ts), and answers 501 while the Worker lacks its Google secrets", async () => {
     const p = await register();
     const gc = await link(p, { provider: "gamecenter", proof: { publicKeyURL: "https://static.gc.apple.com/x", signature: "", salt: "", timestamp: 1, teamPlayerID: "T:1" } });
     expect(gc.status).toBe(401);
     expect(((await gc.json()) as any).error).toBe("proof_rejected");
-    expect((await link(p, { provider: "playgames", proof: { serverAuthCode: "4/abc", playerId: "g1" } })).status).toBe(501);
-    expect((await restore("10.3.1.1", { provider: "playgames", proof: { serverAuthCode: "4/abc" }, newSecret: secret() })).status).toBe(501);
+    const unwired = { ...env, PLAY_GAMES_CLIENT_ID: undefined, PLAY_GAMES_CLIENT_SECRET: undefined };
+    const pg = await app.request("/v1/link", { method: "POST", headers: auth(p), body: JSON.stringify({ provider: "playgames", proof: { serverAuthCode: "4/abc", playerId: "g1" } }) }, unwired);
+    expect(pg.status).toBe(501);
+    expect((await pg.json()) as any).toEqual({ error: "not_implemented", provider: "playgames" });
+    const rs = await app.request("/v1/link/restore", { method: "POST", headers: { "content-type": "application/json", "cf-connecting-ip": "10.3.1.1" }, body: JSON.stringify({ provider: "playgames", proof: { serverAuthCode: "4/abc", playerId: "g1" }, newSecret: secret() }) }, unwired);
+    expect(rs.status).toBe(501);
   });
   it("the test verifier is a Vitest-only binding", async () => {
     const p = await register();

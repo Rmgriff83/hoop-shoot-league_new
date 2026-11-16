@@ -102,11 +102,19 @@ fills only what a row lacks. **Then, in App Store Connect by hand**: the app
 with that version (sandbox and TestFlight players earn them from the moment
 they exist, before review).
 
-## Play Games (not built)
+## Play Games (the backend built 2026-11-15; the ids pending)
 
-`play_id` sits empty per row. When Android lands: Play Console (or the
-Publishing API `achievementConfigurations.insert`) **generates** the ids —
-they cannot be chosen like Apple's — with 5–200 XP each and 1,000 in all
-(our 815 / max 60 fit), 512×512 icons, and at least five achievements before
-Play Games can publish. A `PlayGamesBackend` then maps `key → play_id` where
-`GameCenterBackend` maps `apple_id`; nothing in `Achievements` changes.
+`play_id` sits empty per row until Google has generated the ids — they
+cannot be chosen like Apple's. `PlayGamesBackend`
+(`game/net/play_games_backend.gd`) maps `apple_id → key → play_id`
+(`AchievementDefs.play_id`, `key_for_play_id`) on the way to
+`unlockAchievement` and back from `loadAchievements` (`STATE_UNLOCKED` rows),
+so nothing in `Achievements` changed: it keeps speaking Apple ids. A key
+whose `play_id` is still "" cannot be reported — `unlock` returns false and
+Achievements parks it in `achievementsPending`, to flush once the id exists.
+Next: `tools/play_achievements.mjs` (the ASC script's twin, Ross runs it) —
+the Play Games Services Publishing API `achievementConfigurations.insert`
+with 5–200 XP each and 1,000 in all (our 815 / max 60 fit), 512×512 icons
+(from the 1024 art), at least five before Play Games can publish — and it
+writes the generated ids back into `data/achievements.json`.
+`AchievementDefs.validate` accepts "" or an opaque id, unique.

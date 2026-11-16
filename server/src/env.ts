@@ -24,6 +24,13 @@ export interface Env {
   REVENUECAT_WEBHOOK_AUTH?: string;
   /** The iOS bundle id the Game Center signature covers (platform.ts); a wrangler var, the same in every env. */
   APPLE_BUNDLE_ID?: string;
+  /**
+   * Worker secrets (`wrangler secret put`): the Play Games "Game server" credential — the OAuth web
+   * client whose id the phone names in requestServerSideAccess and whose secret exchanges the code
+   * (platform.ts). Both absent → the playgames provider answers 501.
+   */
+  PLAY_GAMES_CLIENT_ID?: string;
+  PLAY_GAMES_CLIENT_SECRET?: string;
   /** Vitest only: enables the `test` proof verifier (platform.ts). Never a wrangler var. */
   PLATFORM_TEST_VERIFIER?: string;
   /** Per-IP wall on every /v1 route (layer 2: a workers.dev host has no WAF). */

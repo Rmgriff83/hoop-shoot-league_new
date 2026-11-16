@@ -3022,7 +3022,7 @@ func _run_platform() -> void:
 		sp.call("close")
 	await _sleep(0.5)
 	# Put the world back.
-	Platform.use_backend(GameCenterBackend.new())
+	Platform.use_backend(Platform.default_backend())
 	Net.transport = Callable()
 	Net.enabled = was_enabled
 	SaveService.put_account(was_account if not was_account.is_empty() else {})
