@@ -853,15 +853,38 @@ is a *pending purchase* the phone CLAIMs, like `/v1/rewards/claim`.
   2. A RevenueCat project with two apps: **iOS** bundle
      `com.rossgriffus.hoopshootleague` (upload the In-App Purchase Key .p8
      and an App Store Connect API key) and **Android**
-     `com.rossgriffus.hoopshootleague` (the Play service-account JSON — needs the
-     Play Console account, which does not exist yet). Their public SDK keys
+     `com.rossgriffus.hoopshootleague` (the Play service-account JSON; done
+     2026-11-15). Their public SDK keys
      (`appl_…`, `goog_…`) go into **`store_keys.json`** (gitignored;
      `store_keys.example.json` is the template).
+     The Play side, as it went (2026-11-15): Play Console → Setup → API
+     access links a Google Cloud project; a service account there with the
+     Cloud roles **Pub/Sub Admin** + **Monitoring Viewer** (for RevenueCat's
+     RTDN topic) and a JSON key — a new Cloud organisation ships with
+     `iam.disableServiceAccountKeyCreation` enforced, overridden at the
+     project (needs the Organization Policy Administrator role, granted to
+     yourself at the organisation level); the account invited in Play Console
+     → Users and permissions with *View app information*, *View financial
+     data* and *Manage orders*; the Google Play Android Developer API and
+     Cloud Pub/Sub API enabled. RevenueCat validates the credentials (the
+     purchase check can lag the Play invite by minutes to hours; editing any
+     in-app product's description and saving nudges it), then *Connect to
+     Google* makes the RTDN topic, pasted into Play Console → Monetization
+     setup → Real-time developer notifications ("all one-time products").
+     Service-to-server purchase tracking stays off (a purchase learned only
+     from Google would carry no player id). The JSON lives at
+     `~/.config/hoop_shoot/revenuecat/play_service_account.json`.
   3. App Store Connect: consumables `tickets_300` ($0.99 tier) and
      `tickets_1000` ($2.99), the Paid Apps agreement, banking and tax; a
      sandbox tester signed in on the phone under Settings → App Store →
-     Sandbox Account (IAP never works in the Simulator). Play Console, when
-     it exists: the same two one-time products and licence testers.
+     Sandbox Account (IAP never works in the Simulator). Play Console
+     (2026-11-15): the same products as one-time products, each with a
+     single purchase option `buy` carrying the price, set Active; licence
+     testers are per developer account (Setup → License testing,
+     RESPOND_NORMALLY), separate from an app's internal testers — the phone
+     shows "Test card, always approves" only after the Play Store app's
+     cache and data are cleared. First Play test buy credited end to end
+     the same day (Build 548).
   4. RevenueCat: products `tickets_300` / `tickets_1000`, an offering
      `default` with packages of the same identifiers (the phone buys by
      product id; the offering is for the dashboard).
