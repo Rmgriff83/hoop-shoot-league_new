@@ -112,9 +112,27 @@ cannot be chosen like Apple's. `PlayGamesBackend`
 so nothing in `Achievements` changed: it keeps speaking Apple ids. A key
 whose `play_id` is still "" cannot be reported — `unlock` returns false and
 Achievements parks it in `achievementsPending`, to flush once the id exists.
-Next: `tools/play_achievements.mjs` (the ASC script's twin, Ross runs it) —
-the Play Games Services Publishing API `achievementConfigurations.insert`
-with 5–200 XP each and 1,000 in all (our 815 / max 60 fit), 512×512 icons
-(from the 1024 art), at least five before Play Games can publish — and it
-writes the generated ids back into `data/achievements.json`.
-`AchievementDefs.validate` accepts "" or an opaque id, unique.
+**`tools/play_achievements.mjs`** (the ASC script's twin; Ross runs it):
+the Play Games Services Publishing API —
+`POST https://www.googleapis.com/games/v1configuration/applications/<game id>/achievements`,
+scope `androidpublisher` — one STANDARD achievement per row, `HIDDEN` or
+`REVEALED` from `hidden`, the title-cased name and the `unlock` text as the
+en-US draft strings, `pointValue` = points (Play: 5–200 in steps of 5,
+1,000 in all — our 815 / max 60 fit; at least five before the project can
+publish). Idempotent: rows with a `play_id` are checked, rows whose name
+already exists adopt it, the rest are inserted; every id is written back
+into `data/achievements.json` (`AchievementDefs.validate` accepts "" or an
+opaque id, unique) — commit that and build, since the ids ship in the pck.
+It authenticates as a service account (RS256 JWT bearer; by default the
+RevenueCat one, `PLAY_SA_JSON` in `~/.config/hoop_shoot/play.env`
+overrides) which needs, in Play Console → Users and permissions, the
+account-level **"Edit Google Play Games Services projects"** (plus "View app
+information"), and the **Google Play Game Services Publishing API** enabled
+in the Cloud project. `--dry-run` prints the plan; `--only a,b` narrows.
+**Icons are by hand:** Google deprecated `imageConfigurations.upload`
+("attempting to use this API causes errors"), so the script writes 512×512
+copies to `~/.config/hoop_shoot/playgames/icons/<key>.png` (`--icons` for
+just that) and Ross uploads them in Play Console → Play Games Services →
+Achievements → each row → Icon. Testers earn draft achievements at once;
+the public needs the project published (Publish Google Play Games Services
+projects), which wants every achievement complete.
