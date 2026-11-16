@@ -175,7 +175,7 @@ stage_play_games_plugin() {
   else
     echo "no Play Games plugin at $PG_PLUGIN (tools/fetch_play_games_plugin.sh installs it): no Play Games sign-in"
   fi
-  if grep -q REPLACE_ME data/play_games.json; then
+  if grep -Eq '"(game_id|web_client_id)": *"[^"]*REPLACE_ME' data/play_games.json; then   # the ids, not the note
     echo "data/play_games.json still carries placeholder ids: the Play build ships without the Play Games plugin (no sign-in, no achievements on Android)"
   fi
 }

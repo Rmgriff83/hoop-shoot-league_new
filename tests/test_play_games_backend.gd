@@ -68,7 +68,9 @@ func run(t) -> void:
 	var loop := Engine.get_main_loop()
 	var tick := PlayGamesBackend.POLL_S + 0.2
 	# The config gate.
-	t.eq(PlayGamesBackend.load_config("res://data/play_games.json").is_empty(), FileAccess.get_file_as_string("res://data/play_games.json").contains("REPLACE_ME"), "the repo's data/play_games.json: real ids load, placeholders do not")
+	var repo_cfg: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://data/play_games.json"))
+	var repo_placeholder: bool = str(repo_cfg.get("game_id", "")).contains("REPLACE_ME")
+	t.eq(PlayGamesBackend.load_config("res://data/play_games.json").is_empty(), repo_placeholder, "the repo's data/play_games.json: real ids load, placeholders do not")
 	var f := FileAccess.open(CFG, FileAccess.WRITE)
 	f.store_string(JSON.stringify({"game_id": "123456789012", "web_client_id": "1234-abc.apps.googleusercontent.com"}))
 	f.close()
@@ -89,9 +91,13 @@ func run(t) -> void:
 
 	var stub := StubPlayGames.new()
 	Engine.register_singleton(SINGLETON, stub)
-	var gated := PlayGamesBackend.new()   # the repo's config
-	if FileAccess.get_file_as_string("res://data/play_games.json").contains("REPLACE_ME"):
-		t.ok(not gated.is_available() and not stub.calls.has("initialize"), "the plugin present but placeholder ids: unavailable, the SDK never initialized")
+	f = FileAccess.open("user://qa_play_games_bad.json", FileAccess.WRITE)
+	f.store_string(JSON.stringify({"game_id": "REPLACE_ME", "web_client_id": "REPLACE_ME.apps.googleusercontent.com"}))
+	f.close()
+	var gated := PlayGamesBackend.new("user://qa_play_games_bad.json")
+	t.ok(not gated.is_available() and not stub.calls.has("initialize"), "the plugin present but placeholder ids: unavailable, the SDK never initialized")
+	var repo := PlayGamesBackend.new()   # the repo's config
+	t.eq(repo.is_available(), not repo_placeholder, "the repo's ids: available iff they are real")
 	stub.calls.clear()
 	var be := PlayGamesBackend.new(CFG)
 	t.ok(be.is_available() and not be.is_signed_in(), "the singleton present and ids real: available, not signed in")
