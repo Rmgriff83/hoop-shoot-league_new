@@ -22,7 +22,7 @@ const PATH := "res://data/ads.json"
 const PLACEHOLDER := "REPLACE_ME"
 ## An ad that never reports back is given up on after this long.
 const GUARD_S := 8.0
-const DEFAULT_POLICY := {"grace_matches": 6, "min_gap_s": 600, "upsell_every": 5, "practice_min_s": 300}
+const DEFAULT_POLICY := {"grace_matches": 6, "min_gap_s": 300, "upsell_every": 5, "practice_min_s": 300}
 ## Every verdict `last_reason` can hold.
 const REASONS := ["shown", "failed", "owner", "not_started", "not_loaded", "grace", "gap", "practice_short"]
 
