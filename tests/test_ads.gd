@@ -1,4 +1,5 @@
-## Ads (docs/ADS.md, 2026-11-01; the 2026-11-12 policy: grace 3, the online
+## Ads (docs/ADS.md, 2026-11-01; the 2026-11-12 policy — grace 6 again and a
+## 10-minute gap since 2026-11-17 — the online
 ## ad on the way out, a practice ad, a reason): the policy table and its
 ## reasons, the facade's gate against a fake network (the count apart from
 ## the gate), the sound under an ad, the guard, the owner rule and the store
@@ -34,16 +35,16 @@ func run(t) -> void:
 
 
 func _policy(t) -> void:
-	var base := {"owner": false, "available": true, "ready": true, "matches_played": 10, "grace_matches": 3, "last_ad_at": -1.0, "now": 1000.0, "min_gap_s": 120}
+	var base := {"owner": false, "available": true, "ready": true, "matches_played": 10, "grace_matches": 6, "last_ad_at": -1.0, "now": 1000.0, "min_gap_s": 600}
 	t.ok(AdPolicy.should_show(base), "a player past the grace, a loaded ad, no ad yet: show")
 	t.eq(AdPolicy.reason(base), "", "…no reason against it")
 	t.eq(AdPolicy.reason(base.merged({"owner": true}, true)), "owner", "an owner of remove_ads: never")
 	t.eq(AdPolicy.reason(base.merged({"available": false}, true)), "not_started", "no network: never")
 	t.eq(AdPolicy.reason(base.merged({"ready": false}, true)), "not_loaded", "nothing loaded: not now")
-	t.eq(AdPolicy.reason(base.merged({"matches_played": 2}, true)), "grace", "inside the grace (3 results): not yet")
-	t.ok(AdPolicy.should_show(base.merged({"matches_played": 3}, true)), "…the 4th result is the first that may")
-	t.eq(AdPolicy.reason(base.merged({"last_ad_at": 900.0}, true)), "gap", "100 s after the last one: not yet (120 s gap)")
-	t.ok(AdPolicy.should_show(base.merged({"last_ad_at": 880.0}, true)), "…120 s after: may")
+	t.eq(AdPolicy.reason(base.merged({"matches_played": 5}, true)), "grace", "inside the grace (6 results): not yet")
+	t.ok(AdPolicy.should_show(base.merged({"matches_played": 6}, true)), "…the 7th result is the first that may")
+	t.eq(AdPolicy.reason(base.merged({"last_ad_at": 500.0}, true)), "gap", "500 s after the last one: not yet (600 s gap)")
+	t.ok(AdPolicy.should_show(base.merged({"last_ad_at": 400.0}, true)), "…600 s after: may")
 	t.eq(AdPolicy.reason(base.merged({"owner": true, "ready": false}, true)), "owner", "the owner rule comes first")
 	t.ok(AdPolicy.upsell_due(5, 5) and AdPolicy.upsell_due(10, 5), "the nudge on the 5th and 10th ad")
 	t.ok(not AdPolicy.upsell_due(4, 5) and not AdPolicy.upsell_due(0, 5) and not AdPolicy.upsell_due(5, 0), "…not otherwise")
@@ -95,11 +96,11 @@ func _facade(t, ads, store, app, save) -> void:
 	var s: Dictionary = save.get_settings()
 	s["adMatches"] = 0
 	save.put_settings(s)
-	t.eq(ads.policy("grace_matches"), 3, "data/ads.json: 3 results of grace (2026-11-12, was 6)")
-	t.eq(ads.policy("min_gap_s"), 120, "…120 s between ads")
+	t.eq(ads.policy("grace_matches"), 6, "data/ads.json: 6 results of grace (6 again since 2026-11-17; 3 from 2026-11-12)")
+	t.eq(ads.policy("min_gap_s"), 600, "…600 s between ads (ten minutes since 2026-11-17, was 120)")
 	t.eq(ads.policy("upsell_every"), 5, "…the nudge every 5")
 	t.eq(ads.policy("practice_min_s"), 300, "…five minutes of practice before its ad")
-	t.eq(ads.DEFAULT_POLICY, {"grace_matches": 3, "min_gap_s": 120, "upsell_every": 5, "practice_min_s": 300}, "the built-in default says the same")
+	t.eq(ads.DEFAULT_POLICY, {"grace_matches": 6, "min_gap_s": 600, "upsell_every": 5, "practice_min_s": 300}, "the built-in default says the same")
 	t.eq(str(ads.platform_cfg("iOS").get("app_id", "")), "ca-app-pub-3569871537594448~6449564013", "data/ads.json: the iOS AdMob app id")
 	t.eq(str(ads.platform_cfg("iOS").get("interstitial", "")), "ca-app-pub-3569871537594448/6439001907", "…and the real interstitial unit (the App Store release, 2026-11-07), never Google's test unit")
 	var real_cfg: Dictionary = ads.cfg
@@ -118,23 +119,23 @@ func _facade(t, ads, store, app, save) -> void:
 	var events: Array = []
 	ads.ad_started.connect(func() -> void: events.push_back("started"))
 	ads.ad_finished.connect(func(shown: bool) -> void: events.push_back("finished %s" % shown))
-	# The grace: the first three results go straight through.
-	for i in 3:
+	# The grace: the first six results go straight through.
+	for i in 6:
 		ads.before_results(then)
-	t.eq(calls[0], 3, "three results inside the grace: straight to the screen")
+	t.eq(calls[0], 6, "six results inside the grace: straight to the screen")
 	t.eq(fake.shows, 0, "…no ad")
-	t.eq(ads.matches_played(), 3, "…counted in the synced settings")
+	t.eq(ads.matches_played(), 6, "…counted in the synced settings")
 	t.eq(ads.last_reason, "grace", "…the reason: the grace")
-	# The fourth: an ad, the sound off under it, then the screen.
+	# The seventh: an ad, the sound off under it, then the screen.
 	fake.auto = false
 	ads.before_results(then)
-	t.ok(ads.showing() and fake.shows == 1 and calls[0] == 3, "the 4th result: the interstitial is up, the screen waits")
+	t.ok(ads.showing() and fake.shows == 1 and calls[0] == 6, "the 7th result: the interstitial is up, the screen waits")
 	t.eq(ads.last_reason, "shown", "…the reason: shown")
 	t.ok(not Sfx.music_sound() and not Sfx.sfx_sound(), "…the game's sound off under it")
 	t.eq(events, ["started"], "…ad_started")
 	t.eq(ads.reason(), "not_loaded", "…another gate meanwhile would not show (one is up)")
 	fake.close()
-	t.ok(not ads.showing() and calls[0] == 4, "closed: the screen")
+	t.ok(not ads.showing() and calls[0] == 7, "closed: the screen")
 	t.ok(Sfx.music_sound() == App.music_sound and Sfx.sfx_sound() == App.sfx_sound, "…the sound back to the settings")
 	t.eq(events, ["started", "finished true"], "…ad_finished(shown)")
 	t.eq(ads.ads_shown, 1, "one ad shown")
@@ -142,61 +143,61 @@ func _facade(t, ads, store, app, save) -> void:
 	t.eq(fake.loads, 2, "…and the next one loading")
 	# The gap.
 	fake.auto = true
-	now[0] = 1060.0
+	now[0] = 1300.0
 	ads.before_results(then)
-	t.ok(calls[0] == 5 and fake.shows == 1, "60 s later: no ad, straight through")
+	t.ok(calls[0] == 8 and fake.shows == 1, "300 s later: no ad, straight through")
 	t.eq(ads.last_reason, "gap", "…the reason: the gap")
-	now[0] = 1120.0
+	now[0] = 1600.0
 	ads.before_results(then)
-	t.ok(calls[0] == 6 and fake.shows == 2 and ads.ads_shown == 2, "120 s later: the next ad")
+	t.ok(calls[0] == 9 and fake.shows == 2 and ads.ads_shown == 2, "600 s later: the next ad")
 	# A show that fails, nothing loaded: through, nothing counted.
-	now[0] = 2000.0
+	now[0] = 3000.0
 	fake.show_outcome = "failed"
 	ads.before_results(then)
-	t.ok(calls[0] == 7 and fake.shows == 3 and ads.ads_shown == 2 and ads.last_ad_at == 1120.0, "a failed show: the screen, nothing counted")
+	t.ok(calls[0] == 10 and fake.shows == 3 and ads.ads_shown == 2 and ads.last_ad_at == 1600.0, "a failed show: the screen, nothing counted")
 	t.eq(events.back(), "finished false", "…ad_finished(false)")
 	t.eq(ads.last_reason, "failed", "…the reason: failed")
 	fake.show_outcome = "shown"
 	fake.ready_ = false
 	ads.before_results(then)
-	t.ok(calls[0] == 8 and fake.shows == 3, "nothing loaded: straight through")
+	t.ok(calls[0] == 11 and fake.shows == 3, "nothing loaded: straight through")
 	t.eq(ads.last_reason, "not_loaded", "…the reason: not loaded")
 	fake.ready_ = true
 	# The gate on its own counts nothing; the count on its own shows nothing.
 	var played: int = ads.matches_played()
 	ads.gate(then, "test")
-	t.ok(calls[0] == 9 and fake.shows == 4 and ads.matches_played() == played, "gate: the ad, no result counted")
+	t.ok(calls[0] == 12 and fake.shows == 4 and ads.matches_played() == played, "gate: the ad, no result counted")
 	ads.last_ad_at = -1.0
 	ads.count_result()
-	t.ok(ads.matches_played() == played + 1 and fake.shows == 4 and calls[0] == 9, "count_result: a result, no ad")
+	t.ok(ads.matches_played() == played + 1 and fake.shows == 4 and calls[0] == 12, "count_result: a result, no ad")
 	ads.gate(Callable(), "test")
 	t.ok(fake.shows == 5 and not ads.showing(), "a gate with nothing to run after shows and finishes clean")
 	ads.last_ad_at = -1.0
 	# Practice: one chance after practice_min_s of play, never a result.
 	played = ads.matches_played()
 	ads.after_practice(299.9, then)
-	t.ok(calls[0] == 10 and fake.shows == 5 and ads.last_reason == "practice_short", "4:59 of practice: straight home, practice_short")
+	t.ok(calls[0] == 13 and fake.shows == 5 and ads.last_reason == "practice_short", "4:59 of practice: straight home, practice_short")
 	ads.after_practice(300.0, then)
-	t.ok(calls[0] == 11 and fake.shows == 6 and ads.last_reason == "shown", "5:00: the ad")
+	t.ok(calls[0] == 14 and fake.shows == 6 and ads.last_reason == "shown", "5:00: the ad")
 	t.eq(ads.matches_played(), played, "…and practice never counts as a result")
 	ads.last_ad_at = -1.0
 	fake.ready_ = false
 	ads.after_practice(600.0, then)
-	t.ok(calls[0] == 12 and fake.shows == 6 and ads.last_reason == "not_loaded", "nothing loaded at the quit: skipped, no retry")
+	t.ok(calls[0] == 15 and fake.shows == 6 and ads.last_reason == "not_loaded", "nothing loaded at the quit: skipped, no retry")
 	fake.ready_ = true
 	# The guard: an ad that never reports back.
 	fake.auto = false
 	_slept.clear()
 	ads.before_results(then)
 	t.eq(_slept, [ads.GUARD_S], "an ad up: the guard waits GUARD_S…")
-	t.ok(ads.showing() and calls[0] == 12, "…the screen waiting meanwhile")
+	t.ok(ads.showing() and calls[0] == 15, "…the screen waiting meanwhile")
 	await Engine.get_main_loop().process_frame
 	await Engine.get_main_loop().process_frame
-	t.ok(not ads.showing() and calls[0] == 13, "…and moves on when nothing came back")
+	t.ok(not ads.showing() and calls[0] == 16, "…and moves on when nothing came back")
 	t.eq(ads.last_reason, "failed", "…noted as failed")
 	t.ok(Sfx.music_sound() == App.music_sound, "…sound back")
 	fake.close()
-	t.eq(calls[0], 13, "a late close changes nothing")
+	t.eq(calls[0], 16, "a late close changes nothing")
 	fake.auto = true
 	# The nudge: on the 5th ad, once.
 	ads.ads_shown = 4
@@ -217,7 +218,7 @@ func _facade(t, ads, store, app, save) -> void:
 	ads.last_ad_at = -1.0
 	var shows := fake.shows
 	ads.before_results(then)
-	t.ok(calls[0] == 16 and fake.shows == shows and ads.last_reason == "owner", "an owner: straight through, the reason: owner")
+	t.ok(calls[0] == 19 and fake.shows == shows and ads.last_reason == "owner", "an owner: straight through, the reason: owner")
 	var fresh := FakeAdsBackend.new()
 	ads.use_backend(fresh)
 	ads.start_if_needed()

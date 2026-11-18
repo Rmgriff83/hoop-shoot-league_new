@@ -6,6 +6,8 @@ outline ("Hoop Shoot — Remove Ads and Ads Integration", 2026-11-01) is the
 spec; the calls he made: $4.99, rewarded ads later, app-ads.txt on
 rossgriffus.com, iOS first, the ad before the results screen, a 2-minute gap
 plus a new-player grace, a 13+ audience, only remove_ads removes ads.
+Re-tuned 2026-11-17 for the Play test: six results of grace, ten minutes
+between ads; practice stays at one chance after five minutes.
 
 ## The rule
 
@@ -28,7 +30,7 @@ plus a new-player grace, a 13+ audience, only remove_ads removes ads.
 | Null backend | `game/ads/ads_backend.gd` — desktop, headless, QA, phone deploys, owners |
 | AdMob backend | `game/ads/admob_backend.gd` — the vendored `Admob` node (addons/AdmobPlugin) |
 | The nudge | `game/ads/ads_upsell.gd` — the results screens' side toast |
-| Numbers and ids | `data/ads.json` — `policy {grace_matches 3, min_gap_s 120, upsell_every 5, practice_min_s 300}`, per-store `app_id` / `interstitial` |
+| Numbers and ids | `data/ads.json` — `policy {grace_matches 6, min_gap_s 600, upsell_every 5, practice_min_s 300}`, per-store `app_id` / `interstitial` |
 | The purchase | `Store.owns` / `Store.restore` (game/net/store.gd), the Ticket Store tile, Settings → RESTORE PURCHASES |
 | Fake + QA | `tests/fake_ads_backend.gd`, `--qa-ads` (ads_interstitial / ads_results / ads_upsell / ads_owner) |
 | Tests | `tests/test_ads.gd`, `tests/test_ticket_store.gd` (entitlements), `server/test/store.test.ts` |
@@ -39,8 +41,9 @@ Two moves in the facade, apart since Ross's 2026-11-12 policy:
 `Ads.count_result()` counts a finished result toward the grace, and
 `Ads.gate(then, where)` asks the policy and plays the ad. The policy says
 **no** for an owner, without a started network or a loaded interstitial,
-during the player's first `grace_matches` (**3**, was 6) results, and
-within `min_gap_s` (120 s) of the last ad; then `then` runs at once.
+during the player's first `grace_matches` (**6** — Ross's 2026-11-17 call,
+back from the 3 of 2026-11-12) results, and within `min_gap_s` (**600 s**,
+ten minutes; 120 until 2026-11-17) of the last ad; then `then` runs at once.
 Otherwise the interstitial goes up with the game's sound off (the buses,
 not the settings), and `then` runs when it closes — or after `GUARD_S`
 (8 s) if the network never reports back. The policy decides BEFORE the
@@ -149,7 +152,7 @@ User ID") and a `TRANSFER` webhook moves the Worker's row.
    sandbox refund → ads back on relaunch; delete + reinstall → ads →
    RESTORE PURCHASES → OWNED and a `TRANSFER` 200 in the delivery log;
    consent + tracking prompts once; an interstitial before the results of
-   the 4th result (three of grace); an online match → no ad before the
+   the 7th result (six of grace); an online match → no ad before the
    post-match page, REMATCH? live for its minute, the ad on HOME (and the
    other phone's card reads THEY LEFT only after our ad went up — the room
    closes first); a rematch that goes → no ad; a 5-minute practice → an ad
